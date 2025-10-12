@@ -1,0 +1,267 @@
+{
+  "version": "1.0",
+  "client_name": "TEST",
+  "save_date": "2025-09-14T13:32:49.563851",
+  "audio_file_path": "C:/Users/paulj/OneDrive/Desktop/sound clips/KingOfKingsChorus.mp3",
+  "original_audio_file": "C:/Users/paulj/OneDrive/Desktop/sound clips/KingOfKingsChorus.mp3",
+  "parameters": {
+    "Design.Shape": "circular",
+    "Design.FrameOrientation": "vertical",
+    "Design.FinishX": 36.0,
+    "Design.FinishY": 36.0,
+    "Design.NumberSections": 2,
+    "Design.Separation": 2.0,
+    "Design.FinishZ": 0.5,
+    "Design.Species": "maple",
+    "Pattern.SlotStyle": "radial",
+    "Pattern.NumberSlots": 48,
+    "Pattern.BitDiameter": 0.25,
+    "Pattern.Spacer": 0.5,
+    "Pattern.X_Offset": 0.75,
+    "Pattern.Y_Offset": 1.5,
+    "Pattern.ScaleCenterPoint": 1.0,
+    "Pattern.AmplitudeExponent": 1.0,
+    "Pattern.Orientation": "auto",
+    "Pattern.GrainAngle": 90.0,
+    "Pattern.DovetailInset": 0.0625,
+    "Pattern.LeadOverlap": 0.25,
+    "Pattern.LeadRadius": 0.25,
+    "Pattern.GenerateDovetails": false,
+    "Pattern.ShowDovetails": false,
+    "Pattern.DovetailCutDirection": "climb",
+    "Pattern.DovetailEdgeDefault": 0,
+    "Pattern.DovetailEdgeOverrides": "{}",
+    "Audio.SourceFile": null,
+    "Audio.Processing.FilterAmount": 0.05,
+    "Audio.Processing.ApplyFilter": false,
+    "Audio.Processing.PeakControl.Method": "none",
+    "Audio.Processing.PeakControl.Threshold": 0.8,
+    "Audio.Processing.RollAmount": 0,
+    "Audio.Binning.Method": "mean",
+    "Visual.ApplyCorrection": true,
+    "Visual.CorrectionScale": 1.0,
+    "Visual.CorrectionMode": "nudge_adj",
+    "Display.ShowDebugCircle": false,
+    "Display.DebugCircleRadius": 1.5,
+    "Display.ShowLabels": false,
+    "Display.ShowOffsets": false,
+    "Export.CncMargin": 1.0,
+    "Export.SectionsInSheet": 1,
+    "Audio.Processing.NumRawSamples": 200000,
+    "Audio.Processing.StartTime": 47.61,
+    "Audio.Processing.EndTime": 76.36,
+    "Audio.Processing.SilenceThreshold": -20,
+    "Audio.Processing.SilenceDuration": 0.5,
+    "Audio.Processing.StemChoice": "vocals",
+    "Audio.Processing.UseStems": true,
+    "Audio.Processing.BinningMode": "mean_abs",
+    "Audio.Processing.RemoveSilence": true,
+    "PeakControl.ClipPercentage": 0.8,
+    "PeakControl.CompressionExponent": 0.75,
+    "PeakControl.ThresholdPercentage": 0.9,
+    "PeakControl.ScaleAllPercentage": 1.0,
+    "PeakControl.ManualSlot": 0,
+    "PeakControl.ManualValue": 1.0,
+    "PeakControl.NudgeEnabled": false,
+    "PeakControl.ClipEnabled": false,
+    "PeakControl.CompressEnabled": false,
+    "PeakControl.ScaleEnabled": false,
+    "PeakControl.ScaleAllEnabled": false,
+    "PeakControl.ManualEnabled": false,
+    "artisticStyle": "watercolor",
+    "colorPalette": "ocean",
+    "colorPalettes": {
+      "ocean": {
+        "colorDeep": [
+          0.0,
+          0.2,
+          0.4,
+          0.9
+        ],
+        "colorMid": [
+          0.0,
+          0.4,
+          0.6,
+          0.7
+        ],
+        "colorLight": [
+          0.2,
+          0.6,
+          0.8,
+          0.5
+        ],
+        "paperColor": [
+          0.98,
+          0.97,
+          0.95,
+          1.0
+        ]
+      },
+      "sunset": {
+        "colorDeep": [
+          0.4,
+          0.1,
+          0.0,
+          0.9
+        ],
+        "colorMid": [
+          0.7,
+          0.3,
+          0.1,
+          0.7
+        ],
+        "colorLight": [
+          1.0,
+          0.6,
+          0.2,
+          0.5
+        ],
+        "paperColor": [
+          0.98,
+          0.95,
+          0.93,
+          1.0
+        ]
+      },
+      "forest": {
+        "colorDeep": [
+          0.0,
+          0.2,
+          0.1,
+          0.9
+        ],
+        "colorMid": [
+          0.1,
+          0.4,
+          0.2,
+          0.7
+        ],
+        "colorLight": [
+          0.3,
+          0.6,
+          0.4,
+          0.5
+        ],
+        "paperColor": [
+          0.97,
+          0.98,
+          0.95,
+          1.0
+        ]
+      },
+      "monochrome": {
+        "colorDeep": [
+          0.1,
+          0.1,
+          0.1,
+          0.9
+        ],
+        "colorMid": [
+          0.4,
+          0.4,
+          0.4,
+          0.7
+        ],
+        "colorLight": [
+          0.7,
+          0.7,
+          0.7,
+          0.5
+        ],
+        "paperColor": [
+          0.98,
+          0.98,
+          0.98,
+          1.0
+        ]
+      }
+    },
+    "wetness": 0.7,
+    "pigmentLoad": 0.8,
+    "paperRoughness": 0.5,
+    "bleedAmount": 0.6,
+    "granulation": 0.4,
+    "amplitudeEffects": "color",
+    "amplitudeInfluence": 1.0,
+    "noiseScale": 20.0,
+    "noiseOctaves": 4.0,
+    "noiseSeed": 0.0,
+    "flowSpeed": 0.3,
+    "flowDirection": 0.0,
+    "brushPressure": 0.7,
+    "paintThickness": 0.5,
+    "dryingTime": 0.5,
+    "mediumViscosity": 0.5,
+    "brushSize": 0.5,
+    "impasto": 0.4,
+    "brushTexture": 0.5,
+    "colorMixing": 0.6,
+    "inkFlow": 0.4,
+    "inkDensity": 0.8,
+    "edgeDarkening": 0.6,
+    "dryness": 0.3,
+    "opacity": 1.0,
+    "artisticIntensity": 0.8
+  },
+  "processed_amplitudes": [
+    7.377289171659599,
+    7.175424104907904,
+    7.947381906287243,
+    6.309899084196261,
+    8.509554991123261,
+    3.9179934089313417,
+    3.4016715257059422,
+    4.1676797973281925,
+    6.733006274970626,
+    5.522907515672512,
+    5.435391156287806,
+    7.214751572348543,
+    4.464005605652318,
+    7.065628727838287,
+    6.339390427205711,
+    6.627919203783868,
+    7.937200634764569,
+    7.926042960285718,
+    4.130148457186006,
+    1.6084991234673234,
+    8.541931831938664,
+    8.997024734669823,
+    7.006368448188243,
+    6.161957006051612,
+    4.367885546730526,
+    6.456220446968886,
+    6.496028168421691,
+    6.75012511656738,
+    6.142357419734808,
+    7.305315784914471,
+    7.2970509880313585,
+    4.226254040366297,
+    3.853560748156187,
+    6.343382893479419,
+    5.511899707693911,
+    4.063604608856191,
+    4.3137820371118165,
+    4.667667651216671,
+    8.391558964574049,
+    6.562422434089324,
+    5.927573179450188,
+    5.601240010507797,
+    6.135012825870278,
+    7.270847625209216,
+    5.389086949119614,
+    6.601738548007217,
+    6.670465962599199,
+    4.286043961852452
+  ],
+  "slot_nudges": {},
+  "manual_amplitude_adjustments": {},
+  "reference_states": [],
+  "ui_states": {
+    "current_reference_index": -1
+  },
+  "export_folder": "exports",
+  "stem_paths": {
+    "vocals": "c:\\Users\\paulj\\WaveDesigner-refactor\\separated\\htdemucs\\tmpmg3m32ir\\vocals.wav",
+    "no_vocals": "c:\\Users\\paulj\\WaveDesigner-refactor\\separated\\htdemucs\\tmpmg3m32ir\\no_vocals.wav"
+  }
+}

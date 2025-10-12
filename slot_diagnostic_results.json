@@ -1,0 +1,10 @@
+{
+  "timestamp": "2025-10-01T18:35:20.403385",
+  "errors": [
+    "AttributeError: 'ConfigService' object has no attribute 'load_default_state'",
+    "Traceback (most recent call last):\n  File \"C:\\Users\\paulj\\WDweb\\full_diagnostic.py\", line 33, in run_diagnostic\n    state = config_service.load_default_state()\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'ConfigService' object has no attribute 'load_default_state'. Did you mean: '_default_state'?\n"
+  ],
+  "backend_analysis": {},
+  "frontend_simulation": {},
+  "conclusions": []
+}

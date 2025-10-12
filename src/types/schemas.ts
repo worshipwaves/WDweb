@@ -1,0 +1,283 @@
+import { z } from 'zod';
+
+
+export const SectionMaterialSchema = z.object({
+  section_id: z.number().int().min(0).max(3),
+  species: z.string(),
+  grain_direction: z.enum(['horizontal', 'vertical', 'angled'])
+}).strict();
+
+export type SectionMaterial = z.infer<typeof SectionMaterialSchema>;
+
+export const WoodMaterialsConfigSchema = z.object({
+  default_species: z.string(),
+  default_grain_direction: z.enum(['horizontal', 'vertical', 'angled']),
+  species_catalog: z.array(z.object({
+    id: z.string(),
+    display: z.string(),
+    wood_number: z.string()
+  })),
+  texture_config: z.object({
+    size_thresholds_inches: z.object({
+      small: z.number(),
+      medium: z.number()
+    }),
+    size_map: z.record(z.string(), z.object({
+      folder: z.string(),
+      dimensions: z.string()
+    })),
+    base_texture_path: z.string()
+  }),
+  rendering_config: z.object({
+    grain_rotation_offset_degrees: z.number()
+  }),
+  geometry_constants: z.object({
+    section_positioning_angles: z.record(z.string(), z.array(z.number()))
+  })
+}).strict();
+
+export type WoodMaterialsConfig = z.infer<typeof WoodMaterialsConfigSchema>;
+
+export const FrameDesignSchema = z.object({
+  shape: z.string(),
+  frame_orientation: z.string(),
+  finish_x: z.number(),
+  finish_y: z.number(),
+  finish_z: z.number(),
+  number_sections: z.number(),
+  separation: z.number(),
+  species: z.string(),
+  material_thickness: z.number(),
+	section_materials: z.array(SectionMaterialSchema).optional().default([]),
+});
+
+export const DovetailSettingsSchema = z.object({
+  generate_dovetails: z.boolean(),
+  show_dovetails: z.boolean(),
+  dovetail_inset: z.number(),
+  dovetail_cut_direction: z.string(),
+  dovetail_edge_default: z.number(),
+  dovetail_edge_overrides: z.string(),
+});
+
+export const PatternSettingsSchema = z.object({
+  slot_style: z.string(),
+  number_slots: z.number(),
+  bit_diameter: z.number(),
+  spacer: z.number(),
+  x_offset: z.number(),
+  y_offset: z.number(),
+  scale_center_point: z.number(),
+  amplitude_exponent: z.number(),
+  orientation: z.string(),
+  grain_angle: z.number(),
+  lead_overlap: z.number(),
+  lead_radius: z.number(),
+  dovetail_settings: DovetailSettingsSchema,
+});
+
+export const SizeDefaultsSchema = z.record(z.string(), z.object({
+  number_slots: z.number(),
+  separation: z.number(),
+}));
+
+export const AudioSourceSchema = z.object({
+  source_file: z.string().nullable(),
+  start_time: z.number(),
+  end_time: z.number(),
+  use_stems: z.boolean(),
+  stem_choice: z.string(),
+});
+
+export const AudioProcessingSchema = z.object({
+  num_raw_samples: z.number(),
+  filter_amount: z.number(),
+  apply_filter: z.boolean(),
+  binning_method: z.string(),
+  binning_mode: z.string(),
+  remove_silence: z.boolean(),
+  silence_threshold: z.number(),
+  silence_duration: z.number(),
+});
+
+export const PeakControlSchema = z.object({
+  method: z.string(),
+  threshold: z.number(),
+  roll_amount: z.number(),
+  nudge_enabled: z.boolean(),
+  clip_enabled: z.boolean(),
+  compress_enabled: z.boolean(),
+  scale_enabled: z.boolean(),
+  scale_all_enabled: z.boolean(),
+  manual_enabled: z.boolean(),
+  clip_percentage: z.number(),
+  compression_exponent: z.number(),
+  threshold_percentage: z.number(),
+  scale_all_percentage: z.number(),
+  manual_slot: z.number(),
+  manual_value: z.number(),
+});
+
+export const VisualCorrectionSchema = z.object({
+  apply_correction: z.boolean(),
+  correction_scale: z.number(),
+  correction_mode: z.string(),
+});
+
+export const DisplaySettingsSchema = z.object({
+  show_debug_circle: z.boolean(),
+  debug_circle_radius: z.number(),
+  show_labels: z.boolean(),
+  show_offsets: z.boolean(),
+});
+
+export const ExportSettingsSchema = z.object({
+  cnc_margin: z.number(),
+  sections_in_sheet: z.number(),
+});
+
+export const ColorPaletteSchema = z.object({
+  color_deep: z.array(z.number()),
+  color_mid: z.array(z.number()),
+  color_light: z.array(z.number()),
+  paper_color: z.array(z.number()),
+});
+
+export const WatercolorSettingsSchema = z.object({
+  wetness: z.number(),
+  pigment_load: z.number(),
+  paper_roughness: z.number(),
+  bleed_amount: z.number(),
+  granulation: z.number(),
+});
+
+export const OilSettingsSchema = z.object({
+  brush_size: z.number(),
+  impasto: z.number(),
+  brush_texture: z.number(),
+  color_mixing: z.number(),
+});
+
+export const InkSettingsSchema = z.object({
+  ink_flow: z.number(),
+  ink_density: z.number(),
+  edge_darkening: z.number(),
+  dryness: z.number(),
+});
+
+export const PhysicalSimulationSchema = z.object({
+  brush_pressure: z.number(),
+  paint_thickness: z.number(),
+  drying_time: z.number(),
+  medium_viscosity: z.number(),
+});
+
+export const NoiseSettingsSchema = z.object({
+  noise_scale: z.number(),
+  noise_octaves: z.number(),
+  noise_seed: z.number(),
+  flow_speed: z.number(),
+  flow_direction: z.number(),
+});
+
+export const ArtisticRenderingSchema = z.object({
+  artistic_style: z.string(),
+  color_palette: z.string(),
+  opacity: z.number(),
+  artistic_intensity: z.number(),
+  amplitude_effects: z.string(),
+  amplitude_influence: z.number(),
+  watercolor_settings: WatercolorSettingsSchema,
+  oil_settings: OilSettingsSchema,
+  ink_settings: InkSettingsSchema,
+  physical_simulation: PhysicalSimulationSchema,
+  noise_settings: NoiseSettingsSchema,
+  color_palettes: z.record(z.string(), ColorPaletteSchema),
+});
+
+export const CompositionStateDTOSchema = z.object({
+  frame_design: FrameDesignSchema,
+  pattern_settings: PatternSettingsSchema,
+  size_defaults: SizeDefaultsSchema.optional(), // Make optional to handle old stored states
+  audio_source: AudioSourceSchema,
+  audio_processing: AudioProcessingSchema,
+  peak_control: PeakControlSchema,
+  visual_correction: VisualCorrectionSchema,
+  display_settings: DisplaySettingsSchema,
+  export_settings: ExportSettingsSchema,
+  artistic_rendering: ArtisticRenderingSchema,
+  processed_amplitudes: z.array(z.number()),
+});
+
+export type CompositionStateDTO = z.infer<typeof CompositionStateDTOSchema>;
+
+export const CSGDataResponseSchema = z.object({
+  panel_config: z.object({
+    outer_radius: z.number(),
+    thickness: z.number(),
+    separation: z.number(),
+    number_sections: z.number(),
+    shape: z.string().optional(),
+  }),
+  slot_data: z.array(z.object({
+    vertices: z.array(z.array(z.number())).optional(),
+    x: z.number(),
+    z: z.number(),
+    angle: z.number(),
+    length: z.number(),
+    width: z.number().optional(),
+    panelIndex: z.number().optional(),
+  })),
+  section_edges: z.array(z.object({
+    section_index: z.number(),
+    edge1_start: z.array(z.number()),
+    edge1_end: z.array(z.number()),
+    edge2_start: z.array(z.number()),
+    edge2_end: z.array(z.number()),
+  })).optional(),
+});
+
+export type CSGDataResponse = z.infer<typeof CSGDataResponseSchema>;
+
+export const SmartCsgResponseSchema = z.object({
+  csg_data: CSGDataResponseSchema,
+  updated_state: CompositionStateDTOSchema,
+});
+
+export type SmartCsgResponse = z.infer<typeof SmartCsgResponseSchema>;
+
+export const AudioProcessResponseSchema = z.object({
+  updated_state: CompositionStateDTOSchema,
+  max_amplitude_local: z.number(),
+  raw_samples_for_cache: z.array(z.number()),
+});
+
+export type AudioProcessResponse = z.infer<typeof AudioProcessResponseSchema>;
+
+// Schema for tracking original audio data to prevent compound rescaling
+export const AudioDataSchema = z.object({
+  rawSamples: z.array(z.number()).nullable(),
+  previousMaxAmplitude: z.number().nullable(),
+  audioSessionId: z.string().nullable(),
+});
+
+export type AudioData = z.infer<typeof AudioDataSchema>;
+
+// The single, authoritative schema for the entire application state
+export const ApplicationStateSchema = z.object({
+  phase: z.enum(['upload', 'discovery', 'reveal', 'customization']),
+  composition: CompositionStateDTOSchema,
+  audio: AudioDataSchema, // New addition for smart processing
+  ui: z.object({
+    currentStyleIndex: z.number(),
+    isAutoPlaying: z.boolean(),
+    showHint: z.boolean(),
+    renderQuality: z.enum(['low', 'medium', 'high']),
+  }),
+  processing: z.object({
+    stage: z.enum(['idle', 'uploading', 'demucs', 'rendering']),
+    progress: z.number(),
+  }),
+});
+
+export type ApplicationState = z.infer<typeof ApplicationStateSchema>;

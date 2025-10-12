@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="WaveDesigner - Custom Soundwave Art">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>WaveDesigner</title>
+  <link rel="stylesheet" href="/public/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Upload Phase Container -->
+    <div id="uploadContainer" class="phase-container active"></div>
+    
+    <!-- Visualization Phase Container -->
+    <div id="visualizationContainer" class="phase-container">
+      <canvas id="renderCanvas"></canvas>
+      
+      <!-- Waveform Canvas Overlay -->
+      <canvas id="waveformCanvas" class="waveform-overlay" style="display: none;"></canvas>
+      
+      <!-- Carousel Container -->
+      <div id="carouselContainer" class="carousel-container">
+        <div class="carousel-dots"></div>
+      </div>
+    </div>
+    
+    <div id="ui-overlay">
+      <div class="ui-controls-top">
+        <button id="resetCameraButton" title="Reset Camera View">↺</button>
+      </div>
+      
+      <!-- New Parameter Controls -->
+      <div id="controls" class="ui-controls-panel">
+        <h3>Design Parameters</h3>
+        
+        <div class="control-group">
+          <label for="shape">Shape:</label>
+          <select id="shape" class="control-input">
+            <option value="circular">Circular</option>
+            <option value="rectangular">Rectangular</option>
+          </select>
+        </div>
+				
+				<div class="control-group">
+          <label for="woodSpecies">Wood Species:</label>
+          <select id="woodSpecies" class="control-input">
+            <option value="walnut-black-american">Walnut</option>
+            <option value="cherry-black">Cherry</option>
+            <option value="maple">Maple</option>
+            <option value="maple-birdseye">Maple (Birdseye)</option>
+            <option value="oak-white-american">Oak (White)</option>
+            <option value="oak-red-american">Oak (Red)</option>
+            <option value="mahogany-american">Mahogany</option>
+            <option value="alder-red">Alder</option>
+            <option value="bloodwood">Bloodwood</option>
+            <option value="bubinga">Bubinga</option>
+            <option value="cedar-western-red">Cedar</option>
+            <option value="padauk-african">Padauk</option>
+            <option value="pine-north-carolina">Pine</option>
+            <option value="wenge">Wenge</option>
+            <option value="zebrano">Zebrawood</option>
+          </select>
+        </div>
+        
+        <div class="control-group">
+          <label for="grainDirection">Grain Direction:</label>
+          <select id="grainDirection" class="control-input">
+            <option value="horizontal">Horizontal</option>
+            <option value="vertical">Vertical</option>
+            <option value="angled">Angled</option>
+          </select>
+        </div>
+        
+        <div id="sectionIndicator" class="control-group" style="display: none;">
+          <label>Selected Section:</label>
+          <span class="section-number">Section <span id="selectedSectionNumber">-</span></span>
+        </div>
+        
+        <div class="control-group">
+          <label for="sections">Sections:</label>
+          <select id="sections" class="control-input">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </div>
+        
+        <div class="control-group">
+          <label for="slots">Slots: <span id="slotsValue"></span></label>
+          <input type="range" id="slots" class="control-input" min="24" max="120" step="12">
+        </div>
+        
+        <div class="control-group">
+          <label for="size">Size:</label>
+          <select id="size" class="control-input">
+            <option value="24">24"</option>
+            <option value="36">36"</option>
+            <option value="48">48"</option>
+          </select>
+        </div>
+        
+        <div class="control-group">
+          <label for="separation">Gap: <span id="separationValue"></span>"</label>
+          <input type="range" id="separation" class="control-input" min="0.5" max="4.0" step="0.5">
+        </div>
+        
+        <button id="updateButton" class="update-button">Update Design</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Handle shape change to disable n=3 for rectangular
+    document.addEventListener('DOMContentLoaded', () => {
+      const shapeEl = document.getElementById('shape');
+      const sectionsEl = document.getElementById('sections');
+      
+      function updateSectionsForShape() {
+        if (!shapeEl || !sectionsEl) return;
+        
+        const shape = shapeEl.value;
+        const option3 = sectionsEl.querySelector('option[value="3"]');
+        
+        if (!option3) return;
+        
+        if (shape === 'rectangular') {
+          // Hide n=3 option entirely
+          option3.style.display = 'none';
+          option3.disabled = true;
+          
+          // If n=3 was selected, change to n=2
+          if (sectionsEl.value === '3') {
+            sectionsEl.value = '2';
+          }
+        } else {
+          // Show n=3 for circular
+          option3.style.display = '';
+          option3.disabled = false;
+        }
+      }
+      
+      // Run on shape change
+      if (shapeEl) {
+        shapeEl.addEventListener('change', updateSectionsForShape);
+      }
+      
+      // Run immediately
+      updateSectionsForShape();
+      
+      // Also run after a short delay in case main.ts modifies the DOM
+      setTimeout(updateSectionsForShape, 100);
+      setTimeout(updateSectionsForShape, 500);
+    });
+  </script>
+  </script>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

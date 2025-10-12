@@ -1,0 +1,7 @@
+# requirements/desktop.txt
+# Dependencies for the in-house PyQt desktop application.
+
+PyQt5==5.15.11
+PyQtWebEngine==5.15.7
+pygame==2.5.2
+Pillow==10.3.0

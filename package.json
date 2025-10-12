@@ -1,0 +1,36 @@
+{
+  "name": "wavedesigner-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --force",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint \"src/**/*.{ts,tsx,js,jsx}\" --cache --cache-location .eslintcache",
+    "lint:fix": "eslint \"src/**/*.{ts,tsx,js,jsx}\" --fix --cache",
+    "lint:watch": "chokidar \"src/**/*.{ts,tsx,js,jsx}\" -c \"npm run lint\" --initial",
+    "test": "node tests/eslint/no-this-assignment-except-private.test.cjs"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^7.32.0",
+    "@babylonjs/loaders": "^7.32.0",
+    "earcut": "^3.0.2",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "@typescript-eslint/eslint-plugin": "^7.1.0",
+    "@typescript-eslint/parser": "^7.1.0",
+    "chokidar-cli": "^3.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-import-resolver-typescript": "^3.6.1",
+    "eslint-plugin-boundaries": "^5.0.1",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-rulesdir": "^0.2.2",
+    "eslint-plugin-unused-imports": "^3.1.0",
+    "typescript": "^5.3.3",
+    "vite": "^7.1.5"
+  }
+}

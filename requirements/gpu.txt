@@ -1,0 +1,8 @@
+# requirements/gpu.txt
+# GPU-specific dependencies for Demucs processing.
+
+--extra-index-url https://download.pytorch.org/whl/cu121
+
+torch==2.4.1+cu121
+torchaudio==2.4.1+cu121
+demucs==4.0.1
