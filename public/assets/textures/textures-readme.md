@@ -17,21 +17,21 @@ This directory contains textures used by the SoundWave Art project.
 ## Available Wood Species
 
 The following wood species are available:
-- alder-red
-- bloodwood
-- bubinga
-- cedar-western-red
-- cherry-black
-- mahogany-american
-- maple
-- maple-birdseye
-- oak-red-american
-- oak-white-american
-- padauk-african
-- pine-north-carolina
-- walnut-black-american
-- wenge
-- zebrano
+- 079 - alder-red
+- 082 - bloodwood
+- 054 - bubinga
+- 083 - cedar-western-red
+- 085 - cherry-black
+- 095 - mahogany-american
+- 098 - maple
+- 097 - maple-birdseye
+- 099 - oak-red-american
+- 100 - oak-white-american
+- 069 - padauk-african
+- 102 - pine-north-carolina
+- 109 - walnut-black-american
+- 077 - wenge
+- 078 - zebrano
 
 ## Texture Maps
 
@@ -48,4 +48,3 @@ The visualization system references these textures through the `visualization/ma
 ```python
 # Example path to a wood texture
 "assets/textures/wood/maple/Varnished/Medium_99cm/Diffuse/wood-098_maple-varnished-300x099cm_d.png"
-```
