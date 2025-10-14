@@ -7,16 +7,16 @@ export async function fetchAndValidate<T>(
 ): Promise<T> {
   const response = await fetch(url, init);
   if (!response.ok) {
-    const errorBody = await response.text();
-    console.error(`Request failed: ${response.status} ${response.statusText}`, errorBody);
     throw new Error(`Request failed: ${response.status} ${response.statusText}`);
   }
 
-  const raw = await response.json() as unknown;
+  const raw = (await response.json()) as unknown;
   const parsed = schema.safeParse(raw);
 
   if (!parsed.success) {
-    console.error('Validation failed:', parsed.error.format());
+    console.error('Validation failed for:', url);
+    console.error('Error details:', JSON.stringify(parsed.error.format(), null, 2));
+    console.error('Received data:', raw);
     throw new Error('Response validation failed');
   }
 

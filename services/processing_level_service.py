@@ -38,6 +38,7 @@ class ProcessingLevelService:
         "amplitude_exponent": "geometry",
         "number_sections": "geometry",
         "separation": "geometry",
+        "processed_amplitudes": "geometry",
 
         # Audio Level (Requires full audio reprocessing)
         "number_slots": "audio",

@@ -48,23 +48,31 @@ export class ApplicationController {
    * Initialize the controller with default or restored state
    */
   async initialize(): Promise<void> {
-    // Fetch wood materials configuration first (foundational config)
     try {
-      this._woodMaterialsConfig = await fetchAndValidate(
-        '/api/config/wood-materials',
+      // Initialize facade (loads style presets)
+      await this._facade.initialize();
+      
+      // Load wood materials configuration
+      this._woodMaterialsConfig = await fetchAndValidate<WoodMaterialsConfig>(
+        'http://localhost:8000/api/config/wood-materials',
         WoodMaterialsConfigSchema
       );
       console.log('[Controller] Wood materials config loaded:', this._woodMaterialsConfig);
     } catch (error) {
-      console.error('[Controller] Failed to load wood materials config:', error);
+      console.error('[Controller] Failed to load configuration:', error);
       throw error;
-    }		
-    // Try to restore saved state first
+    }
+    
+    // Load fresh defaults first
+    const freshDefaults = await this._facade.createInitialState();
+    
+    // Try to restore saved state
     const restored = this._facade.loadPersistedState();
     
     if (restored && restored.audio.rawSamples && restored.audio.rawSamples.length > 0) {
-      // ONLY restore if we have the critical rawSamples data
-      this._state = restored;
+      // Deep merge: preserved user settings + new schema fields from defaults
+      this._state = this._facade.mergeStates(freshDefaults, restored);
+      
       // Re-cache the raw samples on load
       if (this._state.audio.audioSessionId) {
         this._audioCache.rehydrateCache(
@@ -72,13 +80,12 @@ export class ApplicationController {
           new Float32Array(this._state.audio.rawSamples)
         );
       }
-      await this.dispatch({ type: 'STATE_RESTORED', payload: restored });
+      await this.dispatch({ type: 'STATE_RESTORED', payload: this._state });
     } else {
       if (restored) {
         console.warn('[DEBUG] Restored state is invalid (missing rawSamples). Discarding and creating fresh state.');
       }
-      // Create fresh state from backend defaults
-      this._state = await this._facade.createInitialState();
+      this._state = freshDefaults;
     }
     
     this.notifySubscribers();
@@ -104,7 +111,7 @@ export class ApplicationController {
     
     // Special handling for file upload
     if (action.type === 'FILE_UPLOADED') {
-      await this.handleFileUpload(action.payload);
+      await this.handleFileUpload(action.payload.file, action.payload.uiSnapshot);
       return;
     }
     
@@ -144,8 +151,10 @@ export class ApplicationController {
   
   /**
    * Handle file upload with backend processing
+   * @param file - The uploaded audio file
+   * @param uiSnapshot - UI state captured by main.ts before dispatch
    */
-  private async handleFileUpload(file: File): Promise<void> {
+  private async handleFileUpload(file: File, uiSnapshot: CompositionStateDTO): Promise<void> {
     if (!this._state) return;
 
     // Update UI to show uploading
@@ -155,65 +164,53 @@ export class ApplicationController {
     });
 
     try {
-      // --- CRITICAL FIX: Force a complete state reset on new file upload ---
-      // This ensures no stale data from localStorage can corrupt the new session.
+      // Force a complete state reset on new file upload
       const freshState = await this._facade.createInitialState();
       this._state = freshState;
       
-      // Clear the audio cache entirely to prevent any possible cross-contamination.
+      // Clear the audio cache
       this._audioCache.clearAll();
 
-      // Process audio through facade using the guaranteed-clean state.
+      // Process audio through facade
       const audioResponse: AudioProcessResponse = await this._facade.processAudio(
         file,
-        this._state.composition // Use the newly created clean state
+        this._state.composition
       );
 
-      // CORRECTED: Cache the correct raw samples from the backend response
+      // Cache the raw samples
       const sessionId = this._audioCache.cacheRawSamples(
         file,
         new Float32Array(audioResponse.raw_samples_for_cache)
       );
       
-      // Dispatch a single action with the complete, validated result from the backend.
-      // This payload now matches what the FILE_PROCESSING_SUCCESS action expects.
+      // Dispatch the backend response (subscribers will sync UI to backend defaults)
       await this.dispatch({
         type: 'FILE_PROCESSING_SUCCESS',
         payload: {
           composition: audioResponse.updated_state,
           maxAmplitudeLocal: audioResponse.max_amplitude_local,
-          rawSamplesForCache: audioResponse.raw_samples_for_cache, // Pass raw samples to the reducer
+          rawSamplesForCache: audioResponse.raw_samples_for_cache,
           audioSessionId: sessionId,
         },
       });
 			
-			// CRITICAL: Force composition to match UI controls on audio load
-      const sectionsEl = document.getElementById('sections') as HTMLSelectElement;
-      const slotsEl = document.getElementById('slots') as HTMLInputElement;
-      const sizeEl = document.getElementById('size') as HTMLSelectElement;
+			// Compare user's pre-upload UI choices with backend defaults
+      const backendComp = audioResponse.updated_state;
+      const changedParams = this._detectChangedParams(backendComp, uiSnapshot);
       
-      if (sectionsEl || slotsEl || sizeEl) {
-        const uiComposition = { ...audioResponse.updated_state };
-        let needsUpdate = false;
+      if (changedParams.length > 0) {
+        // User changed UI before upload, use their values
+        await this.handleCompositionUpdate(uiSnapshot);
+      } else {
+        // UI matched defaults, trigger initial render
+        const response = await this._facade.getSmartCSGData(
+          audioResponse.updated_state,
+          [],
+          null
+        );
         
-        if (sectionsEl && parseInt(sectionsEl.value) !== audioResponse.updated_state.frame_design.number_sections) {
-          uiComposition.frame_design.number_sections = parseInt(sectionsEl.value, 10);
-          needsUpdate = true;
-        }
-        if (sizeEl && parseFloat(sizeEl.value) !== audioResponse.updated_state.frame_design.finish_x) {
-          const size = parseFloat(sizeEl.value);
-          uiComposition.frame_design.finish_x = size;
-          uiComposition.frame_design.finish_y = size;
-          needsUpdate = true;
-        }
-        if (slotsEl && parseInt(slotsEl.value) !== audioResponse.updated_state.pattern_settings.number_slots) {
-          uiComposition.pattern_settings.number_slots = parseInt(slotsEl.value, 10);
-          needsUpdate = true;
-        }
-        
-        // If UI differs from loaded state, update to match UI
-        if (needsUpdate) {
-          await this.handleCompositionUpdate(uiComposition);
+        if (this._sceneManager) {
+          await this._sceneManager.renderComposition(response);
         }
       }
     } catch (error: unknown) {
@@ -418,6 +415,23 @@ export class ApplicationController {
       }
     }
 
+    // CRITICAL: Ensure both dimensions match for circular shapes
+    // This prevents mismatch bugs from UI snapshot capture or state restoration
+    if (newComposition.frame_design.shape === 'circular') {
+      const size = newComposition.frame_design.finish_x;
+      if (newComposition.frame_design.finish_y !== size) {
+        console.warn(`[Controller] Correcting finish_y mismatch: ${newComposition.frame_design.finish_y} → ${size}`);
+        newComposition = {
+          ...newComposition,
+          frame_design: {
+            ...newComposition.frame_design,
+            finish_x: size,
+            finish_y: size,
+          },
+        };
+      }
+    }
+
     // 1. Detect what changed to determine the processing level.
     const changedParams = this._detectChangedParams(
       this._state.composition,
@@ -512,7 +526,7 @@ export class ApplicationController {
       
       // Now, trigger the render directly with the received CSG data.
       if (this._sceneManager) {
-        await this._sceneManager.renderComposition(response.csg_data);
+        await this._sceneManager.renderComposition(response);
       }
       
       // Finally, notify all other UI components that the state has changed.

@@ -3,6 +3,8 @@
  * Handles file upload with drag-and-drop, visual-first approach
  */
 
+import type { UIEngine } from './UIEngine';
+
 export interface UploadEvents {
   onFileSelected: (file: File) => void;
   onError?: (error: string) => void;
@@ -14,11 +16,19 @@ export class UploadInterface {
   private fileInput: HTMLInputElement | null = null;
   private isVisible: boolean = true;
   private callbacks: UploadEvents;
+  private uiEngine: UIEngine;
   
-  private readonly acceptedTypes = ['audio/mpeg', 'audio/wav', 'audio/flac', 'audio/mp3', 'audio/x-wav', 'audio/x-m4a'];
-  private readonly maxFileSize = 100 * 1024 * 1024; // 100MB
+  private acceptedTypes: string[] = [];
+  private acceptedExtensions: string[] = [];
+  private maxFileSize: number = 0;
+  private hintDelayMs: number = 3000;
+  private messages = {
+    invalid_type: '',
+    file_too_large: '',
+    drop_hint: ''
+  };
   
-  constructor(containerId: string, callbacks: UploadEvents) {
+  constructor(containerId: string, callbacks: UploadEvents, uiEngine: UIEngine) {
     const container = document.getElementById(containerId);
     if (!container) {
       throw new Error(`Container with id "${containerId}" not found`);
@@ -26,14 +36,28 @@ export class UploadInterface {
     
     this.container = container;
     this.callbacks = callbacks;
+    this.uiEngine = uiEngine;
+    
+    // Load config from UIEngine
+    const uploadConfig = this.uiEngine.getUploadConfig();
+    if (uploadConfig) {
+      this.acceptedTypes = uploadConfig.accepted_mime_types;
+      this.acceptedExtensions = uploadConfig.accepted_extensions;
+      this.maxFileSize = uploadConfig.max_file_size_mb * 1024 * 1024;
+      this.hintDelayMs = uploadConfig.hint_delay_ms;
+      this.messages = uploadConfig.messages;
+    }
     
     this.createUploadInterface();
     this.attachEventListeners();
   }
   
   private createUploadInterface(): void {
+    const dropZoneId = this.uiEngine.getUploadConfig()?.drop_zone_id || 'uploadDropZone';
+    const fileInputId = this.uiEngine.getUploadConfig()?.file_input_id || 'fileInput';
+    
     this.container.innerHTML = `
-      <div id="uploadDropZone" class="upload-zone">
+      <div id="${dropZoneId}" class="upload-zone">
         <div class="upload-visual">
           <svg class="upload-icon" viewBox="0 0 100 100" width="80" height="80">
             <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"/>
@@ -48,12 +72,12 @@ export class UploadInterface {
           </svg>
           <div class="pulse-ring"></div>
         </div>
-        <input type="file" id="fileInput" accept="audio/*" style="display: none;">
+        <input type="file" id="${fileInputId}" accept="audio/*" style="display: none;">
       </div>
     `;
     
-    this.dropZone = document.getElementById('uploadDropZone') as HTMLDivElement;
-    this.fileInput = document.getElementById('fileInput') as HTMLInputElement;
+    this.dropZone = this.uiEngine.getElement('uploadDropZone') as HTMLDivElement;
+    this.fileInput = this.uiEngine.getElement('fileInput') as HTMLInputElement;
   }
   
   private attachEventListeners(): void {

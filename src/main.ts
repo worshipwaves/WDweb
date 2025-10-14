@@ -23,6 +23,7 @@ import { FrameGenerationService } from './FrameGenerationService';
 import { type CSGDataResponse, type WoodMaterialsConfig } from './types/schemas';
 import { CompositionStateDTO } from './types/schemas';
 import { UploadInterface } from './UploadInterface';
+import { UIEngine } from './UIEngine';
 import { WaveformDesignerFacade } from './WaveformDesignerFacade';
 import { WoodMaterial } from './WoodMaterial';
 
@@ -32,20 +33,31 @@ import { WoodMaterial } from './WoodMaterial';
  * Uses angles from backend configuration (single source of truth).
  */
 function calculateGrainAngle(
-  direction: 'horizontal' | 'vertical' | 'angled',
+  direction: string,
   sectionId: number,
   numberSections: number,
   config: WoodMaterialsConfig
 ): number {
-  if (direction === 'horizontal') return 0;
-  if (direction === 'vertical') return 90;
+  const directionAngles = config.rendering_config.grain_direction_angles;
   
-  // Angled: use bifurcation angle from config
+  // Check if this direction has a direct angle mapping
+  if (direction in directionAngles) {
+    const angle = directionAngles[direction];
+    
+    // If the value is a number, use it directly
+    if (typeof angle === 'number') {
+      return angle;
+    }
+    
+    // If it's a string (like "use_section_positioning"), fall through
+  }
+  
+  // Use section positioning angles (for unmapped directions or special values)
   const anglesKey = String(numberSections);
   const angles = config.geometry_constants.section_positioning_angles[anglesKey];
   
-  if (!angles || !angles[sectionId]) {
-    console.warn(`[main.ts] No angle found for section ${sectionId} in ${numberSections}-section config`);
+  if (!angles || typeof angles[sectionId] !== 'number') {
+    console.warn(`[main.ts] No angle found for direction "${direction}", section ${sectionId}, n=${numberSections}`);
     return 0;
   }
   
@@ -232,8 +244,7 @@ class SceneManager {
     return this._renderQueue;
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
-  private async _renderCompositionInternal(csgData: CSGDataResponse): Promise<void> {
+  private _renderCompositionInternal(csgData: CSGDataResponse): void {
     console.log('[POC] SceneManager._renderCompositionInternal called');
     
     // Clean up old meshes
@@ -257,7 +268,7 @@ class SceneManager {
     try {
       // Get array of meshes from frame service
       const frameService = new FrameGenerationService(this._scene);
-      const meshes = frameService.createFrameMeshes(csgData);
+      const meshes = frameService.createFrameMeshes(csgData.csg_data);
       
       console.log(`[POC] SceneManager received ${meshes.length} meshes`);
 
@@ -288,7 +299,11 @@ class SceneManager {
     }
   }
 	
-	private setupSectionInteraction(): void {
+	public getSelectedSection(): number | null {
+    return this._selectedSectionIndex;
+  }
+  
+  private setupSectionInteraction(): void {
     console.log('[SceneManager] Setting up section interaction');
     
     this._canvas.addEventListener('pointerdown', (_evt) => {
@@ -392,7 +407,7 @@ class SceneManager {
     }
   }
 	
-	private applySectionMaterials(): void {
+	public applySectionMaterials(): void {
     if (!window.controller) {
       console.error('[SceneManager] Controller not available');
       return;
@@ -572,6 +587,10 @@ class SceneManager {
 document.addEventListener('DOMContentLoaded', () => {
   void (async () => {
     try {
+      // Initialize UIEngine first - loads config from backend
+      const uiEngine = new UIEngine();
+      await uiEngine.loadConfig();
+      
       // Create the facade and controller
       const facade = new WaveformDesignerFacade();
       const controller = new ApplicationController(facade);
@@ -580,285 +599,494 @@ document.addEventListener('DOMContentLoaded', () => {
       await controller.initialize();	
       
       // Create the scene manager
-      const sceneManager = SceneManager.create('renderCanvas', facade);		
-
-			// Populate UI controls with backend defaults
-      const initialState = controller.getState();
-      const sectionsEl = document.getElementById('sections') as HTMLSelectElement;
-      const slotsEl = document.getElementById('slots') as HTMLInputElement;
-      const sizeEl = document.getElementById('size') as HTMLSelectElement;
-      const separationEl = document.getElementById('separation') as HTMLInputElement;
-      
-      const shapeEl = document.getElementById('shape') as HTMLSelectElement;
-      
-      if (shapeEl) shapeEl.value = initialState.composition.frame_design.shape;
-      if (sectionsEl) sectionsEl.value = String(initialState.composition.frame_design.number_sections);
-      if (slotsEl) slotsEl.value = String(initialState.composition.pattern_settings.number_slots);
-      if (sizeEl) sizeEl.value = String(initialState.composition.frame_design.finish_x);
-      if (separationEl) separationEl.value = String(initialState.composition.frame_design.separation);
-			
-			if (sectionsEl) sectionsEl.value = String(initialState.composition.frame_design.number_sections);
-      if (slotsEl) slotsEl.value = String(initialState.composition.pattern_settings.number_slots);
-      if (sizeEl) sizeEl.value = String(initialState.composition.frame_design.finish_x);
-      if (separationEl) separationEl.value = String(initialState.composition.frame_design.separation);
-      
-      // Add event listeners to update value displays
-      if (slotsEl) {
-        const slotsValueEl = document.getElementById('slotsValue');
-        if (slotsValueEl) slotsValueEl.textContent = slotsEl.value;
-        slotsEl.addEventListener('input', () => {
-          if (slotsValueEl) slotsValueEl.textContent = slotsEl.value;
-        });
-      }
-      
-      if (separationEl) {
-        const sepValueEl = document.getElementById('separationValue');
-        if (sepValueEl) sepValueEl.textContent = separationEl.value;
-        separationEl.addEventListener('input', () => {
-          if (sepValueEl) sepValueEl.textContent = separationEl.value;
-        });
-      }
-      
-      // Register the scene manager with the controller so it can trigger renders
-      controller.registerSceneManager(sceneManager);			
-      
-      // Create upload interface
-      const uploadInterface = new UploadInterface('uploadContainer', {
-        onFileSelected: (file: File) => {
-          void controller.dispatch({ type: 'FILE_UPLOADED', payload: file });
-        },
-        onError: (error: string) => {
-          console.error('Upload error:', error);
-        }
-      });
-      
-      // Subscribe to state changes to update the UI.
-      controller.subscribe((state) => {
-        // Handle UI phase transitions
-        if (state.phase === 'discovery' || state.phase === 'customization') {
-          const uploadContainer = document.getElementById('uploadContainer');
-          const vizContainer = document.getElementById('visualizationContainer');
-          if (uploadContainer?.classList.contains('active')) {
-            uploadContainer.classList.remove('active');
-            vizContainer?.classList.add('active');
-            uploadInterface.hide();
-          }
-        }
-
-        // Force UI controls to sync with the current composition state
-        const sectionsEl = document.getElementById('sections') as HTMLSelectElement;
-        const slotsEl = document.getElementById('slots') as HTMLInputElement;
-        const sizeEl = document.getElementById('size') as HTMLSelectElement;
-        const separationEl = document.getElementById('separation') as HTMLInputElement;
-
-        if (sectionsEl) sectionsEl.value = String(state.composition.frame_design.number_sections);
-        if (slotsEl) slotsEl.value = String(state.composition.pattern_settings.number_slots);
-        if (sizeEl) sizeEl.value = String(state.composition.frame_design.finish_x);
-        if (separationEl) separationEl.value = String(state.composition.frame_design.separation);
-      });
-      
-      // Perform the initial render based on the default state
-      void (async () => {
-        const initialState = controller.getState();
-        const csgData = await facade.getSmartCSGData(
-          initialState.composition,
-          [], // No changed params on initial load
-          null
-        );
-        await sceneManager.renderComposition(csgData.csg_data);
-      })();
-			
-			// Add wood species change listener
-      const woodSpeciesControl = document.getElementById('woodSpecies') as HTMLSelectElement;
-      if (woodSpeciesControl && controller) {
-        woodSpeciesControl.addEventListener('change', () => {
-          const state = controller.getState();
-            const numSections = state.composition.frame_design.number_sections;
-            const selectedSection = controller.getSelectedSection();
-            const grainDirectionControl = document.getElementById('grainDirection') as HTMLSelectElement;
-            const grainDirection = grainDirectionControl ? 
-              grainDirectionControl.value as 'horizontal' | 'vertical' | 'angled' : 'vertical';
-            const species = woodSpeciesControl.value;
-            
-            // For n=1, always update section 0 regardless of selection
-            if (numSections === 1) {
-              controller.updateSectionMaterial(0, species, grainDirection);
-            } else if (selectedSection !== null && selectedSection >= 0) {
-              // Update specific selected section
-              controller.updateSectionMaterial(selectedSection, species, grainDirection);
-            } else {
-              // Update all sections
-              for (let i = 0; i < numSections; i++) {
-                controller.updateSectionMaterial(i, species, grainDirection);
-              }
-            }
-        });
-      }
-      
-      // Add grain direction change listener
-      const grainDirectionControl = document.getElementById('grainDirection') as HTMLSelectElement;
-      if (grainDirectionControl && controller) {
-        grainDirectionControl.addEventListener('change', () => {
-          const state = controller.getState();
-            const numSections = state.composition.frame_design.number_sections;
-            const selectedSection = controller.getSelectedSection();
-            const grainDirection = grainDirectionControl.value as 'horizontal' | 'vertical' | 'angled';
-            const speciesEl = document.getElementById('woodSpecies') as HTMLSelectElement;
-            const species = speciesEl ? speciesEl.value : 'walnut-black-american';
-            
-            // For n=1, always update section 0 regardless of selection
-            if (numSections === 1) {
-              controller.updateSectionMaterial(0, species, grainDirection);
-            } else if (selectedSection !== null && selectedSection >= 0) {
-              // Update specific selected section
-              controller.updateSectionMaterial(selectedSection, species, grainDirection);
-            } else {
-              // Update all sections
-              for (let i = 0; i < numSections; i++) {
-                controller.updateSectionMaterial(i, species, grainDirection);
-              }
-            }
-        });
-      }
-			
-      // Wire up UI controls
-      const updateButton = document.getElementById('updateButton');
-      if (updateButton) {
-        updateButton.addEventListener('click', () => {
-        if (!controller) return;
-        const currentState = controller.getState();
-        const newComposition = structuredClone(currentState.composition);
-
-        // Get values from UI controls
-        const shapeEl = document.getElementById('shape') as HTMLSelectElement;
-        const sectionsEl = document.getElementById('sections') as HTMLSelectElement;
-        const slotsEl = document.getElementById('slots') as HTMLInputElement;
-        const sizeEl = document.getElementById('size') as HTMLSelectElement;
-        const separationEl = document.getElementById('separation') as HTMLInputElement;
-
-        if (shapeEl) {
-          newComposition.frame_design.shape = shapeEl.value as 'circular' | 'rectangular';
-        }
-          if (sectionsEl) {
-            newComposition.frame_design.number_sections = parseInt(sectionsEl.value, 10);
-          }
-          if (slotsEl) {
-            newComposition.pattern_settings.number_slots = parseInt(slotsEl.value, 10);
-          }
-          if (sizeEl) {
-            const size = parseFloat(sizeEl.value);
-            newComposition.frame_design.finish_x = size;
-            newComposition.frame_design.finish_y = size;
-          }
-          if (separationEl) {
-            newComposition.frame_design.separation = parseFloat(separationEl.value);
-          }
-
-          // Delegate the entire update process to the controller's smart handler.
-          void controller.handleCompositionUpdate(newComposition);
-        });
-      }
-
-      // Add listeners to 'sections' and 'slots' controls to handle divisibility logic instantly
-      const sectionsControl = document.getElementById('sections') as HTMLSelectElement;
-      const slotsControl = document.getElementById('slots') as HTMLInputElement;
-
-      if (sectionsControl && slotsControl) {
-        sectionsControl.addEventListener('change', () => {
-          const numSections = parseInt(sectionsControl.value, 10);
-          const numSlots = parseInt(slotsControl.value, 10);
-
-          // Update slider step
-          slotsControl.step = String(numSections);
-
-          // Snap to nearest valid value
-          if (numSlots % numSections !== 0) {
-            slotsControl.value = String(Math.round(numSlots / numSections) * numSections);
-            // Update displayed value
-            const slotsValueEl = document.getElementById('slotsValue');
-            if (slotsValueEl) slotsValueEl.textContent = slotsControl.value;
-          }
-        });
-				
-				// Reset materials when section count changes
-        sectionsControl.addEventListener('change', () => {
-          if (!controller) return;
-          
-          const numSections = parseInt(sectionsControl.value, 10);
-          const state = controller.getState();
-          const materials = state.composition.frame_design.section_materials || [];
-          
-          // For n=1, hide section indicator and clear selection
-          const sectionIndicator = document.getElementById('sectionIndicator');
-          if (numSections === 1) {
-            controller.selectSection(-1);
-            if (sectionIndicator) sectionIndicator.style.display = 'none';
-          }
-          
-          // Check if all sections have the same species
-          const allSameSpecies = materials.length > 0 && 
-            materials.every(m => m.species === materials[0].species);
-          
-          if (!allSameSpecies) {
-            // Mixed materials or no materials - reset to default
-            const config = controller.getWoodMaterialsConfig();
-            
-            // Clear section selection
-            controller.selectSection(-1);
-            if (sectionIndicator) sectionIndicator.style.display = 'none';
-            
-            // Reset UI controls to defaults
-            const speciesEl = document.getElementById('woodSpecies') as HTMLSelectElement;
-            const grainEl = document.getElementById('grainDirection') as HTMLSelectElement;
-            if (speciesEl) speciesEl.value = config.default_species;
-            if (grainEl) grainEl.value = config.default_grain_direction;
-          }
-          // If all same species, materials are preserved in the composition update
-        });
-        
-        // Set initial step value based on current sections
-        const initialSections = parseInt(sectionsControl.value, 10);
-        slotsControl.step = String(initialSections);
-      }
-
-      // Add listener to 'size' control to apply smart defaults instantly to other controls
-      const sizeControl = document.getElementById('size') as HTMLSelectElement;
-      const separationControl = document.getElementById('separation') as HTMLInputElement;
-
-      if (sizeControl && slotsControl && separationControl && controller) {
-        sizeControl.addEventListener('change', () => {
-          const newSize = sizeControl.value;
-          const defaults = controller.getState().composition.size_defaults?.[newSize];
-          
-          if (defaults) {
-            slotsControl.value = String(defaults.number_slots);
-            separationControl.value = String(defaults.separation);
-            
-            // Update displayed value
-            const slotsValueEl = document.getElementById('slotsValue');
-            if (slotsValueEl) slotsValueEl.textContent = String(defaults.number_slots);
-            const sepValueEl = document.getElementById('separationValue');
-            if (sepValueEl) sepValueEl.textContent = String(defaults.separation);
-
-            // Also ensure the new slot number is valid for the current number of sections
-            const numSections = parseInt(sectionsControl.value, 10);
-            if (defaults.number_slots % numSections !== 0) {
-                slotsControl.value = String(Math.round(defaults.number_slots / numSections) * numSections);
-                if (slotsValueEl) slotsValueEl.textContent = slotsControl.value;
-            }
-          }
-        });
-        
-        // Trigger once on load to apply initial defaults
-        sizeControl.dispatchEvent(new Event('change'));
-      }
-      
-      // Expose globally for testing
+      const sceneManager = SceneManager.create('renderCanvas', facade);
       window.sceneManager = sceneManager;
-      window.controller = controller;
+      
+      // Register scene manager with controller
+      controller.registerSceneManager(sceneManager);
+      
+      // Generic UI initialization
+      await initializeUI(uiEngine, controller, sceneManager);
+      
+      // Trigger initial render if composition has amplitudes
+      const initialState = controller.getState();
+      if (initialState.composition.processed_amplitudes.length > 0) {
+        const response = await fetch('http://localhost:8000/geometry/csg-data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            state: initialState.composition,
+            changed_params: [],
+            previous_max_amplitude: null
+          })
+        });
+        
+        if (response.ok) {
+          const csgData = await response.json() as CSGDataResponse;
+          await sceneManager.renderComposition(csgData);
+        } else {
+          console.error('[main.ts] Failed to fetch CSG data:', response.status, await response.text());
+        }
+      }
       
     } catch (error) {
-      console.error('Failed to initialize application:', error);
+      console.error('Initialization error:', error);
     }
   })();
 });
+
+/**
+ * Generic UI initialization - no hardcoded element references
+ */
+async function initializeUI(
+  uiEngine: UIEngine, 
+  controller: ApplicationController,
+  sceneManager: ReturnType<typeof SceneManager.create>
+): Promise<void> {
+  const initialState = controller.getState();
+  
+  // 1. Set up dynamic options first (wood species from endpoint)
+  await setupDynamicOptions(uiEngine);
+  
+  // 2. Then populate all UI elements from composition state
+  syncUIFromState(uiEngine, initialState.composition);
+  
+  // 3. Bind all element change listeners generically
+  bindElementListeners(uiEngine, controller, sceneManager);
+  
+  // 4. Bind update button
+  bindUpdateButton(uiEngine, controller, sceneManager);
+  
+  // 5. Bind camera reset button
+  bindCameraResetButton(sceneManager);
+  
+  // 6. Bind new file upload button
+  bindNewFileButton(controller);
+  
+  // 7. Setup upload interface
+  setupUploadInterface(uiEngine, controller);
+  
+  // 8. Subscribe to state changes (only sync UI on phase transitions, not every change)
+  controller.subscribe((state) => {
+    handlePhaseTransition(uiEngine, state, controller);
+  });
+  
+  // 9. Initial phase transition (only if restoring non-upload phase)
+  if (initialState.phase !== 'upload') {
+    handlePhaseTransition(uiEngine, initialState, controller);
+  }
+  
+  // 10. Initial conditional logic (like disabling n=3 for rectangular)
+  updateConditionalUI(uiEngine, initialState.composition);
+}
+
+/**
+ * Sync all UI elements from composition state
+ */
+function syncUIFromState(uiEngine: UIEngine, composition: CompositionStateDTO): void {
+  const elementKeys = uiEngine.getElementKeys();
+  
+  elementKeys.forEach(key => {
+    const config = uiEngine.getElementConfig(key);
+    if (!config) return;
+    
+    const value = uiEngine.getStateValue(composition, config.state_path);
+    if (value !== null && value !== undefined) {
+      const typedValue: string | number = typeof value === 'number' ? value : String(value);
+      uiEngine.writeElementValue(key, typedValue);
+    }
+  });
+}
+
+/**
+ * Setup dynamic options from endpoints (e.g., wood species)
+ */
+async function setupDynamicOptions(uiEngine: UIEngine): Promise<void> {
+  const elementKeys = uiEngine.getElementKeys();
+  
+  for (const key of elementKeys) {
+    const config = uiEngine.getElementConfig(key);
+    if (!config) continue;
+    
+    const element = uiEngine.getElement(key) as HTMLSelectElement;
+    if (!element) continue;
+    
+    // Handle dynamic options from endpoint
+    if (config.options_from_endpoint) {
+      const options = await uiEngine.loadDynamicOptions(key);
+      if (options.length > 0) {
+        element.innerHTML = '';
+        options.forEach(opt => {
+          const optionEl = document.createElement('option');
+          optionEl.value = String(opt.value);
+          optionEl.textContent = opt.label;
+          element.appendChild(optionEl);
+        });
+      }
+    }
+    // Handle static options from config
+    else if (config.options && element.tagName === 'SELECT') {
+      element.innerHTML = '';
+      config.options.forEach(opt => {
+        const optionEl = document.createElement('option');
+        optionEl.value = String(opt.value);
+        optionEl.textContent = opt.label;
+        element.appendChild(optionEl);
+      });
+    }
+  }
+}
+
+/**
+ * Capture current UI state generically using UIEngine
+ */
+function captureUISnapshot(uiEngine: UIEngine, baseComposition: CompositionStateDTO): CompositionStateDTO {
+  // Deep clone to avoid mutations
+  const composition = JSON.parse(JSON.stringify(baseComposition)) as CompositionStateDTO;
+  const elementKeys = uiEngine.getElementKeys();
+  
+  for (const key of elementKeys) {
+    const config = uiEngine.getElementConfig(key);
+    if (!config) continue;
+    
+    let value = uiEngine.readElementValue(key);
+    if (value === null || value === undefined) continue;
+    
+    // CRITICAL: Convert strings to numbers for numeric fields
+    if (config.type === 'select' && typeof value === 'string') {
+      const numValue = parseFloat(value);
+      if (!isNaN(numValue)) {
+        value = numValue;
+      }
+    }
+    
+    // Special handling for size - sets both finish_x AND finish_y
+    if (key === 'size') {
+      composition.frame_design.finish_x = value as number;
+      composition.frame_design.finish_y = value as number;
+    } else {
+      // UIEngine.setStateValue returns updated composition
+      const updated = uiEngine.setStateValue(composition, config.state_path, value);
+      Object.assign(composition, updated);
+    }
+  }
+  
+  return composition;
+}
+
+/**
+ * Bind change listeners to all elements generically
+ */
+function bindElementListeners(uiEngine: UIEngine, controller: ApplicationController, _sceneManager: SceneManager): void {
+  const elementKeys = uiEngine.getElementKeys();
+  
+  elementKeys.forEach(key => {
+    const element = uiEngine.getElement(key);
+    const config = uiEngine.getElementConfig(key);
+    
+    if (!element || !config) return;
+    
+    // Handle range inputs - update display value
+    if (config.type === 'range' && config.display_value_id) {
+      const inputEl = element as HTMLInputElement;
+      const displayEl = document.getElementById(config.display_value_id);
+      
+      if (displayEl) {
+        displayEl.textContent = inputEl.value;
+        inputEl.addEventListener('input', () => {
+          displayEl.textContent = inputEl.value;
+        });
+      }
+    }
+    
+    // Generic behavior: sections updates slots step and validates
+    if (key === 'sections') {
+      element.addEventListener('change', () => {
+        const sections = parseInt((element as HTMLSelectElement).value);
+        uiEngine.updateSlotsStep(sections);
+        
+        const slotsEl = uiEngine.getElement('slots') as HTMLInputElement;
+        if (slotsEl) {
+          const currentSlots = parseInt(slotsEl.value);
+          const validSlots = uiEngine.validateSlotsDivisibility(currentSlots, sections);
+          if (validSlots !== currentSlots) {
+            slotsEl.value = String(validSlots);
+            const displayEl = document.getElementById('slotsValue');
+            if (displayEl) displayEl.textContent = String(validSlots);
+          }
+        }
+        
+        // Trigger conditional UI update
+        const currentState = controller.getState();
+        updateConditionalUI(uiEngine, currentState.composition);
+      });
+    }
+    
+    // Generic behavior: shape updates conditional options
+    if (key === 'shape') {
+      element.addEventListener('change', () => {
+        const currentState = controller.getState();
+        updateConditionalUI(uiEngine, currentState.composition);
+      });
+    }
+    
+    // Generic behavior: handle on_change_triggers if configured
+    if (config.on_change_triggers) {
+      element.addEventListener('change', () => {
+        const value = uiEngine.readElementValue(key);
+        const currentState = controller.getState();
+        uiEngine.handleOnChangeTriggers(key, value, currentState.composition);
+      });
+    }
+    
+    // Generic on_change handlers from config
+    if (config.on_change) {
+      console.log(`[bindElementListeners] Binding on_change handler for: ${key}`, config.on_change);
+      element.addEventListener('change', () => {
+        console.log(`[bindElementListeners] on_change triggered for: ${key}`);
+        handleOnChangeAction(config.on_change!, uiEngine, controller);
+      });
+    }
+  });
+}
+
+/**
+ * Bind update button to collect all values and submit
+ */
+function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController, _sceneManager: SceneManager): void {
+  const updateButton = uiEngine.getElement('updateDesign');
+  if (!updateButton) return;
+  
+  updateButton.addEventListener('click', () => {
+    void (async () => {
+      const currentState = controller.getState();
+      const newComposition: CompositionStateDTO = JSON.parse(JSON.stringify(currentState.composition)) as CompositionStateDTO;
+      
+      // Read all element values and update composition (skip empty/invalid values)
+      const elementKeys = uiEngine.getElementKeys();
+      elementKeys.forEach(key => {
+        const config = uiEngine.getElementConfig(key);
+        if (!config) return;
+        
+        const value = uiEngine.readElementValue(key);
+        
+        // Skip null, undefined, or empty string values
+        if (value === null || value === undefined || value === '') return;
+        
+        // Convert to appropriate type
+        let typedValue: string | number = value;
+        if (config.type === 'select' && typeof value === 'string') {
+          const numValue = parseFloat(value);
+          if (!isNaN(numValue)) {
+            typedValue = numValue;
+          }
+        }
+        
+        const updated: CompositionStateDTO = uiEngine.setStateValue(newComposition, config.state_path, typedValue) as CompositionStateDTO;
+        Object.assign(newComposition, updated);
+      });
+      
+      // Validate slots divisibility
+      const slots = newComposition.pattern_settings.number_slots;
+      const sections = newComposition.frame_design.number_sections;
+      const validSlots = uiEngine.validateSlotsDivisibility(slots, sections);
+      
+      if (validSlots !== slots) {
+        newComposition.pattern_settings.number_slots = validSlots;
+        // Update UI
+        const slotsEl = uiEngine.getElement('slots') as HTMLInputElement;
+        if (slotsEl) {
+          slotsEl.value = String(validSlots);
+          const displayEl = document.getElementById('slotsValue');
+          if (displayEl) displayEl.textContent = String(validSlots);
+        }
+      }
+      
+      // Submit to controller and re-render scene
+      await controller.handleCompositionUpdate(newComposition);
+    })();
+  });
+}
+
+/**
+ * Bind camera reset button
+ */
+function bindCameraResetButton(
+  sceneManager: ReturnType<typeof SceneManager.create>
+): void {
+  const resetButton = document.getElementById('resetCameraButton');
+  if (!resetButton) return;
+  
+  resetButton.addEventListener('click', () => {
+    sceneManager.resetCamera();
+  });
+}
+
+/**
+ * Bind new file upload button
+ */
+function bindNewFileButton(controller: ApplicationController): void {
+  const newFileButton = document.getElementById('newFileButton');
+  if (!newFileButton) return;
+  
+  newFileButton.addEventListener('click', () => {
+    // Show confirmation dialog
+    const confirmed = confirm(
+      'Upload a new audio file?\n\n' +
+      'This will clear your current design and return to the upload screen.'
+    );
+    
+    if (confirmed) {
+      // Clear localStorage
+      localStorage.removeItem('wavedesigner_session');
+      
+      // Reload page to reset to initial state
+      window.location.reload();
+    }
+  });
+}
+
+/**
+ * Setup upload interface
+ */
+function setupUploadInterface(uiEngine: UIEngine, controller: ApplicationController): void {
+  const uploadConfig = uiEngine.getUploadConfig();
+  if (!uploadConfig) return;
+  
+  // Create upload interface (stored but not used directly)
+  new UploadInterface(uploadConfig.container_id, {
+    onFileSelected: (file: File) => {
+      // Capture UI snapshot before upload (respects user's pre-upload choices)
+      const currentState = controller.getState();
+      const uiComposition = captureUISnapshot(uiEngine, currentState.composition);
+      
+      void controller.dispatch({ 
+        type: 'FILE_UPLOADED', 
+        payload: { file, uiSnapshot: uiComposition }
+      });
+    },
+    onError: (error: string) => {
+      console.error('Upload error:', error);
+    }
+  }, uiEngine);
+}
+
+/**
+ * Update conditional UI (e.g., disable n=3 for rectangular)
+ */
+function updateConditionalUI(uiEngine: UIEngine, composition: CompositionStateDTO): void {
+  const currentState: Record<string, string | number> = {
+    shape: composition.frame_design.shape,
+    sections: composition.frame_design.number_sections,
+  };
+  
+  uiEngine.updateConditionalOptions(currentState);
+}
+
+/**
+ * Handle phase transitions (upload → visualization)
+ */
+function handlePhaseTransition(
+  uiEngine: UIEngine,
+  state: ApplicationState,
+  _controller: ApplicationController
+): void {
+  const uploadConfig = uiEngine.getUploadConfig();
+  if (!uploadConfig) return;
+  
+  const uploadContainer = document.getElementById(uploadConfig.container_id);
+  const visualizationContainer = document.getElementById('visualizationContainer');
+  
+  if (!uploadContainer || !visualizationContainer) return;
+  
+  const { phase } = state;
+  if (phase === 'upload') {
+    uploadContainer.classList.add('active');
+    visualizationContainer.classList.remove('active');
+  } else if (phase === 'discovery' || phase === 'customization') {
+    uploadContainer.classList.remove('active');
+    visualizationContainer.classList.add('active');
+  }
+}
+
+/**
+ * Handle generic on_change actions from config
+ */
+function handleOnChangeAction(
+  onChangeConfig: { action: string; requires?: string[] },
+  uiEngine: UIEngine,
+  controller: ApplicationController
+): void {
+  console.log(`[handleOnChangeAction] Called with action: ${onChangeConfig.action}`);
+  
+  switch (onChangeConfig.action) {
+    case 'update_section_materials':
+      console.log('[handleOnChangeAction] Entering update_section_materials case');
+      // SceneManager may not be available during initial setup - this is expected
+      if (!window.sceneManager) {
+        console.log('[handleOnChangeAction] SceneManager not available, returning');
+        return;
+      }
+      console.log('[handleOnChangeAction] Calling handleUpdateSectionMaterials');
+      handleUpdateSectionMaterials(onChangeConfig, uiEngine, controller, window.sceneManager);
+      break;
+    default:
+      console.warn(`[main.ts] Unknown on_change action: ${onChangeConfig.action}`);
+  }
+}
+
+/**
+ * Handle update_section_materials action (wood species/grain changes)
+ */
+function handleUpdateSectionMaterials(
+  onChangeConfig: { action: string; requires?: string[] },
+  uiEngine: UIEngine,
+  controller: ApplicationController,
+  sceneManager: ReturnType<typeof SceneManager.create>
+): void {
+  console.log('[handleUpdateSectionMaterials] CALLED');
+  
+  if (!onChangeConfig.requires || onChangeConfig.requires.length < 2) {
+    console.warn('[handleUpdateSectionMaterials] Missing required parameters');
+    return;
+  }
+  
+  // Get required element values from config
+  const values: Record<string, string> = {};
+  for (const key of onChangeConfig.requires) {
+    const element = uiEngine.getElement(key);
+    if (!element) {
+      console.warn(`[handleUpdateSectionMaterials] Element not found: ${key}`);
+      return;
+    }
+    values[key] = (element as HTMLSelectElement).value;
+  }
+  
+  // Use the first two required params as species and grain (order from config)
+  const [speciesKey, grainKey] = onChangeConfig.requires;
+  const species = values[speciesKey];
+  const grain = values[grainKey];
+  
+  if (!species || !grain) {
+    console.warn('[handleUpdateSectionMaterials] Missing values:', { species, grain });
+    return;
+  }
+  
+  const currentState = controller.getState();
+  const numSections = currentState.composition.frame_design.number_sections;
+  const selectedSection = sceneManager.getSelectedSection();
+  
+  console.log(`[handleUpdateSectionMaterials] Selected section: ${selectedSection}, numSections: ${numSections}, species: ${species}, grain: ${grain}`);
+  
+  if (numSections === 1) {
+    console.log('[handleUpdateSectionMaterials] Updating section 0 only (n=1)');
+    controller.updateSectionMaterial(0, species, grain);
+  } else if (selectedSection !== null && selectedSection >= 0) {
+    console.log(`[handleUpdateSectionMaterials] Updating ONLY selected section ${selectedSection}`);
+    controller.updateSectionMaterial(selectedSection, species, grain);
+  } else {
+    // When n>1 and no section selected, default to section 0 only
+    console.log(`[handleUpdateSectionMaterials] No selection - defaulting to section 0`);
+    controller.updateSectionMaterial(0, species, grain);
+  }
+}

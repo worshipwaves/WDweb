@@ -31,6 +31,15 @@
       <div class="ui-controls-top">
         <button id="resetCameraButton" title="Reset Camera View">↺</button>
       </div>
+			<div class="ui-controls-top-left">
+				<button id="newFileButton" title="Upload New File">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+						<polyline points="17 8 12 3 7 8"></polyline>
+						<line x1="12" y1="3" x2="12" y2="15"></line>
+					</svg>
+				</button>
+			</div>			
       
       <!-- New Parameter Controls -->
       <div id="controls" class="ui-controls-panel">
@@ -47,30 +56,14 @@
 				<div class="control-group">
           <label for="woodSpecies">Wood Species:</label>
           <select id="woodSpecies" class="control-input">
-            <option value="walnut-black-american">Walnut</option>
-            <option value="cherry-black">Cherry</option>
-            <option value="maple">Maple</option>
-            <option value="maple-birdseye">Maple (Birdseye)</option>
-            <option value="oak-white-american">Oak (White)</option>
-            <option value="oak-red-american">Oak (Red)</option>
-            <option value="mahogany-american">Mahogany</option>
-            <option value="alder-red">Alder</option>
-            <option value="bloodwood">Bloodwood</option>
-            <option value="bubinga">Bubinga</option>
-            <option value="cedar-western-red">Cedar</option>
-            <option value="padauk-african">Padauk</option>
-            <option value="pine-north-carolina">Pine</option>
-            <option value="wenge">Wenge</option>
-            <option value="zebrano">Zebrawood</option>
+            <!-- Options loaded dynamically from /api/config/wood-materials -->
           </select>
         </div>
         
         <div class="control-group">
           <label for="grainDirection">Grain Direction:</label>
           <select id="grainDirection" class="control-input">
-            <option value="horizontal">Horizontal</option>
-            <option value="vertical">Vertical</option>
-            <option value="angled">Angled</option>
+            <!-- Options loaded from config -->
           </select>
         </div>
         
@@ -82,10 +75,7 @@
         <div class="control-group">
           <label for="sections">Sections:</label>
           <select id="sections" class="control-input">
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
+            <!-- Options loaded from config -->
           </select>
         </div>
         
@@ -97,9 +87,7 @@
         <div class="control-group">
           <label for="size">Size:</label>
           <select id="size" class="control-input">
-            <option value="24">24"</option>
-            <option value="36">36"</option>
-            <option value="48">48"</option>
+            <!-- Options loaded from config -->
           </select>
         </div>
         

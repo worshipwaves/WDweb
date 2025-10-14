@@ -29,14 +29,25 @@ export const WoodMaterialsConfigSchema = z.object({
     base_texture_path: z.string()
   }),
   rendering_config: z.object({
-    grain_rotation_offset_degrees: z.number()
+    grain_rotation_offset_degrees: z.number(),
+    grain_direction_angles: z.record(z.string(), z.union([z.number(), z.string()]))
   }),
   geometry_constants: z.object({
-    section_positioning_angles: z.record(z.string(), z.array(z.number()))
+    section_positioning_angles: z.record(z.string(), z.array(z.number())),
+    section_rotation_offsets: z.record(z.string(), z.array(z.number()))
   })
 }).strict();
 
 export type WoodMaterialsConfig = z.infer<typeof WoodMaterialsConfigSchema>;
+
+export const StylePresetSchema = z.object({
+  id: z.string(),
+  sections: z.number().int().min(1).max(4),
+  slots: z.number().int().min(24),
+  name: z.string()
+}).strict();
+
+export type StylePreset = z.infer<typeof StylePresetSchema>;
 
 export const FrameDesignSchema = z.object({
   shape: z.string(),

@@ -14,21 +14,23 @@
  * All state management, backend calls, and business logic go through here.
  */
 
-import {
+import { 
   CompositionStateDTOSchema,
-  ApplicationStateSchema,
+  AudioProcessResponseSchema,
   SmartCsgResponseSchema,
-  AudioProcessResponseSchema, // Add the missing schema import
-  CompositionStateDTO,
-  type ApplicationState,
+  StylePresetSchema,
+  ApplicationStateSchema,
+  type CompositionStateDTO,
+  type AudioProcessResponse,
   type SmartCsgResponse,
-  type AudioProcessResponse, // Add the corresponding type import
+  type StylePreset,
+  type ApplicationState
 } from './types/schemas';
 import { fetchAndValidate, parseStoredData } from './utils/validation';
 
 // Action types for state updates
 export type Action =
-  | { type: 'FILE_UPLOADED'; payload: File }
+  | { type: 'FILE_UPLOADED'; payload: { file: File; uiSnapshot: CompositionStateDTO } }
   | { type: 'STYLE_SELECTED'; payload: number }             // user selection
   | { type: 'STYLE_ADVANCE'; payload: number }              // autoplay (programmatic)
   | { type: 'AUTOPLAY_TOGGLED'; payload: boolean }
@@ -50,7 +52,41 @@ export type Action =
 	
 
 export class WaveformDesignerFacade {
-  private readonly apiBase = 'http://localhost:8000';
+	private readonly apiBase = 'http://localhost:8000';
+  private _stylePresets: StylePreset[] = [];
+  
+  /**
+   * Initialize facade by loading style presets from backend config
+   */
+  async initialize(): Promise<void> {
+    const response = await fetch(`${this.apiBase}/api/config/default-parameters`);
+    if (!response.ok) {
+      throw new Error('Failed to load default parameters');
+    }
+    
+    const data = await response.json() as unknown;
+    
+    // Validate structure
+    if (typeof data !== 'object' || data === null || !('style_presets' in data)) {
+      throw new Error('Invalid config structure: missing style_presets');
+    }
+    
+    const config = data as { style_presets: unknown };
+    
+    // Validate each preset
+    if (!Array.isArray(config.style_presets)) {
+      throw new Error('style_presets must be an array');
+    }
+    
+    this._stylePresets = config.style_presets.map((preset: unknown) => {
+      const result = StylePresetSchema.safeParse(preset);
+      if (!result.success) {
+        console.error('Invalid style preset:', result.error.format());
+        throw new Error('Style preset validation failed');
+      }
+      return result.data;
+    });
+  }
   
   /**
    * Process uploaded audio file through backend
@@ -269,6 +305,38 @@ export class WaveformDesignerFacade {
     return parseStoredData(stored, ApplicationStateSchema);
   }
 	
+	/**
+   * Deep merge persisted state onto fresh defaults
+   * Preserves user customizations while adding new schema fields
+   */
+  mergeStates(freshDefaults: ApplicationState, persisted: ApplicationState): ApplicationState {
+    const merge = (target: any, source: any): any => {
+      if (!source || typeof source !== 'object' || Array.isArray(source)) {
+        return source;
+      }
+      
+      if (!target || typeof target !== 'object' || Array.isArray(target)) {
+        return source;
+      }
+      
+      const result: any = { ...target };
+      
+      for (const key in source) {
+        if (source.hasOwnProperty(key)) {
+          if (typeof source[key] === 'object' && source[key] !== null && !Array.isArray(source[key])) {
+            result[key] = merge(target[key], source[key]);
+          } else {
+            result[key] = source[key];
+          }
+        }
+      }
+      
+      return result;
+    };
+    
+    return merge(freshDefaults, persisted);
+  }
+	
   /**
    * TypeScript port of the backend's core geometry calculation.
    * This allows the frontend to stay in sync with max_amplitude_local
@@ -333,14 +401,9 @@ export class WaveformDesignerFacade {
   }	
   
   /**
-   * Get available style options
+   * Get available style options from configuration
    */
-  getStyleOptions(): Array<{ id: string; sections: number; slots: number; name: string }> {
-    return [
-      { id: 'n1', sections: 1, slots: 48, name: 'Circular' },
-      { id: 'n2', sections: 2, slots: 48, name: 'Split' },
-      { id: 'n3', sections: 3, slots: 72, name: 'Trinity' },
-      { id: 'n4', sections: 4, slots: 96, name: 'Quad' }
-    ];
+  getStyleOptions(): StylePreset[] {
+    return this._stylePresets;
   }
 }

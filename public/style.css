@@ -77,6 +77,38 @@ html, body {
   background-color: rgba(255, 255, 255, 0.2);
 }
 
+/* New File Upload Button */
+.ui-controls-top-left {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  pointer-events: auto;
+}
+
+#newFileButton {
+  background-color: rgba(59, 130, 246, 0.7);
+  color: white;
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+#newFileButton:hover {
+  background-color: rgba(59, 130, 246, 0.9);
+  transform: scale(1.1);
+}
+
+#newFileButton svg {
+  width: 20px;
+  height: 20px;
+}
+
 /* Parameter Controls Panel */
 .ui-controls-panel {
   position: absolute;

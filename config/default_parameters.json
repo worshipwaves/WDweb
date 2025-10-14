@@ -8,7 +8,13 @@
     "number_sections": 2,
     "separation": 2.0,
     "species": "maple",
-    "material_thickness": 0.375
+    "material_thickness": 0.375,
+    "section_materials": [
+      {"section_id": 0, "species": "walnut-black-american", "grain_direction": "vertical"},
+      {"section_id": 1, "species": "walnut-black-american", "grain_direction": "vertical"},
+      {"section_id": 2, "species": "walnut-black-american", "grain_direction": "vertical"},
+      {"section_id": 3, "species": "walnut-black-american", "grain_direction": "vertical"}
+    ]
   },
   "pattern_settings": {
     "slot_style": "radial",
@@ -194,7 +200,12 @@
       "base_texture_path": "/assets/textures/wood"
     },
     "rendering_config": {
-      "grain_rotation_offset_degrees": 0.0
+      "grain_rotation_offset_degrees": 0.0,
+      "grain_direction_angles": {
+        "horizontal": 0,
+        "vertical": 90,
+        "angled": "use_section_positioning"
+      }
     },
     "geometry_constants": {
       "section_positioning_angles": {
@@ -202,21 +213,142 @@
         "2": [0, 180],
         "3": [90, 330, 210],
         "4": [45, 135, 225, 315]
+      },
+      "section_rotation_offsets": {
+        "2": [0, 180],
+        "3": [60, 300, 180],
+        "4": [0, 270, 180, 90]
       }
     }
   },
-  "processed_amplitudes": [
-    7.377289171659599, 7.175424104907904, 7.947381906287243, 6.309899084196261,
-    8.509554991123261, 3.9179934089313417, 3.4016715257059422, 4.1676797973281925,
-    6.733006274970626, 5.522907515672512, 5.435391156287806, 7.214751572348543,
-    4.464005605652318, 7.065628727838287, 6.339390427205711, 6.627919203783868,
-    7.937200634764569, 7.926042960285718, 4.130148457186006, 1.6084991234673234,
-    8.541931831938664, 8.997024734669823, 7.006368448188243, 6.161957006051612,
-    4.367885546730526, 6.456220446968886, 6.496028168421691, 6.75012511656738,
-    6.142357419734808, 7.305315784914471, 7.2970509880313585, 4.226254040366297,
-    3.853560748156187, 6.343382893479419, 5.511899707693911, 4.063604608856191,
-    4.3137820371118165, 4.667667651216671, 8.391558964574049, 6.562422434089324,
-    5.927573179450188, 5.601240010507797, 6.135012825870278, 7.270847625209216,
-    5.389086949119614, 6.601738548007217, 6.670465962599199, 4.286043961852452
-  ]
+  "processed_amplitudes": [],
+  
+  "style_presets": [
+    {"id": "n1", "sections": 1, "slots": 48, "name": "Circular"},
+    {"id": "n2", "sections": 2, "slots": 48, "name": "Split"},
+    {"id": "n3", "sections": 3, "slots": 72, "name": "Trinity"},
+    {"id": "n4", "sections": 4, "slots": 96, "name": "Quad"}
+  ],
+	
+  "_ui_config": {
+    "elements": {
+      "shape": {
+        "id": "shape",
+        "type": "select",
+        "label": "Shape",
+        "state_path": "frame_design.shape",
+        "options": [
+          {"value": "circular", "label": "Circular"},
+          {"value": "rectangular", "label": "Rectangular"}
+        ]
+      },
+      "sections": {
+        "id": "sections",
+        "type": "select",
+        "label": "Sections",
+        "state_path": "frame_design.number_sections",
+        "options": [
+          {"value": 1, "label": "1"},
+          {"value": 2, "label": "2"},
+          {"value": 3, "label": "3", "disabled_when": {"shape": "rectangular"}},
+          {"value": 4, "label": "4"}
+        ]
+      },
+      "slots": {
+        "id": "slots",
+        "type": "range",
+        "label": "Slots",
+        "state_path": "pattern_settings.number_slots",
+        "min": 24,
+        "max": 120,
+        "step": 1,
+        "display_value_id": "slotsValue"
+      },
+      "size": {
+        "id": "size",
+        "type": "select",
+        "label": "Size",
+        "state_path": "frame_design.finish_x",
+        "options": [
+          {"value": 24, "label": "24\""},
+          {"value": 36, "label": "36\""},
+          {"value": 48, "label": "48\""}
+        ],
+        "on_change_triggers": [
+          {
+            "action": "apply_size_defaults",
+            "source_path": "size_defaults"
+          }
+        ]
+      },
+      "separation": {
+        "id": "separation",
+        "type": "range",
+        "label": "Gap",
+        "state_path": "frame_design.separation",
+        "min": 0.5,
+        "max": 4.0,
+        "step": 0.5,
+        "display_value_id": "separationValue"
+      },
+      "woodSpecies": {
+        "id": "woodSpecies",
+        "type": "select",
+        "label": "Wood Species",
+        "state_path": "frame_design.section_materials[].species",
+        "options_from_endpoint": "/api/config/wood-materials",
+        "options_path": "species_catalog",
+        "default_value_from_endpoint": "/api/config/wood-materials",
+        "default_value_path": "default_species",
+        "on_change": {
+          "action": "update_section_materials",
+          "requires": ["woodSpecies", "grainDirection"]
+        }
+      },
+      "grainDirection": {
+        "id": "grainDirection",
+        "type": "select",
+        "label": "Grain Direction",
+        "state_path": "frame_design.section_materials[].grain_direction",
+        "options": [
+          {"value": "horizontal", "label": "Horizontal"},
+          {"value": "vertical", "label": "Vertical"},
+          {"value": "angled", "label": "Angled"}
+        ],
+        "default_value_from_endpoint": "/api/config/wood-materials",
+        "default_value_path": "default_grain_direction",
+        "on_change": {
+          "action": "update_section_materials",
+          "requires": ["woodSpecies", "grainDirection"]
+        }
+      }
+    },
+    "buttons": {
+      "updateDesign": {
+        "id": "updateButton",
+        "label": "Update Design",
+        "action": "submit_composition_update"
+      },
+      "resetCamera": {
+        "id": "resetCameraButton",
+        "label": "↻",
+        "title": "Reset Camera View",
+        "action": "reset_camera"
+      }
+    },
+    "upload": {
+      "container_id": "uploadContainer",
+      "drop_zone_id": "uploadDropZone",
+      "file_input_id": "fileInput",
+      "accepted_mime_types": ["audio/mpeg", "audio/wav", "audio/flac", "audio/mp3", "audio/x-wav", "audio/x-m4a"],
+      "accepted_extensions": ["mp3", "wav", "flac", "m4a", "aac", "ogg"],
+      "max_file_size_mb": 100,
+      "hint_delay_ms": 3000,
+      "messages": {
+        "invalid_type": "Please upload an audio file (MP3, WAV, or FLAC)",
+        "file_too_large": "File size must be less than {max_size}MB",
+        "drop_hint": "Drop your audio file here"
+      }
+    }
+  }
 }
