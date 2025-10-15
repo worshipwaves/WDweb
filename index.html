@@ -11,6 +11,23 @@
 </head>
 <body>
   <div id="app">
+    <!-- Processing Overlay (fullscreen, always on top) -->
+    <div id="processingOverlay" class="processing-overlay">
+      <div class="processing-content">
+        <div class="processing-spinner"></div>
+        <div class="processing-message">Processing...</div>
+        <div class="processing-progress-bar">
+          <div class="processing-progress-fill"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Texture Loading Indicator (bottom-right corner) -->
+    <div id="textureLoadingIndicator" class="texture-loading-indicator">
+      <div class="loading-spinner-small"></div>
+      <span class="loading-text">Loading exotic wood species... (<span id="texturesLoaded">0</span> of <span id="texturesTotal">15</span>)</span>
+    </div>
+    
     <!-- Upload Phase Container -->
     <div id="uploadContainer" class="phase-container active"></div>
     

@@ -302,7 +302,20 @@ export class WaveformDesignerFacade {
     const stored = localStorage.getItem('wavedesigner_session');
     // Use the type-safe helper to parse and validate the stored data.
     // It handles JSON parsing errors and Zod validation internally.
-    return parseStoredData(stored, ApplicationStateSchema);
+    const restoredState = parseStoredData(stored, ApplicationStateSchema);
+    
+    // Always reset processing stage to idle on page load
+    if (restoredState) {
+      return {
+        ...restoredState,
+        processing: {
+          stage: 'idle',
+          progress: 0
+        }
+      };
+    }
+    
+    return null;
   }
 	
 	/**

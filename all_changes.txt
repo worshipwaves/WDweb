@@ -1,0 +1,998 @@
+diff --git a/.eslintcache b/.eslintcache
+index 196326b..5f9c372 100644
+--- a/.eslintcache
++++ b/.eslintcache
+@@ -1 +1 @@
+-[{"c:\\Users\\paulj\\WDweb\\src\\main.ts":"1","c:\\Users\\paulj\\WDweb\\src\\WoodMaterial.ts":"2","C:\\Users\\paulj\\WDweb\\src\\main.ts":"3","C:\\Users\\paulj\\WDweb\\src\\WoodMaterial.ts":"4","C:\\Users\\paulj\\WDweb\\src\\FrameGenerationService.ts":"5","C:\\Users\\paulj\\WDweb\\src\\PanelGenerationService.ts":"6","C:\\Users\\paulj\\WDweb\\src\\types\\PanelTypes.ts":"7","C:\\Users\\paulj\\WDweb\\src\\testParams.ts":"8","c:\\Users\\paulj\\WDweb\\src\\FrameGenerationService.ts":"9","c:\\Users\\paulj\\WDweb\\src\\PanelGenerationService.ts":"10","c:\\Users\\paulj\\WDweb\\src\\testParams.ts":"11","c:\\Users\\paulj\\WDweb\\src\\types\\PanelTypes.ts":"12","C:\\Users\\paulj\\WDweb\\src\\UploadInterface.ts":"13","C:\\Users\\paulj\\WDweb\\src\\WaveformDesignerFacade.ts":"14","C:\\Users\\paulj\\WDweb\\src\\ApplicationController.ts":"15","C:\\Users\\paulj\\WDweb\\src\\types\\schemas.ts":"16","C:\\Users\\paulj\\WDweb\\src\\utils\\validation.ts":"17","C:\\Users\\paulj\\WDweb\\src\\AudioCacheService.ts":"18","C:\\Users\\paulj\\WDweb\\src\\UIEngine.ts":"19"},{"size":11216,"mtime":1758727533532,"results":"20","hashOfConfig":"21"},{"size":5833,"mtime":1758159302590,"results":"22","hashOfConfig":"21"},{"size":36906,"mtime":1760418867749,"results":"23","hashOfConfig":"24"},{"size":7801,"mtime":1760046470225,"results":"25","hashOfConfig":"24"},{"size":3012,"mtime":1759957358252,"results":"26","hashOfConfig":"24"},{"size":18261,"mtime":1760048091626,"results":"27","hashOfConfig":"24"},{"size":1087,"mtime":1759957358252,"results":"28","hashOfConfig":"24"},{"size":2311,"mtime":1759957358252,"results":"29","hashOfConfig":"24"},{"size":2061,"mtime":1758647293984},{"size":17398,"mtime":1758690262206,"results":"30","hashOfConfig":"21"},{"size":2311,"mtime":1758692946511,"results":"31","hashOfConfig":"21"},{"size":978,"mtime":1758668197728,"results":"32","hashOfConfig":"21"},{"size":6294,"mtime":1760379135299,"results":"33","hashOfConfig":"24"},{"size":13373,"mtime":1760417785980,"results":"34","hashOfConfig":"24"},{"size":19776,"mtime":1760417613183,"results":"35","hashOfConfig":"24"},{"size":8863,"mtime":1760419099800,"results":"36","hashOfConfig":"24"},{"size":1421,"mtime":1760418510207,"results":"37","hashOfConfig":"24"},{"size":7523,"mtime":1759957358252,"results":"38","hashOfConfig":"24"},{"size":14343,"mtime":1760407115135,"results":"39","hashOfConfig":"24"},{"filePath":"40","messages":"41","suppressedMessages":"42","errorCount":2,"fatalErrorCount":0,"warningCount":10,"fixableErrorCount":0,"fixableWarningCount":0,"source":null},"nwmphj",{"filePath":"43","messages":"44","suppressedMessages":"45","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"46","messages":"47","suppressedMessages":"48","errorCount":6,"fatalErrorCount":0,"warningCount":20,"fixableErrorCount":0,"fixableWarningCount":1,"source":null},"1kd5mtz",{"filePath":"49","messages":"50","suppressedMessages":"51","errorCount":0,"fatalErrorCount":0,"warningCount":5,"fixableErrorCount":0,"fixableWarningCount":1,"source":null},{"filePath":"52","messages":"53","suppressedMessages":"54","errorCount":0,"fatalErrorCount":0,"warningCount":5,"fixableErrorCount":0,"fixableWarningCount":0,"source":null},{"filePath":"55","messages":"56","suppressedMessages":"57","errorCount":0,"fatalErrorCount":0,"warningCount":16,"fixableErrorCount":0,"fixableWarningCount":0,"source":null},{"filePath":"58","messages":"59","suppressedMessages":"60","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"61","messages":"62","suppressedMessages":"63","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"64","messages":"65","suppressedMessages":"66","errorCount":19,"fatalErrorCount":0,"warningCount":21,"fixableErrorCount":0,"fixableWarningCount":0,"source":null},{"filePath":"67","messages":"68","suppressedMessages":"69","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"70","messages":"71","suppressedMessages":"72","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"73","messages":"74","suppressedMessages":"75","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"76","messages":"77","suppressedMessages":"78","errorCount":19,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0,"source":null},{"filePath":"79","messages":"80","suppressedMessages":"81","errorCount":10,"fatalErrorCount":0,"warningCount":4,"fixableErrorCount":0,"fixableWarningCount":1,"source":null},{"filePath":"82","messages":"83","suppressedMessages":"84","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"85","messages":"86","suppressedMessages":"87","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"88","messages":"89","suppressedMessages":"90","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"91","messages":"92","suppressedMessages":"93","errorCount":67,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0,"source":null},"c:\\Users\\paulj\\WDweb\\src\\main.ts",["94","95","96","97","98","99","100","101","102","103","104","105"],[],"c:\\Users\\paulj\\WDweb\\src\\WoodMaterial.ts",[],[],"C:\\Users\\paulj\\WDweb\\src\\main.ts",["106","107","108","109","110","111","112","113","114","115","116","117","118","119","120","121","122","123","124","125","126","127","128","129","130","131"],[],"C:\\Users\\paulj\\WDweb\\src\\WoodMaterial.ts",["132","133","134","135","136"],[],"C:\\Users\\paulj\\WDweb\\src\\FrameGenerationService.ts",["137","138","139","140","141"],[],"C:\\Users\\paulj\\WDweb\\src\\PanelGenerationService.ts",["142","143","144","145","146","147","148","149","150","151","152","153","154","155","156","157"],[],"C:\\Users\\paulj\\WDweb\\src\\types\\PanelTypes.ts",[],[],"C:\\Users\\paulj\\WDweb\\src\\testParams.ts",[],[],"c:\\Users\\paulj\\WDweb\\src\\PanelGenerationService.ts",["158","159","160","161","162","163","164","165","166","167","168","169","170","171","172","173","174","175","176","177","178","179","180","181","182","183","184","185","186","187","188","189","190","191","192","193","194","195","196","197"],[],"c:\\Users\\paulj\\WDweb\\src\\testParams.ts",[],[],"c:\\Users\\paulj\\WDweb\\src\\types\\PanelTypes.ts",[],[],"C:\\Users\\paulj\\WDweb\\src\\UploadInterface.ts",[],[],"C:\\Users\\paulj\\WDweb\\src\\WaveformDesignerFacade.ts",["198","199","200","201","202","203","204","205","206","207","208","209","210","211","212","213","214","215","216"],[],"C:\\Users\\paulj\\WDweb\\src\\ApplicationController.ts",["217","218","219","220","221","222","223","224","225","226","227","228","229","230"],[],"C:\\Users\\paulj\\WDweb\\src\\types\\schemas.ts",[],[],"C:\\Users\\paulj\\WDweb\\src\\utils\\validation.ts",[],[],"C:\\Users\\paulj\\WDweb\\src\\AudioCacheService.ts",[],[],"C:\\Users\\paulj\\WDweb\\src\\UIEngine.ts",["231","232","233","234","235","236","237","238","239","240","241","242","243","244","245","246","247","248","249","250","251","252","253","254","255","256","257","258","259","260","261","262","263","264","265","266","267","268","269","270","271","272","273","274","275","276","277","278","279","280","281","282","283","284","285","286","287","288","289","290","291","292","293","294","295","296","297"],[],{"ruleId":"298","severity":2,"message":"299","line":97,"column":7,"nodeType":"300","messageId":"301","endLine":97,"endColumn":52},{"ruleId":"302","severity":1,"message":"303","line":98,"column":7,"nodeType":"304","messageId":"305","endLine":98,"endColumn":18,"suggestions":"306"},{"ruleId":"302","severity":1,"message":"303","line":115,"column":5,"nodeType":"304","messageId":"305","endLine":115,"endColumn":16,"suggestions":"307"},{"ruleId":"302","severity":1,"message":"303","line":116,"column":5,"nodeType":"304","messageId":"305","endLine":116,"endColumn":16,"suggestions":"308"},{"ruleId":"302","severity":1,"message":"303","line":123,"column":7,"nodeType":"304","messageId":"305","endLine":123,"endColumn":18,"suggestions":"309"},{"ruleId":"302","severity":1,"message":"303","line":202,"column":4,"nodeType":"304","messageId":"305","endLine":202,"endColumn":15,"suggestions":"310"},{"ruleId":"302","severity":1,"message":"303","line":224,"column":6,"nodeType":"304","messageId":"305","endLine":224,"endColumn":17,"suggestions":"311"},{"ruleId":"302","severity":1,"message":"303","line":246,"column":8,"nodeType":"304","messageId":"305","endLine":246,"endColumn":19,"suggestions":"312"},{"ruleId":"302","severity":1,"message":"303","line":253,"column":4,"nodeType":"304","messageId":"305","endLine":253,"endColumn":15,"suggestions":"313"},{"ruleId":"302","severity":1,"message":"303","line":344,"column":5,"nodeType":"304","messageId":"305","endLine":344,"endColumn":16,"suggestions":"314"},{"ruleId":"302","severity":1,"message":"303","line":357,"column":5,"nodeType":"304","messageId":"305","endLine":357,"endColumn":16,"suggestions":"315"},{"ruleId":"316","severity":2,"message":"317","line":362,"column":47,"nodeType":"318","messageId":"319","endLine":372,"endColumn":2},{"ruleId":"320","severity":1,"message":"321","line":17,"column":1,"nodeType":"322","endLine":17,"endColumn":44},{"ruleId":"320","severity":1,"message":"323","line":26,"column":1,"nodeType":"322","endLine":26,"endColumn":39,"fix":"324"},{"ruleId":"325","severity":2,"message":"326","line":237,"column":11,"nodeType":"327","messageId":"328","endLine":237,"endColumn":57,"suggestions":"329"},{"ruleId":"302","severity":1,"message":"303","line":248,"column":5,"nodeType":"304","messageId":"305","endLine":248,"endColumn":16,"suggestions":"330"},{"ruleId":"331","severity":2,"message":"332","line":271,"column":53,"nodeType":"304","messageId":"333","endLine":271,"endColumn":69},{"ruleId":"302","severity":1,"message":"303","line":273,"column":7,"nodeType":"304","messageId":"305","endLine":273,"endColumn":18,"suggestions":"334"},{"ruleId":"302","severity":1,"message":"303","line":292,"column":7,"nodeType":"304","messageId":"305","endLine":292,"endColumn":18,"suggestions":"335"},{"ruleId":"302","severity":1,"message":"303","line":307,"column":5,"nodeType":"304","messageId":"305","endLine":307,"endColumn":16,"suggestions":"336"},{"ruleId":"302","severity":1,"message":"303","line":322,"column":11,"nodeType":"304","messageId":"305","endLine":322,"endColumn":22,"suggestions":"337"},{"ruleId":"302","severity":1,"message":"303","line":424,"column":5,"nodeType":"304","messageId":"305","endLine":424,"endColumn":16,"suggestions":"338"},{"ruleId":"302","severity":1,"message":"303","line":428,"column":7,"nodeType":"304","messageId":"305","endLine":428,"endColumn":18,"suggestions":"339"},{"ruleId":"298","severity":2,"message":"299","line":693,"column":11,"nodeType":"340","messageId":"301","endLine":693,"endColumn":73},{"ruleId":"298","severity":2,"message":"299","line":769,"column":13,"nodeType":"340","messageId":"301","endLine":769,"endColumn":84},{"ruleId":"302","severity":1,"message":"303","line":844,"column":7,"nodeType":"304","messageId":"305","endLine":844,"endColumn":18,"suggestions":"341"},{"ruleId":"302","severity":1,"message":"303","line":846,"column":9,"nodeType":"304","messageId":"305","endLine":846,"endColumn":20,"suggestions":"342"},{"ruleId":"343","severity":2,"message":"344","line":928,"column":28,"nodeType":null,"messageId":"345","endLine":928,"endColumn":38},{"ruleId":"298","severity":2,"message":"346","line":1002,"column":9,"nodeType":"340","messageId":"301","endLine":1002,"endColumn":26},{"ruleId":"302","severity":1,"message":"303","line":1020,"column":3,"nodeType":"304","messageId":"305","endLine":1020,"endColumn":14,"suggestions":"347"},{"ruleId":"302","severity":1,"message":"303","line":1024,"column":7,"nodeType":"304","messageId":"305","endLine":1024,"endColumn":18,"suggestions":"348"},{"ruleId":"302","severity":1,"message":"303","line":1027,"column":9,"nodeType":"304","messageId":"305","endLine":1027,"endColumn":20,"suggestions":"349"},{"ruleId":"302","severity":1,"message":"303","line":1030,"column":7,"nodeType":"304","messageId":"305","endLine":1030,"endColumn":18,"suggestions":"350"},{"ruleId":"302","severity":1,"message":"303","line":1047,"column":3,"nodeType":"304","messageId":"305","endLine":1047,"endColumn":14,"suggestions":"351"},{"ruleId":"302","severity":1,"message":"303","line":1079,"column":3,"nodeType":"304","messageId":"305","endLine":1079,"endColumn":14,"suggestions":"352"},{"ruleId":"302","severity":1,"message":"303","line":1082,"column":5,"nodeType":"304","messageId":"305","endLine":1082,"endColumn":16,"suggestions":"353"},{"ruleId":"302","severity":1,"message":"303","line":1085,"column":5,"nodeType":"304","messageId":"305","endLine":1085,"endColumn":16,"suggestions":"354"},{"ruleId":"302","severity":1,"message":"303","line":1089,"column":5,"nodeType":"304","messageId":"305","endLine":1089,"endColumn":16,"suggestions":"355"},{"ruleId":"320","severity":1,"message":"356","line":1,"column":1,"nodeType":"322","endLine":5,"endColumn":26,"fix":"357"},{"ruleId":"302","severity":1,"message":"303","line":51,"column":9,"nodeType":"304","messageId":"305","endLine":51,"endColumn":20,"suggestions":"358"},{"ruleId":"302","severity":1,"message":"303","line":123,"column":9,"nodeType":"304","messageId":"305","endLine":123,"endColumn":20,"suggestions":"359"},{"ruleId":"302","severity":1,"message":"303","line":128,"column":21,"nodeType":"304","messageId":"305","endLine":128,"endColumn":32,"suggestions":"360"},{"ruleId":"302","severity":1,"message":"303","line":151,"column":9,"nodeType":"304","messageId":"305","endLine":151,"endColumn":20,"suggestions":"361"},{"ruleId":"302","severity":1,"message":"303","line":50,"column":7,"nodeType":"304","messageId":"305","endLine":50,"endColumn":18,"suggestions":"362"},{"ruleId":"302","severity":1,"message":"303","line":61,"column":7,"nodeType":"304","messageId":"305","endLine":61,"endColumn":18,"suggestions":"363"},{"ruleId":"302","severity":1,"message":"303","line":64,"column":7,"nodeType":"304","messageId":"305","endLine":64,"endColumn":18,"suggestions":"364"},{"ruleId":"302","severity":1,"message":"303","line":68,"column":7,"nodeType":"304","messageId":"305","endLine":68,"endColumn":18,"suggestions":"365"},{"ruleId":"302","severity":1,"message":"303","line":73,"column":7,"nodeType":"304","messageId":"305","endLine":73,"endColumn":18,"suggestions":"366"},{"ruleId":"302","severity":1,"message":"303","line":56,"column":5,"nodeType":"304","messageId":"305","endLine":56,"endColumn":16,"suggestions":"367"},{"ruleId":"302","severity":1,"message":"303","line":60,"column":7,"nodeType":"304","messageId":"305","endLine":60,"endColumn":18,"suggestions":"368"},{"ruleId":"302","severity":1,"message":"303","line":66,"column":7,"nodeType":"304","messageId":"305","endLine":66,"endColumn":18,"suggestions":"369"},{"ruleId":"302","severity":1,"message":"303","line":78,"column":5,"nodeType":"304","messageId":"305","endLine":78,"endColumn":16,"suggestions":"370"},{"ruleId":"302","severity":1,"message":"303","line":83,"column":7,"nodeType":"304","messageId":"305","endLine":83,"endColumn":18,"suggestions":"371"},{"ruleId":"302","severity":1,"message":"303","line":89,"column":7,"nodeType":"304","messageId":"305","endLine":89,"endColumn":18,"suggestions":"372"},{"ruleId":"302","severity":1,"message":"303","line":93,"column":9,"nodeType":"304","messageId":"305","endLine":93,"endColumn":20,"suggestions":"373"},{"ruleId":"302","severity":1,"message":"303","line":120,"column":9,"nodeType":"304","messageId":"305","endLine":120,"endColumn":20,"suggestions":"374"},{"ruleId":"302","severity":1,"message":"303","line":130,"column":9,"nodeType":"304","messageId":"305","endLine":130,"endColumn":20,"suggestions":"375"},{"ruleId":"302","severity":1,"message":"303","line":136,"column":9,"nodeType":"304","messageId":"305","endLine":136,"endColumn":20,"suggestions":"376"},{"ruleId":"302","severity":1,"message":"303","line":142,"column":9,"nodeType":"304","messageId":"305","endLine":142,"endColumn":20,"suggestions":"377"},{"ruleId":"302","severity":1,"message":"303","line":152,"column":9,"nodeType":"304","messageId":"305","endLine":152,"endColumn":20,"suggestions":"378"},{"ruleId":"302","severity":1,"message":"303","line":158,"column":5,"nodeType":"304","messageId":"305","endLine":158,"endColumn":16,"suggestions":"379"},{"ruleId":"302","severity":1,"message":"303","line":205,"column":5,"nodeType":"304","messageId":"305","endLine":205,"endColumn":16,"suggestions":"380"},{"ruleId":"302","severity":1,"message":"303","line":234,"column":5,"nodeType":"304","messageId":"305","endLine":234,"endColumn":16,"suggestions":"381"},{"ruleId":"302","severity":1,"message":"303","line":317,"column":5,"nodeType":"304","messageId":"305","endLine":317,"endColumn":16,"suggestions":"382"},{"ruleId":"383","severity":2,"message":"384","line":42,"column":3,"nodeType":"385","messageId":"386","endLine":42,"endColumn":28},{"ruleId":"302","severity":1,"message":"303","line":43,"column":5,"nodeType":"304","messageId":"305","endLine":43,"endColumn":16,"suggestions":"387"},{"ruleId":"302","severity":1,"message":"303","line":44,"column":5,"nodeType":"304","messageId":"305","endLine":44,"endColumn":16,"suggestions":"388"},{"ruleId":"302","severity":1,"message":"303","line":54,"column":7,"nodeType":"304","messageId":"305","endLine":54,"endColumn":18,"suggestions":"389"},{"ruleId":"302","severity":1,"message":"303","line":56,"column":7,"nodeType":"304","messageId":"305","endLine":56,"endColumn":18,"suggestions":"390"},{"ruleId":"302","severity":1,"message":"303","line":60,"column":9,"nodeType":"304","messageId":"305","endLine":60,"endColumn":20,"suggestions":"391"},{"ruleId":"302","severity":1,"message":"303","line":63,"column":9,"nodeType":"304","messageId":"305","endLine":63,"endColumn":20,"suggestions":"392"},{"ruleId":"302","severity":1,"message":"303","line":67,"column":5,"nodeType":"304","messageId":"305","endLine":67,"endColumn":16,"suggestions":"393"},{"ruleId":"302","severity":1,"message":"303","line":94,"column":5,"nodeType":"304","messageId":"305","endLine":94,"endColumn":16,"suggestions":"394"},{"ruleId":"302","severity":1,"message":"303","line":107,"column":7,"nodeType":"304","messageId":"305","endLine":107,"endColumn":18,"suggestions":"395"},{"ruleId":"302","severity":1,"message":"303","line":130,"column":9,"nodeType":"304","messageId":"305","endLine":130,"endColumn":20,"suggestions":"396"},{"ruleId":"302","severity":1,"message":"303","line":171,"column":7,"nodeType":"304","messageId":"305","endLine":171,"endColumn":18,"suggestions":"397"},{"ruleId":"302","severity":1,"message":"303","line":197,"column":7,"nodeType":"304","messageId":"305","endLine":197,"endColumn":18,"suggestions":"398"},{"ruleId":"302","severity":1,"message":"303","line":215,"column":7,"nodeType":"304","messageId":"305","endLine":215,"endColumn":18,"suggestions":"399"},{"ruleId":"302","severity":1,"message":"303","line":227,"column":5,"nodeType":"304","messageId":"305","endLine":227,"endColumn":16,"suggestions":"400"},{"ruleId":"302","severity":1,"message":"303","line":231,"column":7,"nodeType":"304","messageId":"305","endLine":231,"endColumn":18,"suggestions":"401"},{"ruleId":"302","severity":1,"message":"303","line":280,"column":5,"nodeType":"304","messageId":"305","endLine":280,"endColumn":16,"suggestions":"402"},{"ruleId":"298","severity":2,"message":"299","line":297,"column":15,"nodeType":"340","messageId":"301","endLine":297,"endColumn":53},{"ruleId":"403","severity":2,"message":"404","line":297,"column":51,"nodeType":"405","messageId":"406","endLine":297,"endColumn":52},{"ruleId":"403","severity":2,"message":"407","line":298,"column":47,"nodeType":"405","messageId":"406","endLine":298,"endColumn":48},{"ruleId":"403","severity":2,"message":"408","line":299,"column":47,"nodeType":"405","messageId":"406","endLine":299,"endColumn":48},{"ruleId":"302","severity":1,"message":"303","line":301,"column":9,"nodeType":"304","messageId":"305","endLine":301,"endColumn":20,"suggestions":"409"},{"ruleId":"302","severity":1,"message":"303","line":377,"column":11,"nodeType":"304","messageId":"305","endLine":377,"endColumn":22,"suggestions":"410"},{"ruleId":"302","severity":1,"message":"303","line":386,"column":5,"nodeType":"304","messageId":"305","endLine":386,"endColumn":16,"suggestions":"411"},{"ruleId":"403","severity":2,"message":"412","line":408,"column":41,"nodeType":"413","messageId":"406","endLine":408,"endColumn":47},{"ruleId":"298","severity":2,"message":"346","line":414,"column":11,"nodeType":"340","messageId":"301","endLine":417,"endColumn":7},{"ruleId":"414","severity":2,"message":"415","line":414,"column":24,"nodeType":"304","messageId":"416","endLine":414,"endColumn":41},{"ruleId":"403","severity":2,"message":"417","line":414,"column":38,"nodeType":"413","messageId":"406","endLine":414,"endColumn":41},{"ruleId":"403","severity":2,"message":"407","line":415,"column":9,"nodeType":"405","messageId":"406","endLine":415,"endColumn":10},{"ruleId":"403","severity":2,"message":"408","line":416,"column":9,"nodeType":"405","messageId":"406","endLine":416,"endColumn":10},{"ruleId":"331","severity":2,"message":"418","line":431,"column":22,"nodeType":"304","messageId":"333","endLine":431,"endColumn":26},{"ruleId":"403","severity":2,"message":"404","line":431,"column":24,"nodeType":"405","messageId":"406","endLine":431,"endColumn":25},{"ruleId":"331","severity":2,"message":"418","line":431,"column":44,"nodeType":"304","messageId":"333","endLine":431,"endColumn":48},{"ruleId":"403","severity":2,"message":"419","line":431,"column":46,"nodeType":"405","messageId":"406","endLine":431,"endColumn":47},{"ruleId":"331","severity":2,"message":"418","line":436,"column":22,"nodeType":"304","messageId":"333","endLine":436,"endColumn":26},{"ruleId":"403","severity":2,"message":"404","line":436,"column":24,"nodeType":"405","messageId":"406","endLine":436,"endColumn":25},{"ruleId":"331","severity":2,"message":"418","line":436,"column":43,"nodeType":"304","messageId":"333","endLine":436,"endColumn":47},{"ruleId":"403","severity":2,"message":"419","line":436,"column":45,"nodeType":"405","messageId":"406","endLine":436,"endColumn":46},{"ruleId":"302","severity":1,"message":"303","line":496,"column":5,"nodeType":"304","messageId":"305","endLine":496,"endColumn":16,"suggestions":"420"},{"ruleId":"302","severity":1,"message":"303","line":522,"column":5,"nodeType":"304","messageId":"305","endLine":522,"endColumn":16,"suggestions":"421"},{"ruleId":"422","severity":2,"message":"423","line":313,"column":28,"nodeType":"424","messageId":"425","endLine":313,"endColumn":31,"suggestions":"426"},{"ruleId":"422","severity":2,"message":"423","line":313,"column":41,"nodeType":"424","messageId":"425","endLine":313,"endColumn":44,"suggestions":"427"},{"ruleId":"422","severity":2,"message":"423","line":313,"column":47,"nodeType":"424","messageId":"425","endLine":313,"endColumn":50,"suggestions":"428"},{"ruleId":"298","severity":2,"message":"299","line":322,"column":13,"nodeType":"340","messageId":"301","endLine":322,"endColumn":40},{"ruleId":"422","severity":2,"message":"423","line":322,"column":21,"nodeType":"424","messageId":"425","endLine":322,"endColumn":24,"suggestions":"429"},{"ruleId":"414","severity":2,"message":"430","line":325,"column":13,"nodeType":"304","messageId":"416","endLine":325,"endColumn":34},{"ruleId":"431","severity":2,"message":"432","line":325,"column":20,"nodeType":"433","messageId":"434","endLine":325,"endColumn":34,"suggestions":"435"},{"ruleId":"403","severity":2,"message":"436","line":325,"column":20,"nodeType":"413","messageId":"406","endLine":325,"endColumn":34},{"ruleId":"403","severity":2,"message":"437","line":326,"column":29,"nodeType":"413","messageId":"406","endLine":326,"endColumn":32},{"ruleId":"403","severity":2,"message":"437","line":326,"column":57,"nodeType":"413","messageId":"406","endLine":326,"endColumn":60},{"ruleId":"403","severity":2,"message":"437","line":326,"column":96,"nodeType":"413","messageId":"406","endLine":326,"endColumn":99},{"ruleId":"298","severity":2,"message":"299","line":327,"column":13,"nodeType":"300","messageId":"301","endLine":327,"endColumn":58},{"ruleId":"403","severity":2,"message":"437","line":327,"column":20,"nodeType":"413","messageId":"406","endLine":327,"endColumn":23},{"ruleId":"403","severity":2,"message":"437","line":327,"column":40,"nodeType":"413","messageId":"406","endLine":327,"endColumn":43},{"ruleId":"403","severity":2,"message":"437","line":327,"column":53,"nodeType":"413","messageId":"406","endLine":327,"endColumn":56},{"ruleId":"298","severity":2,"message":"299","line":329,"column":13,"nodeType":"300","messageId":"301","endLine":329,"endColumn":38},{"ruleId":"403","severity":2,"message":"437","line":329,"column":20,"nodeType":"413","messageId":"406","endLine":329,"endColumn":23},{"ruleId":"403","severity":2,"message":"437","line":329,"column":34,"nodeType":"413","messageId":"406","endLine":329,"endColumn":37},{"ruleId":"438","severity":2,"message":"439","line":337,"column":5,"nodeType":"440","messageId":"441","endLine":337,"endColumn":44},{"ruleId":"320","severity":1,"message":"442","line":19,"column":1,"nodeType":"322","endLine":19,"endColumn":55,"fix":"443"},{"ruleId":"302","severity":1,"message":"303","line":60,"column":7,"nodeType":"304","messageId":"305","endLine":60,"endColumn":18,"suggestions":"444"},{"ruleId":"298","severity":2,"message":"346","line":67,"column":11,"nodeType":"340","messageId":"301","endLine":67,"endColumn":66},{"ruleId":"298","severity":2,"message":"299","line":70,"column":11,"nodeType":"340","messageId":"301","endLine":70,"endColumn":55},{"ruleId":"403","severity":2,"message":"445","line":72,"column":30,"nodeType":"413","messageId":"406","endLine":72,"endColumn":35},{"ruleId":"403","severity":2,"message":"445","line":72,"column":59,"nodeType":"413","messageId":"406","endLine":72,"endColumn":64},{"ruleId":"298","severity":2,"message":"346","line":74,"column":7,"nodeType":"300","messageId":"301","endLine":74,"endColumn":70},{"ruleId":"298","severity":2,"message":"346","line":88,"column":7,"nodeType":"300","messageId":"301","endLine":88,"endColumn":34},{"ruleId":"298","severity":2,"message":"346","line":119,"column":11,"nodeType":"340","messageId":"301","endLine":119,"endColumn":78},{"ruleId":"298","severity":2,"message":"346","line":123,"column":7,"nodeType":"300","messageId":"301","endLine":123,"endColumn":29},{"ruleId":"298","severity":2,"message":"346","line":168,"column":13,"nodeType":"340","messageId":"301","endLine":168,"endColumn":65},{"ruleId":"298","severity":2,"message":"346","line":169,"column":7,"nodeType":"300","messageId":"301","endLine":169,"endColumn":31},{"ruleId":"302","severity":1,"message":"303","line":554,"column":5,"nodeType":"304","messageId":"305","endLine":554,"endColumn":16,"suggestions":"446"},{"ruleId":"302","severity":1,"message":"303","line":578,"column":5,"nodeType":"304","messageId":"305","endLine":578,"endColumn":16,"suggestions":"447"},{"ruleId":"298","severity":2,"message":"299","line":77,"column":11,"nodeType":"340","messageId":"301","endLine":77,"endColumn":39},{"ruleId":"298","severity":2,"message":"299","line":78,"column":5,"nodeType":"300","messageId":"301","endLine":78,"endColumn":34},{"ruleId":"403","severity":2,"message":"448","line":78,"column":24,"nodeType":"413","messageId":"406","endLine":78,"endColumn":34},{"ruleId":"298","severity":2,"message":"299","line":147,"column":11,"nodeType":"340","messageId":"301","endLine":147,"endColumn":39},{"ruleId":"298","severity":2,"message":"299","line":149,"column":11,"nodeType":"340","messageId":"301","endLine":149,"endColumn":80},{"ruleId":"438","severity":2,"message":"439","line":149,"column":63,"nodeType":"449","messageId":"441","endLine":149,"endColumn":73},{"ruleId":"403","severity":2,"message":"437","line":149,"column":69,"nodeType":"413","messageId":"406","endLine":149,"endColumn":72},{"ruleId":"438","severity":2,"message":"439","line":151,"column":5,"nodeType":"440","messageId":"441","endLine":151,"endColumn":33},{"ruleId":"298","severity":2,"message":"299","line":166,"column":11,"nodeType":"340","messageId":"301","endLine":166,"endColumn":39},{"ruleId":"298","severity":2,"message":"299","line":170,"column":11,"nodeType":"340","messageId":"301","endLine":170,"endColumn":75},{"ruleId":"438","severity":2,"message":"439","line":170,"column":58,"nodeType":"449","messageId":"441","endLine":170,"endColumn":68},{"ruleId":"403","severity":2,"message":"437","line":170,"column":64,"nodeType":"413","messageId":"406","endLine":170,"endColumn":67},{"ruleId":"422","severity":2,"message":"423","line":266,"column":30,"nodeType":"424","messageId":"425","endLine":266,"endColumn":33,"suggestions":"450"},{"ruleId":"422","severity":2,"message":"423","line":266,"column":55,"nodeType":"424","messageId":"425","endLine":266,"endColumn":58,"suggestions":"451"},{"ruleId":"298","severity":2,"message":"299","line":268,"column":9,"nodeType":"340","messageId":"301","endLine":268,"endColumn":28},{"ruleId":"298","severity":2,"message":"299","line":276,"column":9,"nodeType":"300","messageId":"301","endLine":276,"endColumn":33},{"ruleId":"403","severity":2,"message":"452","line":276,"column":23,"nodeType":"413","messageId":"406","endLine":276,"endColumn":32},{"ruleId":"298","severity":2,"message":"299","line":280,"column":11,"nodeType":"300","messageId":"301","endLine":280,"endColumn":27},{"ruleId":"298","severity":2,"message":"299","line":285,"column":9,"nodeType":"300","messageId":"301","endLine":285,"endColumn":30},{"ruleId":"403","severity":2,"message":"453","line":285,"column":25,"nodeType":"413","messageId":"406","endLine":285,"endColumn":29},{"ruleId":"422","severity":2,"message":"423","line":295,"column":30,"nodeType":"424","messageId":"425","endLine":295,"endColumn":33,"suggestions":"454"},{"ruleId":"422","severity":2,"message":"423","line":295,"column":61,"nodeType":"424","messageId":"425","endLine":295,"endColumn":64,"suggestions":"455"},{"ruleId":"422","severity":2,"message":"423","line":295,"column":67,"nodeType":"424","messageId":"425","endLine":295,"endColumn":70,"suggestions":"456"},{"ruleId":"298","severity":2,"message":"299","line":298,"column":13,"nodeType":"340","messageId":"301","endLine":298,"endColumn":69},{"ruleId":"298","severity":2,"message":"299","line":302,"column":11,"nodeType":"340","messageId":"301","endLine":302,"endColumn":35},{"ruleId":"298","severity":2,"message":"299","line":304,"column":9,"nodeType":"300","messageId":"301","endLine":304,"endColumn":32},{"ruleId":"403","severity":2,"message":"453","line":304,"column":27,"nodeType":"413","messageId":"406","endLine":304,"endColumn":31},{"ruleId":"422","severity":2,"message":"423","line":309,"column":32,"nodeType":"424","messageId":"425","endLine":309,"endColumn":35,"suggestions":"457"},{"ruleId":"298","severity":2,"message":"299","line":310,"column":11,"nodeType":"300","messageId":"301","endLine":310,"endColumn":33},{"ruleId":"458","severity":2,"message":"459","line":310,"column":11,"nodeType":"413","messageId":"460","endLine":310,"endColumn":15},{"ruleId":"403","severity":2,"message":"461","line":310,"column":16,"nodeType":"413","messageId":"406","endLine":310,"endColumn":24},{"ruleId":"298","severity":2,"message":"299","line":319,"column":11,"nodeType":"340","messageId":"301","endLine":319,"endColumn":67},{"ruleId":"298","severity":2,"message":"299","line":321,"column":9,"nodeType":"340","messageId":"301","endLine":321,"endColumn":33},{"ruleId":"298","severity":2,"message":"299","line":323,"column":7,"nodeType":"300","messageId":"301","endLine":323,"endColumn":34},{"ruleId":"403","severity":2,"message":"462","line":323,"column":25,"nodeType":"304","messageId":"406","endLine":323,"endColumn":33},{"ruleId":"298","severity":2,"message":"299","line":326,"column":5,"nodeType":"300","messageId":"301","endLine":326,"endColumn":45},{"ruleId":"403","severity":2,"message":"463","line":326,"column":13,"nodeType":"304","messageId":"406","endLine":326,"endColumn":36},{"ruleId":"422","severity":2,"message":"423","line":348,"column":34,"nodeType":"424","messageId":"425","endLine":348,"endColumn":37,"suggestions":"464"},{"ruleId":"422","severity":2,"message":"423","line":348,"column":57,"nodeType":"424","messageId":"425","endLine":348,"endColumn":60,"suggestions":"465"},{"ruleId":"298","severity":2,"message":"299","line":350,"column":11,"nodeType":"340","messageId":"301","endLine":350,"endColumn":58},{"ruleId":"403","severity":2,"message":"466","line":350,"column":34,"nodeType":"413","messageId":"406","endLine":350,"endColumn":47},{"ruleId":"298","severity":2,"message":"299","line":354,"column":11,"nodeType":"340","messageId":"301","endLine":354,"endColumn":60},{"ruleId":"403","severity":2,"message":"467","line":357,"column":13,"nodeType":"413","messageId":"406","endLine":357,"endColumn":25},{"ruleId":"403","severity":2,"message":"467","line":358,"column":13,"nodeType":"413","messageId":"406","endLine":358,"endColumn":25},{"ruleId":"298","severity":2,"message":"299","line":361,"column":5,"nodeType":"300","messageId":"301","endLine":361,"endColumn":66},{"ruleId":"403","severity":2,"message":"468","line":361,"column":13,"nodeType":"413","messageId":"406","endLine":361,"endColumn":29},{"ruleId":"403","severity":2,"message":"469","line":361,"column":54,"nodeType":"413","messageId":"406","endLine":361,"endColumn":66},{"ruleId":"298","severity":2,"message":"299","line":362,"column":5,"nodeType":"300","messageId":"301","endLine":362,"endColumn":58},{"ruleId":"403","severity":2,"message":"467","line":362,"column":13,"nodeType":"413","messageId":"406","endLine":362,"endColumn":25},{"ruleId":"403","severity":2,"message":"470","line":362,"column":48,"nodeType":"413","messageId":"406","endLine":362,"endColumn":58},{"ruleId":"422","severity":2,"message":"423","line":371,"column":56,"nodeType":"424","messageId":"425","endLine":371,"endColumn":59,"suggestions":"471"},{"ruleId":"422","severity":2,"message":"423","line":371,"column":75,"nodeType":"424","messageId":"425","endLine":371,"endColumn":78,"suggestions":"472"},{"ruleId":"331","severity":2,"message":"418","line":377,"column":41,"nodeType":"413","messageId":"333","endLine":377,"endColumn":49},{"ruleId":"422","severity":2,"message":"423","line":387,"column":89,"nodeType":"424","messageId":"425","endLine":387,"endColumn":92,"suggestions":"473"},{"ruleId":"298","severity":2,"message":"299","line":389,"column":11,"nodeType":"340","messageId":"301","endLine":389,"endColumn":72},{"ruleId":"298","severity":2,"message":"299","line":390,"column":11,"nodeType":"340","messageId":"301","endLine":390,"endColumn":45},{"ruleId":"403","severity":2,"message":"474","line":390,"column":37,"nodeType":"413","messageId":"406","endLine":390,"endColumn":44},{"ruleId":"298","severity":2,"message":"299","line":396,"column":7,"nodeType":"475","messageId":"301","endLine":396,"endColumn":61},{"ruleId":"403","severity":2,"message":"469","line":396,"column":49,"nodeType":"413","messageId":"406","endLine":396,"endColumn":61},{"ruleId":"298","severity":2,"message":"299","line":397,"column":7,"nodeType":"475","messageId":"301","endLine":397,"endColumn":53},{"ruleId":"403","severity":2,"message":"470","line":397,"column":43,"nodeType":"413","messageId":"406","endLine":397,"endColumn":53},{"ruleId":"331","severity":2,"message":"476","line":404,"column":45,"nodeType":"413","messageId":"333","endLine":404,"endColumn":53},{"ruleId":"422","severity":2,"message":"423","line":426,"column":32,"nodeType":"424","messageId":"425","endLine":426,"endColumn":35,"suggestions":"477"},{"ruleId":"422","severity":2,"message":"423","line":426,"column":52,"nodeType":"424","messageId":"425","endLine":426,"endColumn":55,"suggestions":"478"},{"ruleId":"438","severity":2,"message":"439","line":427,"column":53,"nodeType":"449","messageId":"441","endLine":427,"endColumn":67},{"ruleId":"403","severity":2,"message":"437","line":427,"column":63,"nodeType":"413","messageId":"406","endLine":427,"endColumn":66},{"ruleId":"422","severity":2,"message":"423","line":443,"column":57,"nodeType":"424","messageId":"425","endLine":443,"endColumn":60,"suggestions":"479"},"@typescript-eslint/no-unsafe-assignment","Unsafe assignment of an `any` value.","AssignmentExpression","anyAssignment","no-console","Unexpected console statement.","MemberExpression","unexpected",["480"],["481"],["482"],["483"],["484"],["485"],["486"],["487"],["488"],["489"],"@typescript-eslint/no-misused-promises","Promise returned in function argument where a void return was expected.","ArrowFunctionExpression","voidReturnArgument","import/order","`@babylonjs/core` import should occur before import of `@babylonjs/loaders/glTF`","ImportDeclaration","`./UIEngine` import should occur before import of `./UploadInterface`",{"range":"490","text":"491"},"@typescript-eslint/await-thenable","Unexpected `await` of a non-Promise (non-\"Thenable\") value.","AwaitExpression","await",["492"],["493"],"@typescript-eslint/no-unsafe-argument","Unsafe argument of type `any` assigned to a parameter of type `CSGDataResponse`.","unsafeArgument",["494"],["495"],["496"],["497"],["498"],["499"],"VariableDeclarator",["500"],["501"],"@typescript-eslint/no-unused-vars","'controller' is defined but never used. Allowed unused args must match /^_/u.","unusedVar","Unsafe assignment of an error typed value.",["502"],["503"],["504"],["505"],["506"],["507"],["508"],["509"],["510"],"There should be at least one empty line between import groups",{"range":"511","text":"512"},["513"],["514"],["515"],["516"],["517"],["518"],["519"],["520"],["521"],["522"],["523"],["524"],["525"],["526"],["527"],["528"],["529"],["530"],["531"],["532"],["533"],["534"],["535"],["536"],["537"],"@typescript-eslint/require-await","Async method 'createPanelsWithCSG' has no 'await' expression.","FunctionExpression","missingAwait",["538"],["539"],["540"],["541"],["542"],["543"],["544"],["545"],["546"],["547"],["548"],["549"],["550"],["551"],["552"],["553"],"@typescript-eslint/no-unsafe-member-access","Unsafe member access [0] on an `error` typed value.","Literal","unsafeMemberExpression","Unsafe member access [0] on an `any` value.","Unsafe member access [1] on an `any` value.",["554"],["555"],["556"],"Unsafe member access .length on an `error` typed value.","Identifier","@typescript-eslint/no-unsafe-call","Unsafe call of an `error` type typed value.","unsafeCall","Unsafe member access .map on an `error` typed value.","Unsafe argument of type `any` assigned to a parameter of type `number`.","Unsafe member access [1] on an `error` typed value.",["557"],["558"],"@typescript-eslint/no-explicit-any","Unexpected any. Specify a different type.","TSAnyKeyword","unexpectedAny",["559","560"],["561","562"],["563","564"],["565","566"],"Unsafe call of an `any` typed value.","no-prototype-builtins","Do not access Object.prototype method 'hasOwnProperty' from target object.","CallExpression","prototypeBuildIn",["567"],"Unsafe member access .hasOwnProperty on an `any` value.","Unsafe member access [key] on an `any` value.","@typescript-eslint/no-unsafe-return","Unsafe return of an `any` typed value.","ReturnStatement","unsafeReturn","`./utils/validation` import should occur before import of `./WaveformDesignerFacade`",{"range":"568","text":"569"},["570"],"Unsafe member access .audio on an `any` value.",["571"],["572"],"Unsafe member access ._ui_config on an `any` value.","ChainExpression",["573","574"],["575","576"],"Unsafe member access [arrayPart] on an `any` value.","Unsafe member access [part] on an `any` value.",["577","578"],["579","580"],["581","582"],["583","584"],"no-param-reassign","Assignment to property of function parameter 'item'.","assignmentToFunctionParamProp","Unsafe member access [property] on an `any` value.","Unsafe member access [parts[i]] on an `any` value.","Unsafe member access [parts[parts.length - 1]] on an `any` value.",["585","586"],["587","588"],"Unsafe member access .size_defaults on an `any` value.","Unsafe member access .frame_design on an `any` value.","Unsafe member access .pattern_settings on an `any` value.","Unsafe member access .number_slots on an `any` value.","Unsafe member access .separation on an `any` value.",["589","590"],["591","592"],["593","594"],"Unsafe member access [sizeKey] on an `any` value.","Property","Unsafe argument of type `any` assigned to a parameter of type `string | number`.",["595","596"],["597","598"],["599","600"],{"messageId":"601","data":"602","fix":"603","desc":"604"},{"messageId":"601","data":"605","fix":"606","desc":"604"},{"messageId":"601","data":"607","fix":"608","desc":"604"},{"messageId":"601","data":"609","fix":"610","desc":"604"},{"messageId":"601","data":"611","fix":"612","desc":"604"},{"messageId":"601","data":"613","fix":"614","desc":"604"},{"messageId":"601","data":"615","fix":"616","desc":"604"},{"messageId":"601","data":"617","fix":"618","desc":"604"},{"messageId":"601","data":"619","fix":"620","desc":"604"},{"messageId":"601","data":"621","fix":"622","desc":"604"},[815,909],"import { UIEngine } from './UIEngine';\r\nimport { UploadInterface } from './UploadInterface';\r\n",{"messageId":"623","fix":"624","desc":"625"},{"messageId":"601","data":"626","fix":"627","desc":"604"},{"messageId":"601","data":"628","fix":"629","desc":"604"},{"messageId":"601","data":"630","fix":"631","desc":"604"},{"messageId":"601","data":"632","fix":"633","desc":"604"},{"messageId":"601","data":"634","fix":"635","desc":"604"},{"messageId":"601","data":"636","fix":"637","desc":"604"},{"messageId":"601","data":"638","fix":"639","desc":"604"},{"messageId":"601","data":"640","fix":"641","desc":"604"},{"messageId":"601","data":"642","fix":"643","desc":"604"},{"messageId":"601","data":"644","fix":"645","desc":"604"},{"messageId":"601","data":"646","fix":"647","desc":"604"},{"messageId":"601","data":"648","fix":"649","desc":"604"},{"messageId":"601","data":"650","fix":"651","desc":"604"},{"messageId":"601","data":"652","fix":"653","desc":"604"},{"messageId":"601","data":"654","fix":"655","desc":"604"},{"messageId":"601","data":"656","fix":"657","desc":"604"},{"messageId":"601","data":"658","fix":"659","desc":"604"},{"messageId":"601","data":"660","fix":"661","desc":"604"},[79,79],"\n",{"messageId":"601","data":"662","fix":"663","desc":"604"},{"messageId":"601","data":"664","fix":"665","desc":"604"},{"messageId":"601","data":"666","fix":"667","desc":"604"},{"messageId":"601","data":"668","fix":"669","desc":"604"},{"messageId":"601","data":"670","fix":"671","desc":"604"},{"messageId":"601","data":"672","fix":"673","desc":"604"},{"messageId":"601","data":"674","fix":"675","desc":"604"},{"messageId":"601","data":"676","fix":"677","desc":"604"},{"messageId":"601","data":"678","fix":"679","desc":"604"},{"messageId":"601","data":"680","fix":"681","desc":"604"},{"messageId":"601","data":"682","fix":"683","desc":"604"},{"messageId":"601","data":"684","fix":"685","desc":"604"},{"messageId":"601","data":"686","fix":"687","desc":"604"},{"messageId":"601","data":"688","fix":"689","desc":"604"},{"messageId":"601","data":"690","fix":"691","desc":"604"},{"messageId":"601","data":"692","fix":"693","desc":"604"},{"messageId":"601","data":"694","fix":"695","desc":"604"},{"messageId":"601","data":"696","fix":"697","desc":"604"},{"messageId":"601","data":"698","fix":"699","desc":"604"},{"messageId":"601","data":"700","fix":"701","desc":"604"},{"messageId":"601","data":"702","fix":"703","desc":"604"},{"messageId":"601","data":"704","fix":"705","desc":"604"},{"messageId":"601","data":"706","fix":"707","desc":"604"},{"messageId":"601","data":"708","fix":"709","desc":"604"},{"messageId":"601","data":"710","fix":"711","desc":"604"},{"messageId":"601","data":"712","fix":"713","desc":"604"},{"messageId":"601","data":"714","fix":"715","desc":"604"},{"messageId":"601","data":"716","fix":"717","desc":"604"},{"messageId":"601","data":"718","fix":"719","desc":"604"},{"messageId":"601","data":"720","fix":"721","desc":"604"},{"messageId":"601","data":"722","fix":"723","desc":"604"},{"messageId":"601","data":"724","fix":"725","desc":"604"},{"messageId":"601","data":"726","fix":"727","desc":"604"},{"messageId":"601","data":"728","fix":"729","desc":"604"},{"messageId":"601","data":"730","fix":"731","desc":"604"},{"messageId":"601","data":"732","fix":"733","desc":"604"},{"messageId":"601","data":"734","fix":"735","desc":"604"},{"messageId":"601","data":"736","fix":"737","desc":"604"},{"messageId":"601","data":"738","fix":"739","desc":"604"},{"messageId":"601","data":"740","fix":"741","desc":"604"},{"messageId":"601","data":"742","fix":"743","desc":"604"},{"messageId":"601","data":"744","fix":"745","desc":"604"},{"messageId":"601","data":"746","fix":"747","desc":"604"},{"messageId":"601","data":"748","fix":"749","desc":"604"},{"messageId":"601","data":"750","fix":"751","desc":"604"},{"messageId":"601","data":"752","fix":"753","desc":"604"},{"messageId":"754","fix":"755","desc":"756"},{"messageId":"757","fix":"758","desc":"759"},{"messageId":"754","fix":"760","desc":"756"},{"messageId":"757","fix":"761","desc":"759"},{"messageId":"754","fix":"762","desc":"756"},{"messageId":"757","fix":"763","desc":"759"},{"messageId":"754","fix":"764","desc":"756"},{"messageId":"757","fix":"765","desc":"759"},{"messageId":"766","data":"767","fix":"768","desc":"769"},[499,631],"import { fetchAndValidate } from './utils/validation';\r\nimport { WaveformDesignerFacade, Action } from './WaveformDesignerFacade';\r\n",{"messageId":"601","data":"770","fix":"771","desc":"604"},{"messageId":"601","data":"772","fix":"773","desc":"604"},{"messageId":"601","data":"774","fix":"775","desc":"604"},{"messageId":"754","fix":"776","desc":"756"},{"messageId":"757","fix":"777","desc":"759"},{"messageId":"754","fix":"778","desc":"756"},{"messageId":"757","fix":"779","desc":"759"},{"messageId":"754","fix":"780","desc":"756"},{"messageId":"757","fix":"781","desc":"759"},{"messageId":"754","fix":"782","desc":"756"},{"messageId":"757","fix":"783","desc":"759"},{"messageId":"754","fix":"784","desc":"756"},{"messageId":"757","fix":"785","desc":"759"},{"messageId":"754","fix":"786","desc":"756"},{"messageId":"757","fix":"787","desc":"759"},{"messageId":"754","fix":"788","desc":"756"},{"messageId":"757","fix":"789","desc":"759"},{"messageId":"754","fix":"790","desc":"756"},{"messageId":"757","fix":"791","desc":"759"},{"messageId":"754","fix":"792","desc":"756"},{"messageId":"757","fix":"793","desc":"759"},{"messageId":"754","fix":"794","desc":"756"},{"messageId":"757","fix":"795","desc":"759"},{"messageId":"754","fix":"796","desc":"756"},{"messageId":"757","fix":"797","desc":"759"},{"messageId":"754","fix":"798","desc":"756"},{"messageId":"757","fix":"799","desc":"759"},{"messageId":"754","fix":"800","desc":"756"},{"messageId":"757","fix":"801","desc":"759"},{"messageId":"754","fix":"802","desc":"756"},{"messageId":"757","fix":"803","desc":"759"},"removeConsole",{"propertyName":"804"},{"range":"805","text":"806"},"Remove the console.log().",{"propertyName":"804"},{"range":"807","text":"806"},{"propertyName":"804"},{"range":"808","text":"806"},{"propertyName":"804"},{"range":"809","text":"806"},{"propertyName":"804"},{"range":"810","text":"806"},{"propertyName":"804"},{"range":"811","text":"806"},{"propertyName":"804"},{"range":"812","text":"806"},{"propertyName":"804"},{"range":"813","text":"806"},{"propertyName":"804"},{"range":"814","text":"806"},{"propertyName":"804"},{"range":"815","text":"806"},"removeAwait",{"range":"816","text":"806"},"Remove unnecessary `await`.",{"propertyName":"804"},{"range":"817","text":"806"},{"propertyName":"804"},{"range":"818","text":"806"},{"propertyName":"804"},{"range":"819","text":"806"},{"propertyName":"804"},{"range":"820","text":"806"},{"propertyName":"804"},{"range":"821","text":"806"},{"propertyName":"804"},{"range":"822","text":"806"},{"propertyName":"804"},{"range":"823","text":"806"},{"propertyName":"804"},{"range":"824","text":"806"},{"propertyName":"804"},{"range":"825","text":"806"},{"propertyName":"804"},{"range":"826","text":"806"},{"propertyName":"804"},{"range":"827","text":"806"},{"propertyName":"804"},{"range":"828","text":"806"},{"propertyName":"804"},{"range":"829","text":"806"},{"propertyName":"804"},{"range":"830","text":"806"},{"propertyName":"804"},{"range":"831","text":"806"},{"propertyName":"804"},{"range":"832","text":"806"},{"propertyName":"804"},{"range":"833","text":"806"},{"propertyName":"804"},{"range":"834","text":"806"},{"propertyName":"804"},{"range":"835","text":"806"},{"propertyName":"804"},{"range":"836","text":"806"},{"propertyName":"804"},{"range":"837","text":"806"},{"propertyName":"804"},{"range":"838","text":"806"},{"propertyName":"804"},{"range":"839","text":"806"},{"propertyName":"804"},{"range":"840","text":"806"},{"propertyName":"804"},{"range":"841","text":"806"},{"propertyName":"804"},{"range":"842","text":"806"},{"propertyName":"804"},{"range":"843","text":"806"},{"propertyName":"804"},{"range":"844","text":"806"},{"propertyName":"804"},{"range":"845","text":"806"},{"propertyName":"804"},{"range":"846","text":"806"},{"propertyName":"804"},{"range":"847","text":"806"},{"propertyName":"804"},{"range":"848","text":"806"},{"propertyName":"804"},{"range":"849","text":"806"},{"propertyName":"804"},{"range":"850","text":"806"},{"propertyName":"804"},{"range":"851","text":"806"},{"propertyName":"804"},{"range":"852","text":"806"},{"propertyName":"804"},{"range":"853","text":"806"},{"propertyName":"804"},{"range":"854","text":"806"},{"propertyName":"804"},{"range":"855","text":"806"},{"propertyName":"804"},{"range":"856","text":"806"},{"propertyName":"804"},{"range":"857","text":"806"},{"propertyName":"804"},{"range":"858","text":"806"},{"propertyName":"804"},{"range":"859","text":"806"},{"propertyName":"804"},{"range":"860","text":"806"},{"propertyName":"804"},{"range":"861","text":"806"},{"propertyName":"804"},{"range":"862","text":"806"},{"propertyName":"804"},{"range":"863","text":"806"},{"propertyName":"804"},{"range":"864","text":"806"},{"propertyName":"804"},{"range":"865","text":"806"},{"propertyName":"804"},{"range":"866","text":"806"},{"propertyName":"804"},{"range":"867","text":"806"},{"propertyName":"804"},{"range":"868","text":"806"},{"propertyName":"804"},{"range":"869","text":"806"},{"propertyName":"804"},{"range":"870","text":"806"},{"propertyName":"804"},{"range":"871","text":"806"},{"propertyName":"804"},{"range":"872","text":"806"},{"propertyName":"804"},{"range":"873","text":"806"},{"propertyName":"804"},{"range":"874","text":"806"},{"propertyName":"804"},{"range":"875","text":"806"},{"propertyName":"804"},{"range":"876","text":"806"},{"propertyName":"804"},{"range":"877","text":"806"},{"propertyName":"804"},{"range":"878","text":"806"},{"propertyName":"804"},{"range":"879","text":"806"},{"propertyName":"804"},{"range":"880","text":"806"},"suggestUnknown",{"range":"881","text":"882"},"Use `unknown` instead, this will force you to explicitly, and safely assert the type is correct.","suggestNever",{"range":"883","text":"884"},"Use `never` instead, this is useful when instantiating generic type parameters that you don't need to know the type of.",{"range":"885","text":"882"},{"range":"886","text":"884"},{"range":"887","text":"882"},{"range":"888","text":"884"},{"range":"889","text":"882"},{"range":"890","text":"884"},"callObjectPrototype",{"prop":"891"},{"range":"892","text":"893"},"Call Object.prototype.hasOwnProperty explicitly.",{"propertyName":"804"},{"range":"894","text":"806"},{"propertyName":"804"},{"range":"895","text":"806"},{"propertyName":"804"},{"range":"896","text":"806"},{"range":"897","text":"882"},{"range":"898","text":"884"},{"range":"899","text":"882"},{"range":"900","text":"884"},{"range":"901","text":"882"},{"range":"902","text":"884"},{"range":"903","text":"882"},{"range":"904","text":"884"},{"range":"905","text":"882"},{"range":"906","text":"884"},{"range":"907","text":"882"},{"range":"908","text":"884"},{"range":"909","text":"882"},{"range":"910","text":"884"},{"range":"911","text":"882"},{"range":"912","text":"884"},{"range":"913","text":"882"},{"range":"914","text":"884"},{"range":"915","text":"882"},{"range":"916","text":"884"},{"range":"917","text":"882"},{"range":"918","text":"884"},{"range":"919","text":"882"},{"range":"920","text":"884"},{"range":"921","text":"882"},{"range":"922","text":"884"},{"range":"923","text":"882"},{"range":"924","text":"884"},"log",[2715,2780],"",[3303,3354],[3360,3408],[3684,3732],[6278,6323],[6870,7020],[7639,7701],[7807,7850],[10294,10341],[10665,10710],[7657,7662],[7914,7982],[8698,8765],[9285,9336],[9673,9734],[10256,10335],[13750,13841],[13975,14047],[27817,27911],[27971,28041],[33849,33932],[34018,34095],[34224,34300],[34334,34409],[34942,34995],[36105,36255],[36293,36369],[36499,36595],[36753,36838],[1871,1978],[4565,4630],[4790,4847],[5778,5839],[1382,1451],[1880,1999],[2070,2133],[2249,2312],[2480,2558],[1111,1181],[1320,1394],[1536,1599],[1936,1999],[2188,2241],[2452,2537],[2659,2749],[4019,4133],[4450,4527],[4693,4772],[5090,5177],[5494,5571],[5649,5719],[7056,7126],[7986,8077],[10516,10601],[832,887],[893,944],[1242,1296],[1376,1463],[1604,1647],[1704,1753],[1781,1824],[2612,2769],[2993,3038],[3833,3904],[5224,5285],[6093,6146],[6636,6685],[6982,7081],[7191,7269],[8673,8729],[9610,10048],[12801,12857],[13018,13091],[16279,16375],[17255,17297],[9615,9618],"unknown",[9615,9618],"never",[9628,9631],[9628,9631],[9634,9637],[9634,9637],[9900,9903],[9900,9903],"hasOwnProperty",[9977,9999],"Object.prototype.hasOwnProperty.call(source, ",[1988,2073],[17622,17676],[18232,18346],[7586,7589],[7586,7589],[7611,7614],[7611,7614],[8387,8390],[8387,8390],[8418,8421],[8418,8421],[8424,8427],[8424,8427],[8986,8989],[8986,8989],[9973,9976],[9973,9976],[9996,9999],[9996,9999],[10726,10729],[10726,10729],[10745,10748],[10745,10748],[11307,11310],[11307,11310],[12495,12498],[12495,12498],[12515,12518],[12515,12518],[12996,12999],[12996,12999]]
+\ No newline at end of file
++[{"c:\\Users\\paulj\\WDweb\\src\\main.ts":"1","c:\\Users\\paulj\\WDweb\\src\\WoodMaterial.ts":"2","C:\\Users\\paulj\\WDweb\\src\\main.ts":"3","C:\\Users\\paulj\\WDweb\\src\\WoodMaterial.ts":"4","C:\\Users\\paulj\\WDweb\\src\\FrameGenerationService.ts":"5","C:\\Users\\paulj\\WDweb\\src\\PanelGenerationService.ts":"6","C:\\Users\\paulj\\WDweb\\src\\types\\PanelTypes.ts":"7","C:\\Users\\paulj\\WDweb\\src\\testParams.ts":"8","c:\\Users\\paulj\\WDweb\\src\\FrameGenerationService.ts":"9","c:\\Users\\paulj\\WDweb\\src\\PanelGenerationService.ts":"10","c:\\Users\\paulj\\WDweb\\src\\testParams.ts":"11","c:\\Users\\paulj\\WDweb\\src\\types\\PanelTypes.ts":"12","C:\\Users\\paulj\\WDweb\\src\\UploadInterface.ts":"13","C:\\Users\\paulj\\WDweb\\src\\WaveformDesignerFacade.ts":"14","C:\\Users\\paulj\\WDweb\\src\\ApplicationController.ts":"15","C:\\Users\\paulj\\WDweb\\src\\types\\schemas.ts":"16","C:\\Users\\paulj\\WDweb\\src\\utils\\validation.ts":"17","C:\\Users\\paulj\\WDweb\\src\\AudioCacheService.ts":"18","C:\\Users\\paulj\\WDweb\\src\\UIEngine.ts":"19","C:\\Users\\paulj\\WDweb\\src\\TextureCacheService.ts":"20","C:\\Users\\paulj\\WDweb\\src\\ProcessingOverlay.ts":"21","C:\\Users\\paulj\\WDweb\\src\\PerformanceMonitor.ts":"22","C:\\Users\\paulj\\WDweb\\src\\IdleTextureLoader.ts":"23"},{"size":11216,"mtime":1758727533532,"results":"24","hashOfConfig":"25"},{"size":5833,"mtime":1758159302590,"results":"26","hashOfConfig":"25"},{"size":42525,"mtime":1760497564483,"results":"27","hashOfConfig":"28"},{"size":9342,"mtime":1760473557555,"results":"29","hashOfConfig":"28"},{"size":3012,"mtime":1759957358252,"results":"30","hashOfConfig":"28"},{"size":18261,"mtime":1760497377688,"results":"31","hashOfConfig":"28"},{"size":1087,"mtime":1759957358252,"results":"32","hashOfConfig":"28"},{"size":2311,"mtime":1759957358252,"results":"33","hashOfConfig":"28"},{"size":2061,"mtime":1758647293984},{"size":17398,"mtime":1758690262206,"results":"34","hashOfConfig":"25"},{"size":2311,"mtime":1758692946511,"results":"35","hashOfConfig":"25"},{"size":978,"mtime":1758668197728,"results":"36","hashOfConfig":"25"},{"size":6294,"mtime":1760379135299,"results":"37","hashOfConfig":"28"},{"size":13646,"mtime":1760465162728,"results":"38","hashOfConfig":"28"},{"size":26150,"mtime":1760501293841,"results":"39","hashOfConfig":"28"},{"size":8885,"mtime":1760463362467,"results":"40","hashOfConfig":"28"},{"size":1421,"mtime":1760418510207,"results":"41","hashOfConfig":"28"},{"size":7523,"mtime":1759957358252,"results":"42","hashOfConfig":"28"},{"size":14343,"mtime":1760407115135,"results":"43","hashOfConfig":"28"},{"size":4799,"mtime":1760475048577,"results":"44","hashOfConfig":"28"},{"size":4010,"mtime":1760464475622,"results":"45","hashOfConfig":"28"},{"size":2318,"mtime":1760472890446,"results":"46","hashOfConfig":"28"},{"size":8420,"mtime":1760482985081,"results":"47","hashOfConfig":"28"},{"filePath":"48","messages":"49","suppressedMessages":"50","errorCount":2,"fatalErrorCount":0,"warningCount":10,"fixableErrorCount":0,"fixableWarningCount":0,"source":null},"nwmphj",{"filePath":"51","messages":"52","suppressedMessages":"53","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"54","messages":"55","suppressedMessages":"56","errorCount":13,"fatalErrorCount":0,"warningCount":33,"fixableErrorCount":0,"fixableWarningCount":4,"source":null},"1kd5mtz",{"filePath":"57","messages":"58","suppressedMessages":"59","errorCount":0,"fatalErrorCount":0,"warningCount":6,"fixableErrorCount":0,"fixableWarningCount":2,"source":null},{"filePath":"60","messages":"61","suppressedMessages":"62","errorCount":0,"fatalErrorCount":0,"warningCount":5,"fixableErrorCount":0,"fixableWarningCount":0,"source":null},{"filePath":"63","messages":"64","suppressedMessages":"65","errorCount":0,"fatalErrorCount":0,"warningCount":16,"fixableErrorCount":0,"fixableWarningCount":0,"source":null},{"filePath":"66","messages":"67","suppressedMessages":"68","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"69","messages":"70","suppressedMessages":"71","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"72","messages":"73","suppressedMessages":"74","errorCount":19,"fatalErrorCount":0,"warningCount":21,"fixableErrorCount":0,"fixableWarningCount":0,"source":null},{"filePath":"75","messages":"76","suppressedMessages":"77","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"78","messages":"79","suppressedMessages":"80","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"81","messages":"82","suppressedMessages":"83","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"84","messages":"85","suppressedMessages":"86","errorCount":19,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0,"source":null},{"filePath":"87","messages":"88","suppressedMessages":"89","errorCount":13,"fatalErrorCount":0,"warningCount":18,"fixableErrorCount":0,"fixableWarningCount":2,"source":null},{"filePath":"90","messages":"91","suppressedMessages":"92","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"93","messages":"94","suppressedMessages":"95","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"96","messages":"97","suppressedMessages":"98","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"99","messages":"100","suppressedMessages":"101","errorCount":67,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0,"source":null},{"filePath":"102","messages":"103","suppressedMessages":"104","errorCount":0,"fatalErrorCount":0,"warningCount":7,"fixableErrorCount":0,"fixableWarningCount":3,"source":null},{"filePath":"105","messages":"106","suppressedMessages":"107","errorCount":0,"fatalErrorCount":0,"warningCount":0,"fixableErrorCount":0,"fixableWarningCount":0},{"filePath":"108","messages":"109","suppressedMessages":"110","errorCount":0,"fatalErrorCount":0,"warningCount":2,"fixableErrorCount":0,"fixableWarningCount":0,"source":null},{"filePath":"111","messages":"112","suppressedMessages":"113","errorCount":10,"fatalErrorCount":0,"warningCount":6,"fixableErrorCount":0,"fixableWarningCount":0,"source":null},"c:\\Users\\paulj\\WDweb\\src\\main.ts",["114","115","116","117","118","119","120","121","122","123","124","125"],[],"c:\\Users\\paulj\\WDweb\\src\\WoodMaterial.ts",[],[],"C:\\Users\\paulj\\WDweb\\src\\main.ts",["126","127","128","129","130","131","132","133","134","135","136","137","138","139","140","141","142","143","144","145","146","147","148","149","150","151","152","153","154","155","156","157","158","159","160","161","162","163","164","165","166","167","168","169","170","171"],[],"C:\\Users\\paulj\\WDweb\\src\\WoodMaterial.ts",["172","173","174","175","176","177"],[],"C:\\Users\\paulj\\WDweb\\src\\FrameGenerationService.ts",["178","179","180","181","182"],[],"C:\\Users\\paulj\\WDweb\\src\\PanelGenerationService.ts",["183","184","185","186","187","188","189","190","191","192","193","194","195","196","197","198"],[],"C:\\Users\\paulj\\WDweb\\src\\types\\PanelTypes.ts",[],[],"C:\\Users\\paulj\\WDweb\\src\\testParams.ts",[],[],"c:\\Users\\paulj\\WDweb\\src\\PanelGenerationService.ts",["199","200","201","202","203","204","205","206","207","208","209","210","211","212","213","214","215","216","217","218","219","220","221","222","223","224","225","226","227","228","229","230","231","232","233","234","235","236","237","238"],[],"c:\\Users\\paulj\\WDweb\\src\\testParams.ts",[],[],"c:\\Users\\paulj\\WDweb\\src\\types\\PanelTypes.ts",[],[],"C:\\Users\\paulj\\WDweb\\src\\UploadInterface.ts",[],[],"C:\\Users\\paulj\\WDweb\\src\\WaveformDesignerFacade.ts",["239","240","241","242","243","244","245","246","247","248","249","250","251","252","253","254","255","256","257"],[],"C:\\Users\\paulj\\WDweb\\src\\ApplicationController.ts",["258","259","260","261","262","263","264","265","266","267","268","269","270","271","272","273","274","275","276","277","278","279","280","281","282","283","284","285","286","287","288"],[],"C:\\Users\\paulj\\WDweb\\src\\types\\schemas.ts",[],[],"C:\\Users\\paulj\\WDweb\\src\\utils\\validation.ts",[],[],"C:\\Users\\paulj\\WDweb\\src\\AudioCacheService.ts",[],[],"C:\\Users\\paulj\\WDweb\\src\\UIEngine.ts",["289","290","291","292","293","294","295","296","297","298","299","300","301","302","303","304","305","306","307","308","309","310","311","312","313","314","315","316","317","318","319","320","321","322","323","324","325","326","327","328","329","330","331","332","333","334","335","336","337","338","339","340","341","342","343","344","345","346","347","348","349","350","351","352","353","354","355"],[],"C:\\Users\\paulj\\WDweb\\src\\TextureCacheService.ts",["356","357","358","359","360","361","362"],[],"C:\\Users\\paulj\\WDweb\\src\\ProcessingOverlay.ts",[],[],"C:\\Users\\paulj\\WDweb\\src\\PerformanceMonitor.ts",["363","364"],[],"C:\\Users\\paulj\\WDweb\\src\\IdleTextureLoader.ts",["365","366","367","368","369","370","371","372","373","374","375","376","377","378","379","380"],[],{"ruleId":"381","severity":2,"message":"382","line":97,"column":7,"nodeType":"383","messageId":"384","endLine":97,"endColumn":52},{"ruleId":"385","severity":1,"message":"386","line":98,"column":7,"nodeType":"387","messageId":"388","endLine":98,"endColumn":18,"suggestions":"389"},{"ruleId":"385","severity":1,"message":"386","line":115,"column":5,"nodeType":"387","messageId":"388","endLine":115,"endColumn":16,"suggestions":"390"},{"ruleId":"385","severity":1,"message":"386","line":116,"column":5,"nodeType":"387","messageId":"388","endLine":116,"endColumn":16,"suggestions":"391"},{"ruleId":"385","severity":1,"message":"386","line":123,"column":7,"nodeType":"387","messageId":"388","endLine":123,"endColumn":18,"suggestions":"392"},{"ruleId":"385","severity":1,"message":"386","line":202,"column":4,"nodeType":"387","messageId":"388","endLine":202,"endColumn":15,"suggestions":"393"},{"ruleId":"385","severity":1,"message":"386","line":224,"column":6,"nodeType":"387","messageId":"388","endLine":224,"endColumn":17,"suggestions":"394"},{"ruleId":"385","severity":1,"message":"386","line":246,"column":8,"nodeType":"387","messageId":"388","endLine":246,"endColumn":19,"suggestions":"395"},{"ruleId":"385","severity":1,"message":"386","line":253,"column":4,"nodeType":"387","messageId":"388","endLine":253,"endColumn":15,"suggestions":"396"},{"ruleId":"385","severity":1,"message":"386","line":344,"column":5,"nodeType":"387","messageId":"388","endLine":344,"endColumn":16,"suggestions":"397"},{"ruleId":"385","severity":1,"message":"386","line":357,"column":5,"nodeType":"387","messageId":"388","endLine":357,"endColumn":16,"suggestions":"398"},{"ruleId":"399","severity":2,"message":"400","line":362,"column":47,"nodeType":"401","messageId":"402","endLine":372,"endColumn":2},{"ruleId":"403","severity":1,"message":"404","line":17,"column":1,"nodeType":"405","endLine":17,"endColumn":44},{"ruleId":"403","severity":1,"message":"406","line":25,"column":1,"nodeType":"405","endLine":25,"endColumn":61,"fix":"407"},{"ruleId":"403","severity":1,"message":"408","line":27,"column":1,"nodeType":"405","endLine":27,"endColumn":39,"fix":"409"},{"ruleId":"403","severity":1,"message":"410","line":30,"column":1,"nodeType":"405","endLine":30,"endColumn":57,"fix":"411"},{"ruleId":"403","severity":1,"message":"412","line":31,"column":1,"nodeType":"405","endLine":31,"endColumn":59,"fix":"413"},{"ruleId":"385","severity":1,"message":"386","line":239,"column":5,"nodeType":"387","messageId":"388","endLine":239,"endColumn":16,"suggestions":"414"},{"ruleId":"385","severity":1,"message":"386","line":259,"column":7,"nodeType":"387","messageId":"388","endLine":259,"endColumn":18,"suggestions":"415"},{"ruleId":"385","severity":1,"message":"386","line":267,"column":5,"nodeType":"387","messageId":"388","endLine":267,"endColumn":16,"suggestions":"416"},{"ruleId":"417","severity":2,"message":"418","line":280,"column":11,"nodeType":"419","messageId":"420","endLine":280,"endColumn":57,"suggestions":"421"},{"ruleId":"385","severity":1,"message":"386","line":291,"column":5,"nodeType":"387","messageId":"388","endLine":291,"endColumn":16,"suggestions":"422"},{"ruleId":"423","severity":2,"message":"424","line":320,"column":53,"nodeType":"387","messageId":"425","endLine":320,"endColumn":69},{"ruleId":"385","severity":1,"message":"386","line":322,"column":7,"nodeType":"387","messageId":"388","endLine":322,"endColumn":18,"suggestions":"426"},{"ruleId":"385","severity":1,"message":"386","line":347,"column":7,"nodeType":"387","messageId":"388","endLine":347,"endColumn":18,"suggestions":"427"},{"ruleId":"385","severity":1,"message":"386","line":362,"column":5,"nodeType":"387","messageId":"388","endLine":362,"endColumn":16,"suggestions":"428"},{"ruleId":"385","severity":1,"message":"386","line":377,"column":11,"nodeType":"387","messageId":"388","endLine":377,"endColumn":22,"suggestions":"429"},{"ruleId":"385","severity":1,"message":"386","line":479,"column":5,"nodeType":"387","messageId":"388","endLine":479,"endColumn":16,"suggestions":"430"},{"ruleId":"385","severity":1,"message":"386","line":480,"column":5,"nodeType":"387","messageId":"388","endLine":480,"endColumn":16,"suggestions":"431"},{"ruleId":"385","severity":1,"message":"386","line":481,"column":5,"nodeType":"387","messageId":"388","endLine":481,"endColumn":16,"suggestions":"432"},{"ruleId":"385","severity":1,"message":"386","line":482,"column":5,"nodeType":"387","messageId":"388","endLine":482,"endColumn":16,"suggestions":"433"},{"ruleId":"385","severity":1,"message":"386","line":486,"column":7,"nodeType":"387","messageId":"388","endLine":486,"endColumn":18,"suggestions":"434"},{"ruleId":"385","severity":1,"message":"386","line":487,"column":7,"nodeType":"387","messageId":"388","endLine":487,"endColumn":18,"suggestions":"435"},{"ruleId":"385","severity":1,"message":"386","line":513,"column":9,"nodeType":"387","messageId":"388","endLine":513,"endColumn":20,"suggestions":"436"},{"ruleId":"385","severity":1,"message":"386","line":516,"column":9,"nodeType":"387","messageId":"388","endLine":516,"endColumn":20,"suggestions":"437"},{"ruleId":"385","severity":1,"message":"386","line":523,"column":7,"nodeType":"387","messageId":"388","endLine":523,"endColumn":18,"suggestions":"438"},{"ruleId":"381","severity":2,"message":"382","line":769,"column":11,"nodeType":"439","messageId":"384","endLine":769,"endColumn":73},{"ruleId":"381","severity":2,"message":"382","line":845,"column":13,"nodeType":"439","messageId":"384","endLine":845,"endColumn":84},{"ruleId":"385","severity":1,"message":"386","line":920,"column":7,"nodeType":"387","messageId":"388","endLine":920,"endColumn":18,"suggestions":"440"},{"ruleId":"385","severity":1,"message":"386","line":922,"column":9,"nodeType":"387","messageId":"388","endLine":922,"endColumn":20,"suggestions":"441"},{"ruleId":"442","severity":2,"message":"443","line":982,"column":24,"nodeType":"444","messageId":"445","endLine":982,"endColumn":27,"suggestions":"446"},{"ruleId":"381","severity":2,"message":"382","line":984,"column":13,"nodeType":"383","messageId":"384","endLine":984,"endColumn":36},{"ruleId":"447","severity":2,"message":"448","line":984,"column":31,"nodeType":"449","messageId":"450","endLine":984,"endColumn":35},{"ruleId":"381","severity":2,"message":"382","line":994,"column":15,"nodeType":"439","messageId":"384","endLine":994,"endColumn":92},{"ruleId":"442","severity":2,"message":"443","line":994,"column":50,"nodeType":"444","messageId":"445","endLine":994,"endColumn":53,"suggestions":"451"},{"ruleId":"447","severity":2,"message":"452","line":994,"column":63,"nodeType":"449","messageId":"450","endLine":994,"endColumn":73},{"ruleId":"447","severity":2,"message":"453","line":1001,"column":24,"nodeType":"449","messageId":"450","endLine":1001,"endColumn":32},{"ruleId":"454","severity":2,"message":"455","line":1048,"column":28,"nodeType":null,"messageId":"456","endLine":1048,"endColumn":38},{"ruleId":"381","severity":2,"message":"457","line":1122,"column":9,"nodeType":"439","messageId":"384","endLine":1122,"endColumn":26},{"ruleId":"385","severity":1,"message":"386","line":1140,"column":3,"nodeType":"387","messageId":"388","endLine":1140,"endColumn":14,"suggestions":"458"},{"ruleId":"385","severity":1,"message":"386","line":1144,"column":7,"nodeType":"387","messageId":"388","endLine":1144,"endColumn":18,"suggestions":"459"},{"ruleId":"385","severity":1,"message":"386","line":1147,"column":9,"nodeType":"387","messageId":"388","endLine":1147,"endColumn":20,"suggestions":"460"},{"ruleId":"385","severity":1,"message":"386","line":1150,"column":7,"nodeType":"387","messageId":"388","endLine":1150,"endColumn":18,"suggestions":"461"},{"ruleId":"385","severity":1,"message":"386","line":1167,"column":3,"nodeType":"387","messageId":"388","endLine":1167,"endColumn":14,"suggestions":"462"},{"ruleId":"385","severity":1,"message":"386","line":1199,"column":3,"nodeType":"387","messageId":"388","endLine":1199,"endColumn":14,"suggestions":"463"},{"ruleId":"385","severity":1,"message":"386","line":1202,"column":5,"nodeType":"387","messageId":"388","endLine":1202,"endColumn":16,"suggestions":"464"},{"ruleId":"385","severity":1,"message":"386","line":1205,"column":5,"nodeType":"387","messageId":"388","endLine":1205,"endColumn":16,"suggestions":"465"},{"ruleId":"385","severity":1,"message":"386","line":1209,"column":5,"nodeType":"387","messageId":"388","endLine":1209,"endColumn":16,"suggestions":"466"},{"ruleId":"403","severity":1,"message":"467","line":1,"column":1,"nodeType":"405","endLine":5,"endColumn":26,"fix":"468"},{"ruleId":"403","severity":1,"message":"469","line":7,"column":1,"nodeType":"405","endLine":7,"endColumn":59,"fix":"470"},{"ruleId":"385","severity":1,"message":"386","line":55,"column":9,"nodeType":"387","messageId":"388","endLine":55,"endColumn":20,"suggestions":"471"},{"ruleId":"385","severity":1,"message":"386","line":128,"column":9,"nodeType":"387","messageId":"388","endLine":128,"endColumn":20,"suggestions":"472"},{"ruleId":"385","severity":1,"message":"386","line":141,"column":25,"nodeType":"387","messageId":"388","endLine":141,"endColumn":36,"suggestions":"473"},{"ruleId":"385","severity":1,"message":"386","line":169,"column":9,"nodeType":"387","messageId":"388","endLine":169,"endColumn":20,"suggestions":"474"},{"ruleId":"385","severity":1,"message":"386","line":50,"column":7,"nodeType":"387","messageId":"388","endLine":50,"endColumn":18,"suggestions":"475"},{"ruleId":"385","severity":1,"message":"386","line":61,"column":7,"nodeType":"387","messageId":"388","endLine":61,"endColumn":18,"suggestions":"476"},{"ruleId":"385","severity":1,"message":"386","line":64,"column":7,"nodeType":"387","messageId":"388","endLine":64,"endColumn":18,"suggestions":"477"},{"ruleId":"385","severity":1,"message":"386","line":68,"column":7,"nodeType":"387","messageId":"388","endLine":68,"endColumn":18,"suggestions":"478"},{"ruleId":"385","severity":1,"message":"386","line":73,"column":7,"nodeType":"387","messageId":"388","endLine":73,"endColumn":18,"suggestions":"479"},{"ruleId":"385","severity":1,"message":"386","line":56,"column":5,"nodeType":"387","messageId":"388","endLine":56,"endColumn":16,"suggestions":"480"},{"ruleId":"385","severity":1,"message":"386","line":60,"column":7,"nodeType":"387","messageId":"388","endLine":60,"endColumn":18,"suggestions":"481"},{"ruleId":"385","severity":1,"message":"386","line":66,"column":7,"nodeType":"387","messageId":"388","endLine":66,"endColumn":18,"suggestions":"482"},{"ruleId":"385","severity":1,"message":"386","line":78,"column":5,"nodeType":"387","messageId":"388","endLine":78,"endColumn":16,"suggestions":"483"},{"ruleId":"385","severity":1,"message":"386","line":83,"column":7,"nodeType":"387","messageId":"388","endLine":83,"endColumn":18,"suggestions":"484"},{"ruleId":"385","severity":1,"message":"386","line":89,"column":7,"nodeType":"387","messageId":"388","endLine":89,"endColumn":18,"suggestions":"485"},{"ruleId":"385","severity":1,"message":"386","line":93,"column":9,"nodeType":"387","messageId":"388","endLine":93,"endColumn":20,"suggestions":"486"},{"ruleId":"385","severity":1,"message":"386","line":120,"column":9,"nodeType":"387","messageId":"388","endLine":120,"endColumn":20,"suggestions":"487"},{"ruleId":"385","severity":1,"message":"386","line":130,"column":9,"nodeType":"387","messageId":"388","endLine":130,"endColumn":20,"suggestions":"488"},{"ruleId":"385","severity":1,"message":"386","line":136,"column":9,"nodeType":"387","messageId":"388","endLine":136,"endColumn":20,"suggestions":"489"},{"ruleId":"385","severity":1,"message":"386","line":142,"column":9,"nodeType":"387","messageId":"388","endLine":142,"endColumn":20,"suggestions":"490"},{"ruleId":"385","severity":1,"message":"386","line":152,"column":9,"nodeType":"387","messageId":"388","endLine":152,"endColumn":20,"suggestions":"491"},{"ruleId":"385","severity":1,"message":"386","line":158,"column":5,"nodeType":"387","messageId":"388","endLine":158,"endColumn":16,"suggestions":"492"},{"ruleId":"385","severity":1,"message":"386","line":205,"column":5,"nodeType":"387","messageId":"388","endLine":205,"endColumn":16,"suggestions":"493"},{"ruleId":"385","severity":1,"message":"386","line":234,"column":5,"nodeType":"387","messageId":"388","endLine":234,"endColumn":16,"suggestions":"494"},{"ruleId":"385","severity":1,"message":"386","line":317,"column":5,"nodeType":"387","messageId":"388","endLine":317,"endColumn":16,"suggestions":"495"},{"ruleId":"496","severity":2,"message":"497","line":42,"column":3,"nodeType":"498","messageId":"499","endLine":42,"endColumn":28},{"ruleId":"385","severity":1,"message":"386","line":43,"column":5,"nodeType":"387","messageId":"388","endLine":43,"endColumn":16,"suggestions":"500"},{"ruleId":"385","severity":1,"message":"386","line":44,"column":5,"nodeType":"387","messageId":"388","endLine":44,"endColumn":16,"suggestions":"501"},{"ruleId":"385","severity":1,"message":"386","line":54,"column":7,"nodeType":"387","messageId":"388","endLine":54,"endColumn":18,"suggestions":"502"},{"ruleId":"385","severity":1,"message":"386","line":56,"column":7,"nodeType":"387","messageId":"388","endLine":56,"endColumn":18,"suggestions":"503"},{"ruleId":"385","severity":1,"message":"386","line":60,"column":9,"nodeType":"387","messageId":"388","endLine":60,"endColumn":20,"suggestions":"504"},{"ruleId":"385","severity":1,"message":"386","line":63,"column":9,"nodeType":"387","messageId":"388","endLine":63,"endColumn":20,"suggestions":"505"},{"ruleId":"385","severity":1,"message":"386","line":67,"column":5,"nodeType":"387","messageId":"388","endLine":67,"endColumn":16,"suggestions":"506"},{"ruleId":"385","severity":1,"message":"386","line":94,"column":5,"nodeType":"387","messageId":"388","endLine":94,"endColumn":16,"suggestions":"507"},{"ruleId":"385","severity":1,"message":"386","line":107,"column":7,"nodeType":"387","messageId":"388","endLine":107,"endColumn":18,"suggestions":"508"},{"ruleId":"385","severity":1,"message":"386","line":130,"column":9,"nodeType":"387","messageId":"388","endLine":130,"endColumn":20,"suggestions":"509"},{"ruleId":"385","severity":1,"message":"386","line":171,"column":7,"nodeType":"387","messageId":"388","endLine":171,"endColumn":18,"suggestions":"510"},{"ruleId":"385","severity":1,"message":"386","line":197,"column":7,"nodeType":"387","messageId":"388","endLine":197,"endColumn":18,"suggestions":"511"},{"ruleId":"385","severity":1,"message":"386","line":215,"column":7,"nodeType":"387","messageId":"388","endLine":215,"endColumn":18,"suggestions":"512"},{"ruleId":"385","severity":1,"message":"386","line":227,"column":5,"nodeType":"387","messageId":"388","endLine":227,"endColumn":16,"suggestions":"513"},{"ruleId":"385","severity":1,"message":"386","line":231,"column":7,"nodeType":"387","messageId":"388","endLine":231,"endColumn":18,"suggestions":"514"},{"ruleId":"385","severity":1,"message":"386","line":280,"column":5,"nodeType":"387","messageId":"388","endLine":280,"endColumn":16,"suggestions":"515"},{"ruleId":"381","severity":2,"message":"382","line":297,"column":15,"nodeType":"439","messageId":"384","endLine":297,"endColumn":53},{"ruleId":"447","severity":2,"message":"516","line":297,"column":51,"nodeType":"517","messageId":"450","endLine":297,"endColumn":52},{"ruleId":"447","severity":2,"message":"518","line":298,"column":47,"nodeType":"517","messageId":"450","endLine":298,"endColumn":48},{"ruleId":"447","severity":2,"message":"519","line":299,"column":47,"nodeType":"517","messageId":"450","endLine":299,"endColumn":48},{"ruleId":"385","severity":1,"message":"386","line":301,"column":9,"nodeType":"387","messageId":"388","endLine":301,"endColumn":20,"suggestions":"520"},{"ruleId":"385","severity":1,"message":"386","line":377,"column":11,"nodeType":"387","messageId":"388","endLine":377,"endColumn":22,"suggestions":"521"},{"ruleId":"385","severity":1,"message":"386","line":386,"column":5,"nodeType":"387","messageId":"388","endLine":386,"endColumn":16,"suggestions":"522"},{"ruleId":"447","severity":2,"message":"523","line":408,"column":41,"nodeType":"449","messageId":"450","endLine":408,"endColumn":47},{"ruleId":"381","severity":2,"message":"457","line":414,"column":11,"nodeType":"439","messageId":"384","endLine":417,"endColumn":7},{"ruleId":"524","severity":2,"message":"525","line":414,"column":24,"nodeType":"387","messageId":"526","endLine":414,"endColumn":41},{"ruleId":"447","severity":2,"message":"527","line":414,"column":38,"nodeType":"449","messageId":"450","endLine":414,"endColumn":41},{"ruleId":"447","severity":2,"message":"518","line":415,"column":9,"nodeType":"517","messageId":"450","endLine":415,"endColumn":10},{"ruleId":"447","severity":2,"message":"519","line":416,"column":9,"nodeType":"517","messageId":"450","endLine":416,"endColumn":10},{"ruleId":"423","severity":2,"message":"528","line":431,"column":22,"nodeType":"387","messageId":"425","endLine":431,"endColumn":26},{"ruleId":"447","severity":2,"message":"516","line":431,"column":24,"nodeType":"517","messageId":"450","endLine":431,"endColumn":25},{"ruleId":"423","severity":2,"message":"528","line":431,"column":44,"nodeType":"387","messageId":"425","endLine":431,"endColumn":48},{"ruleId":"447","severity":2,"message":"529","line":431,"column":46,"nodeType":"517","messageId":"450","endLine":431,"endColumn":47},{"ruleId":"423","severity":2,"message":"528","line":436,"column":22,"nodeType":"387","messageId":"425","endLine":436,"endColumn":26},{"ruleId":"447","severity":2,"message":"516","line":436,"column":24,"nodeType":"517","messageId":"450","endLine":436,"endColumn":25},{"ruleId":"423","severity":2,"message":"528","line":436,"column":43,"nodeType":"387","messageId":"425","endLine":436,"endColumn":47},{"ruleId":"447","severity":2,"message":"529","line":436,"column":45,"nodeType":"517","messageId":"450","endLine":436,"endColumn":46},{"ruleId":"385","severity":1,"message":"386","line":496,"column":5,"nodeType":"387","messageId":"388","endLine":496,"endColumn":16,"suggestions":"530"},{"ruleId":"385","severity":1,"message":"386","line":522,"column":5,"nodeType":"387","messageId":"388","endLine":522,"endColumn":16,"suggestions":"531"},{"ruleId":"442","severity":2,"message":"443","line":326,"column":28,"nodeType":"444","messageId":"445","endLine":326,"endColumn":31,"suggestions":"532"},{"ruleId":"442","severity":2,"message":"443","line":326,"column":41,"nodeType":"444","messageId":"445","endLine":326,"endColumn":44,"suggestions":"533"},{"ruleId":"442","severity":2,"message":"443","line":326,"column":47,"nodeType":"444","messageId":"445","endLine":326,"endColumn":50,"suggestions":"534"},{"ruleId":"381","severity":2,"message":"382","line":335,"column":13,"nodeType":"439","messageId":"384","endLine":335,"endColumn":40},{"ruleId":"442","severity":2,"message":"443","line":335,"column":21,"nodeType":"444","messageId":"445","endLine":335,"endColumn":24,"suggestions":"535"},{"ruleId":"524","severity":2,"message":"536","line":338,"column":13,"nodeType":"387","messageId":"526","endLine":338,"endColumn":34},{"ruleId":"537","severity":2,"message":"538","line":338,"column":20,"nodeType":"539","messageId":"540","endLine":338,"endColumn":34,"suggestions":"541"},{"ruleId":"447","severity":2,"message":"542","line":338,"column":20,"nodeType":"449","messageId":"450","endLine":338,"endColumn":34},{"ruleId":"447","severity":2,"message":"543","line":339,"column":29,"nodeType":"449","messageId":"450","endLine":339,"endColumn":32},{"ruleId":"447","severity":2,"message":"543","line":339,"column":57,"nodeType":"449","messageId":"450","endLine":339,"endColumn":60},{"ruleId":"447","severity":2,"message":"543","line":339,"column":96,"nodeType":"449","messageId":"450","endLine":339,"endColumn":99},{"ruleId":"381","severity":2,"message":"382","line":340,"column":13,"nodeType":"383","messageId":"384","endLine":340,"endColumn":58},{"ruleId":"447","severity":2,"message":"543","line":340,"column":20,"nodeType":"449","messageId":"450","endLine":340,"endColumn":23},{"ruleId":"447","severity":2,"message":"543","line":340,"column":40,"nodeType":"449","messageId":"450","endLine":340,"endColumn":43},{"ruleId":"447","severity":2,"message":"543","line":340,"column":53,"nodeType":"449","messageId":"450","endLine":340,"endColumn":56},{"ruleId":"381","severity":2,"message":"382","line":342,"column":13,"nodeType":"383","messageId":"384","endLine":342,"endColumn":38},{"ruleId":"447","severity":2,"message":"543","line":342,"column":20,"nodeType":"449","messageId":"450","endLine":342,"endColumn":23},{"ruleId":"447","severity":2,"message":"543","line":342,"column":34,"nodeType":"449","messageId":"450","endLine":342,"endColumn":37},{"ruleId":"544","severity":2,"message":"545","line":350,"column":5,"nodeType":"546","messageId":"547","endLine":350,"endColumn":44},{"ruleId":"403","severity":1,"message":"548","line":19,"column":1,"nodeType":"405","endLine":19,"endColumn":55,"fix":"549"},{"ruleId":"403","severity":1,"message":"412","line":20,"column":1,"nodeType":"405","endLine":20,"endColumn":59,"fix":"550"},{"ruleId":"442","severity":2,"message":"443","line":38,"column":31,"nodeType":"444","messageId":"445","endLine":38,"endColumn":34,"suggestions":"551"},{"ruleId":"385","severity":1,"message":"386","line":62,"column":7,"nodeType":"387","messageId":"388","endLine":62,"endColumn":18,"suggestions":"552"},{"ruleId":"381","severity":2,"message":"382","line":166,"column":9,"nodeType":"439","messageId":"384","endLine":166,"endColumn":65},{"ruleId":"442","severity":2,"message":"443","line":166,"column":47,"nodeType":"444","messageId":"445","endLine":166,"endColumn":50,"suggestions":"553"},{"ruleId":"447","severity":2,"message":"554","line":166,"column":52,"nodeType":"449","messageId":"450","endLine":166,"endColumn":65},{"ruleId":"442","severity":2,"message":"443","line":172,"column":69,"nodeType":"444","messageId":"445","endLine":172,"endColumn":72,"suggestions":"555"},{"ruleId":"447","severity":2,"message":"556","line":172,"column":79,"nodeType":"449","messageId":"450","endLine":172,"endColumn":81},{"ruleId":"385","severity":1,"message":"386","line":182,"column":3,"nodeType":"387","messageId":"388","endLine":182,"endColumn":14,"suggestions":"557"},{"ruleId":"381","severity":2,"message":"382","line":185,"column":9,"nodeType":"439","messageId":"384","endLine":185,"endColumn":54},{"ruleId":"524","severity":2,"message":"536","line":185,"column":19,"nodeType":"387","messageId":"526","endLine":185,"endColumn":42},{"ruleId":"447","severity":2,"message":"558","line":185,"column":32,"nodeType":"449","messageId":"450","endLine":185,"endColumn":42},{"ruleId":"524","severity":2,"message":"536","line":187,"column":7,"nodeType":"387","messageId":"526","endLine":187,"endColumn":22},{"ruleId":"447","severity":2,"message":"559","line":187,"column":15,"nodeType":"449","messageId":"450","endLine":187,"endColumn":22},{"ruleId":"385","severity":1,"message":"386","line":188,"column":4,"nodeType":"387","messageId":"388","endLine":188,"endColumn":15,"suggestions":"560"},{"ruleId":"385","severity":1,"message":"386","line":193,"column":3,"nodeType":"387","messageId":"388","endLine":193,"endColumn":14,"suggestions":"561"},{"ruleId":"524","severity":2,"message":"536","line":195,"column":4,"nodeType":"387","messageId":"526","endLine":195,"endColumn":36},{"ruleId":"447","severity":2,"message":"562","line":195,"column":12,"nodeType":"449","messageId":"450","endLine":195,"endColumn":28},{"ruleId":"385","severity":1,"message":"386","line":196,"column":5,"nodeType":"387","messageId":"388","endLine":196,"endColumn":16,"suggestions":"563"},{"ruleId":"385","severity":1,"message":"386","line":303,"column":4,"nodeType":"387","messageId":"388","endLine":303,"endColumn":15,"suggestions":"564"},{"ruleId":"385","severity":1,"message":"386","line":323,"column":11,"nodeType":"387","messageId":"388","endLine":323,"endColumn":22,"suggestions":"565"},{"ruleId":"385","severity":1,"message":"386","line":325,"column":11,"nodeType":"387","messageId":"388","endLine":325,"endColumn":22,"suggestions":"566"},{"ruleId":"385","severity":1,"message":"386","line":329,"column":11,"nodeType":"387","messageId":"388","endLine":329,"endColumn":22,"suggestions":"567"},{"ruleId":"385","severity":1,"message":"386","line":337,"column":7,"nodeType":"387","messageId":"388","endLine":337,"endColumn":18,"suggestions":"568"},{"ruleId":"385","severity":1,"message":"386","line":339,"column":7,"nodeType":"387","messageId":"388","endLine":339,"endColumn":18,"suggestions":"569"},{"ruleId":"385","severity":1,"message":"386","line":344,"column":7,"nodeType":"387","messageId":"388","endLine":344,"endColumn":18,"suggestions":"570"},{"ruleId":"385","severity":1,"message":"386","line":575,"column":5,"nodeType":"387","messageId":"388","endLine":575,"endColumn":16,"suggestions":"571"},{"ruleId":"385","severity":1,"message":"386","line":589,"column":7,"nodeType":"387","messageId":"388","endLine":589,"endColumn":18,"suggestions":"572"},{"ruleId":"385","severity":1,"message":"386","line":718,"column":5,"nodeType":"387","messageId":"388","endLine":718,"endColumn":16,"suggestions":"573"},{"ruleId":"385","severity":1,"message":"386","line":742,"column":5,"nodeType":"387","messageId":"388","endLine":742,"endColumn":16,"suggestions":"574"},{"ruleId":"381","severity":2,"message":"382","line":77,"column":11,"nodeType":"439","messageId":"384","endLine":77,"endColumn":39},{"ruleId":"381","severity":2,"message":"382","line":78,"column":5,"nodeType":"383","messageId":"384","endLine":78,"endColumn":34},{"ruleId":"447","severity":2,"message":"575","line":78,"column":24,"nodeType":"449","messageId":"450","endLine":78,"endColumn":34},{"ruleId":"381","severity":2,"message":"382","line":147,"column":11,"nodeType":"439","messageId":"384","endLine":147,"endColumn":39},{"ruleId":"381","severity":2,"message":"382","line":149,"column":11,"nodeType":"439","messageId":"384","endLine":149,"endColumn":80},{"ruleId":"544","severity":2,"message":"545","line":149,"column":63,"nodeType":"576","messageId":"547","endLine":149,"endColumn":73},{"ruleId":"447","severity":2,"message":"543","line":149,"column":69,"nodeType":"449","messageId":"450","endLine":149,"endColumn":72},{"ruleId":"544","severity":2,"message":"545","line":151,"column":5,"nodeType":"546","messageId":"547","endLine":151,"endColumn":33},{"ruleId":"381","severity":2,"message":"382","line":166,"column":11,"nodeType":"439","messageId":"384","endLine":166,"endColumn":39},{"ruleId":"381","severity":2,"message":"382","line":170,"column":11,"nodeType":"439","messageId":"384","endLine":170,"endColumn":75},{"ruleId":"544","severity":2,"message":"545","line":170,"column":58,"nodeType":"576","messageId":"547","endLine":170,"endColumn":68},{"ruleId":"447","severity":2,"message":"543","line":170,"column":64,"nodeType":"449","messageId":"450","endLine":170,"endColumn":67},{"ruleId":"442","severity":2,"message":"443","line":266,"column":30,"nodeType":"444","messageId":"445","endLine":266,"endColumn":33,"suggestions":"577"},{"ruleId":"442","severity":2,"message":"443","line":266,"column":55,"nodeType":"444","messageId":"445","endLine":266,"endColumn":58,"suggestions":"578"},{"ruleId":"381","severity":2,"message":"382","line":268,"column":9,"nodeType":"439","messageId":"384","endLine":268,"endColumn":28},{"ruleId":"381","severity":2,"message":"382","line":276,"column":9,"nodeType":"383","messageId":"384","endLine":276,"endColumn":33},{"ruleId":"447","severity":2,"message":"579","line":276,"column":23,"nodeType":"449","messageId":"450","endLine":276,"endColumn":32},{"ruleId":"381","severity":2,"message":"382","line":280,"column":11,"nodeType":"383","messageId":"384","endLine":280,"endColumn":27},{"ruleId":"381","severity":2,"message":"382","line":285,"column":9,"nodeType":"383","messageId":"384","endLine":285,"endColumn":30},{"ruleId":"447","severity":2,"message":"448","line":285,"column":25,"nodeType":"449","messageId":"450","endLine":285,"endColumn":29},{"ruleId":"442","severity":2,"message":"443","line":295,"column":30,"nodeType":"444","messageId":"445","endLine":295,"endColumn":33,"suggestions":"580"},{"ruleId":"442","severity":2,"message":"443","line":295,"column":61,"nodeType":"444","messageId":"445","endLine":295,"endColumn":64,"suggestions":"581"},{"ruleId":"442","severity":2,"message":"443","line":295,"column":67,"nodeType":"444","messageId":"445","endLine":295,"endColumn":70,"suggestions":"582"},{"ruleId":"381","severity":2,"message":"382","line":298,"column":13,"nodeType":"439","messageId":"384","endLine":298,"endColumn":69},{"ruleId":"381","severity":2,"message":"382","line":302,"column":11,"nodeType":"439","messageId":"384","endLine":302,"endColumn":35},{"ruleId":"381","severity":2,"message":"382","line":304,"column":9,"nodeType":"383","messageId":"384","endLine":304,"endColumn":32},{"ruleId":"447","severity":2,"message":"448","line":304,"column":27,"nodeType":"449","messageId":"450","endLine":304,"endColumn":31},{"ruleId":"442","severity":2,"message":"443","line":309,"column":32,"nodeType":"444","messageId":"445","endLine":309,"endColumn":35,"suggestions":"583"},{"ruleId":"381","severity":2,"message":"382","line":310,"column":11,"nodeType":"383","messageId":"384","endLine":310,"endColumn":33},{"ruleId":"584","severity":2,"message":"585","line":310,"column":11,"nodeType":"449","messageId":"586","endLine":310,"endColumn":15},{"ruleId":"447","severity":2,"message":"453","line":310,"column":16,"nodeType":"449","messageId":"450","endLine":310,"endColumn":24},{"ruleId":"381","severity":2,"message":"382","line":319,"column":11,"nodeType":"439","messageId":"384","endLine":319,"endColumn":67},{"ruleId":"381","severity":2,"message":"382","line":321,"column":9,"nodeType":"439","messageId":"384","endLine":321,"endColumn":33},{"ruleId":"381","severity":2,"message":"382","line":323,"column":7,"nodeType":"383","messageId":"384","endLine":323,"endColumn":34},{"ruleId":"447","severity":2,"message":"587","line":323,"column":25,"nodeType":"387","messageId":"450","endLine":323,"endColumn":33},{"ruleId":"381","severity":2,"message":"382","line":326,"column":5,"nodeType":"383","messageId":"384","endLine":326,"endColumn":45},{"ruleId":"447","severity":2,"message":"588","line":326,"column":13,"nodeType":"387","messageId":"450","endLine":326,"endColumn":36},{"ruleId":"442","severity":2,"message":"443","line":348,"column":34,"nodeType":"444","messageId":"445","endLine":348,"endColumn":37,"suggestions":"589"},{"ruleId":"442","severity":2,"message":"443","line":348,"column":57,"nodeType":"444","messageId":"445","endLine":348,"endColumn":60,"suggestions":"590"},{"ruleId":"381","severity":2,"message":"382","line":350,"column":11,"nodeType":"439","messageId":"384","endLine":350,"endColumn":58},{"ruleId":"447","severity":2,"message":"591","line":350,"column":34,"nodeType":"449","messageId":"450","endLine":350,"endColumn":47},{"ruleId":"381","severity":2,"message":"382","line":354,"column":11,"nodeType":"439","messageId":"384","endLine":354,"endColumn":60},{"ruleId":"447","severity":2,"message":"592","line":357,"column":13,"nodeType":"449","messageId":"450","endLine":357,"endColumn":25},{"ruleId":"447","severity":2,"message":"592","line":358,"column":13,"nodeType":"449","messageId":"450","endLine":358,"endColumn":25},{"ruleId":"381","severity":2,"message":"382","line":361,"column":5,"nodeType":"383","messageId":"384","endLine":361,"endColumn":66},{"ruleId":"447","severity":2,"message":"593","line":361,"column":13,"nodeType":"449","messageId":"450","endLine":361,"endColumn":29},{"ruleId":"447","severity":2,"message":"594","line":361,"column":54,"nodeType":"449","messageId":"450","endLine":361,"endColumn":66},{"ruleId":"381","severity":2,"message":"382","line":362,"column":5,"nodeType":"383","messageId":"384","endLine":362,"endColumn":58},{"ruleId":"447","severity":2,"message":"592","line":362,"column":13,"nodeType":"449","messageId":"450","endLine":362,"endColumn":25},{"ruleId":"447","severity":2,"message":"595","line":362,"column":48,"nodeType":"449","messageId":"450","endLine":362,"endColumn":58},{"ruleId":"442","severity":2,"message":"443","line":371,"column":56,"nodeType":"444","messageId":"445","endLine":371,"endColumn":59,"suggestions":"596"},{"ruleId":"442","severity":2,"message":"443","line":371,"column":75,"nodeType":"444","messageId":"445","endLine":371,"endColumn":78,"suggestions":"597"},{"ruleId":"423","severity":2,"message":"528","line":377,"column":41,"nodeType":"449","messageId":"425","endLine":377,"endColumn":49},{"ruleId":"442","severity":2,"message":"443","line":387,"column":89,"nodeType":"444","messageId":"445","endLine":387,"endColumn":92,"suggestions":"598"},{"ruleId":"381","severity":2,"message":"382","line":389,"column":11,"nodeType":"439","messageId":"384","endLine":389,"endColumn":72},{"ruleId":"381","severity":2,"message":"382","line":390,"column":11,"nodeType":"439","messageId":"384","endLine":390,"endColumn":45},{"ruleId":"447","severity":2,"message":"599","line":390,"column":37,"nodeType":"449","messageId":"450","endLine":390,"endColumn":44},{"ruleId":"381","severity":2,"message":"382","line":396,"column":7,"nodeType":"600","messageId":"384","endLine":396,"endColumn":61},{"ruleId":"447","severity":2,"message":"594","line":396,"column":49,"nodeType":"449","messageId":"450","endLine":396,"endColumn":61},{"ruleId":"381","severity":2,"message":"382","line":397,"column":7,"nodeType":"600","messageId":"384","endLine":397,"endColumn":53},{"ruleId":"447","severity":2,"message":"595","line":397,"column":43,"nodeType":"449","messageId":"450","endLine":397,"endColumn":53},{"ruleId":"423","severity":2,"message":"601","line":404,"column":45,"nodeType":"449","messageId":"425","endLine":404,"endColumn":53},{"ruleId":"442","severity":2,"message":"443","line":426,"column":32,"nodeType":"444","messageId":"445","endLine":426,"endColumn":35,"suggestions":"602"},{"ruleId":"442","severity":2,"message":"443","line":426,"column":52,"nodeType":"444","messageId":"445","endLine":426,"endColumn":55,"suggestions":"603"},{"ruleId":"544","severity":2,"message":"545","line":427,"column":53,"nodeType":"576","messageId":"547","endLine":427,"endColumn":67},{"ruleId":"447","severity":2,"message":"543","line":427,"column":63,"nodeType":"449","messageId":"450","endLine":427,"endColumn":66},{"ruleId":"442","severity":2,"message":"443","line":443,"column":57,"nodeType":"444","messageId":"445","endLine":443,"endColumn":60,"suggestions":"604"},{"ruleId":"403","severity":1,"message":"467","line":8,"column":1,"nodeType":"405","endLine":8,"endColumn":50,"fix":"605"},{"ruleId":"403","severity":1,"message":"469","line":10,"column":1,"nodeType":"405","endLine":10,"endColumn":59,"fix":"606"},{"ruleId":"403","severity":1,"message":"607","line":11,"column":1,"nodeType":"405","endLine":11,"endColumn":57,"fix":"608"},{"ruleId":"385","severity":1,"message":"386","line":32,"column":5,"nodeType":"387","messageId":"388","endLine":32,"endColumn":16,"suggestions":"609"},{"ruleId":"385","severity":1,"message":"386","line":46,"column":5,"nodeType":"387","messageId":"388","endLine":46,"endColumn":16,"suggestions":"610"},{"ruleId":"385","severity":1,"message":"386","line":58,"column":7,"nodeType":"387","messageId":"388","endLine":58,"endColumn":18,"suggestions":"611"},{"ruleId":"385","severity":1,"message":"386","line":62,"column":7,"nodeType":"387","messageId":"388","endLine":62,"endColumn":18,"suggestions":"612"},{"ruleId":"385","severity":1,"message":"386","line":49,"column":5,"nodeType":"387","messageId":"388","endLine":49,"endColumn":16,"suggestions":"613"},{"ruleId":"385","severity":1,"message":"386","line":55,"column":5,"nodeType":"387","messageId":"388","endLine":55,"endColumn":16,"suggestions":"614"},{"ruleId":"385","severity":1,"message":"386","line":37,"column":5,"nodeType":"387","messageId":"388","endLine":37,"endColumn":16,"suggestions":"615"},{"ruleId":"385","severity":1,"message":"386","line":48,"column":7,"nodeType":"387","messageId":"388","endLine":48,"endColumn":18,"suggestions":"616"},{"ruleId":"385","severity":1,"message":"386","line":82,"column":5,"nodeType":"387","messageId":"388","endLine":82,"endColumn":16,"suggestions":"617"},{"ruleId":"524","severity":2,"message":"536","line":95,"column":13,"nodeType":"387","messageId":"526","endLine":95,"endColumn":68},{"ruleId":"442","severity":2,"message":"443","line":95,"column":35,"nodeType":"444","messageId":"445","endLine":95,"endColumn":38,"suggestions":"618"},{"ruleId":"447","severity":2,"message":"619","line":95,"column":40,"nodeType":"449","messageId":"450","endLine":95,"endColumn":68},{"ruleId":"385","severity":1,"message":"386","line":102,"column":7,"nodeType":"387","messageId":"388","endLine":102,"endColumn":18,"suggestions":"620"},{"ruleId":"385","severity":1,"message":"386","line":124,"column":7,"nodeType":"387","messageId":"388","endLine":124,"endColumn":18,"suggestions":"621"},{"ruleId":"385","severity":1,"message":"386","line":158,"column":5,"nodeType":"387","messageId":"388","endLine":158,"endColumn":16,"suggestions":"622"},{"ruleId":"544","severity":2,"message":"545","line":212,"column":5,"nodeType":"546","messageId":"547","endLine":212,"endColumn":69},{"ruleId":"524","severity":2,"message":"536","line":212,"column":12,"nodeType":"387","messageId":"526","endLine":212,"endColumn":56},{"ruleId":"442","severity":2,"message":"443","line":212,"column":34,"nodeType":"444","messageId":"445","endLine":212,"endColumn":37,"suggestions":"623"},{"ruleId":"447","severity":2,"message":"554","line":212,"column":39,"nodeType":"449","messageId":"450","endLine":212,"endColumn":52},{"ruleId":"524","severity":2,"message":"536","line":233,"column":11,"nodeType":"387","messageId":"526","endLine":233,"endColumn":66},{"ruleId":"442","severity":2,"message":"443","line":233,"column":33,"nodeType":"444","messageId":"445","endLine":233,"endColumn":36,"suggestions":"624"},{"ruleId":"447","severity":2,"message":"619","line":233,"column":38,"nodeType":"449","messageId":"450","endLine":233,"endColumn":66},"@typescript-eslint/no-unsafe-assignment","Unsafe assignment of an `any` value.","AssignmentExpression","anyAssignment","no-console","Unexpected console statement.","MemberExpression","unexpected",["625"],["626"],["627"],["628"],["629"],["630"],["631"],["632"],["633"],["634"],"@typescript-eslint/no-misused-promises","Promise returned in function argument where a void return was expected.","ArrowFunctionExpression","voidReturnArgument","import/order","`@babylonjs/core` import should occur before import of `@babylonjs/loaders/glTF`","ImportDeclaration","`./TextureCacheService` import should occur before import of `./types/schemas`",{"range":"635","text":"636"},"`./UIEngine` import should occur before import of `./UploadInterface`",{"range":"637","text":"638"},"`./ProcessingOverlay` import should occur before import of `./types/schemas`",{"range":"639","text":"640"},"`./PerformanceMonitor` import should occur before import of `./types/schemas`",{"range":"641","text":"642"},["643"],["644"],["645"],"@typescript-eslint/await-thenable","Unexpected `await` of a non-Promise (non-\"Thenable\") value.","AwaitExpression","await",["646"],["647"],"@typescript-eslint/no-unsafe-argument","Unsafe argument of type `any` assigned to a parameter of type `CSGDataResponse`.","unsafeArgument",["648"],["649"],["650"],["651"],["652"],["653"],["654"],["655"],["656"],["657"],["658"],["659"],["660"],"VariableDeclarator",["661"],["662"],"@typescript-eslint/no-explicit-any","Unexpected any. Specify a different type.","TSAnyKeyword","unexpectedAny",["663","664"],"@typescript-eslint/no-unsafe-member-access","Unsafe member access [part] on an `any` value.","Identifier","unsafeMemberExpression",["665","666"],"Unsafe member access .section_id on an `any` value.","Unsafe member access [property] on an `any` value.","@typescript-eslint/no-unused-vars","'controller' is defined but never used. Allowed unused args must match /^_/u.","unusedVar","Unsafe assignment of an error typed value.",["667"],["668"],["669"],["670"],["671"],["672"],["673"],["674"],["675"],"There should be at least one empty line between import groups",{"range":"676","text":"677"},"`./PerformanceMonitor` import should occur before type import of `./types/schemas`",{"range":"678","text":"679"},["680"],["681"],["682"],["683"],["684"],["685"],["686"],["687"],["688"],["689"],["690"],["691"],["692"],["693"],["694"],["695"],["696"],["697"],["698"],["699"],["700"],["701"],["702"],["703"],["704"],"@typescript-eslint/require-await","Async method 'createPanelsWithCSG' has no 'await' expression.","FunctionExpression","missingAwait",["705"],["706"],["707"],["708"],["709"],["710"],["711"],["712"],["713"],["714"],["715"],["716"],["717"],["718"],["719"],["720"],"Unsafe member access [0] on an `error` typed value.","Literal","Unsafe member access [0] on an `any` value.","Unsafe member access [1] on an `any` value.",["721"],["722"],["723"],"Unsafe member access .length on an `error` typed value.","@typescript-eslint/no-unsafe-call","Unsafe call of an `error` type typed value.","unsafeCall","Unsafe member access .map on an `error` typed value.","Unsafe argument of type `any` assigned to a parameter of type `number`.","Unsafe member access [1] on an `error` typed value.",["724"],["725"],["726","727"],["728","729"],["730","731"],["732","733"],"Unsafe call of an `any` typed value.","no-prototype-builtins","Do not access Object.prototype method 'hasOwnProperty' from target object.","CallExpression","prototypeBuildIn",["734"],"Unsafe member access .hasOwnProperty on an `any` value.","Unsafe member access [key] on an `any` value.","@typescript-eslint/no-unsafe-return","Unsafe return of an `any` typed value.","ReturnStatement","unsafeReturn","`./utils/validation` import should occur before import of `./WaveformDesignerFacade`",{"range":"735","text":"736"},{"range":"737","text":"738"},["739","740"],["741"],["742","743"],"Unsafe member access ._textureCache on an `any` value.",["744","745"],"Unsafe member access .id on an `any` value.",["746"],"Unsafe member access .getTexture on an `any` value.","Unsafe member access .isReady on an `any` value.",["747"],["748"],"Unsafe member access .onLoadObservable on an `any` value.",["749"],["750"],["751"],["752"],["753"],["754"],["755"],["756"],["757"],["758"],["759"],["760"],"Unsafe member access ._ui_config on an `any` value.","ChainExpression",["761","762"],["763","764"],"Unsafe member access [arrayPart] on an `any` value.",["765","766"],["767","768"],["769","770"],["771","772"],"no-param-reassign","Assignment to property of function parameter 'item'.","assignmentToFunctionParamProp","Unsafe member access [parts[i]] on an `any` value.","Unsafe member access [parts[parts.length - 1]] on an `any` value.",["773","774"],["775","776"],"Unsafe member access .size_defaults on an `any` value.","Unsafe member access .frame_design on an `any` value.","Unsafe member access .pattern_settings on an `any` value.","Unsafe member access .number_slots on an `any` value.","Unsafe member access .separation on an `any` value.",["777","778"],["779","780"],["781","782"],"Unsafe member access [sizeKey] on an `any` value.","Property","Unsafe argument of type `any` assigned to a parameter of type `string | number`.",["783","784"],["785","786"],["787","788"],{"range":"789","text":"677"},{"range":"790","text":"679"},"`./IdleTextureLoader` import should occur before type import of `./types/schemas`",{"range":"791","text":"792"},["793"],["794"],["795"],["796"],["797"],["798"],["799"],["800"],["801"],["802","803"],"Unsafe member access ._preloadSpeciesTexturesAsync on an `any` value.",["804"],["805"],["806"],["807","808"],["809","810"],{"messageId":"811","data":"812","fix":"813","desc":"814"},{"messageId":"811","data":"815","fix":"816","desc":"814"},{"messageId":"811","data":"817","fix":"818","desc":"814"},{"messageId":"811","data":"819","fix":"820","desc":"814"},{"messageId":"811","data":"821","fix":"822","desc":"814"},{"messageId":"811","data":"823","fix":"824","desc":"814"},{"messageId":"811","data":"825","fix":"826","desc":"814"},{"messageId":"811","data":"827","fix":"828","desc":"814"},{"messageId":"811","data":"829","fix":"830","desc":"814"},{"messageId":"811","data":"831","fix":"832","desc":"814"},[676,877],"import { TextureCacheService } from './TextureCacheService';\r\nimport { type CSGDataResponse, type WoodMaterialsConfig } from './types/schemas';\r\nimport { CompositionStateDTO } from './types/schemas';\r\n",[877,971],"import { UIEngine } from './UIEngine';\r\nimport { UploadInterface } from './UploadInterface';\r\n",[676,1145],"import { ProcessingOverlay } from './ProcessingOverlay';\r\nimport { type CSGDataResponse, type WoodMaterialsConfig } from './types/schemas';\r\nimport { CompositionStateDTO } from './types/schemas';\r\nimport { TextureCacheService } from './TextureCacheService';\r\nimport { UploadInterface } from './UploadInterface';\r\nimport { UIEngine } from './UIEngine';\r\nimport { WaveformDesignerFacade } from './WaveformDesignerFacade';\r\nimport { WoodMaterial } from './WoodMaterial';\r\n",[676,1205],"import { PerformanceMonitor } from './PerformanceMonitor';\r\nimport { type CSGDataResponse, type WoodMaterialsConfig } from './types/schemas';\r\nimport { CompositionStateDTO } from './types/schemas';\r\nimport { TextureCacheService } from './TextureCacheService';\r\nimport { UploadInterface } from './UploadInterface';\r\nimport { UIEngine } from './UIEngine';\r\nimport { WaveformDesignerFacade } from './WaveformDesignerFacade';\r\nimport { WoodMaterial } from './WoodMaterial';\r\nimport { ProcessingOverlay } from './ProcessingOverlay';\r\n",{"messageId":"811","data":"833","fix":"834","desc":"814"},{"messageId":"811","data":"835","fix":"836","desc":"814"},{"messageId":"811","data":"837","fix":"838","desc":"814"},{"messageId":"839","fix":"840","desc":"841"},{"messageId":"811","data":"842","fix":"843","desc":"814"},{"messageId":"811","data":"844","fix":"845","desc":"814"},{"messageId":"811","data":"846","fix":"847","desc":"814"},{"messageId":"811","data":"848","fix":"849","desc":"814"},{"messageId":"811","data":"850","fix":"851","desc":"814"},{"messageId":"811","data":"852","fix":"853","desc":"814"},{"messageId":"811","data":"854","fix":"855","desc":"814"},{"messageId":"811","data":"856","fix":"857","desc":"814"},{"messageId":"811","data":"858","fix":"859","desc":"814"},{"messageId":"811","data":"860","fix":"861","desc":"814"},{"messageId":"811","data":"862","fix":"863","desc":"814"},{"messageId":"811","data":"864","fix":"865","desc":"814"},{"messageId":"811","data":"866","fix":"867","desc":"814"},{"messageId":"811","data":"868","fix":"869","desc":"814"},{"messageId":"811","data":"870","fix":"871","desc":"814"},{"messageId":"811","data":"872","fix":"873","desc":"814"},{"messageId":"874","fix":"875","desc":"876"},{"messageId":"877","fix":"878","desc":"879"},{"messageId":"874","fix":"880","desc":"876"},{"messageId":"877","fix":"881","desc":"879"},{"messageId":"811","data":"882","fix":"883","desc":"814"},{"messageId":"811","data":"884","fix":"885","desc":"814"},{"messageId":"811","data":"886","fix":"887","desc":"814"},{"messageId":"811","data":"888","fix":"889","desc":"814"},{"messageId":"811","data":"890","fix":"891","desc":"814"},{"messageId":"811","data":"892","fix":"893","desc":"814"},{"messageId":"811","data":"894","fix":"895","desc":"814"},{"messageId":"811","data":"896","fix":"897","desc":"814"},{"messageId":"811","data":"898","fix":"899","desc":"814"},[79,79],"\n",[81,202],"import { PerformanceMonitor } from './PerformanceMonitor';\r\nimport type { WoodMaterialsConfig } from './types/schemas';\r\n",{"messageId":"811","data":"900","fix":"901","desc":"814"},{"messageId":"811","data":"902","fix":"903","desc":"814"},{"messageId":"811","data":"904","fix":"905","desc":"814"},{"messageId":"811","data":"906","fix":"907","desc":"814"},{"messageId":"811","data":"908","fix":"909","desc":"814"},{"messageId":"811","data":"910","fix":"911","desc":"814"},{"messageId":"811","data":"912","fix":"913","desc":"814"},{"messageId":"811","data":"914","fix":"915","desc":"814"},{"messageId":"811","data":"916","fix":"917","desc":"814"},{"messageId":"811","data":"918","fix":"919","desc":"814"},{"messageId":"811","data":"920","fix":"921","desc":"814"},{"messageId":"811","data":"922","fix":"923","desc":"814"},{"messageId":"811","data":"924","fix":"925","desc":"814"},{"messageId":"811","data":"926","fix":"927","desc":"814"},{"messageId":"811","data":"928","fix":"929","desc":"814"},{"messageId":"811","data":"930","fix":"931","desc":"814"},{"messageId":"811","data":"932","fix":"933","desc":"814"},{"messageId":"811","data":"934","fix":"935","desc":"814"},{"messageId":"811","data":"936","fix":"937","desc":"814"},{"messageId":"811","data":"938","fix":"939","desc":"814"},{"messageId":"811","data":"940","fix":"941","desc":"814"},{"messageId":"811","data":"942","fix":"943","desc":"814"},{"messageId":"811","data":"944","fix":"945","desc":"814"},{"messageId":"811","data":"946","fix":"947","desc":"814"},{"messageId":"811","data":"948","fix":"949","desc":"814"},{"messageId":"811","data":"950","fix":"951","desc":"814"},{"messageId":"811","data":"952","fix":"953","desc":"814"},{"messageId":"811","data":"954","fix":"955","desc":"814"},{"messageId":"811","data":"956","fix":"957","desc":"814"},{"messageId":"811","data":"958","fix":"959","desc":"814"},{"messageId":"811","data":"960","fix":"961","desc":"814"},{"messageId":"811","data":"962","fix":"963","desc":"814"},{"messageId":"811","data":"964","fix":"965","desc":"814"},{"messageId":"811","data":"966","fix":"967","desc":"814"},{"messageId":"811","data":"968","fix":"969","desc":"814"},{"messageId":"811","data":"970","fix":"971","desc":"814"},{"messageId":"811","data":"972","fix":"973","desc":"814"},{"messageId":"811","data":"974","fix":"975","desc":"814"},{"messageId":"811","data":"976","fix":"977","desc":"814"},{"messageId":"811","data":"978","fix":"979","desc":"814"},{"messageId":"811","data":"980","fix":"981","desc":"814"},{"messageId":"811","data":"982","fix":"983","desc":"814"},{"messageId":"811","data":"984","fix":"985","desc":"814"},{"messageId":"811","data":"986","fix":"987","desc":"814"},{"messageId":"811","data":"988","fix":"989","desc":"814"},{"messageId":"811","data":"990","fix":"991","desc":"814"},{"messageId":"874","fix":"992","desc":"876"},{"messageId":"877","fix":"993","desc":"879"},{"messageId":"874","fix":"994","desc":"876"},{"messageId":"877","fix":"995","desc":"879"},{"messageId":"874","fix":"996","desc":"876"},{"messageId":"877","fix":"997","desc":"879"},{"messageId":"874","fix":"998","desc":"876"},{"messageId":"877","fix":"999","desc":"879"},{"messageId":"1000","data":"1001","fix":"1002","desc":"1003"},[499,631],"import { fetchAndValidate } from './utils/validation';\r\nimport { WaveformDesignerFacade, Action } from './WaveformDesignerFacade';\r\n",[303,691],"import { PerformanceMonitor } from './PerformanceMonitor';\r\nimport {\r\n  CompositionStateDTO,\r\n  ApplicationState,\r\n  type AudioProcessResponse,\r\n  type CSGDataResponse,\r\n  type WoodMaterialsConfig,\r\n  WoodMaterialsConfigSchema,\r\n} from './types/schemas';\r\nimport { WaveformDesignerFacade, Action } from './WaveformDesignerFacade';\r\nimport { fetchAndValidate } from './utils/validation';\r\n",{"messageId":"874","fix":"1004","desc":"876"},{"messageId":"877","fix":"1005","desc":"879"},{"messageId":"811","data":"1006","fix":"1007","desc":"814"},{"messageId":"874","fix":"1008","desc":"876"},{"messageId":"877","fix":"1009","desc":"879"},{"messageId":"874","fix":"1010","desc":"876"},{"messageId":"877","fix":"1011","desc":"879"},{"messageId":"811","data":"1012","fix":"1013","desc":"814"},{"messageId":"811","data":"1014","fix":"1015","desc":"814"},{"messageId":"811","data":"1016","fix":"1017","desc":"814"},{"messageId":"811","data":"1018","fix":"1019","desc":"814"},{"messageId":"811","data":"1020","fix":"1021","desc":"814"},{"messageId":"811","data":"1022","fix":"1023","desc":"814"},{"messageId":"811","data":"1024","fix":"1025","desc":"814"},{"messageId":"811","data":"1026","fix":"1027","desc":"814"},{"messageId":"811","data":"1028","fix":"1029","desc":"814"},{"messageId":"811","data":"1030","fix":"1031","desc":"814"},{"messageId":"811","data":"1032","fix":"1033","desc":"814"},{"messageId":"811","data":"1034","fix":"1035","desc":"814"},{"messageId":"811","data":"1036","fix":"1037","desc":"814"},{"messageId":"811","data":"1038","fix":"1039","desc":"814"},{"messageId":"811","data":"1040","fix":"1041","desc":"814"},{"messageId":"874","fix":"1042","desc":"876"},{"messageId":"877","fix":"1043","desc":"879"},{"messageId":"874","fix":"1044","desc":"876"},{"messageId":"877","fix":"1045","desc":"879"},{"messageId":"874","fix":"1046","desc":"876"},{"messageId":"877","fix":"1047","desc":"879"},{"messageId":"874","fix":"1048","desc":"876"},{"messageId":"877","fix":"1049","desc":"879"},{"messageId":"874","fix":"1050","desc":"876"},{"messageId":"877","fix":"1051","desc":"879"},{"messageId":"874","fix":"1052","desc":"876"},{"messageId":"877","fix":"1053","desc":"879"},{"messageId":"874","fix":"1054","desc":"876"},{"messageId":"877","fix":"1055","desc":"879"},{"messageId":"874","fix":"1056","desc":"876"},{"messageId":"877","fix":"1057","desc":"879"},{"messageId":"874","fix":"1058","desc":"876"},{"messageId":"877","fix":"1059","desc":"879"},{"messageId":"874","fix":"1060","desc":"876"},{"messageId":"877","fix":"1061","desc":"879"},{"messageId":"874","fix":"1062","desc":"876"},{"messageId":"877","fix":"1063","desc":"879"},{"messageId":"874","fix":"1064","desc":"876"},{"messageId":"877","fix":"1065","desc":"879"},{"messageId":"874","fix":"1066","desc":"876"},{"messageId":"877","fix":"1067","desc":"879"},{"messageId":"874","fix":"1068","desc":"876"},{"messageId":"877","fix":"1069","desc":"879"},[286,286],[288,409],[288,467],"import { IdleTextureLoader } from './IdleTextureLoader';\r\nimport type { WoodMaterialsConfig } from './types/schemas';\r\nimport { PerformanceMonitor } from './PerformanceMonitor';\r\n",{"messageId":"811","data":"1070","fix":"1071","desc":"814"},{"messageId":"811","data":"1072","fix":"1073","desc":"814"},{"messageId":"811","data":"1074","fix":"1075","desc":"814"},{"messageId":"811","data":"1076","fix":"1077","desc":"814"},{"messageId":"811","data":"1078","fix":"1079","desc":"814"},{"messageId":"811","data":"1080","fix":"1081","desc":"814"},{"messageId":"811","data":"1082","fix":"1083","desc":"814"},{"messageId":"811","data":"1084","fix":"1085","desc":"814"},{"messageId":"811","data":"1086","fix":"1087","desc":"814"},{"messageId":"874","fix":"1088","desc":"876"},{"messageId":"877","fix":"1089","desc":"879"},{"messageId":"811","data":"1090","fix":"1091","desc":"814"},{"messageId":"811","data":"1092","fix":"1093","desc":"814"},{"messageId":"811","data":"1094","fix":"1095","desc":"814"},{"messageId":"874","fix":"1096","desc":"876"},{"messageId":"877","fix":"1097","desc":"879"},{"messageId":"874","fix":"1098","desc":"876"},{"messageId":"877","fix":"1099","desc":"879"},"removeConsole",{"propertyName":"1100"},{"range":"1101","text":"1102"},"Remove the console.log().",{"propertyName":"1100"},{"range":"1103","text":"1102"},{"propertyName":"1100"},{"range":"1104","text":"1102"},{"propertyName":"1100"},{"range":"1105","text":"1102"},{"propertyName":"1100"},{"range":"1106","text":"1102"},{"propertyName":"1100"},{"range":"1107","text":"1102"},{"propertyName":"1100"},{"range":"1108","text":"1102"},{"propertyName":"1100"},{"range":"1109","text":"1102"},{"propertyName":"1100"},{"range":"1110","text":"1102"},{"propertyName":"1100"},{"range":"1111","text":"1102"},{"propertyName":"1100"},{"range":"1112","text":"1102"},{"propertyName":"1100"},{"range":"1113","text":"1102"},{"propertyName":"1100"},{"range":"1114","text":"1102"},"removeAwait",{"range":"1115","text":"1102"},"Remove unnecessary `await`.",{"propertyName":"1100"},{"range":"1116","text":"1102"},{"propertyName":"1100"},{"range":"1117","text":"1102"},{"propertyName":"1100"},{"range":"1118","text":"1102"},{"propertyName":"1100"},{"range":"1119","text":"1102"},{"propertyName":"1100"},{"range":"1120","text":"1102"},{"propertyName":"1100"},{"range":"1121","text":"1102"},{"propertyName":"1100"},{"range":"1122","text":"1102"},{"propertyName":"1100"},{"range":"1123","text":"1102"},{"propertyName":"1100"},{"range":"1124","text":"1102"},{"propertyName":"1100"},{"range":"1125","text":"1102"},{"propertyName":"1100"},{"range":"1126","text":"1102"},{"propertyName":"1100"},{"range":"1127","text":"1102"},{"propertyName":"1100"},{"range":"1128","text":"1102"},{"propertyName":"1100"},{"range":"1129","text":"1102"},{"propertyName":"1100"},{"range":"1130","text":"1102"},{"propertyName":"1100"},{"range":"1131","text":"1102"},"suggestUnknown",{"range":"1132","text":"1133"},"Use `unknown` instead, this will force you to explicitly, and safely assert the type is correct.","suggestNever",{"range":"1134","text":"1135"},"Use `never` instead, this is useful when instantiating generic type parameters that you don't need to know the type of.",{"range":"1136","text":"1133"},{"range":"1137","text":"1135"},{"propertyName":"1100"},{"range":"1138","text":"1102"},{"propertyName":"1100"},{"range":"1139","text":"1102"},{"propertyName":"1100"},{"range":"1140","text":"1102"},{"propertyName":"1100"},{"range":"1141","text":"1102"},{"propertyName":"1100"},{"range":"1142","text":"1102"},{"propertyName":"1100"},{"range":"1143","text":"1102"},{"propertyName":"1100"},{"range":"1144","text":"1102"},{"propertyName":"1100"},{"range":"1145","text":"1102"},{"propertyName":"1100"},{"range":"1146","text":"1102"},{"propertyName":"1100"},{"range":"1147","text":"1102"},{"propertyName":"1100"},{"range":"1148","text":"1102"},{"propertyName":"1100"},{"range":"1149","text":"1102"},{"propertyName":"1100"},{"range":"1150","text":"1102"},{"propertyName":"1100"},{"range":"1151","text":"1102"},{"propertyName":"1100"},{"range":"1152","text":"1102"},{"propertyName":"1100"},{"range":"1153","text":"1102"},{"propertyName":"1100"},{"range":"1154","text":"1102"},{"propertyName":"1100"},{"range":"1155","text":"1102"},{"propertyName":"1100"},{"range":"1156","text":"1102"},{"propertyName":"1100"},{"range":"1157","text":"1102"},{"propertyName":"1100"},{"range":"1158","text":"1102"},{"propertyName":"1100"},{"range":"1159","text":"1102"},{"propertyName":"1100"},{"range":"1160","text":"1102"},{"propertyName":"1100"},{"range":"1161","text":"1102"},{"propertyName":"1100"},{"range":"1162","text":"1102"},{"propertyName":"1100"},{"range":"1163","text":"1102"},{"propertyName":"1100"},{"range":"1164","text":"1102"},{"propertyName":"1100"},{"range":"1165","text":"1102"},{"propertyName":"1100"},{"range":"1166","text":"1102"},{"propertyName":"1100"},{"range":"1167","text":"1102"},{"propertyName":"1100"},{"range":"1168","text":"1102"},{"propertyName":"1100"},{"range":"1169","text":"1102"},{"propertyName":"1100"},{"range":"1170","text":"1102"},{"propertyName":"1100"},{"range":"1171","text":"1102"},{"propertyName":"1100"},{"range":"1172","text":"1102"},{"propertyName":"1100"},{"range":"1173","text":"1102"},{"propertyName":"1100"},{"range":"1174","text":"1102"},{"propertyName":"1100"},{"range":"1175","text":"1102"},{"propertyName":"1100"},{"range":"1176","text":"1102"},{"propertyName":"1100"},{"range":"1177","text":"1102"},{"propertyName":"1100"},{"range":"1178","text":"1102"},{"propertyName":"1100"},{"range":"1179","text":"1102"},{"propertyName":"1100"},{"range":"1180","text":"1102"},{"propertyName":"1100"},{"range":"1181","text":"1102"},{"propertyName":"1100"},{"range":"1182","text":"1102"},{"propertyName":"1100"},{"range":"1183","text":"1102"},{"propertyName":"1100"},{"range":"1184","text":"1102"},{"propertyName":"1100"},{"range":"1185","text":"1102"},{"propertyName":"1100"},{"range":"1186","text":"1102"},{"propertyName":"1100"},{"range":"1187","text":"1102"},{"propertyName":"1100"},{"range":"1188","text":"1102"},{"propertyName":"1100"},{"range":"1189","text":"1102"},{"propertyName":"1100"},{"range":"1190","text":"1102"},{"propertyName":"1100"},{"range":"1191","text":"1102"},{"propertyName":"1100"},{"range":"1192","text":"1102"},{"range":"1193","text":"1133"},{"range":"1194","text":"1135"},{"range":"1195","text":"1133"},{"range":"1196","text":"1135"},{"range":"1197","text":"1133"},{"range":"1198","text":"1135"},{"range":"1199","text":"1133"},{"range":"1200","text":"1135"},"callObjectPrototype",{"prop":"1201"},{"range":"1202","text":"1203"},"Call Object.prototype.hasOwnProperty explicitly.",{"range":"1204","text":"1133"},{"range":"1205","text":"1135"},{"propertyName":"1100"},{"range":"1206","text":"1102"},{"range":"1207","text":"1133"},{"range":"1208","text":"1135"},{"range":"1209","text":"1133"},{"range":"1210","text":"1135"},{"propertyName":"1100"},{"range":"1211","text":"1102"},{"propertyName":"1100"},{"range":"1212","text":"1102"},{"propertyName":"1100"},{"range":"1213","text":"1102"},{"propertyName":"1100"},{"range":"1214","text":"1102"},{"propertyName":"1100"},{"range":"1215","text":"1102"},{"propertyName":"1100"},{"range":"1216","text":"1102"},{"propertyName":"1100"},{"range":"1217","text":"1102"},{"propertyName":"1100"},{"range":"1218","text":"1102"},{"propertyName":"1100"},{"range":"1219","text":"1102"},{"propertyName":"1100"},{"range":"1220","text":"1102"},{"propertyName":"1100"},{"range":"1221","text":"1102"},{"propertyName":"1100"},{"range":"1222","text":"1102"},{"propertyName":"1100"},{"range":"1223","text":"1102"},{"propertyName":"1100"},{"range":"1224","text":"1102"},{"propertyName":"1100"},{"range":"1225","text":"1102"},{"range":"1226","text":"1133"},{"range":"1227","text":"1135"},{"range":"1228","text":"1133"},{"range":"1229","text":"1135"},{"range":"1230","text":"1133"},{"range":"1231","text":"1135"},{"range":"1232","text":"1133"},{"range":"1233","text":"1135"},{"range":"1234","text":"1133"},{"range":"1235","text":"1135"},{"range":"1236","text":"1133"},{"range":"1237","text":"1135"},{"range":"1238","text":"1133"},{"range":"1239","text":"1135"},{"range":"1240","text":"1133"},{"range":"1241","text":"1135"},{"range":"1242","text":"1133"},{"range":"1243","text":"1135"},{"range":"1244","text":"1133"},{"range":"1245","text":"1135"},{"range":"1246","text":"1133"},{"range":"1247","text":"1135"},{"range":"1248","text":"1133"},{"range":"1249","text":"1135"},{"range":"1250","text":"1133"},{"range":"1251","text":"1135"},{"range":"1252","text":"1133"},{"range":"1253","text":"1135"},{"propertyName":"1100"},{"range":"1254","text":"1102"},{"propertyName":"1100"},{"range":"1255","text":"1102"},{"propertyName":"1100"},{"range":"1256","text":"1102"},{"propertyName":"1100"},{"range":"1257","text":"1102"},{"propertyName":"1100"},{"range":"1258","text":"1102"},{"propertyName":"1100"},{"range":"1259","text":"1102"},{"propertyName":"1100"},{"range":"1260","text":"1102"},{"propertyName":"1100"},{"range":"1261","text":"1102"},{"propertyName":"1100"},{"range":"1262","text":"1102"},{"range":"1263","text":"1133"},{"range":"1264","text":"1135"},{"propertyName":"1100"},{"range":"1265","text":"1102"},{"propertyName":"1100"},{"range":"1266","text":"1102"},{"propertyName":"1100"},{"range":"1267","text":"1102"},{"range":"1268","text":"1133"},{"range":"1269","text":"1135"},{"range":"1270","text":"1133"},{"range":"1271","text":"1135"},"log",[2715,2780],"",[3303,3354],[3360,3408],[3684,3732],[6278,6323],[6870,7020],[7639,7701],[7807,7850],[10294,10341],[10665,10710],[7856,7930],[9068,9131],[9393,9459],[9815,9820],[10072,10140],[11074,11141],[11889,11940],[12277,12338],[12860,12939],[16354,16453],[16459,16557],[16563,16633],[16639,16726],[16860,16932],[16940,17024],[17839,17955],[18032,18105],[18337,18443],[31688,31782],[31842,31912],[34244,34247],"unknown",[34244,34247],"never",[34705,34708],[34705,34708],[39468,39551],[39637,39714],[39843,39919],[39953,40028],[40561,40614],[41724,41874],[41912,41988],[42118,42214],[42372,42457],[2145,2252],[5375,5440],[5997,6054],[7256,7317],[1382,1451],[1880,1999],[2070,2133],[2249,2312],[2480,2558],[1111,1181],[1320,1394],[1536,1599],[1936,1999],[2188,2241],[2452,2537],[2659,2749],[4019,4133],[4450,4527],[4693,4772],[5090,5177],[5494,5571],[5649,5719],[7056,7126],[7986,8077],[10516,10601],[832,887],[893,944],[1242,1296],[1376,1463],[1604,1647],[1704,1753],[1781,1824],[2612,2769],[2993,3038],[3833,3904],[5224,5285],[6093,6146],[6636,6685],[6982,7081],[7191,7269],[8673,8729],[9610,10048],[12801,12857],[13018,13091],[16279,16375],[17255,17297],[9888,9891],[9888,9891],[9901,9904],[9901,9904],[9907,9910],[9907,9910],[10173,10176],[10173,10176],"hasOwnProperty",[10250,10272],"Object.prototype.hasOwnProperty.call(source, ",[1397,1400],[1397,1400],[2122,2207],[5408,5411],[5408,5411],[5603,5606],[5603,5606],[6085,6160],[6290,6347],[6420,6474],[6562,6612],[10492,10560],[11276,11334],[11411,11493],[11654,11711],[11965,12036],[12087,12156],[12294,12357],[18928,18996],[19510,19600],[23998,24052],[24608,24722],[7586,7589],[7586,7589],[7611,7614],[7611,7614],[8387,8390],[8387,8390],[8418,8421],[8418,8421],[8424,8427],[8424,8427],[8986,8989],[8986,8989],[9973,9976],[9973,9976],[9996,9999],[9996,9999],[10726,10729],[10726,10729],[10745,10748],[10745,10748],[11307,11310],[11307,11310],[12495,12498],[12495,12498],[12515,12518],[12515,12518],[12996,12999],[12996,12999],[952,1011],[1497,1583],[2026,2098],[2343,2421],[1171,1234],[1333,1413],[1401,1490],[1724,1771],[2818,2905],[3396,3399],[3396,3399],[3534,3585],[4304,4382],[5072,5128],[6915,6918],[6915,6918],[7637,7640],[7637,7640]]
+\ No newline at end of file
+diff --git a/config/default_parameters.json b/config/default_parameters.json
+index d3ec18e..9e23d41 100644
+--- a/config/default_parameters.json
++++ b/config/default_parameters.json
+@@ -299,11 +299,7 @@
+         "options_from_endpoint": "/api/config/wood-materials",
+         "options_path": "species_catalog",
+         "default_value_from_endpoint": "/api/config/wood-materials",
+-        "default_value_path": "default_species",
+-        "on_change": {
+-          "action": "update_section_materials",
+-          "requires": ["woodSpecies", "grainDirection"]
+-        }
++        "default_value_path": "default_species"
+       },
+       "grainDirection": {
+         "id": "grainDirection",
+@@ -316,11 +312,7 @@
+           {"value": "angled", "label": "Angled"}
+         ],
+         "default_value_from_endpoint": "/api/config/wood-materials",
+-        "default_value_path": "default_grain_direction",
+-        "on_change": {
+-          "action": "update_section_materials",
+-          "requires": ["woodSpecies", "grainDirection"]
+-        }
++        "default_value_path": "default_grain_direction"
+       }
+     },
+     "buttons": {
+diff --git a/index.html b/index.html
+index 73207b5..ea7bd2e 100644
+--- a/index.html
++++ b/index.html
+@@ -11,6 +11,23 @@
+ </head>
+ <body>
+   <div id="app">
++    <!-- Processing Overlay (fullscreen, always on top) -->
++    <div id="processingOverlay" class="processing-overlay">
++      <div class="processing-content">
++        <div class="processing-spinner"></div>
++        <div class="processing-message">Processing...</div>
++        <div class="processing-progress-bar">
++          <div class="processing-progress-fill"></div>
++        </div>
++      </div>
++    </div>
++    
++    <!-- Texture Loading Indicator (bottom-right corner) -->
++    <div id="textureLoadingIndicator" class="texture-loading-indicator">
++      <div class="loading-spinner-small"></div>
++      <span class="loading-text">Loading exotic wood species... (<span id="texturesLoaded">0</span> of <span id="texturesTotal">15</span>)</span>
++    </div>
++    
+     <!-- Upload Phase Container -->
+     <div id="uploadContainer" class="phase-container active"></div>
+     
+diff --git a/public/style.css b/public/style.css
+index 4e21183..cf813b0 100644
+--- a/public/style.css
++++ b/public/style.css
+@@ -121,8 +121,8 @@ html, body {
+   border-radius: 8px;
+   padding: 1.5rem;
+   pointer-events: auto;
+-  min-width: 280px;
+-  max-width: 320px;
++  min-width: 230px;
++  max-width: 270px;
+ }
+ 
+ .ui-controls-panel h3 {
+@@ -159,7 +159,7 @@ html, body {
+ }
+ 
+ .control-group label {
+-  flex: 0 0 90px;
++  flex: 0 0 60px;
+   font-size: 0.9rem;
+   color: rgba(255, 255, 255, 0.8);
+ }
+@@ -302,6 +302,151 @@ input[type="range"].control-input::-moz-range-thumb:hover {
+   }
+ }
+ 
++/* Processing Overlay */
++.processing-overlay {
++  position: fixed;
++  top: 0;
++  left: 0;
++  width: 100%;
++  height: 100%;
++  background: rgba(0, 0, 0, 0.9);
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  z-index: 10000;
++  opacity: 0;
++  visibility: hidden;
++  transition: opacity 0.3s ease, visibility 0.3s ease;
++}
++
++.processing-overlay.active {
++  opacity: 1;
++  visibility: visible;
++}
++
++.processing-content {
++  text-align: center;
++  max-width: 400px;
++  padding: 2rem;
++}
++
++.processing-spinner {
++  width: 60px;
++  height: 60px;
++  margin: 0 auto 1.5rem;
++  border: 4px solid rgba(255, 255, 255, 0.2);
++  border-top-color: #667eea;
++  border-radius: 50%;
++  animation: spin 1s linear infinite;
++}
++
++@keyframes spin {
++  to { transform: rotate(360deg); }
++}
++
++.processing-message {
++  font-size: 1.5rem;
++  font-weight: 600;
++  color: white;
++  margin-bottom: 1.5rem;
++  line-height: 1.4;
++}
++
++.processing-progress-bar {
++  width: 100%;
++  height: 8px;
++  background: rgba(255, 255, 255, 0.1);
++  border-radius: 4px;
++  overflow: hidden;
++  display: none;
++}
++
++.processing-progress-fill {
++  height: 100%;
++  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
++  border-radius: 4px;
++  transition: width 0.3s ease;
++}
++
++.processing-progress-fill.indeterminate {
++  animation: indeterminate 1.5s ease-in-out infinite;
++}
++
++@keyframes indeterminate {
++  0% {
++    transform: translateX(-100%);
++  }
++  50% {
++    transform: translateX(0%);
++  }
++  100% {
++    transform: translateX(100%);
++  }
++}
++
++/* Mobile adjustments */
++@media (max-width: 768px) {
++  .processing-message {
++    font-size: 1.25rem;
++  }
++  
++  .processing-spinner {
++    width: 50px;
++    height: 50px;
++  }
++}
++
++/* Texture Loading Indicator (bottom-right corner) */
++.texture-loading-indicator {
++  position: fixed;
++  bottom: 20px;
++  right: 20px;
++  background: rgba(0, 0, 0, 0.8);
++  backdrop-filter: blur(10px);
++  padding: 12px 16px;
++  border-radius: 8px;
++  display: none;
++  align-items: center;
++  gap: 10px;
++  z-index: 9000;
++  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
++  transition: opacity 0.3s ease;
++}
++
++.texture-loading-indicator.active {
++  display: flex;
++}
++
++.loading-spinner-small {
++  width: 16px;
++  height: 16px;
++  border: 2px solid rgba(255, 255, 255, 0.2);
++  border-top-color: #667eea;
++  border-radius: 50%;
++  animation: spin 1s linear infinite;
++}
++
++.loading-text {
++  font-size: 0.85rem;
++  color: rgba(255, 255, 255, 0.9);
++  white-space: nowrap;
++}
++
++/* Mobile adjustments */
++@media (max-width: 768px) {
++  .texture-loading-indicator {
++    bottom: 80px;
++    right: 10px;
++    left: 10px;
++    justify-content: center;
++    padding: 10px 14px;
++  }
++  
++  .loading-text {
++    font-size: 0.8rem;
++  }
++}
++
+ /* Phase Containers */
+ .phase-container {
+   position: absolute;
+diff --git a/src/ApplicationController.ts b/src/ApplicationController.ts
+index 080b683..4a4eca7 100644
+--- a/src/ApplicationController.ts
++++ b/src/ApplicationController.ts
+@@ -17,6 +17,7 @@ import {
+ } from './types/schemas';
+ import { WaveformDesignerFacade, Action } from './WaveformDesignerFacade';
+ import { fetchAndValidate } from './utils/validation';
++import { PerformanceMonitor } from './PerformanceMonitor';
+ 
+ // Subscriber callback type
+ type StateSubscriber = (state: ApplicationState) => void;
+@@ -32,8 +33,9 @@ export class ApplicationController {
+     applySectionMaterials: () => void;
+   } | null = null;
+ 	private _audioCache: AudioCacheService;
+-	private _woodMaterialsConfig: WoodMaterialsConfig | null = null;
++  private _woodMaterialsConfig: WoodMaterialsConfig | null = null;
+   private _selectedSectionIndex: number | null = null;
++  private _idleTextureLoader: any = null; // IdleTextureLoader instance
+   
+   constructor(facade: WaveformDesignerFacade) {
+     this._facade = facade;
+@@ -133,7 +135,10 @@ export class ApplicationController {
+    * Register the SceneManager with the controller.
+    * This allows the controller to directly trigger rendering operations.
+    */
+-  registerSceneManager(sceneManager: { renderComposition: (csgData: CSGDataResponse) => Promise<void> }): void {
++  registerSceneManager(sceneManager: { 
++    renderComposition: (csgData: CSGDataResponse) => Promise<void>;
++    applySectionMaterials: () => void;
++  }): void {
+     this._sceneManager = sceneManager;
+   }	
+   
+@@ -148,6 +153,57 @@ export class ApplicationController {
+       this._subscribers.delete(callback);
+     };
+   }
++	
++	/**
++	 * Wait for walnut textures to be ready (don't remove overlay until they're loaded)
++	 */
++	private async waitForWalnutTextures(): Promise<void> {
++		if (!this._sceneManager || !this._woodMaterialsConfig) {
++			console.warn('[Controller] Cannot wait for textures - sceneManager or config not available');
++			return;
++		}
++		
++		const textureCache = (this._sceneManager as any)._textureCache;
++		if (!textureCache) {
++			console.warn('[Controller] TextureCache not available');
++			return;
++		}
++		
++		const walnut = this._woodMaterialsConfig.species_catalog.find((s: any) => s.id === 'walnut-black-american');
++		if (!walnut) {
++			console.warn('[Controller] Walnut species not found in catalog');
++			return;
++		}
++		
++		const basePath = this._woodMaterialsConfig.texture_config.base_texture_path;
++		const sizeInfo = this._woodMaterialsConfig.texture_config.size_map.large;
++		const albedoPath = `${basePath}/${walnut.id}/Varnished/${sizeInfo.folder}/Diffuse/wood-${walnut.wood_number}_${walnut.id}-varnished-${sizeInfo.dimensions}_d.png`;
++		
++		console.log('[Controller] Waiting for walnut albedo texture:', albedoPath);
++		
++		// Get the texture from cache
++		const texture = textureCache.getTexture(albedoPath);
++		
++		if (texture.isReady()) {
++			console.log('[Controller] Walnut texture already ready');
++			return; // Already ready
++		}
++		
++		// Wait for texture to load
++		console.log('[Controller] Walnut texture loading...');
++		return new Promise((resolve) => {
++			texture.onLoadObservable.addOnce(() => {
++				console.log('[Controller] Walnut texture loaded');
++				resolve();
++			});
++			
++			// Timeout after 5 seconds to prevent infinite wait
++			setTimeout(() => {
++				console.warn('[Controller] Walnut texture load timeout - proceeding anyway');
++				resolve();
++			}, 5000);
++		});
++	}
+   
+   /**
+    * Handle file upload with backend processing
+@@ -157,6 +213,8 @@ export class ApplicationController {
+   private async handleFileUpload(file: File, uiSnapshot: CompositionStateDTO): Promise<void> {
+     if (!this._state) return;
+ 
++    PerformanceMonitor.start('total_upload_to_render');
++    
+     // Update UI to show uploading
+     await this.dispatch({
+       type: 'PROCESSING_UPDATE',
+@@ -164,6 +222,7 @@ export class ApplicationController {
+     });
+ 
+     try {
++      PerformanceMonitor.start('backend_audio_processing');
+       // Force a complete state reset on new file upload
+       const freshState = await this._facade.createInitialState();
+       this._state = freshState;
+@@ -176,12 +235,15 @@ export class ApplicationController {
+         file,
+         this._state.composition
+       );
++      PerformanceMonitor.end('backend_audio_processing');
+ 
++      PerformanceMonitor.start('cache_raw_samples');
+       // Cache the raw samples
+       const sessionId = this._audioCache.cacheRawSamples(
+         file,
+         new Float32Array(audioResponse.raw_samples_for_cache)
+       );
++      PerformanceMonitor.end('cache_raw_samples');
+       
+       // Dispatch the backend response (subscribers will sync UI to backend defaults)
+       await this.dispatch({
+@@ -193,6 +255,54 @@ export class ApplicationController {
+           audioSessionId: sessionId,
+         },
+       });
++      
++      /// Show "Preparing your custom art experience!" message
++      await this.dispatch({
++        type: 'PROCESSING_UPDATE',
++        payload: { stage: 'preparing_textures', progress: 0 },
++      });
++      
++      // TEMPORARILY DISABLED TO TEST IF IDLE TEXTURE LOADING BLOCKS SECTION CHANGES
++			/*
++			// Start texture preload in background (don't await - let render proceed)
++			if (this._sceneManager && this._woodMaterialsConfig) {
++				const textureCache = (this._sceneManager as any)._textureCache;
++				if (textureCache && typeof textureCache.preloadAllTextures === 'function') {
++					textureCache.preloadAllTextures(this._woodMaterialsConfig).then((idleLoader: any) => {
++						this._idleTextureLoader = idleLoader;
++						console.log('[Controller] Idle texture loader initialized');
++						
++						const indicator = document.getElementById('textureLoadingIndicator');
++						const loadedEl = document.getElementById('texturesLoaded');
++						const totalEl = document.getElementById('texturesTotal');
++						
++						if (indicator && loadedEl && totalEl) {
++							console.log('[Controller] Setting up progress callback');
++							idleLoader.onProgress((loaded: number, total: number) => {
++								console.log(`[Controller] Progress callback fired: ${loaded}/${total}`);
++								loadedEl.textContent = String(loaded);
++								totalEl.textContent = String(total);
++								
++								if (loaded < total) {
++									indicator.classList.add('active');
++								} else {
++									console.log('[Controller] All textures loaded, hiding indicator');
++									setTimeout(() => {
++										indicator.classList.remove('active');
++									}, 2000);
++								}
++							});
++						}
++					}).catch((error: unknown) => {
++						console.error('[Controller] Texture preload failed:', error);
++					});
++				}
++			}
++			*/
++			
++			console.log('[Controller] Texture preloading DISABLED for testing');
++      
++      PerformanceMonitor.start('csg_generation_and_render');
+ 			
+ 			// Compare user's pre-upload UI choices with backend defaults
+       const backendComp = audioResponse.updated_state;
+@@ -210,9 +320,32 @@ export class ApplicationController {
+         );
+         
+         if (this._sceneManager) {
++          console.log('[Controller] Starting renderComposition...');
+           await this._sceneManager.renderComposition(response);
++          console.log('[Controller] renderComposition complete, waiting for visibility...');
++          
++          // Wait a frame to ensure render is actually visible
++          await new Promise(resolve => requestAnimationFrame(resolve));
++          console.log('[Controller] Render should now be visible');
+         }
+       }
++      
++      PerformanceMonitor.end('csg_generation_and_render');
++      
++      // CRITICAL: Wait for walnut textures to be ready before removing overlay
++      // This prevents user seeing black meshes while textures load
++      console.log('[Controller] Waiting for walnut textures to be ready...');
++      await this.waitForWalnutTextures();
++      console.log('[Controller] Walnut textures ready - removing overlay');
++      
++      PerformanceMonitor.end('total_upload_to_render');
++      
++      // Reset processing stage after successful render
++      console.log('[Controller] Resetting processing stage to idle');
++      await this.dispatch({
++        type: 'PROCESSING_UPDATE',
++        payload: { stage: 'idle', progress: 0 },
++      });
+     } catch (error: unknown) {
+       console.error('File upload or processing failed:', error);
+       await this.dispatch({
+@@ -438,13 +571,44 @@ export class ApplicationController {
+       newComposition
+     );
+ 
++    // DIAGNOSTIC: Log what changed
++    console.log('[Controller] Changed params detected:', changedParams);
++
+     // If nothing relevant changed, just update the local state without an API call.
+     if (changedParams.length === 0) {
+       await this.dispatch({ type: 'COMPOSITION_UPDATED', payload: newComposition });
+       return;
+     }
+ 
+-    // 2. Check if this is an audio-level change that we can handle client-side
++    // 2. Check if ONLY material properties changed (fast path - no backend call)
++    const onlyMaterialsChanged = changedParams.every(param => 
++      param === 'section_materials' || param.startsWith('section_materials.')
++    );
++
++    if (onlyMaterialsChanged) {
++      console.log('[Controller] Material-only change detected - applying without backend call');
++      
++      // Update state locally
++      this._state = {
++        ...this._state,
++        composition: newComposition
++      };
++      
++      // Persist state
++      this._facade.persistState(this._state);
++      
++      // Apply materials to existing meshes (no geometry rebuild)
++      if (this._sceneManager) {
++        this._sceneManager.applySectionMaterials();
++      }
++      
++      // Notify subscribers
++      this.notifySubscribers();
++      
++      return;
++    }
++
++    // 3. Check if this is an audio-level change that we can handle client-side
+     const audioLevelParams = ['number_sections', 'number_slots', 'binning_mode'];
+     const isAudioChange = changedParams.some(param => audioLevelParams.includes(param));
+     
+@@ -494,14 +658,14 @@ export class ApplicationController {
+ 				}
+     
+     try {
+-      // 3. Make one smart API call.
++      // 4. Make one smart API call.
+       const response = await this._facade.getSmartCSGData(
+         stateToSend,
+         changedParams,
+         this._state.audio.previousMaxAmplitude
+       );
+ 
+-      // 4. Handle the handshake: update state FIRST, then trigger the render.
++      // 5. Handle the handshake: update state FIRST, then trigger the render.
+       // This is the crucial step to prevent infinite loops.
+ 
+       // First, update the application state internally with the new, processed state.
+@@ -628,4 +792,4 @@ export class ApplicationController {
+       this._facade.persistState(this._state);
+     }
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/src/WaveformDesignerFacade.ts b/src/WaveformDesignerFacade.ts
+index 972d7b2..658569d 100644
+--- a/src/WaveformDesignerFacade.ts
++++ b/src/WaveformDesignerFacade.ts
+@@ -302,7 +302,20 @@ export class WaveformDesignerFacade {
+     const stored = localStorage.getItem('wavedesigner_session');
+     // Use the type-safe helper to parse and validate the stored data.
+     // It handles JSON parsing errors and Zod validation internally.
+-    return parseStoredData(stored, ApplicationStateSchema);
++    const restoredState = parseStoredData(stored, ApplicationStateSchema);
++    
++    // Always reset processing stage to idle on page load
++    if (restoredState) {
++      return {
++        ...restoredState,
++        processing: {
++          stage: 'idle',
++          progress: 0
++        }
++      };
++    }
++    
++    return null;
+   }
+ 	
+ 	/**
+diff --git a/src/WoodMaterial.ts b/src/WoodMaterial.ts
+index 6236e82..4e0103e 100644
+--- a/src/WoodMaterial.ts
++++ b/src/WoodMaterial.ts
+@@ -4,6 +4,7 @@ import {
+     Texture
+ } from '@babylonjs/core';
+ import type { WoodMaterialsConfig } from './types/schemas';
++import { PerformanceMonitor } from './PerformanceMonitor';
+ 
+ /**
+  * Custom wood material class that extends PBRMaterial.
+@@ -41,36 +42,38 @@ export class WoodMaterial extends PBRMaterial {
+      * @param grainAngleDeg - Grain rotation angle in degrees (0-360)
+      * @param panelDimension - Panel dimension for texture size selection
+      * @param config - Wood materials configuration from backend
++     * @param textureCache - Texture cache service for efficient texture loading
+      */
+     public updateTexturesAndGrain(
+         species: string, 
+         grainAngleDeg: number, 
+         panelDimension: number,
+-        config: WoodMaterialsConfig
++        config: WoodMaterialsConfig,
++        textureCache?: { getTexture: (path: string) => Texture }
+     ): void {
++        PerformanceMonitor.start(`material_update_${species}`);
+         console.log(`[WoodMaterial] Loading: ${species}, grain: ${grainAngleDeg}°, dimension: ${panelDimension}"`);
+         
+         this.currentSpecies = species;
+         
++        // Generate random UV offsets for visual variety
++        const randomUOffset = Math.random();
++        const randomVOffset = Math.random();
++        
+         // Select appropriate texture size
+         const size = this.selectTextureSize(panelDimension, config);
+         
+-        // Load textures with grain rotation
+-        this.loadWoodTextures(species, size, grainAngleDeg, config);
++        // Load textures with grain rotation and random offsets
++        this.loadWoodTextures(species, size, grainAngleDeg, config, randomUOffset, randomVOffset, textureCache);
+     }
+     
+     /**
+      * Select appropriate texture size based on panel dimension.
++     * NOTE: Always returns 'large' for best quality and simpler caching.
++     * Random UV offsets prevent repetitive appearance across sections.
+      */
+-    private selectTextureSize(dimension: number, config: WoodMaterialsConfig): string {
+-        const thresholds = config.texture_config.size_thresholds_inches;
+-        if (dimension <= thresholds.small) {
+-            return 'small';
+-        } else if (dimension <= thresholds.medium) {
+-            return 'medium';
+-        } else {
+-            return 'large';
+-        }
++    private selectTextureSize(_dimension: number, _config: WoodMaterialsConfig): string {
++        return 'large';
+     }
+     
+     /**
+@@ -80,7 +83,10 @@ export class WoodMaterial extends PBRMaterial {
+         species: string, 
+         size: string, 
+         grainAngleDeg: number, 
+-        config: WoodMaterialsConfig
++        config: WoodMaterialsConfig,
++        randomUOffset: number,
++        randomVOffset: number,
++        textureCache?: { getTexture: (path: string) => Texture }
+     ): void {
+         const basePath = config.texture_config.base_texture_path;
+         const assetRoot = `${basePath}/${species}/`;
+@@ -107,48 +113,61 @@ export class WoodMaterial extends PBRMaterial {
+         const totalRotationDeg = grainAngleDeg + rotationOffset;
+         const grainRotationRad = (totalRotationDeg * Math.PI) / 180;
+         
+-        // Dispose old textures
+-        if (this.albedoMap) {
+-            this.albedoMap.dispose();
+-        }
+-        if (this.normalMap) {
+-            this.normalMap.dispose();
+-        }
+-        if (this.roughnessMap) {
+-            this.roughnessMap.dispose();
+-        }
++        // DO NOT dispose old textures when using cache - they're shared!
++        // The TextureCacheService manages texture lifecycle
++        // Only set references to null to allow garbage collection of the reference
++        this.albedoMap = null;
++        this.normalMap = null;
++        this.roughnessMap = null;
+         
+-        // Varnished Albedo/Diffuse texture
++        // Construct texture paths
+         const albedoPath = `${assetRoot}Varnished/${sizeFolder}/Diffuse/wood-${woodNumber}_${species}-varnished-${dimensions}_d.png`;
++        const normalPath = `${assetRoot}Shared_Maps/${sizeFolder}/Normal/wood-${woodNumber}_${species}-${dimensions}_n.png`;
++        const roughnessPath = `${assetRoot}Shared_Maps/${sizeFolder}/Roughness/wood-${woodNumber}_${species}-${dimensions}_r.png`;
++        
+         console.log(`[WoodMaterial] Loading albedo from: ${albedoPath}`);
+-        this.albedoMap = new Texture(
+-            albedoPath, 
+-            this.scene, 
+-            undefined, undefined, undefined, 
+-            () => { console.log(`[WoodMaterial] Albedo loaded successfully`); },
+-            (message) => { console.error(`[WoodMaterial] Failed to load albedo:`, message); }
+-        );
++        
++        // Use texture cache if available, otherwise load directly
++        if (textureCache) {
++            this.albedoMap = textureCache.getTexture(albedoPath);
++            this.normalMap = textureCache.getTexture(normalPath);
++            this.roughnessMap = textureCache.getTexture(roughnessPath);
++        } else {
++            // Fallback: load without cache
++            this.albedoMap = new Texture(
++                albedoPath, 
++                this.scene, 
++                undefined, undefined, undefined, 
++                () => { console.log(`[WoodMaterial] Albedo loaded successfully`); },
++                (message) => { console.error(`[WoodMaterial] Albedo load failed: ${message}`); }
++            );
++            this.normalMap = new Texture(normalPath, this.scene);
++            this.roughnessMap = new Texture(roughnessPath, this.scene);
++        }
++        
++        // Configure albedo/diffuse texture
++        this.albedoMap.wrapU = Texture.WRAP_ADDRESSMODE;
++        this.albedoMap.wrapV = Texture.WRAP_ADDRESSMODE;
+         this.albedoMap.wAng = grainRotationRad;
++        this.albedoMap.uOffset = randomUOffset;
++        this.albedoMap.vOffset = randomVOffset;
+         this.albedoTexture = this.albedoMap;
+         
+-        // Normal map
+-        this.normalMap = new Texture(
+-            `${assetRoot}Shared_Maps/${sizeFolder}/Normal/wood-${woodNumber}_${species}-${dimensions}_n.png`,
+-            this.scene
+-        );
++        // Configure normal map
+         this.normalMap.wAng = grainRotationRad;
++        this.normalMap.uOffset = randomUOffset;
++        this.normalMap.vOffset = randomVOffset;
+         this.bumpTexture = this.normalMap;
+         
+-        // Roughness texture
+-        this.roughnessMap = new Texture(
+-            `${assetRoot}Shared_Maps/${sizeFolder}/Roughness/wood-${woodNumber}_${species}-${dimensions}_r.png`,
+-            this.scene
+-        );
++        // Configure roughness texture
+         this.roughnessMap.wAng = grainRotationRad;
++        this.roughnessMap.uOffset = randomUOffset;
++        this.roughnessMap.vOffset = randomVOffset;
+         this.metallicTexture = this.roughnessMap;
+         this.useRoughnessFromMetallicTextureGreen = true;
+         
+         console.log(`[WoodMaterial] Textures loaded for ${species}`);
++        PerformanceMonitor.end(`material_update_${species}`);
+     }
+     
+     /**
+diff --git a/src/main.ts b/src/main.ts
+index 801b15e..0daaef3 100644
+--- a/src/main.ts
++++ b/src/main.ts
+@@ -22,10 +22,13 @@ import { AudioCacheService } from './AudioCacheService';
+ import { FrameGenerationService } from './FrameGenerationService';
+ import { type CSGDataResponse, type WoodMaterialsConfig } from './types/schemas';
+ import { CompositionStateDTO } from './types/schemas';
++import { TextureCacheService } from './TextureCacheService';
+ import { UploadInterface } from './UploadInterface';
+ import { UIEngine } from './UIEngine';
+ import { WaveformDesignerFacade } from './WaveformDesignerFacade';
+ import { WoodMaterial } from './WoodMaterial';
++import { ProcessingOverlay } from './ProcessingOverlay';
++import { PerformanceMonitor } from './PerformanceMonitor';
+ 
+ 
+ /**
+@@ -80,6 +83,7 @@ class SceneManager {
+   private _canvas: HTMLCanvasElement;
+   private _camera!: ArcRotateCamera;
+ 	private _facade: WaveformDesignerFacade;
++  private _textureCache: TextureCacheService;
+   
+   // Rendering resources (prefixed = OK)
+   private _woodMaterial: WoodMaterial | null = null;
+@@ -112,6 +116,9 @@ class SceneManager {
+     this._scene = new Scene(this._engine);
+     this._scene.clearColor = new Color3(0.1, 0.1, 0.1).toColor4();
+ 
++    // Initialize texture cache
++    this._textureCache = new TextureCacheService(this._scene);
++
+     // Initialize camera
+     this._camera = this.setupCamera();
+ 
+@@ -224,6 +231,42 @@ class SceneManager {
+     this._scene.environmentColor = new Color3(0.8, 0.8, 0.8);
+   }
+ 
++  /**
++   * Preload default wood textures on page load (before audio upload)
++   * This ensures instant rendering when user uploads audio
++   */
++  public preloadDefaultTextures(config: WoodMaterialsConfig): void {
++    console.log('[SceneManager] Preloading default textures on page load...');
++    
++    // Preload walnut immediately (and optionally cherry/maple for quick switching)
++    const speciesToPreload = ['walnut-black-american', 'cherry-black', 'maple'];
++    
++    speciesToPreload.forEach(speciesId => {
++      const species = config.species_catalog.find(s => s.id === speciesId);
++      if (!species) {
++        console.warn(`[SceneManager] Species not found: ${speciesId}`);
++        return;
++      }
++      
++      const basePath = config.texture_config.base_texture_path;
++      const sizeInfo = config.texture_config.size_map.large;
++      
++      // Construct paths for all 3 texture maps
++      const albedoPath = `${basePath}/${species.id}/Varnished/${sizeInfo.folder}/Diffuse/wood-${species.wood_number}_${species.id}-varnished-${sizeInfo.dimensions}_d.png`;
++      const normalPath = `${basePath}/${species.id}/Shared_Maps/${sizeInfo.folder}/Normal/wood-${species.wood_number}_${species.id}-${sizeInfo.dimensions}_n.png`;
++      const roughnessPath = `${basePath}/${species.id}/Shared_Maps/${sizeInfo.folder}/Roughness/wood-${species.wood_number}_${species.id}-${sizeInfo.dimensions}_r.png`;
++      
++      console.log(`[SceneManager] Page-load preload: ${species.id}`);
++      
++      // Load and cache textures (they'll be in cache when user uploads audio)
++      this._textureCache.getTexture(albedoPath);
++      this._textureCache.getTexture(normalPath);
++      this._textureCache.getTexture(roughnessPath);
++    });
++    
++    console.log('[SceneManager] Page-load texture preload initiated');
++  }
++
+   public renderComposition(csgData: CSGDataResponse): Promise<void> {
+     void (this._renderQueue = this._renderQueue.then(
+       async () => {
+@@ -246,6 +289,8 @@ class SceneManager {
+ 
+   private _renderCompositionInternal(csgData: CSGDataResponse): void {
+     console.log('[POC] SceneManager._renderCompositionInternal called');
++    PerformanceMonitor.start('render_internal_total');
++    PerformanceMonitor.start('mesh_cleanup');
+     
+     // Clean up old meshes
+     if (this._finalMesh) {
+@@ -264,8 +309,12 @@ class SceneManager {
+     // Clean up section materials  
+     this._sectionMaterials.forEach(mat => mat.dispose());
+     this._sectionMaterials = [];
++    
++    PerformanceMonitor.end('mesh_cleanup');
+ 
+     try {
++      PerformanceMonitor.start('csg_mesh_generation');
++      
+       // Get array of meshes from frame service
+       const frameService = new FrameGenerationService(this._scene);
+       const meshes = frameService.createFrameMeshes(csgData.csg_data);
+@@ -286,9 +335,15 @@ class SceneManager {
+       // Store section meshes
+       this._sectionMeshes = meshes;
+       
++      PerformanceMonitor.end('csg_mesh_generation');
++      PerformanceMonitor.start('apply_materials');
++      
+       // Apply materials to sections based on state
+       this.applySectionMaterials();
+       
++      PerformanceMonitor.end('apply_materials');
++      PerformanceMonitor.end('render_internal_total');
++      
+       console.log('[POC] All section meshes configured');
+       
+       // Setup interaction
+@@ -421,11 +476,15 @@ class SceneManager {
+     const panelDimension = composition.frame_design.finish_x;
+     const sectionMaterials = composition.frame_design.section_materials || [];
+     
+-    console.log(`[SceneManager] Applying materials to ${this._sectionMeshes.length} sections`);
++    console.log(`[SceneManager] === Applying materials to ${this._sectionMeshes.length} sections ===`);
++    console.log(`[SceneManager] Section materials array:`, JSON.stringify(sectionMaterials, null, 2));
++    console.log(`[SceneManager] Mesh count:`, this._sectionMeshes.length);
++    console.log(`[SceneManager] Existing materials count:`, this._sectionMaterials.length);
+     
+     for (let index = 0; index < this._sectionMeshes.length; index++) {
+       const mesh = this._sectionMeshes[index];
+-      console.log(`[SceneManager] Setting up section ${index}: ${mesh.name}`);
++      console.log(`[SceneManager] Processing section ${index}: ${mesh.name}`);
++      console.log(`[SceneManager] Current mesh material:`, mesh.material?.name || 'none');
+ 
+       // Get material settings for this section
+       let species = config.default_species;
+@@ -451,20 +510,25 @@ class SceneManager {
+       // Create or reuse material
+       let material: WoodMaterial;
+       if (this._sectionMaterials[index]) {
++        console.log(`[SceneManager] Reusing existing material for section ${index}: ${this._sectionMaterials[index].name}`);
+         material = this._sectionMaterials[index];
+       } else {
++        console.log(`[SceneManager] Creating NEW material for section ${index}`);
+         material = new WoodMaterial(`wood_section_${index}`, this._scene);
+         material.backFaceCulling = false;
+         material.twoSidedLighting = true;
+         this._sectionMaterials[index] = material;
+       }
+ 
+-      // Update textures and grain
++      console.log(`[SceneManager] Updating section ${index} to species: ${species}, grainAngle: ${grainAngle}`);
++      
++      // Update textures and grain (with texture cache)
+       material.updateTexturesAndGrain(
+         species,
+         grainAngle,
+         panelDimension,
+-        config
++        config,
++        this._textureCache
+       );
+ 
+       // Apply to mesh
+@@ -605,6 +669,15 @@ document.addEventListener('DOMContentLoaded', () => {
+       // Register scene manager with controller
+       controller.registerSceneManager(sceneManager);
+       
++      // Preload default textures (walnut, cherry, maple) on page load
++      // This ensures instant rendering when user uploads audio
++      try {
++        const woodConfig = controller.getWoodMaterialsConfig();
++        sceneManager.preloadDefaultTextures(woodConfig);
++      } catch (error) {
++        console.warn('[main.ts] Could not preload textures - config not loaded yet:', error);
++      }
++      
+       // Generic UI initialization
+       await initializeUI(uiEngine, controller, sceneManager);
+       
+@@ -666,17 +739,20 @@ async function initializeUI(
+   // 7. Setup upload interface
+   setupUploadInterface(uiEngine, controller);
+   
+-  // 8. Subscribe to state changes (only sync UI on phase transitions, not every change)
++  // 8. Initialize processing overlay
++  new ProcessingOverlay('processingOverlay', controller);
++  
++  // 9. Subscribe to state changes (only sync UI on phase transitions, not every change)
+   controller.subscribe((state) => {
+     handlePhaseTransition(uiEngine, state, controller);
+   });
+   
+-  // 9. Initial phase transition (only if restoring non-upload phase)
++  // 10. Initial phase transition (only if restoring non-upload phase)
+   if (initialState.phase !== 'upload') {
+     handlePhaseTransition(uiEngine, initialState, controller);
+   }
+   
+-  // 10. Initial conditional logic (like disabling n=3 for rectangular)
++  // 11. Initial conditional logic (like disabling n=3 for rectangular)
+   updateConditionalUI(uiEngine, initialState.composition);
+ }
+ 
+@@ -853,7 +929,7 @@ function bindElementListeners(uiEngine: UIEngine, controller: ApplicationControl
+ /**
+  * Bind update button to collect all values and submit
+  */
+-function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController, _sceneManager: SceneManager): void {
++function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController, sceneManager: SceneManager): void {
+   const updateButton = uiEngine.getElement('updateDesign');
+   if (!updateButton) return;
+   
+@@ -882,8 +958,52 @@ function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController,
+           }
+         }
+         
+-        const updated: CompositionStateDTO = uiEngine.setStateValue(newComposition, config.state_path, typedValue) as CompositionStateDTO;
+-        Object.assign(newComposition, updated);
++        // Check if this is a section-specific property (contains [])
++        if (config.state_path.includes('[]')) {
++          // Extract array path and property name
++          const [arrayPath, property] = config.state_path.split('[].');
++          if (!property) return;
++          
++          // Determine target section
++          const numSections = newComposition.frame_design.number_sections;
++          const selectedSection = sceneManager.getSelectedSection();
++          
++          let targetSection: number;
++          if (numSections === 1) {
++            targetSection = 0;
++          } else if (selectedSection !== null && selectedSection >= 0) {
++            targetSection = selectedSection;
++          } else {
++            targetSection = 0;
++          }
++          
++          // Navigate to the array
++          const parts = arrayPath.split('.');
++          let current: any = newComposition;
++          for (const part of parts) {
++            current = current[part];
++          }
++          
++          // Ensure array exists and has entries for all sections
++          if (!Array.isArray(current)) {
++            console.warn(`[bindUpdateButton] ${arrayPath} is not an array`);
++            return;
++          }
++          
++          // Find or create entry for target section
++          let sectionEntry = current.find((item: any) => item.section_id === targetSection);
++          if (!sectionEntry) {
++            sectionEntry = { section_id: targetSection };
++            current.push(sectionEntry);
++          }
++          
++          // Update the specific property for this section
++          sectionEntry[property] = typedValue;
++        } else {
++          // Regular property - update normally
++          const updated: CompositionStateDTO = uiEngine.setStateValue(newComposition, config.state_path, typedValue) as CompositionStateDTO;
++          Object.assign(newComposition, updated);
++        }
+       });
+       
+       // Validate slots divisibility
+diff --git a/src/types/schemas.ts b/src/types/schemas.ts
+index f6f38f8..d1236c3 100644
+--- a/src/types/schemas.ts
++++ b/src/types/schemas.ts
+@@ -286,7 +286,7 @@ export const ApplicationStateSchema = z.object({
+     renderQuality: z.enum(['low', 'medium', 'high']),
+   }),
+   processing: z.object({
+-    stage: z.enum(['idle', 'uploading', 'demucs', 'rendering']),
++    stage: z.enum(['idle', 'uploading', 'preparing_textures', 'demucs', 'rendering']),
+     progress: z.number(),
+   }),
+ });

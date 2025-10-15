@@ -17,6 +17,7 @@ import {
 } from './types/schemas';
 import { WaveformDesignerFacade, Action } from './WaveformDesignerFacade';
 import { fetchAndValidate } from './utils/validation';
+import { PerformanceMonitor } from './PerformanceMonitor';
 
 // Subscriber callback type
 type StateSubscriber = (state: ApplicationState) => void;
@@ -32,8 +33,9 @@ export class ApplicationController {
     applySectionMaterials: () => void;
   } | null = null;
 	private _audioCache: AudioCacheService;
-	private _woodMaterialsConfig: WoodMaterialsConfig | null = null;
+  private _woodMaterialsConfig: WoodMaterialsConfig | null = null;
   private _selectedSectionIndex: number | null = null;
+  private _idleTextureLoader: any = null; // IdleTextureLoader instance
   
   constructor(facade: WaveformDesignerFacade) {
     this._facade = facade;
@@ -133,7 +135,10 @@ export class ApplicationController {
    * Register the SceneManager with the controller.
    * This allows the controller to directly trigger rendering operations.
    */
-  registerSceneManager(sceneManager: { renderComposition: (csgData: CSGDataResponse) => Promise<void> }): void {
+  registerSceneManager(sceneManager: { 
+    renderComposition: (csgData: CSGDataResponse) => Promise<void>;
+    applySectionMaterials: () => void;
+  }): void {
     this._sceneManager = sceneManager;
   }	
   
@@ -148,6 +153,57 @@ export class ApplicationController {
       this._subscribers.delete(callback);
     };
   }
+	
+	/**
+	 * Wait for walnut textures to be ready (don't remove overlay until they're loaded)
+	 */
+	private async waitForWalnutTextures(): Promise<void> {
+		if (!this._sceneManager || !this._woodMaterialsConfig) {
+			console.warn('[Controller] Cannot wait for textures - sceneManager or config not available');
+			return;
+		}
+		
+		const textureCache = (this._sceneManager as any)._textureCache;
+		if (!textureCache) {
+			console.warn('[Controller] TextureCache not available');
+			return;
+		}
+		
+		const walnut = this._woodMaterialsConfig.species_catalog.find((s: any) => s.id === 'walnut-black-american');
+		if (!walnut) {
+			console.warn('[Controller] Walnut species not found in catalog');
+			return;
+		}
+		
+		const basePath = this._woodMaterialsConfig.texture_config.base_texture_path;
+		const sizeInfo = this._woodMaterialsConfig.texture_config.size_map.large;
+		const albedoPath = `${basePath}/${walnut.id}/Varnished/${sizeInfo.folder}/Diffuse/wood-${walnut.wood_number}_${walnut.id}-varnished-${sizeInfo.dimensions}_d.png`;
+		
+		console.log('[Controller] Waiting for walnut albedo texture:', albedoPath);
+		
+		// Get the texture from cache
+		const texture = textureCache.getTexture(albedoPath);
+		
+		if (texture.isReady()) {
+			console.log('[Controller] Walnut texture already ready');
+			return; // Already ready
+		}
+		
+		// Wait for texture to load
+		console.log('[Controller] Walnut texture loading...');
+		return new Promise((resolve) => {
+			texture.onLoadObservable.addOnce(() => {
+				console.log('[Controller] Walnut texture loaded');
+				resolve();
+			});
+			
+			// Timeout after 5 seconds to prevent infinite wait
+			setTimeout(() => {
+				console.warn('[Controller] Walnut texture load timeout - proceeding anyway');
+				resolve();
+			}, 5000);
+		});
+	}
   
   /**
    * Handle file upload with backend processing
@@ -157,6 +213,8 @@ export class ApplicationController {
   private async handleFileUpload(file: File, uiSnapshot: CompositionStateDTO): Promise<void> {
     if (!this._state) return;
 
+    PerformanceMonitor.start('total_upload_to_render');
+    
     // Update UI to show uploading
     await this.dispatch({
       type: 'PROCESSING_UPDATE',
@@ -164,6 +222,7 @@ export class ApplicationController {
     });
 
     try {
+      PerformanceMonitor.start('backend_audio_processing');
       // Force a complete state reset on new file upload
       const freshState = await this._facade.createInitialState();
       this._state = freshState;
@@ -176,12 +235,15 @@ export class ApplicationController {
         file,
         this._state.composition
       );
+      PerformanceMonitor.end('backend_audio_processing');
 
+      PerformanceMonitor.start('cache_raw_samples');
       // Cache the raw samples
       const sessionId = this._audioCache.cacheRawSamples(
         file,
         new Float32Array(audioResponse.raw_samples_for_cache)
       );
+      PerformanceMonitor.end('cache_raw_samples');
       
       // Dispatch the backend response (subscribers will sync UI to backend defaults)
       await this.dispatch({
@@ -193,6 +255,54 @@ export class ApplicationController {
           audioSessionId: sessionId,
         },
       });
+      
+      /// Show "Preparing your custom art experience!" message
+      await this.dispatch({
+        type: 'PROCESSING_UPDATE',
+        payload: { stage: 'preparing_textures', progress: 0 },
+      });
+      
+      // TEMPORARILY DISABLED TO TEST IF IDLE TEXTURE LOADING BLOCKS SECTION CHANGES
+			/*
+			// Start texture preload in background (don't await - let render proceed)
+			if (this._sceneManager && this._woodMaterialsConfig) {
+				const textureCache = (this._sceneManager as any)._textureCache;
+				if (textureCache && typeof textureCache.preloadAllTextures === 'function') {
+					textureCache.preloadAllTextures(this._woodMaterialsConfig).then((idleLoader: any) => {
+						this._idleTextureLoader = idleLoader;
+						console.log('[Controller] Idle texture loader initialized');
+						
+						const indicator = document.getElementById('textureLoadingIndicator');
+						const loadedEl = document.getElementById('texturesLoaded');
+						const totalEl = document.getElementById('texturesTotal');
+						
+						if (indicator && loadedEl && totalEl) {
+							console.log('[Controller] Setting up progress callback');
+							idleLoader.onProgress((loaded: number, total: number) => {
+								console.log(`[Controller] Progress callback fired: ${loaded}/${total}`);
+								loadedEl.textContent = String(loaded);
+								totalEl.textContent = String(total);
+								
+								if (loaded < total) {
+									indicator.classList.add('active');
+								} else {
+									console.log('[Controller] All textures loaded, hiding indicator');
+									setTimeout(() => {
+										indicator.classList.remove('active');
+									}, 2000);
+								}
+							});
+						}
+					}).catch((error: unknown) => {
+						console.error('[Controller] Texture preload failed:', error);
+					});
+				}
+			}
+			*/
+			
+			console.log('[Controller] Texture preloading DISABLED for testing');
+      
+      PerformanceMonitor.start('csg_generation_and_render');
 			
 			// Compare user's pre-upload UI choices with backend defaults
       const backendComp = audioResponse.updated_state;
@@ -210,9 +320,32 @@ export class ApplicationController {
         );
         
         if (this._sceneManager) {
+          console.log('[Controller] Starting renderComposition...');
           await this._sceneManager.renderComposition(response);
+          console.log('[Controller] renderComposition complete, waiting for visibility...');
+          
+          // Wait a frame to ensure render is actually visible
+          await new Promise(resolve => requestAnimationFrame(resolve));
+          console.log('[Controller] Render should now be visible');
         }
       }
+      
+      PerformanceMonitor.end('csg_generation_and_render');
+      
+      // CRITICAL: Wait for walnut textures to be ready before removing overlay
+      // This prevents user seeing black meshes while textures load
+      console.log('[Controller] Waiting for walnut textures to be ready...');
+      await this.waitForWalnutTextures();
+      console.log('[Controller] Walnut textures ready - removing overlay');
+      
+      PerformanceMonitor.end('total_upload_to_render');
+      
+      // Reset processing stage after successful render
+      console.log('[Controller] Resetting processing stage to idle');
+      await this.dispatch({
+        type: 'PROCESSING_UPDATE',
+        payload: { stage: 'idle', progress: 0 },
+      });
     } catch (error: unknown) {
       console.error('File upload or processing failed:', error);
       await this.dispatch({
@@ -438,13 +571,44 @@ export class ApplicationController {
       newComposition
     );
 
+    // DIAGNOSTIC: Log what changed
+    console.log('[Controller] Changed params detected:', changedParams);
+
     // If nothing relevant changed, just update the local state without an API call.
     if (changedParams.length === 0) {
       await this.dispatch({ type: 'COMPOSITION_UPDATED', payload: newComposition });
       return;
     }
 
-    // 2. Check if this is an audio-level change that we can handle client-side
+    // 2. Check if ONLY material properties changed (fast path - no backend call)
+    const onlyMaterialsChanged = changedParams.every(param => 
+      param === 'section_materials' || param.startsWith('section_materials.')
+    );
+
+    if (onlyMaterialsChanged) {
+      console.log('[Controller] Material-only change detected - applying without backend call');
+      
+      // Update state locally
+      this._state = {
+        ...this._state,
+        composition: newComposition
+      };
+      
+      // Persist state
+      this._facade.persistState(this._state);
+      
+      // Apply materials to existing meshes (no geometry rebuild)
+      if (this._sceneManager) {
+        this._sceneManager.applySectionMaterials();
+      }
+      
+      // Notify subscribers
+      this.notifySubscribers();
+      
+      return;
+    }
+
+    // 3. Check if this is an audio-level change that we can handle client-side
     const audioLevelParams = ['number_sections', 'number_slots', 'binning_mode'];
     const isAudioChange = changedParams.some(param => audioLevelParams.includes(param));
     
@@ -494,14 +658,14 @@ export class ApplicationController {
 				}
     
     try {
-      // 3. Make one smart API call.
+      // 4. Make one smart API call.
       const response = await this._facade.getSmartCSGData(
         stateToSend,
         changedParams,
         this._state.audio.previousMaxAmplitude
       );
 
-      // 4. Handle the handshake: update state FIRST, then trigger the render.
+      // 5. Handle the handshake: update state FIRST, then trigger the render.
       // This is the crucial step to prevent infinite loops.
 
       // First, update the application state internally with the new, processed state.

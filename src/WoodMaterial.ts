@@ -4,6 +4,7 @@ import {
     Texture
 } from '@babylonjs/core';
 import type { WoodMaterialsConfig } from './types/schemas';
+import { PerformanceMonitor } from './PerformanceMonitor';
 
 /**
  * Custom wood material class that extends PBRMaterial.
@@ -41,36 +42,38 @@ export class WoodMaterial extends PBRMaterial {
      * @param grainAngleDeg - Grain rotation angle in degrees (0-360)
      * @param panelDimension - Panel dimension for texture size selection
      * @param config - Wood materials configuration from backend
+     * @param textureCache - Texture cache service for efficient texture loading
      */
     public updateTexturesAndGrain(
         species: string, 
         grainAngleDeg: number, 
         panelDimension: number,
-        config: WoodMaterialsConfig
+        config: WoodMaterialsConfig,
+        textureCache?: { getTexture: (path: string) => Texture }
     ): void {
+        PerformanceMonitor.start(`material_update_${species}`);
         console.log(`[WoodMaterial] Loading: ${species}, grain: ${grainAngleDeg}°, dimension: ${panelDimension}"`);
         
         this.currentSpecies = species;
         
+        // Generate random UV offsets for visual variety
+        const randomUOffset = Math.random();
+        const randomVOffset = Math.random();
+        
         // Select appropriate texture size
         const size = this.selectTextureSize(panelDimension, config);
         
-        // Load textures with grain rotation
-        this.loadWoodTextures(species, size, grainAngleDeg, config);
+        // Load textures with grain rotation and random offsets
+        this.loadWoodTextures(species, size, grainAngleDeg, config, randomUOffset, randomVOffset, textureCache);
     }
     
     /**
      * Select appropriate texture size based on panel dimension.
+     * NOTE: Always returns 'large' for best quality and simpler caching.
+     * Random UV offsets prevent repetitive appearance across sections.
      */
-    private selectTextureSize(dimension: number, config: WoodMaterialsConfig): string {
-        const thresholds = config.texture_config.size_thresholds_inches;
-        if (dimension <= thresholds.small) {
-            return 'small';
-        } else if (dimension <= thresholds.medium) {
-            return 'medium';
-        } else {
-            return 'large';
-        }
+    private selectTextureSize(_dimension: number, _config: WoodMaterialsConfig): string {
+        return 'large';
     }
     
     /**
@@ -80,7 +83,10 @@ export class WoodMaterial extends PBRMaterial {
         species: string, 
         size: string, 
         grainAngleDeg: number, 
-        config: WoodMaterialsConfig
+        config: WoodMaterialsConfig,
+        randomUOffset: number,
+        randomVOffset: number,
+        textureCache?: { getTexture: (path: string) => Texture }
     ): void {
         const basePath = config.texture_config.base_texture_path;
         const assetRoot = `${basePath}/${species}/`;
@@ -107,48 +113,61 @@ export class WoodMaterial extends PBRMaterial {
         const totalRotationDeg = grainAngleDeg + rotationOffset;
         const grainRotationRad = (totalRotationDeg * Math.PI) / 180;
         
-        // Dispose old textures
-        if (this.albedoMap) {
-            this.albedoMap.dispose();
-        }
-        if (this.normalMap) {
-            this.normalMap.dispose();
-        }
-        if (this.roughnessMap) {
-            this.roughnessMap.dispose();
+        // DO NOT dispose old textures when using cache - they're shared!
+        // The TextureCacheService manages texture lifecycle
+        // Only set references to null to allow garbage collection of the reference
+        this.albedoMap = null;
+        this.normalMap = null;
+        this.roughnessMap = null;
+        
+        // Construct texture paths
+        const albedoPath = `${assetRoot}Varnished/${sizeFolder}/Diffuse/wood-${woodNumber}_${species}-varnished-${dimensions}_d.png`;
+        const normalPath = `${assetRoot}Shared_Maps/${sizeFolder}/Normal/wood-${woodNumber}_${species}-${dimensions}_n.png`;
+        const roughnessPath = `${assetRoot}Shared_Maps/${sizeFolder}/Roughness/wood-${woodNumber}_${species}-${dimensions}_r.png`;
+        
+        console.log(`[WoodMaterial] Loading albedo from: ${albedoPath}`);
+        
+        // Use texture cache if available, otherwise load directly
+        if (textureCache) {
+            this.albedoMap = textureCache.getTexture(albedoPath);
+            this.normalMap = textureCache.getTexture(normalPath);
+            this.roughnessMap = textureCache.getTexture(roughnessPath);
+        } else {
+            // Fallback: load without cache
+            this.albedoMap = new Texture(
+                albedoPath, 
+                this.scene, 
+                undefined, undefined, undefined, 
+                () => { console.log(`[WoodMaterial] Albedo loaded successfully`); },
+                (message) => { console.error(`[WoodMaterial] Albedo load failed: ${message}`); }
+            );
+            this.normalMap = new Texture(normalPath, this.scene);
+            this.roughnessMap = new Texture(roughnessPath, this.scene);
         }
         
-        // Varnished Albedo/Diffuse texture
-        const albedoPath = `${assetRoot}Varnished/${sizeFolder}/Diffuse/wood-${woodNumber}_${species}-varnished-${dimensions}_d.png`;
-        console.log(`[WoodMaterial] Loading albedo from: ${albedoPath}`);
-        this.albedoMap = new Texture(
-            albedoPath, 
-            this.scene, 
-            undefined, undefined, undefined, 
-            () => { console.log(`[WoodMaterial] Albedo loaded successfully`); },
-            (message) => { console.error(`[WoodMaterial] Failed to load albedo:`, message); }
-        );
+        // Configure albedo/diffuse texture
+        this.albedoMap.wrapU = Texture.WRAP_ADDRESSMODE;
+        this.albedoMap.wrapV = Texture.WRAP_ADDRESSMODE;
         this.albedoMap.wAng = grainRotationRad;
+        this.albedoMap.uOffset = randomUOffset;
+        this.albedoMap.vOffset = randomVOffset;
         this.albedoTexture = this.albedoMap;
         
-        // Normal map
-        this.normalMap = new Texture(
-            `${assetRoot}Shared_Maps/${sizeFolder}/Normal/wood-${woodNumber}_${species}-${dimensions}_n.png`,
-            this.scene
-        );
+        // Configure normal map
         this.normalMap.wAng = grainRotationRad;
+        this.normalMap.uOffset = randomUOffset;
+        this.normalMap.vOffset = randomVOffset;
         this.bumpTexture = this.normalMap;
         
-        // Roughness texture
-        this.roughnessMap = new Texture(
-            `${assetRoot}Shared_Maps/${sizeFolder}/Roughness/wood-${woodNumber}_${species}-${dimensions}_r.png`,
-            this.scene
-        );
+        // Configure roughness texture
         this.roughnessMap.wAng = grainRotationRad;
+        this.roughnessMap.uOffset = randomUOffset;
+        this.roughnessMap.vOffset = randomVOffset;
         this.metallicTexture = this.roughnessMap;
         this.useRoughnessFromMetallicTextureGreen = true;
         
         console.log(`[WoodMaterial] Textures loaded for ${species}`);
+        PerformanceMonitor.end(`material_update_${species}`);
     }
     
     /**

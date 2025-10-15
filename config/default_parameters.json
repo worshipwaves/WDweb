@@ -299,11 +299,7 @@
         "options_from_endpoint": "/api/config/wood-materials",
         "options_path": "species_catalog",
         "default_value_from_endpoint": "/api/config/wood-materials",
-        "default_value_path": "default_species",
-        "on_change": {
-          "action": "update_section_materials",
-          "requires": ["woodSpecies", "grainDirection"]
-        }
+        "default_value_path": "default_species"
       },
       "grainDirection": {
         "id": "grainDirection",
@@ -316,11 +312,7 @@
           {"value": "angled", "label": "Angled"}
         ],
         "default_value_from_endpoint": "/api/config/wood-materials",
-        "default_value_path": "default_grain_direction",
-        "on_change": {
-          "action": "update_section_materials",
-          "requires": ["woodSpecies", "grainDirection"]
-        }
+        "default_value_path": "default_grain_direction"
       }
     },
     "buttons": {

@@ -22,10 +22,13 @@ import { AudioCacheService } from './AudioCacheService';
 import { FrameGenerationService } from './FrameGenerationService';
 import { type CSGDataResponse, type WoodMaterialsConfig } from './types/schemas';
 import { CompositionStateDTO } from './types/schemas';
+import { TextureCacheService } from './TextureCacheService';
 import { UploadInterface } from './UploadInterface';
 import { UIEngine } from './UIEngine';
 import { WaveformDesignerFacade } from './WaveformDesignerFacade';
 import { WoodMaterial } from './WoodMaterial';
+import { ProcessingOverlay } from './ProcessingOverlay';
+import { PerformanceMonitor } from './PerformanceMonitor';
 
 
 /**
@@ -80,6 +83,7 @@ class SceneManager {
   private _canvas: HTMLCanvasElement;
   private _camera!: ArcRotateCamera;
 	private _facade: WaveformDesignerFacade;
+  private _textureCache: TextureCacheService;
   
   // Rendering resources (prefixed = OK)
   private _woodMaterial: WoodMaterial | null = null;
@@ -111,6 +115,9 @@ class SceneManager {
     // Create scene
     this._scene = new Scene(this._engine);
     this._scene.clearColor = new Color3(0.1, 0.1, 0.1).toColor4();
+
+    // Initialize texture cache
+    this._textureCache = new TextureCacheService(this._scene);
 
     // Initialize camera
     this._camera = this.setupCamera();
@@ -224,6 +231,42 @@ class SceneManager {
     this._scene.environmentColor = new Color3(0.8, 0.8, 0.8);
   }
 
+  /**
+   * Preload default wood textures on page load (before audio upload)
+   * This ensures instant rendering when user uploads audio
+   */
+  public preloadDefaultTextures(config: WoodMaterialsConfig): void {
+    console.log('[SceneManager] Preloading default textures on page load...');
+    
+    // Preload walnut immediately (and optionally cherry/maple for quick switching)
+    const speciesToPreload = ['walnut-black-american', 'cherry-black', 'maple'];
+    
+    speciesToPreload.forEach(speciesId => {
+      const species = config.species_catalog.find(s => s.id === speciesId);
+      if (!species) {
+        console.warn(`[SceneManager] Species not found: ${speciesId}`);
+        return;
+      }
+      
+      const basePath = config.texture_config.base_texture_path;
+      const sizeInfo = config.texture_config.size_map.large;
+      
+      // Construct paths for all 3 texture maps
+      const albedoPath = `${basePath}/${species.id}/Varnished/${sizeInfo.folder}/Diffuse/wood-${species.wood_number}_${species.id}-varnished-${sizeInfo.dimensions}_d.png`;
+      const normalPath = `${basePath}/${species.id}/Shared_Maps/${sizeInfo.folder}/Normal/wood-${species.wood_number}_${species.id}-${sizeInfo.dimensions}_n.png`;
+      const roughnessPath = `${basePath}/${species.id}/Shared_Maps/${sizeInfo.folder}/Roughness/wood-${species.wood_number}_${species.id}-${sizeInfo.dimensions}_r.png`;
+      
+      console.log(`[SceneManager] Page-load preload: ${species.id}`);
+      
+      // Load and cache textures (they'll be in cache when user uploads audio)
+      this._textureCache.getTexture(albedoPath);
+      this._textureCache.getTexture(normalPath);
+      this._textureCache.getTexture(roughnessPath);
+    });
+    
+    console.log('[SceneManager] Page-load texture preload initiated');
+  }
+
   public renderComposition(csgData: CSGDataResponse): Promise<void> {
     void (this._renderQueue = this._renderQueue.then(
       async () => {
@@ -246,26 +289,43 @@ class SceneManager {
 
   private _renderCompositionInternal(csgData: CSGDataResponse): void {
     console.log('[POC] SceneManager._renderCompositionInternal called');
+    PerformanceMonitor.start('render_internal_total');
+		
+		console.log('[BEFORE CLEANUP]', {
+			rootNode: this._rootNode ? 'exists' : 'null',
+			rootNodeId: this._rootNode?.uniqueId,
+			rootNodeName: this._rootNode?.name,
+			meshCount: this._sectionMeshes.length,
+			sceneTransformNodes: this._scene.transformNodes.length,
+			sceneMeshes: this._scene.meshes.length
+		});
+		
+    PerformanceMonitor.start('mesh_cleanup');
     
-    // Clean up old meshes
-    if (this._finalMesh) {
-      this._finalMesh.dispose();
-      this._finalMesh = null;
-    }
-    if (this._panelMesh) {
-      this._panelMesh.dispose();
-      this._panelMesh = null;
-    }
+		// Dispose the root node, which recursively disposes all children and materials
+		if (this._rootNode) {
+			this._rootNode.dispose(false, false); // ← Only dispose materials, NOT textures!
+			this._rootNode = null;
+		}
+
+		// Clear reference arrays (meshes already disposed via root)
+		this._sectionMeshes = [];
+		this._sectionMaterials = [];
     
-    // Clean up section meshes
-    this._sectionMeshes.forEach(mesh => mesh.dispose());
-    this._sectionMeshes = [];
-    
-    // Clean up section materials  
-    this._sectionMaterials.forEach(mat => mat.dispose());
-    this._sectionMaterials = [];
+    PerformanceMonitor.end('mesh_cleanup');
+		
+		console.log('[AFTER CLEANUP]', {
+			rootNode: this._rootNode ? 'exists' : 'null',
+			rootNodeId: this._rootNode?.uniqueId,
+			rootNodeName: this._rootNode?.name,
+			meshCount: this._sectionMeshes.length,
+			sceneTransformNodes: this._scene.transformNodes.length,
+			sceneMeshes: this._scene.meshes.length
+		});		
 
     try {
+      PerformanceMonitor.start('csg_mesh_generation');
+      
       // Get array of meshes from frame service
       const frameService = new FrameGenerationService(this._scene);
       const meshes = frameService.createFrameMeshes(csgData.csg_data);
@@ -286,8 +346,14 @@ class SceneManager {
       // Store section meshes
       this._sectionMeshes = meshes;
       
+      PerformanceMonitor.end('csg_mesh_generation');
+      PerformanceMonitor.start('apply_materials');
+      
       // Apply materials to sections based on state
       this.applySectionMaterials();
+      
+      PerformanceMonitor.end('apply_materials');
+      PerformanceMonitor.end('render_internal_total');
       
       console.log('[POC] All section meshes configured');
       
@@ -421,11 +487,15 @@ class SceneManager {
     const panelDimension = composition.frame_design.finish_x;
     const sectionMaterials = composition.frame_design.section_materials || [];
     
-    console.log(`[SceneManager] Applying materials to ${this._sectionMeshes.length} sections`);
+    console.log(`[SceneManager] === Applying materials to ${this._sectionMeshes.length} sections ===`);
+    console.log(`[SceneManager] Section materials array:`, JSON.stringify(sectionMaterials, null, 2));
+    console.log(`[SceneManager] Mesh count:`, this._sectionMeshes.length);
+    console.log(`[SceneManager] Existing materials count:`, this._sectionMaterials.length);
     
     for (let index = 0; index < this._sectionMeshes.length; index++) {
       const mesh = this._sectionMeshes[index];
-      console.log(`[SceneManager] Setting up section ${index}: ${mesh.name}`);
+      console.log(`[SceneManager] Processing section ${index}: ${mesh.name}`);
+      console.log(`[SceneManager] Current mesh material:`, mesh.material?.name || 'none');
 
       // Get material settings for this section
       let species = config.default_species;
@@ -451,20 +521,25 @@ class SceneManager {
       // Create or reuse material
       let material: WoodMaterial;
       if (this._sectionMaterials[index]) {
+        console.log(`[SceneManager] Reusing existing material for section ${index}: ${this._sectionMaterials[index].name}`);
         material = this._sectionMaterials[index];
       } else {
+        console.log(`[SceneManager] Creating NEW material for section ${index}`);
         material = new WoodMaterial(`wood_section_${index}`, this._scene);
         material.backFaceCulling = false;
         material.twoSidedLighting = true;
         this._sectionMaterials[index] = material;
       }
 
-      // Update textures and grain
+      console.log(`[SceneManager] Updating section ${index} to species: ${species}, grainAngle: ${grainAngle}`);
+      
+      // Update textures and grain (with texture cache)
       material.updateTexturesAndGrain(
         species,
         grainAngle,
         panelDimension,
-        config
+        config,
+        this._textureCache
       );
 
       // Apply to mesh
@@ -605,6 +680,15 @@ document.addEventListener('DOMContentLoaded', () => {
       // Register scene manager with controller
       controller.registerSceneManager(sceneManager);
       
+      // Preload default textures (walnut, cherry, maple) on page load
+      // This ensures instant rendering when user uploads audio
+      try {
+        const woodConfig = controller.getWoodMaterialsConfig();
+        sceneManager.preloadDefaultTextures(woodConfig);
+      } catch (error) {
+        console.warn('[main.ts] Could not preload textures - config not loaded yet:', error);
+      }
+      
       // Generic UI initialization
       await initializeUI(uiEngine, controller, sceneManager);
       
@@ -666,17 +750,20 @@ async function initializeUI(
   // 7. Setup upload interface
   setupUploadInterface(uiEngine, controller);
   
-  // 8. Subscribe to state changes (only sync UI on phase transitions, not every change)
+  // 8. Initialize processing overlay
+  new ProcessingOverlay('processingOverlay', controller);
+  
+  // 9. Subscribe to state changes (only sync UI on phase transitions, not every change)
   controller.subscribe((state) => {
     handlePhaseTransition(uiEngine, state, controller);
   });
   
-  // 9. Initial phase transition (only if restoring non-upload phase)
+  // 10. Initial phase transition (only if restoring non-upload phase)
   if (initialState.phase !== 'upload') {
     handlePhaseTransition(uiEngine, initialState, controller);
   }
   
-  // 10. Initial conditional logic (like disabling n=3 for rectangular)
+  // 11. Initial conditional logic (like disabling n=3 for rectangular)
   updateConditionalUI(uiEngine, initialState.composition);
 }
 
@@ -853,7 +940,7 @@ function bindElementListeners(uiEngine: UIEngine, controller: ApplicationControl
 /**
  * Bind update button to collect all values and submit
  */
-function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController, _sceneManager: SceneManager): void {
+function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController, sceneManager: SceneManager): void {
   const updateButton = uiEngine.getElement('updateDesign');
   if (!updateButton) return;
   
@@ -882,8 +969,52 @@ function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController,
           }
         }
         
-        const updated: CompositionStateDTO = uiEngine.setStateValue(newComposition, config.state_path, typedValue) as CompositionStateDTO;
-        Object.assign(newComposition, updated);
+        // Check if this is a section-specific property (contains [])
+        if (config.state_path.includes('[]')) {
+          // Extract array path and property name
+          const [arrayPath, property] = config.state_path.split('[].');
+          if (!property) return;
+          
+          // Determine target section
+          const numSections = newComposition.frame_design.number_sections;
+          const selectedSection = sceneManager.getSelectedSection();
+          
+          let targetSection: number;
+          if (numSections === 1) {
+            targetSection = 0;
+          } else if (selectedSection !== null && selectedSection >= 0) {
+            targetSection = selectedSection;
+          } else {
+            targetSection = 0;
+          }
+          
+          // Navigate to the array
+          const parts = arrayPath.split('.');
+          let current: any = newComposition;
+          for (const part of parts) {
+            current = current[part];
+          }
+          
+          // Ensure array exists and has entries for all sections
+          if (!Array.isArray(current)) {
+            console.warn(`[bindUpdateButton] ${arrayPath} is not an array`);
+            return;
+          }
+          
+          // Find or create entry for target section
+          let sectionEntry = current.find((item: any) => item.section_id === targetSection);
+          if (!sectionEntry) {
+            sectionEntry = { section_id: targetSection };
+            current.push(sectionEntry);
+          }
+          
+          // Update the specific property for this section
+          sectionEntry[property] = typedValue;
+        } else {
+          // Regular property - update normally
+          const updated: CompositionStateDTO = uiEngine.setStateValue(newComposition, config.state_path, typedValue) as CompositionStateDTO;
+          Object.assign(newComposition, updated);
+        }
       });
       
       // Validate slots divisibility

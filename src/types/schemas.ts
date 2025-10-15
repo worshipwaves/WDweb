@@ -286,7 +286,7 @@ export const ApplicationStateSchema = z.object({
     renderQuality: z.enum(['low', 'medium', 'high']),
   }),
   processing: z.object({
-    stage: z.enum(['idle', 'uploading', 'demucs', 'rendering']),
+    stage: z.enum(['idle', 'uploading', 'preparing_textures', 'demucs', 'rendering']),
     progress: z.number(),
   }),
 });
