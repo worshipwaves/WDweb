@@ -21,11 +21,17 @@ export class TextureCacheService {
   /**
    * Get texture from cache, or load and cache if not present
    */
+  /**
+   * Get texture from cache, or load and cache if not present.
+   * Returns a CLONE to prevent shared state issues (each material
+   * needs independent rotation/offset properties).
+   */
   getTexture(path: string): Texture {
     // Check cache first
     const cached = this._textureCache.get(path);
     if (cached) {
-      return cached;
+      // Return clone so each material can modify independently
+      return cached.clone();
     }
     
     // Not in cache - load and cache it
@@ -33,7 +39,8 @@ export class TextureCacheService {
     const texture = new Texture(path, this._scene);
     this._textureCache.set(path, texture);
     
-    return texture;
+    // Return clone (GPU data shared, wrapper independent)
+    return texture.clone();
   }
   
   /**

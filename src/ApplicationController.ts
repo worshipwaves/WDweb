@@ -598,7 +598,11 @@ export class ApplicationController {
       this._facade.persistState(this._state);
       
       // Apply materials to existing meshes (no geometry rebuild)
-      if (this._sceneManager) {
+      if (this._sceneManager && this._selectedSectionIndex !== null) {
+        // Only update the selected section
+        this._sceneManager.applySingleSectionMaterial(this._selectedSectionIndex);
+      } else if (this._sceneManager) {
+        // Fallback: update all sections if no specific section selected
         this._sceneManager.applySectionMaterials();
       }
       
@@ -772,9 +776,9 @@ export class ApplicationController {
       }
     };
     
-    // Notify SceneManager to update materials only (no CSG regeneration)
+    // Notify SceneManager to update ONLY the changed section (no CSG regeneration)
     if (this._sceneManager) {
-      this._sceneManager.applySectionMaterials();
+      this._sceneManager.applySingleSectionMaterial(sectionId);
     }
     
     // Notify subscribers of state change

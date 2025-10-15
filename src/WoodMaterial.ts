@@ -49,22 +49,18 @@ export class WoodMaterial extends PBRMaterial {
         grainAngleDeg: number, 
         panelDimension: number,
         config: WoodMaterialsConfig,
+        sectionIndex: number,
         textureCache?: { getTexture: (path: string) => Texture }
     ): void {
         PerformanceMonitor.start(`material_update_${species}`);
-        console.log(`[WoodMaterial] Loading: ${species}, grain: ${grainAngleDeg}°, dimension: ${panelDimension}"`);
         
         this.currentSpecies = species;
-        
-        // Generate random UV offsets for visual variety
-        const randomUOffset = Math.random();
-        const randomVOffset = Math.random();
         
         // Select appropriate texture size
         const size = this.selectTextureSize(panelDimension, config);
         
-        // Load textures with grain rotation and random offsets
-        this.loadWoodTextures(species, size, grainAngleDeg, config, randomUOffset, randomVOffset, textureCache);
+        // Load textures with grain rotation and corner-based offsets
+        this.loadWoodTextures(species, size, grainAngleDeg, config, sectionIndex, panelDimension, textureCache);
     }
     
     /**
@@ -84,8 +80,8 @@ export class WoodMaterial extends PBRMaterial {
         size: string, 
         grainAngleDeg: number, 
         config: WoodMaterialsConfig,
-        randomUOffset: number,
-        randomVOffset: number,
+        sectionIndex: number,
+        panelDimension: number,
         textureCache?: { getTexture: (path: string) => Texture }
     ): void {
         const basePath = config.texture_config.base_texture_path;
@@ -145,24 +141,64 @@ export class WoodMaterial extends PBRMaterial {
             this.roughnessMap = new Texture(roughnessPath, this.scene);
         }
         
+        // Calculate texture scaling and corner-based offsets
+        const textureSizeCm = 400; // Large texture width from config (300x400cm)
+        const panelSizeCm = panelDimension * 2.54; // Convert inches to cm
+        const uvScale = panelSizeCm / textureSizeCm; // Scale DOWN to show portion of texture
+        const maxSafeOffset = 1.0 - uvScale; // Maximum safe offset to keep within bounds
+        
+        // Corner-based offset strategy for guaranteed different grain patterns
+        const cornerOffsets = [
+            { u: 0.0, v: maxSafeOffset },           // Section 0: NW corner
+            { u: maxSafeOffset, v: maxSafeOffset }, // Section 1: NE corner
+            { u: maxSafeOffset, v: 0.0 },           // Section 2: SE corner
+            { u: 0.0, v: 0.0 }                      // Section 3: SW corner
+        ];
+        
+        // Debug: Check parameters
+        if (sectionIndex === undefined || sectionIndex === null) {
+            console.error('[WoodMaterial] sectionIndex is undefined/null!');
+            return;
+        }
+        if (panelDimension === undefined || panelDimension === null) {
+            console.error('[WoodMaterial] panelDimension is undefined/null!');
+            return;
+        }
+        
+        const offset = cornerOffsets[sectionIndex % 4];
+        if (!offset) {
+            console.error('[WoodMaterial] offset is undefined! sectionIndex:', sectionIndex, 'modulo:', sectionIndex % 4);
+            return;
+        }
+        
         // Configure albedo/diffuse texture
-        this.albedoMap.wrapU = Texture.WRAP_ADDRESSMODE;
-        this.albedoMap.wrapV = Texture.WRAP_ADDRESSMODE;
+        this.albedoMap.wrapU = Texture.CLAMP_ADDRESSMODE;
+        this.albedoMap.wrapV = Texture.CLAMP_ADDRESSMODE;
+        this.albedoMap.uScale = uvScale;
+        this.albedoMap.vScale = uvScale;
         this.albedoMap.wAng = grainRotationRad;
-        this.albedoMap.uOffset = randomUOffset;
-        this.albedoMap.vOffset = randomVOffset;
+        this.albedoMap.uOffset = offset.u;
+        this.albedoMap.vOffset = offset.v;
         this.albedoTexture = this.albedoMap;
         
         // Configure normal map
+        this.normalMap.wrapU = Texture.CLAMP_ADDRESSMODE;
+        this.normalMap.wrapV = Texture.CLAMP_ADDRESSMODE;
+        this.normalMap.uScale = uvScale;
+        this.normalMap.vScale = uvScale;
         this.normalMap.wAng = grainRotationRad;
-        this.normalMap.uOffset = randomUOffset;
-        this.normalMap.vOffset = randomVOffset;
+        this.normalMap.uOffset = offset.u;
+        this.normalMap.vOffset = offset.v;
         this.bumpTexture = this.normalMap;
         
         // Configure roughness texture
+        this.roughnessMap.wrapU = Texture.CLAMP_ADDRESSMODE;
+        this.roughnessMap.wrapV = Texture.CLAMP_ADDRESSMODE;
+        this.roughnessMap.uScale = uvScale;
+        this.roughnessMap.vScale = uvScale;
         this.roughnessMap.wAng = grainRotationRad;
-        this.roughnessMap.uOffset = randomUOffset;
-        this.roughnessMap.vOffset = randomVOffset;
+        this.roughnessMap.uOffset = offset.u;
+        this.roughnessMap.vOffset = offset.v;
         this.metallicTexture = this.roughnessMap;
         this.useRoughnessFromMetallicTextureGreen = true;
         

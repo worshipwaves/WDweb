@@ -539,6 +539,7 @@ class SceneManager {
         grainAngle,
         panelDimension,
         config,
+				index,
         this._textureCache
       );
 
@@ -546,6 +547,69 @@ class SceneManager {
       this._sectionMeshes[index].material = material;
       this._sectionMeshes[index].parent = this._rootNode;
     }
+  }
+	
+	public applySingleSectionMaterial(sectionIndex: number): void {
+    if (!window.controller) {
+      console.error('[SceneManager] Controller not available');
+      return;
+    }
+    
+    const mesh = this._sectionMeshes[sectionIndex];
+    if (!mesh) {
+      console.error(`[SceneManager] Section ${sectionIndex} mesh not found`);
+      return;
+    }
+    
+    const state = window.controller.getState();
+    const config = window.controller.getWoodMaterialsConfig();
+    const composition = state.composition;
+    
+    const numberSections = composition.frame_design.number_sections;
+    const panelDimension = composition.frame_design.finish_x;
+    const sectionMaterials = composition.frame_design.section_materials || [];
+    
+    // Get material settings for THIS section only
+    let species = config.default_species;
+    let grainDirection: 'horizontal' | 'vertical' | 'angled' =
+      config.default_grain_direction as 'horizontal' | 'vertical' | 'angled';
+    
+    const sectionMaterial = sectionMaterials.find(m => m.section_id === sectionIndex);
+    if (sectionMaterial) {
+      species = sectionMaterial.species;
+      grainDirection = sectionMaterial.grain_direction;
+    }
+    
+    const grainAngle = calculateGrainAngle(
+      grainDirection,
+      sectionIndex,
+      numberSections,
+      config
+    );
+    
+    // Get or create material for this section
+    let material = this._sectionMaterials[sectionIndex];
+    if (!material) {
+      material = new WoodMaterial(`wood_section_${sectionIndex}`, this._scene);
+      material.backFaceCulling = false;
+      material.twoSidedLighting = true;
+      this._sectionMaterials[sectionIndex] = material;
+    }
+		
+		console.log(`[applySingleSectionMaterial] Section ${sectionIndex} material name: ${material.name}`);
+		console.log(`[applySingleSectionMaterial] Material instance unique? ${this._sectionMaterials.filter(m => m === material).length === 1}`);		
+    
+    // Update only this section's material
+    material.updateTexturesAndGrain(
+      species,
+      grainAngle,
+      panelDimension,
+      config,
+      sectionIndex,
+      this._textureCache
+    );
+    
+    mesh.material = material;
   }
 
   public dispose(): void {
