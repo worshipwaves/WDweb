@@ -165,6 +165,7 @@ class WaveformDesignerFacade:
         geometry = self._geometry_service.calculate_geometries_dto(state)
         
         result = {
+            **geometry.model_dump(),  # Unpack all geometry data
             "panel_config": self.get_panel_parameters(state),
             "slot_data": [],
             "section_edges": []  # NEW: Include edge data for n=3

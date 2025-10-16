@@ -523,8 +523,8 @@ class SceneManager {
         staticMat.backFaceCulling = false;
         staticCircle.material = staticMat;
         
-        // Create 3 pulsing rings that grow and fade
-        for (let pulseNum = 0; pulseNum < 3; pulseNum++) {
+        // Create 2 pulsing rings that grow and fade
+        for (let pulseNum = 0; pulseNum < 2; pulseNum++) {
           setTimeout(() => {
             const ring = MeshBuilder.CreateDisc(
               `pulseRing_${index}_${pulseNum}`,
@@ -587,9 +587,9 @@ class SceneManager {
         setTimeout(() => {
           staticCircle.dispose();
           staticMat.dispose();
-        }, 5000); // 3 pulses × 1.5s + buffer
+        }, 3000); //  pulses × 1.5s + buffer
         
-      }, index * 5500); // Start next section after previous completes all pulses
+      }, index * 3100); // Start next section after previous completes all pulses
     });
     
     this._hasPlayedPulseAnimation = true;
