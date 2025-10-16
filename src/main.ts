@@ -454,12 +454,16 @@ class SceneManager {
           // Check for multi-select modifier key from the native browser event
           const multiSelect = evt.ctrlKey || evt.metaKey;
           
-          // If NOT multi-selecting, clear all previous selections first.
-          if (!multiSelect) {
+          // Check if we're single-clicking the only item that is already selected
+          const isDeselectingSingle = !multiSelect && this._selectedSectionIndices.size === 1 && this._selectedSectionIndices.has(sectionId);
+
+          // Clear selection ONLY IF it's a standard single click on a NEW item,
+          // but NOT if we're trying to deselect the only selected item.
+          if (!multiSelect && !isDeselectingSingle) {
             this.clearSelection();
           }
 
-          // Toggle the clicked section's state
+          // Now, the toggle will work as expected in all cases.
           this.toggleSection(sectionId);
           
           // Notify controller of the new selection state
@@ -491,7 +495,7 @@ class SceneManager {
     }
   }
 
-  private toggleSection(index: number): void {
+  public toggleSection(index: number): void {
     if (this._selectedSectionIndices.has(index)) {
       // Deselect: Remove from set and fade out overlay
       this._selectedSectionIndices.delete(index);
@@ -790,6 +794,22 @@ class SceneManager {
       chip.classList.toggle('active', indices.has(chipId));
     });
   
+    // Update "Select All" checkbox state
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox') as HTMLInputElement;
+    if (selectAllCheckbox) {
+      const numSections = this._sectionMeshes.length;
+      if (numSections > 0 && indices.size === numSections) {
+        selectAllCheckbox.checked = true;
+        selectAllCheckbox.indeterminate = false;
+      } else if (indices.size > 0 && indices.size < numSections) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = true; // Shows a dash for partial selection
+      } else { // indices.size is 0
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+      }
+    }
+
     // Update control panel for material dropdowns
     const state = window.controller.getState();
     const materials = state.composition.frame_design.section_materials || [];
@@ -1183,23 +1203,26 @@ async function initializeUI(
   // 6. Bind new file upload button
   bindNewFileButton(controller);
   
-  // 7. Setup upload interface
+  // 7. Bind select all checkbox
+  bindSelectAllCheckbox(controller, sceneManager);
+  
+  // 8. Setup upload interface
   setupUploadInterface(uiEngine, controller);
   
-  // 8. Initialize processing overlay
+  // 9. Initialize processing overlay
   new ProcessingOverlay('processingOverlay', controller);
   
-  // 9. Subscribe to state changes (only sync UI on phase transitions, not every change)
+  // 10. Subscribe to state changes (only sync UI on phase transitions, not every change)
   controller.subscribe((state) => {
     handlePhaseTransition(uiEngine, state, controller);
   });
   
-  // 10. Initial phase transition (only if restoring non-upload phase)
+  // 11. Initial phase transition (only if restoring non-upload phase)
   if (initialState.phase !== 'upload') {
     handlePhaseTransition(uiEngine, initialState, controller);
   }
   
-  // 11. Initial conditional logic (like disabling n=3 for rectangular)
+  // 12. Initial conditional logic (like disabling n=3 for rectangular)
   updateConditionalUI(uiEngine, initialState.composition);
 }
 
@@ -1577,6 +1600,36 @@ function updateConditionalUI(uiEngine: UIEngine, composition: CompositionStateDT
   };
   
   uiEngine.updateConditionalOptions(currentState);
+}
+
+/**
+ * Bind the "Select All / None" checkbox functionality
+ */
+function bindSelectAllCheckbox(
+  controller: ApplicationController,
+  sceneManager: ReturnType<typeof SceneManager.create>
+): void {
+  const checkbox = document.getElementById('selectAllCheckbox') as HTMLInputElement;
+  if (!checkbox) return;
+
+  checkbox.addEventListener('change', () => {
+    const numSections = controller.getState().composition.frame_design.number_sections;
+    
+    // Clear existing selections to start fresh
+    sceneManager.clearSelection();
+
+    if (checkbox.checked) {
+      // If checked, select all sections
+      for (let i = 0; i < numSections; i++) {
+        sceneManager.toggleSection(i);
+      }
+    }
+    // If unchecked, clearSelection() has already done the job.
+
+    // Sync controller state and update UI chips
+    controller.selectSection(sceneManager.getSelectedSections());
+    sceneManager.updateSectionUI(sceneManager.getSelectedSections());
+  });
 }
 
 /**
