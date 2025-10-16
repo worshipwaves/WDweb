@@ -34,7 +34,7 @@ export class ApplicationController {
   } | null = null;
 	private _audioCache: AudioCacheService;
   private _woodMaterialsConfig: WoodMaterialsConfig | null = null;
-  private _selectedSectionIndex: number | null = null;
+  private _selectedSectionIndices: Set<number> = new Set();
   private _idleTextureLoader: any = null; // IdleTextureLoader instance
   
   constructor(facade: WaveformDesignerFacade) {
@@ -597,19 +597,22 @@ export class ApplicationController {
       // Persist state
       this._facade.persistState(this._state);
       
-      // Apply materials to existing meshes (no geometry rebuild)
-      if (this._sceneManager && this._selectedSectionIndex !== null) {
-        // Only update the selected section
-        this._sceneManager.applySingleSectionMaterial(this._selectedSectionIndex);
-      } else if (this._sceneManager) {
-        // Fallback: update all sections if no specific section selected
-        this._sceneManager.applySectionMaterials();
+      // Apply materials to existing meshes (no CSG regeneration)
+      if (this._sceneManager) {
+        // When no specific sections are selected, this implies an update to all
+        const targets = this._selectedSectionIndices.size > 0 
+          ? this._selectedSectionIndices 
+          : new Set(Array.from({ length: this._state.composition.frame_design.number_sections }, (_, i) => i));
+
+        targets.forEach(sectionId => {
+          this._sceneManager.applySingleSectionMaterial(sectionId);
+        });
       }
       
       // Notify subscribers
       this.notifySubscribers();
       
-      return;
+      return; // CRITICAL: Stop execution here to prevent full re-render
     }
 
     // 3. Check if this is an audio-level change that we can handle client-side
@@ -718,16 +721,16 @@ export class ApplicationController {
   /**
    * Select a section for material editing
    */
-  selectSection(index: number): void {
-    console.log(`[Controller] Section ${index} selected`);
-    this._selectedSectionIndex = index;
+  selectSection(indices: Set<number>): void {
+    console.log(`[Controller] Selection updated:`, Array.from(indices));
+    this._selectedSectionIndices = new Set(indices);
   }
   
   /**
    * Get currently selected section index
    */
-  getSelectedSection(): number | null {
-    return this._selectedSectionIndex;
+  getSelectedSections(): Set<number> {
+    return this._selectedSectionIndices;
   }
   
 	/**

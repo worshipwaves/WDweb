@@ -84,16 +84,18 @@
           </select>
         </div>
         
-        <div id="sectionIndicator" class="control-group" style="display: none;">
-          <label>Selected Section:</label>
-          <span class="section-number">Section <span id="selectedSectionNumber">-</span></span>
-        </div>
-        
         <div class="control-group">
-          <label for="sections">Sections:</label>
+          <label for="sections">Total Sections:</label>
           <select id="sections" class="control-input">
             <!-- Options loaded from config -->
           </select>
+        </div>
+        
+        <div id="sectionIndicator" class="control-group">
+          <label>Selected Sections:</label>
+          <div id="sectionChipContainer" class="section-chip-container">
+            <!-- Chips will be dynamically inserted here -->
+          </div>
         </div>
         
         <div class="control-group">

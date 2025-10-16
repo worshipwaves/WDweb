@@ -93,10 +93,10 @@ class SceneManager {
   private _finalMesh: Mesh | null = null;
   private _sectionMeshes: Mesh[] = [];
   private _sectionMaterials: WoodMaterial[] = [];
-	private _selectedSectionIndex: number | null = null;
+	private _selectedSectionIndices: Set<number> = new Set();
   private _rootNode: TransformNode | null = null;
 	private _currentCSGData: CSGDataResponse | null = null;  // Store CSG data for overlay positioning
-	private _overlayMesh: Mesh | null = null;
+	private _overlayMeshes: Map<number, Mesh> = new Map();
   private _hasPlayedPulseAnimation: boolean = false;
 	private _renderQueue: Promise<void> = Promise.resolve();
   private _isRendering = false;
@@ -337,6 +337,25 @@ class SceneManager {
       const frameService = new FrameGenerationService(this._scene);
       const meshes = frameService.createFrameMeshes(csgData.csg_data);
       
+      /* // CRITICAL FIX for n=3: The panel generation visually swaps sections 1 and 2.
+      // To make the rest of our logic work, we must swap BOTH the meshes in our array
+      // AND their names to ensure the array index always matches the mesh's logical ID.
+      // We also swap the corresponding backend coordinate data to keep everything in sync.
+      if (csgData.csg_data.panel_config.number_sections === 3 && meshes.length === 3) {
+        // Swap meshes to match visual layout: [Top, Bottom-Right, Bottom-Left]
+        [meshes[1], meshes[2]] = [meshes[2], meshes[1]];
+        
+        // Swap their names so that mesh at index 1 is named "section_1", etc.
+        meshes[1].name = 'section_1';
+        meshes[2].name = 'section_2';
+        
+        // ALSO swap the corresponding backend data to match the new mesh order
+        if (csgData.csg_data.section_local_centers && csgData.csg_data.section_local_centers.length === 3) {
+          [csgData.csg_data.section_local_centers[1], csgData.csg_data.section_local_centers[2]] = 
+          [csgData.csg_data.section_local_centers[2], csgData.csg_data.section_local_centers[1]];
+        }
+      } */
+      
       console.log(`[POC] SceneManager received ${meshes.length} meshes`);
 
       if (meshes.length === 0) {
@@ -370,35 +389,46 @@ class SceneManager {
       // Setup interaction
       this.setupSectionInteraction();
 
+      // --- NEW: Default selection and UI creation ---
+      // Select all sections by default on initial render
+      this._selectedSectionIndices.clear();
+      for (let i = 0; i < this._sectionMeshes.length; i++) {
+        this._selectedSectionIndices.add(i);
+      }
+      
+      // Now, create the persistent overlays (static dots) for the default selection
+      this._overlayMeshes.clear();
+      this._selectedSectionIndices.forEach(index => {
+        const overlay = this.createCircularOverlay(index);
+        if (overlay) {
+          this._overlayMeshes.set(index, overlay);
+        }
+      });
+      
+      // Create the new chip UI and update its visual state
+      this._createSectionChipsUI(this._sectionMeshes.length);
+      this.updateSectionUI(this._selectedSectionIndices);
+      // --- END NEW ---
+
     } catch (error: unknown) {
       console.error('[POC] CSG mesh generation failed:', error);
     }
   }
 	
-	public getSelectedSection(): number | null {
-    return this._selectedSectionIndex;
+	public getSelectedSections(): Set<number> {
+    return this._selectedSectionIndices;
   }
 	
 	public clearSelection(): void {
-    this.fadeOutOverlay();
-    
-    // Hide "Apply to All" button
-    const applyAllBtn = document.getElementById('applyToAllSections');
-    if (applyAllBtn) {
-      applyAllBtn.style.display = 'none';
-    }
-    
-    // Reset section indicator
-    const sectionIndicator = document.getElementById('sectionIndicator');
-    if (sectionIndicator) {
-      sectionIndicator.style.display = 'none';
-    }
+    this._overlayMeshes.forEach(overlay => this._fadeOutAndDispose(overlay));
+    this._overlayMeshes.clear();
+    this._selectedSectionIndices.clear();
   }
   
   private setupSectionInteraction(): void {
     console.log('[SceneManager] Setting up section interaction');
     
-    this._canvas.addEventListener('pointerdown', (_evt) => {
+    this._canvas.addEventListener('pointerdown', (evt: PointerEvent) => {
       const pickResult = this._scene.pick(
         this._scene.pointerX,
         this._scene.pointerY
@@ -413,28 +443,64 @@ class SceneManager {
           const sectionId = parseInt(match[1], 10);
           console.log(`[SceneManager] Section ${sectionId} clicked (mesh: ${meshName})`);
           
-          // Update selection state
-          this.selectSection(sectionId);
+          // Check for multi-select modifier key from the native browser event
+          const multiSelect = evt.ctrlKey || evt.metaKey;
           
-          // Notify controller
+          // If NOT multi-selecting, clear all previous selections first.
+          if (!multiSelect) {
+            this.clearSelection();
+          }
+
+          // Toggle the clicked section's state
+          this.toggleSection(sectionId);
+          
+          // Notify controller of the new selection state
           if (window.controller) {
-            window.controller.selectSection(sectionId);
+            // The controller's selectSection now just syncs state
+            window.controller.selectSection(this._selectedSectionIndices);
           }
           
-          // Update UI to show selected section
-          this.updateSectionUI(sectionId);
+          // Update UI to show selected section(s)
+          this.updateSectionUI(this._selectedSectionIndices);
         }
       }
     });
   }
   
   private selectSection(index: number): void {
-    // Set new selection
-    this._selectedSectionIndex = index;
+    // Clear all existing selections
+    this.clearSelection();
     
-    // Create overlay for selected section
+    // Add the new selection
+    this._selectedSectionIndices.add(index);
+    
+    // Create overlay for the newly selected section
     if (this._sectionMeshes[index]) {
-      this.createCircularOverlay(index);
+      const overlay = this.createCircularOverlay(index);
+      if (overlay) {
+        this._overlayMeshes.set(index, overlay);
+      }
+    }
+  }
+
+  private toggleSection(index: number): void {
+    if (this._selectedSectionIndices.has(index)) {
+      // Deselect: Remove from set and fade out overlay
+      this._selectedSectionIndices.delete(index);
+      const overlay = this._overlayMeshes.get(index);
+      if (overlay) {
+        this._fadeOutAndDispose(overlay);
+        this._overlayMeshes.delete(index);
+      }
+    } else {
+      // Select: Add to set and create new overlay
+      this._selectedSectionIndices.add(index);
+      if (this._sectionMeshes[index]) {
+        const overlay = this.createCircularOverlay(index);
+        if (overlay) {
+          this._overlayMeshes.set(index, overlay);
+        }
+      }
     }
   }
 	
@@ -494,9 +560,9 @@ class SceneManager {
         let xPos = localCenterBabylon.x + distanceFromCenter * Math.cos(angleRad);
         let zPos = localCenterBabylon.z + distanceFromCenter * Math.sin(angleRad);
         
-        // THEN apply transformation to the complete position
-        // For n=2,4: rotation.y=π is baked → negate both axes
-        // For n=3: rotation.y=π AND rotation.z=π are baked → also negate both axes
+        // THEN apply transformation to the complete position.
+        // The y-axis rotation bake flips the coordinate system. We must negate
+        // the final coordinates to place the dot in the correct visual location.
         if (numSections !== 1) {
           xPos = -xPos;
           zPos = -zPos;
@@ -505,23 +571,8 @@ class SceneManager {
         const center = boundingInfo.boundingBox.center;
         const yPos = center.y + 2;
         
-        // Create static white circle (stays visible)
-        const staticCircle = MeshBuilder.CreateDisc(
-          `pulseStatic_${index}`,
-          { radius: baseRadius, tessellation: 32 },
-          this._scene
-        );
-        staticCircle.position = new Vector3(xPos, yPos, zPos);
-        staticCircle.rotation.x = Math.PI / 2;
-        staticCircle.renderingGroupId = 1;
-        staticCircle.parent = this._rootNode;
-        
-        const staticMat = new StandardMaterial(`pulseStaticMat_${index}`, this._scene);
-        staticMat.diffuseColor = new Color3(1, 1, 1);
-        staticMat.alpha = 0.8;
-        staticMat.emissiveColor = new Color3(0.2, 0.2, 0.2);
-        staticMat.backFaceCulling = false;
-        staticCircle.material = staticMat;
+        // The static dot is now created on initial render.
+        // This function now only creates the temporary pulsing rings around it.
         
         // Create 2 pulsing rings that grow and fade
         for (let pulseNum = 0; pulseNum < 2; pulseNum++) {
@@ -584,10 +635,10 @@ class SceneManager {
         }
         
         // Remove static circle after all pulses complete
-        setTimeout(() => {
+        /* setTimeout(() => {
           staticCircle.dispose();
           staticMat.dispose();
-        }, 3000); //  pulses × 1.5s + buffer
+        }, 3000); //  pulses × 1.5s + buffer */
         
       }, index * 3100); // Start next section after previous completes all pulses
     });
@@ -595,11 +646,12 @@ class SceneManager {
     this._hasPlayedPulseAnimation = true;
   }
   
-  private fadeOutOverlay(): void {
-    if (!this._overlayMesh) return;
-    
-    const material = this._overlayMesh.material as StandardMaterial;
-    if (!material) return;
+  private _fadeOutAndDispose(overlay: Mesh): void {
+    const material = overlay.material as StandardMaterial;
+    if (!material) {
+      overlay.dispose();
+      return;
+    }
     
     const fadeAnimation = new Animation(
       'overlayFade',
@@ -610,7 +662,7 @@ class SceneManager {
     );
     
     fadeAnimation.setKeys([
-      { frame: 0, value: 0.4 },
+      { frame: 0, value: material.alpha },
       { frame: 18, value: 0 }
     ]);
     
@@ -619,23 +671,15 @@ class SceneManager {
     const animatable = this._scene.beginAnimation(material, 0, 18, false);
     
     animatable.onAnimationEnd = () => {
-      if (this._overlayMesh) {
-        this._overlayMesh.dispose();
-        this._overlayMesh = null;
-      }
-      this._selectedSectionIndex = null;
+      overlay.dispose();
     };
   }
   
-  private createCircularOverlay(index: number): void {
+  private createCircularOverlay(index: number): Mesh | null {
     const mesh = this._sectionMeshes[index];
-    if (!mesh || !this._currentCSGData || !window.controller) return;
+    if (!mesh || !this._currentCSGData || !window.controller) return null;
     
-    // Dispose existing overlay if present
-    if (this._overlayMesh) {
-      this._overlayMesh.dispose();
-      this._overlayMesh = null;
-    }
+    // Note: Disposing of existing overlays is now handled by selectSection/toggleSection
     
     const config = window.controller.getWoodMaterialsConfig();
     const csgData = this._currentCSGData.csg_data;
@@ -693,9 +737,9 @@ class SceneManager {
     let xPos = localCenterBabylon.x + distanceFromCenter * Math.cos(angleRad);
     let zPos = localCenterBabylon.z + distanceFromCenter * Math.sin(angleRad);
     
-    // THEN apply transformation to the complete position
-    // For n=2,4: rotation.y=π is baked → negate both axes
-    // For n=3: rotation.y=π AND rotation.z=π are baked → also negate both axes
+    // THEN apply transformation to the complete position.
+    // The y-axis rotation bake flips the coordinate system. We must negate
+    // the final coordinates to place the dot in the correct visual location.
     if (numSections !== 1) {
       xPos = -xPos;
       zPos = -zPos;
@@ -719,52 +763,76 @@ class SceneManager {
     
     this._overlayMesh.material = overlayMat;
     this._overlayMesh.parent = this._rootNode;
+
+    return this._overlayMesh;
   }
   
-  private updateSectionUI(index: number): void {
-    // Update section indicator in UI
+  private updateSectionUI(indices: Set<number>): void {
     const sectionIndicator = document.getElementById('sectionIndicator');
-    const sectionNumber = document.getElementById('selectedSectionNumber');
-    
-    if (sectionIndicator && sectionNumber) {
-      sectionIndicator.style.display = 'block';
-      sectionNumber.textContent = String(index + 1);
-    }
-    
-    // Show "Apply to All" button if n >= 2
-    const applyAllBtn = document.getElementById('applyToAllSections');
-    if (applyAllBtn && window.controller) {
-      const state = window.controller.getState();
-      const numSections = state.composition.frame_design.number_sections;
-      applyAllBtn.style.display = numSections >= 2 ? 'block' : 'none';
-    }
-    
-    // Update controls to show current section's material
-    if (window.controller) {
-      const state = window.controller.getState();
-      const materials = state.composition.frame_design.section_materials || [];
+    const speciesEl = document.getElementById('woodSpecies') as HTMLSelectElement;
+    const grainEl = document.getElementById('grainDirection') as HTMLSelectElement;
+  
+    if (!sectionIndicator || !speciesEl || !grainEl || !window.controller) return;
+  
+    // Update chip visuals
+    const chips = document.querySelectorAll('.section-chip');
+    chips.forEach(chip => {
+      const chipId = parseInt((chip as HTMLElement).dataset.sectionId ?? '-1', 10);
+      chip.classList.toggle('active', indices.has(chipId));
+    });
+  
+    // Update control panel for material dropdowns
+    const state = window.controller.getState();
+    const materials = state.composition.frame_design.section_materials || [];
+    const config = window.controller.getWoodMaterialsConfig();
+  
+    if (indices.size === 0) {
+      // No sections selected, maybe show a placeholder or default
+      speciesEl.value = config.default_species;
+      grainEl.value = config.default_grain_direction;
+    } else if (indices.size === 1) {
+      const index = indices.values().next().value;
       const sectionMaterial = materials.find(m => m.section_id === index);
-      
-      const speciesEl = document.getElementById('woodSpecies') as HTMLSelectElement;
-      const grainEl = document.getElementById('grainDirection') as HTMLSelectElement;
-      
-      if (sectionMaterial) {
-        if (speciesEl) speciesEl.value = sectionMaterial.species;
-        if (grainEl) grainEl.value = sectionMaterial.grain_direction;
-      } else {
-        // Use defaults from config
-        try {
-          const config = window.controller.getWoodMaterialsConfig();
-          if (speciesEl) {
-            speciesEl.value = config.default_species;
-          }
-          if (grainEl) {
-            grainEl.value = config.default_grain_direction;
-          }
-        } catch {
-          // Config not loaded, cannot set defaults.
+      speciesEl.value = sectionMaterial?.species || config.default_species;
+      grainEl.value = sectionMaterial?.grain_direction || config.default_grain_direction;
+    } else { // Multiple sections selected
+      const selectedMaterials = Array.from(indices).map(id => materials.find(m => m.section_id === id));
+      const firstSpecies = selectedMaterials[0]?.species || config.default_species;
+      const firstGrain = selectedMaterials[0]?.grain_direction || config.default_grain_direction;
+  
+      const allSpeciesSame = selectedMaterials.every(m => (m?.species || config.default_species) === firstSpecies);
+      const allGrainsSame = selectedMaterials.every(m => (m?.grain_direction || config.default_grain_direction) === firstGrain);
+  
+      speciesEl.value = allSpeciesSame ? firstSpecies : ''; // Empty value indicates "Mixed"
+      grainEl.value = allGrainsSame ? firstGrain : '';
+    }
+  }
+	
+	private _createSectionChipsUI(numSections: number): void {
+    const container = document.getElementById('sectionChipContainer');
+    if (!container) return;
+
+    // Clear existing chips
+    container.innerHTML = '';
+
+    for (let i = 0; i < numSections; i++) {
+      const chip = document.createElement('button');
+      chip.className = 'section-chip';
+      chip.textContent = `${i + 1}`;
+      chip.dataset.sectionId = String(i);
+
+      chip.addEventListener('click', () => {
+        // Toggle selection logic
+        this.toggleSection(i);
+        // Update the UI to reflect the change
+        this.updateSectionUI(this._selectedSectionIndices);
+        // Notify the controller of the new selection state
+        if (window.controller) {
+          window.controller.selectSection(this._selectedSectionIndices);
         }
-      }
+      });
+
+      container.appendChild(chip);
     }
   }
 	
@@ -1343,18 +1411,14 @@ function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController,
           const [arrayPath, property] = config.state_path.split('[].');
           if (!property) return;
           
-          // Determine target section
-          const numSections = newComposition.frame_design.number_sections;
-          const selectedSection = sceneManager.getSelectedSection();
+          // Determine target sections
+          const selectedSections = sceneManager.getSelectedSections();
           
-          let targetSection: number;
-          if (numSections === 1) {
-            targetSection = 0;
-          } else if (selectedSection !== null && selectedSection >= 0) {
-            targetSection = selectedSection;
-          } else {
-            targetSection = 0;
-          }
+          // If no sections are selected, default to updating all.
+          // Otherwise, only update the selected ones.
+          const targetSections: number[] = selectedSections.size > 0
+            ? Array.from(selectedSections)
+            : Array.from({ length: newComposition.frame_design.number_sections }, (_, i) => i);
           
           // Navigate to the array
           const parts = arrayPath.split('.');
@@ -1369,15 +1433,15 @@ function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController,
             return;
           }
           
-          // Find or create entry for target section
-          let sectionEntry = current.find((item: any) => item.section_id === targetSection);
-          if (!sectionEntry) {
-            sectionEntry = { section_id: targetSection };
-            current.push(sectionEntry);
-          }
-          
-          // Update the specific property for this section
-          sectionEntry[property] = typedValue;
+          // Update the property for all target sections
+          targetSections.forEach(targetId => {
+            let sectionEntry = current.find((item: any) => item.section_id === targetId);
+            if (!sectionEntry) {
+              sectionEntry = { section_id: targetId };
+              current.push(sectionEntry);
+            }
+            sectionEntry[property] = typedValue;
+          });
         } else {
           // Regular property - update normally
           const updated: CompositionStateDTO = uiEngine.setStateValue(newComposition, config.state_path, typedValue) as CompositionStateDTO;
@@ -1404,10 +1468,8 @@ function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController,
       // Submit to controller and re-render scene
       await controller.handleCompositionUpdate(newComposition);
       
-      // Clear selection and fade overlay after update
-      if (window.sceneManager) {
-        window.sceneManager.clearSelection();
-      }
+      // DO NOT clear selection after update with the new UI model
+      // The selection state should persist.
     })();
   });
 }
@@ -1597,21 +1659,22 @@ function handleUpdateSectionMaterials(
     return;
   }
   
-  const currentState = controller.getState();
-  const numSections = currentState.composition.frame_design.number_sections;
-  const selectedSection = sceneManager.getSelectedSection();
+  const selectedSections = sceneManager.getSelectedSections();
   
-  console.log(`[handleUpdateSectionMaterials] Selected section: ${selectedSection}, numSections: ${numSections}, species: ${species}, grain: ${grain}`);
+  console.log(`[handleUpdateSectionMaterials] Selected sections:`, Array.from(selectedSections), `species: ${species}, grain: ${grain}`);
   
-  if (numSections === 1) {
-    console.log('[handleUpdateSectionMaterials] Updating section 0 only (n=1)');
-    controller.updateSectionMaterial(0, species, grain);
-  } else if (selectedSection !== null && selectedSection >= 0) {
-    console.log(`[handleUpdateSectionMaterials] Updating ONLY selected section ${selectedSection}`);
-    controller.updateSectionMaterial(selectedSection, species, grain);
+  if (selectedSections.size > 0) {
+    // If one or more sections are selected, update only those
+    selectedSections.forEach(sectionId => {
+      console.log(`[handleUpdateSectionMaterials] Updating selected section ${sectionId}`);
+      controller.updateSectionMaterial(sectionId, species, grain);
+    });
   } else {
-    // When n>1 and no section selected, default to section 0 only
-    console.log(`[handleUpdateSectionMaterials] No selection - defaulting to section 0`);
-    controller.updateSectionMaterial(0, species, grain);
+    // When no section is selected, apply to all sections
+    console.log(`[handleUpdateSectionMaterials] No selection - applying to all sections`);
+    const numSections = controller.getState().composition.frame_design.number_sections;
+    for (let i = 0; i < numSections; i++) {
+      controller.updateSectionMaterial(i, species, grain);
+    }
   }
 }
