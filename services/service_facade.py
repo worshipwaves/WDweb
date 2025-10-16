@@ -236,10 +236,17 @@ class WaveformDesignerFacade:
             previous_max_amplitude
         )
         
-        # Step 2: Generate CSG data FROM THE NEWLY PROCESSED STATE.
+        # Step 2: Calculate geometry to get section_local_centers and true_min_radius
+        geometry = self._geometry_service.calculate_geometries_dto(updated_state)
+        
+        # Step 3: Generate CSG data FROM THE NEWLY PROCESSED STATE.
         csg_data = self.get_csg_data(updated_state)
+        
+        # Step 4: Add geometry data for overlay positioning
+        csg_data["section_local_centers"] = geometry.section_local_centers
+        csg_data["true_min_radius"] = geometry.true_min_radius
 
-        # Step 3: Return both so the frontend can sync its state.
+        # Step 5: Return both so the frontend can sync its state.
         return {
             "csg_data": csg_data,
             "updated_state": updated_state

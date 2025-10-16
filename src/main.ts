@@ -7,6 +7,8 @@ import {
   Vector3, 
   Color3,
   Mesh,
+  MeshBuilder,
+  StandardMaterial,
   TransformNode,
   Animation,
   CubicEase,
@@ -93,6 +95,9 @@ class SceneManager {
   private _sectionMaterials: WoodMaterial[] = [];
 	private _selectedSectionIndex: number | null = null;
   private _rootNode: TransformNode | null = null;
+	private _currentCSGData: CSGDataResponse | null = null;  // Store CSG data for overlay positioning
+	private _overlayMesh: Mesh | null = null;
+  private _hasPlayedPulseAnimation: boolean = false;
 	private _renderQueue: Promise<void> = Promise.resolve();
   private _isRendering = false;
 
@@ -301,6 +306,8 @@ class SceneManager {
 		});
 		
     PerformanceMonitor.start('mesh_cleanup');
+		// Store CSG data for overlay positioning
+    this._currentCSGData = csgData;
     
 		// Dispose the root node, which recursively disposes all children and materials
 		if (this._rootNode) {
@@ -357,6 +364,9 @@ class SceneManager {
       
       console.log('[POC] All section meshes configured');
       
+      // Play pulse animation once after initial render
+      this.pulseAllSections();
+      
       // Setup interaction
       this.setupSectionInteraction();
 
@@ -367,6 +377,22 @@ class SceneManager {
 	
 	public getSelectedSection(): number | null {
     return this._selectedSectionIndex;
+  }
+	
+	public clearSelection(): void {
+    this.fadeOutOverlay();
+    
+    // Hide "Apply to All" button
+    const applyAllBtn = document.getElementById('applyToAllSections');
+    if (applyAllBtn) {
+      applyAllBtn.style.display = 'none';
+    }
+    
+    // Reset section indicator
+    const sectionIndicator = document.getElementById('sectionIndicator');
+    if (sectionIndicator) {
+      sectionIndicator.style.display = 'none';
+    }
   }
   
   private setupSectionInteraction(): void {
@@ -403,35 +429,296 @@ class SceneManager {
   }
   
   private selectSection(index: number): void {
-    // Clear previous selection
-    if (this._selectedSectionIndex !== null && this._sectionMeshes[this._selectedSectionIndex]) {
-      this.clearSectionHighlight(this._selectedSectionIndex);
-    }
-    
     // Set new selection
     this._selectedSectionIndex = index;
     
-    // Highlight selected section
+    // Create overlay for selected section
     if (this._sectionMeshes[index]) {
-      this.highlightSection(index);
+      this.createCircularOverlay(index);
     }
   }
-  
-  private highlightSection(index: number): void {
-    const mesh = this._sectionMeshes[index];
-    if (!mesh) return;
+	
+	private pulseAllSections(): void {
+    if (this._hasPlayedPulseAnimation) return;
+    if (!this._currentCSGData || !window.controller) return;
     
-    // Add subtle highlight effect (could use glow layer or outline in future)
-    mesh.renderOutline = true;
-    mesh.outlineWidth = 0.05;
-    mesh.outlineColor = new Color3(1, 1, 0); // Yellow outline
+    const config = window.controller.getWoodMaterialsConfig();
+    const csgData = this._currentCSGData.csg_data;
+    const numSections = csgData.panel_config.number_sections;
+    
+    // Get bifurcation angles - with special handling for n=4 ordering mismatch
+    let bifurcationAngles: number[];
+    if (numSections === 4) {
+      // Backend section_local_centers order: [TR, BR, BL, TL]
+      // Backend section_positioning_angles["4"]: [45, 135, 225, 315] = [TR, TL, BL, BR]
+      // Create correct mapping: each index gets the angle for its position
+      const angleMap: Record<string, number> = { 'TR': 45, 'BR': 315, 'BL': 225, 'TL': 135 };
+      const quadrantOrder = ['TR', 'BR', 'BL', 'TL'];
+      bifurcationAngles = quadrantOrder.map(q => angleMap[q]);  // Results in [45, 315, 225, 135]
+    } else {
+      bifurcationAngles = config.geometry_constants.section_positioning_angles[String(numSections)] || [0];
+    }
+    
+    // CRITICAL: For n≠3, rotation.y=π is baked into mesh vertices, which mirrors the mesh
+    // This means mesh array order is reversed from section_local_centers order
+    // Reverse the array to match the visual mesh layout
+    const localCenters = (numSections !== 3 && numSections !== 1) 
+      ? [...csgData.section_local_centers].reverse() 
+      : csgData.section_local_centers;
+    
+    // Create pulsing overlays sequentially on each section
+    this._sectionMeshes.forEach((mesh, index) => {
+      setTimeout(() => {
+        const boundingInfo = mesh.getBoundingInfo();
+        const size = boundingInfo.boundingBox.extendSize;
+        const maxDimension = Math.max(size.x, size.z);
+        const baseRadius = maxDimension * 0.05; // 5% size
+        
+        // Use local center from backend geometry data
+        const localCenter = csgData.section_local_centers[index];
+        const bifurcationAngle = bifurcationAngles[index];
+        const minRadius = csgData.true_min_radius;
+        
+        // Calculate position along bifurcation ray at 60% of min_radius
+        const distanceFromCenter = minRadius * 0.6;
+        const angleRad = (bifurcationAngle * Math.PI) / 180;
+        
+        // Convert from CNC coordinates to Babylon coordinates
+        const CNC_CENTER = csgData.panel_config.outer_radius;
+        const localCenterBabylon = {
+          x: localCenter[0] - CNC_CENTER,
+          z: localCenter[1] - CNC_CENTER
+        };
+        
+        // Calculate COMPLETE position in pre-bake space
+        let xPos = localCenterBabylon.x + distanceFromCenter * Math.cos(angleRad);
+        let zPos = localCenterBabylon.z + distanceFromCenter * Math.sin(angleRad);
+        
+        // THEN apply transformation to the complete position
+        // For n=2,4: rotation.y=π is baked → negate both axes
+        // For n=3: rotation.y=π AND rotation.z=π are baked → also negate both axes
+        if (numSections !== 1) {
+          xPos = -xPos;
+          zPos = -zPos;
+        }
+        
+        const center = boundingInfo.boundingBox.center;
+        const yPos = center.y + 2;
+        
+        // Create static white circle (stays visible)
+        const staticCircle = MeshBuilder.CreateDisc(
+          `pulseStatic_${index}`,
+          { radius: baseRadius, tessellation: 32 },
+          this._scene
+        );
+        staticCircle.position = new Vector3(xPos, yPos, zPos);
+        staticCircle.rotation.x = Math.PI / 2;
+        staticCircle.renderingGroupId = 1;
+        staticCircle.parent = this._rootNode;
+        
+        const staticMat = new StandardMaterial(`pulseStaticMat_${index}`, this._scene);
+        staticMat.diffuseColor = new Color3(1, 1, 1);
+        staticMat.alpha = 0.8;
+        staticMat.emissiveColor = new Color3(0.2, 0.2, 0.2);
+        staticMat.backFaceCulling = false;
+        staticCircle.material = staticMat;
+        
+        // Create 3 pulsing rings that grow and fade
+        for (let pulseNum = 0; pulseNum < 3; pulseNum++) {
+          setTimeout(() => {
+            const ring = MeshBuilder.CreateDisc(
+              `pulseRing_${index}_${pulseNum}`,
+              { radius: baseRadius, tessellation: 32 },
+              this._scene
+            );
+            ring.position = new Vector3(xPos, yPos + 0.01, zPos);
+            ring.rotation.x = Math.PI / 2;
+            ring.renderingGroupId = 1;
+            ring.parent = this._rootNode;
+            
+            const ringMat = new StandardMaterial(`pulseRingMat_${index}_${pulseNum}`, this._scene);
+            ringMat.diffuseColor = new Color3(0.3, 0.5, 0.8); // Blueish
+            ringMat.emissiveColor = new Color3(0.3, 0.5, 0.8);
+            ringMat.alpha = 0.6;
+            ringMat.backFaceCulling = false;
+            ring.material = ringMat;
+            
+            // Grow and fade animation (slow, like upload pulse)
+            const scaleAnim = new Animation(
+              `ringScale_${index}_${pulseNum}`,
+              'scaling',
+              30,
+              Animation.ANIMATIONTYPE_VECTOR3,
+              Animation.ANIMATIONLOOPMODE_CONSTANT
+            );
+            
+            const alphaAnim = new Animation(
+              `ringAlpha_${index}_${pulseNum}`,
+              'alpha',
+              30,
+              Animation.ANIMATIONTYPE_FLOAT,
+              Animation.ANIMATIONLOOPMODE_CONSTANT
+            );
+            
+            scaleAnim.setKeys([
+              { frame: 0, value: new Vector3(1, 1, 1) },
+              { frame: 45, value: new Vector3(3, 3, 3) }
+            ]);
+            
+            alphaAnim.setKeys([
+              { frame: 0, value: 0.6 },
+              { frame: 45, value: 0 }
+            ]);
+            
+            ring.animations = [scaleAnim];
+            ringMat.animations = [alphaAnim];
+            
+            const scaleAnimatable = this._scene.beginAnimation(ring, 0, 45, false);
+            this._scene.beginAnimation(ringMat, 0, 45, false);
+            
+            scaleAnimatable.onAnimationEnd = () => {
+              ring.dispose();
+              ringMat.dispose();
+            };
+          }, pulseNum * 1500); // 1.5 seconds between pulses (slow like upload)
+        }
+        
+        // Remove static circle after all pulses complete
+        setTimeout(() => {
+          staticCircle.dispose();
+          staticMat.dispose();
+        }, 5000); // 3 pulses × 1.5s + buffer
+        
+      }, index * 5500); // Start next section after previous completes all pulses
+    });
+    
+    this._hasPlayedPulseAnimation = true;
   }
   
-  private clearSectionHighlight(index: number): void {
-    const mesh = this._sectionMeshes[index];
-    if (!mesh) return;
+  private fadeOutOverlay(): void {
+    if (!this._overlayMesh) return;
     
-    mesh.renderOutline = false;
+    const material = this._overlayMesh.material as StandardMaterial;
+    if (!material) return;
+    
+    const fadeAnimation = new Animation(
+      'overlayFade',
+      'alpha',
+      60,
+      Animation.ANIMATIONTYPE_FLOAT,
+      Animation.ANIMATIONLOOPMODE_CONSTANT
+    );
+    
+    fadeAnimation.setKeys([
+      { frame: 0, value: 0.4 },
+      { frame: 18, value: 0 }
+    ]);
+    
+    material.animations = [fadeAnimation];
+    
+    const animatable = this._scene.beginAnimation(material, 0, 18, false);
+    
+    animatable.onAnimationEnd = () => {
+      if (this._overlayMesh) {
+        this._overlayMesh.dispose();
+        this._overlayMesh = null;
+      }
+      this._selectedSectionIndex = null;
+    };
+  }
+  
+  private createCircularOverlay(index: number): void {
+    const mesh = this._sectionMeshes[index];
+    if (!mesh || !this._currentCSGData || !window.controller) return;
+    
+    // Dispose existing overlay if present
+    if (this._overlayMesh) {
+      this._overlayMesh.dispose();
+      this._overlayMesh = null;
+    }
+    
+    const config = window.controller.getWoodMaterialsConfig();
+    const csgData = this._currentCSGData.csg_data;
+    const numSections = csgData.panel_config.number_sections;
+    
+    // Get bifurcation angles - with special handling for n=4 ordering mismatch
+    let bifurcationAngles: number[];
+    if (numSections === 4) {
+      // Backend section_local_centers order: [TR, BR, BL, TL]
+      // Backend section_positioning_angles["4"]: [45, 135, 225, 315] = [TR, TL, BL, BR]
+      // Create correct mapping: each index gets the angle for its position
+      const angleMap: Record<string, number> = { 'TR': 45, 'BR': 315, 'BL': 225, 'TL': 135 };
+      const quadrantOrder = ['TR', 'BR', 'BL', 'TL'];
+      bifurcationAngles = quadrantOrder.map(q => angleMap[q]);  // Results in [45, 315, 225, 135]
+    } else {
+      bifurcationAngles = config.geometry_constants.section_positioning_angles[String(numSections)] || [0];
+    }
+    
+    // CRITICAL: For n≠3, rotation.y=π is baked into mesh vertices, which mirrors the mesh
+    // Reverse the array to match the visual mesh layout
+    const localCenters = (numSections !== 3 && numSections !== 1) 
+      ? [...csgData.section_local_centers].reverse() 
+      : csgData.section_local_centers;
+    
+    // Get section bounding info for sizing
+    const boundingInfo = mesh.getBoundingInfo();
+    const size = boundingInfo.boundingBox.extendSize;
+    const maxDimension = Math.max(size.x, size.z);
+    const overlayRadius = maxDimension * 0.05; // 5% of section size
+    
+    // Create circular plane mesh
+    this._overlayMesh = MeshBuilder.CreateDisc(
+      'selectionOverlay',
+      { radius: overlayRadius, tessellation: 32 },
+      this._scene
+    );
+    
+    // Use local center from backend geometry data
+    const localCenter = csgData.section_local_centers[index];
+    const bifurcationAngle = bifurcationAngles[index];
+    const minRadius = csgData.true_min_radius;
+    
+    // Calculate position along bifurcation ray at 60% of min_radius
+    const distanceFromCenter = minRadius * 0.6;
+    const angleRad = (bifurcationAngle * Math.PI) / 180;
+    
+    // Convert from CNC coordinates to Babylon coordinates
+    const CNC_CENTER = csgData.panel_config.outer_radius;
+    const localCenterBabylon = {
+      x: localCenter[0] - CNC_CENTER,
+      z: localCenter[1] - CNC_CENTER
+    };
+    
+    // Calculate COMPLETE position in pre-bake space
+    let xPos = localCenterBabylon.x + distanceFromCenter * Math.cos(angleRad);
+    let zPos = localCenterBabylon.z + distanceFromCenter * Math.sin(angleRad);
+    
+    // THEN apply transformation to the complete position
+    // For n=2,4: rotation.y=π is baked → negate both axes
+    // For n=3: rotation.y=π AND rotation.z=π are baked → also negate both axes
+    if (numSections !== 1) {
+      xPos = -xPos;
+      zPos = -zPos;
+    }
+    
+    const center = boundingInfo.boundingBox.center;
+    
+    // Position overlay on bifurcation ray, well above surface to avoid z-fighting
+    this._overlayMesh.position = new Vector3(xPos, center.y + 2, zPos);
+    
+    // Force overlay to render on top
+    this._overlayMesh.renderingGroupId = 1;
+    this._overlayMesh.rotation.x = Math.PI / 2; // Rotate to face upward
+    
+    // Create semi-transparent white material
+    const overlayMat = new StandardMaterial('overlayMat', this._scene);
+    overlayMat.diffuseColor = new Color3(1, 1, 1);
+    overlayMat.alpha = 0.7;
+    overlayMat.emissiveColor = new Color3(0.3, 0.3, 0.3); // Slight glow for visibility
+    overlayMat.backFaceCulling = false;
+    
+    this._overlayMesh.material = overlayMat;
+    this._overlayMesh.parent = this._rootNode;
   }
   
   private updateSectionUI(index: number): void {
@@ -442,6 +729,14 @@ class SceneManager {
     if (sectionIndicator && sectionNumber) {
       sectionIndicator.style.display = 'block';
       sectionNumber.textContent = String(index + 1);
+    }
+    
+    // Show "Apply to All" button if n >= 2
+    const applyAllBtn = document.getElementById('applyToAllSections');
+    if (applyAllBtn && window.controller) {
+      const state = window.controller.getState();
+      const numSections = state.composition.frame_design.number_sections;
+      applyAllBtn.style.display = numSections >= 2 ? 'block' : 'none';
     }
     
     // Update controls to show current section's material
@@ -976,8 +1271,17 @@ function bindElementListeners(uiEngine: UIEngine, controller: ApplicationControl
     // Generic behavior: shape updates conditional options
     if (key === 'shape') {
       element.addEventListener('change', () => {
+        // Read the CURRENT dropdown value, not the old state
+        const shapeValue = (element as HTMLSelectElement).value;
         const currentState = controller.getState();
-        updateConditionalUI(uiEngine, currentState.composition);
+        
+        // Create updated state with new shape value
+        const updatedState: Record<string, string | number> = {
+          shape: shapeValue,
+          sections: currentState.composition.frame_design.number_sections,
+        };
+        
+        uiEngine.updateConditionalOptions(updatedState);
       });
     }
     
@@ -1099,7 +1403,33 @@ function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController,
       
       // Submit to controller and re-render scene
       await controller.handleCompositionUpdate(newComposition);
+      
+      // Clear selection and fade overlay after update
+      if (window.sceneManager) {
+        window.sceneManager.clearSelection();
+      }
     })();
+  });
+}
+
+/**
+ * Bind Apply to All Sections button
+ */
+function bindApplyToAllButton(controller: ApplicationController): void {
+  const applyAllBtn = document.getElementById('applyToAllSections');
+  if (!applyAllBtn) return;
+  
+  applyAllBtn.addEventListener('click', () => {
+    const speciesEl = document.getElementById('woodSpecies') as HTMLSelectElement;
+    const grainEl = document.getElementById('grainDirection') as HTMLSelectElement;
+    
+    if (!speciesEl || !grainEl) return;
+    
+    const species = speciesEl.value;
+    const grain = grainEl.value as 'horizontal' | 'vertical' | 'angled';
+    
+    // Apply current dropdown values to all sections
+    controller.applyToAllSections(species, grain);
   });
 }
 

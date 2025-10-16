@@ -246,6 +246,8 @@ export const CSGDataResponseSchema = z.object({
     edge2_start: z.array(z.number()),
     edge2_end: z.array(z.number()),
   })).optional(),
+  section_local_centers: z.array(z.tuple([z.number(), z.number()])),
+  true_min_radius: z.number(),
 });
 
 export type CSGDataResponse = z.infer<typeof CSGDataResponseSchema>;

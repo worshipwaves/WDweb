@@ -30,4 +30,6 @@ export interface SlotData {
 export interface CSGData {
     panel_config: PanelConfig;
     slot_data: SlotData[];
+    section_local_centers: [number, number][];  // Local center [x, y] for each section
+    true_min_radius: number;  // Minimum radius where slots begin
 }
