@@ -337,25 +337,6 @@ class SceneManager {
       const frameService = new FrameGenerationService(this._scene);
       const meshes = frameService.createFrameMeshes(csgData.csg_data);
       
-      /* // CRITICAL FIX for n=3: The panel generation visually swaps sections 1 and 2.
-      // To make the rest of our logic work, we must swap BOTH the meshes in our array
-      // AND their names to ensure the array index always matches the mesh's logical ID.
-      // We also swap the corresponding backend coordinate data to keep everything in sync.
-      if (csgData.csg_data.panel_config.number_sections === 3 && meshes.length === 3) {
-        // Swap meshes to match visual layout: [Top, Bottom-Right, Bottom-Left]
-        [meshes[1], meshes[2]] = [meshes[2], meshes[1]];
-        
-        // Swap their names so that mesh at index 1 is named "section_1", etc.
-        meshes[1].name = 'section_1';
-        meshes[2].name = 'section_2';
-        
-        // ALSO swap the corresponding backend data to match the new mesh order
-        if (csgData.csg_data.section_local_centers && csgData.csg_data.section_local_centers.length === 3) {
-          [csgData.csg_data.section_local_centers[1], csgData.csg_data.section_local_centers[2]] = 
-          [csgData.csg_data.section_local_centers[2], csgData.csg_data.section_local_centers[1]];
-        }
-      } */
-      
       console.log(`[POC] SceneManager received ${meshes.length} meshes`);
 
       if (meshes.length === 0) {
@@ -475,6 +456,13 @@ class SceneManager {
           // Update UI to show selected section(s)
           this.updateSectionUI(this._selectedSectionIndices);
         }
+      } else {
+        // "Click away" logic: nothing was hit, so deselect all.
+        this.clearSelection();
+        if (window.controller) {
+          window.controller.selectSection(this._selectedSectionIndices);
+        }
+        this.updateSectionUI(this._selectedSectionIndices);
       }
     });
   }
@@ -646,12 +634,6 @@ class SceneManager {
             };
           }, pulseNum * 1500); // 1.5 seconds between pulses (slow like upload)
         }
-        
-        // Remove static circle after all pulses complete
-        /* setTimeout(() => {
-          staticCircle.dispose();
-          staticMat.dispose();
-        }, 3000); //  pulses × 1.5s + buffer */
         
       }, index * 3100); // Start next section after previous completes all pulses
     });
