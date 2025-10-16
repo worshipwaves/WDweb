@@ -63,13 +63,39 @@
         <h3>Design Parameters</h3>
         
         <div class="control-group">
+          <label for="size">Size:</label>
+          <select id="size" class="control-input">
+            <!-- Options loaded from config -->
+          </select>
+        </div>
+
+        <div class="control-group">
           <label for="shape">Shape:</label>
           <select id="shape" class="control-input">
             <option value="circular">Circular</option>
             <option value="rectangular">Rectangular</option>
           </select>
         </div>
-				
+        
+        <div class="control-group">
+          <label for="slots">Slots: <span id="slotsValue"></span></label>
+          <input type="range" id="slots" class="control-input" min="24" max="120" step="12">
+        </div>
+
+        <hr class="control-separator">
+
+        <div class="control-group">
+          <label for="sections">Total Sections:</label>
+          <select id="sections" class="control-input">
+            <!-- Options loaded from config -->
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="separation">Gap: <span id="separationValue"></span>"</label>
+          <input type="range" id="separation" class="control-input" min="0.5" max="4.0" step="0.5">
+        </div>
+        
 				<div class="control-group">
           <label for="woodSpecies">Wood Species:</label>
           <select id="woodSpecies" class="control-input">
@@ -84,35 +110,11 @@
           </select>
         </div>
         
-        <div class="control-group">
-          <label for="sections">Total Sections:</label>
-          <select id="sections" class="control-input">
-            <!-- Options loaded from config -->
-          </select>
-        </div>
-        
         <div id="sectionIndicator" class="control-group">
           <label>Selected Sections:</label>
           <div id="sectionChipContainer" class="section-chip-container">
             <!-- Chips will be dynamically inserted here -->
           </div>
-        </div>
-        
-        <div class="control-group">
-          <label for="slots">Slots: <span id="slotsValue"></span></label>
-          <input type="range" id="slots" class="control-input" min="24" max="120" step="12">
-        </div>
-        
-        <div class="control-group">
-          <label for="size">Size:</label>
-          <select id="size" class="control-input">
-            <!-- Options loaded from config -->
-          </select>
-        </div>
-        
-        <div class="control-group">
-          <label for="separation">Gap: <span id="separationValue"></span>"</label>
-          <input type="range" id="separation" class="control-input" min="0.5" max="4.0" step="0.5">
         </div>
         
         <button id="updateButton" class="update-button">Update Design</button>
