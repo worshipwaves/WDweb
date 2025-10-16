@@ -389,26 +389,34 @@ class SceneManager {
       // Setup interaction
       this.setupSectionInteraction();
 
-      // --- NEW: Default selection and UI creation ---
-      // Select all sections by default on initial render
-      this._selectedSectionIndices.clear();
-      for (let i = 0; i < this._sectionMeshes.length; i++) {
-        this._selectedSectionIndices.add(i);
-      }
-      
-      // Now, create the persistent overlays (static dots) for the default selection
-      this._overlayMeshes.clear();
-      this._selectedSectionIndices.forEach(index => {
-        const overlay = this.createCircularOverlay(index);
-        if (overlay) {
-          this._overlayMeshes.set(index, overlay);
+      // Conditionally enable selection UI for multi-section layouts
+      const sectionIndicator = document.getElementById('sectionIndicator');
+      if (this._sectionMeshes.length > 1) {
+        if (sectionIndicator) sectionIndicator.style.display = 'flex';
+        
+        // Select all sections by default on initial render
+        this._selectedSectionIndices.clear();
+        for (let i = 0; i < this._sectionMeshes.length; i++) {
+          this._selectedSectionIndices.add(i);
         }
-      });
-      
-      // Create the new chip UI and update its visual state
-      this._createSectionChipsUI(this._sectionMeshes.length);
-      this.updateSectionUI(this._selectedSectionIndices);
-      // --- END NEW ---
+        
+        // Create the persistent overlays (static dots) for the default selection
+        this._overlayMeshes.clear();
+        this._selectedSectionIndices.forEach(index => {
+          const overlay = this.createCircularOverlay(index);
+          if (overlay) {
+            this._overlayMeshes.set(index, overlay);
+          }
+        });
+        
+        // Create the new chip UI and update its visual state
+        this._createSectionChipsUI(this._sectionMeshes.length);
+        this.updateSectionUI(this._selectedSectionIndices);
+      } else {
+        // For n=1, hide the selection UI and clear any selection state
+        if (sectionIndicator) sectionIndicator.style.display = 'none';
+        this.clearSelection();
+      }
 
     } catch (error: unknown) {
       console.error('[POC] CSG mesh generation failed:', error);
@@ -439,7 +447,7 @@ class SceneManager {
         const meshName = pickResult.pickedMesh.name;
         const match = meshName.match(/^section_(\d+)$/);
         
-        if (match) {
+        if (this._sectionMeshes.length > 1 && match) {
           const sectionId = parseInt(match[1], 10);
           console.log(`[SceneManager] Section ${sectionId} clicked (mesh: ${meshName})`);
           
@@ -507,6 +515,7 @@ class SceneManager {
 	private pulseAllSections(): void {
     if (this._hasPlayedPulseAnimation) return;
     if (!this._currentCSGData || !window.controller) return;
+    if (this._currentCSGData.csg_data.panel_config.number_sections <= 1) return;
     
     const config = window.controller.getWoodMaterialsConfig();
     const csgData = this._currentCSGData.csg_data;
