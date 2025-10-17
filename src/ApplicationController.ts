@@ -801,18 +801,27 @@ export class ApplicationController {
   }
 	
 	public updateSectionMaterialsArray(newMaterials: Array<{section_id: number, species: string, grain_direction: string}>): void {
-    // Update state with normalized section_materials array
+    console.log('[Controller] updateSectionMaterialsArray called with:', newMaterials);
+    
+    // CRITICAL: Completely replace the array, don't merge with old entries
+    const cleanMaterials = newMaterials.map(m => ({
+      section_id: m.section_id,
+      species: m.species,
+      grain_direction: m.grain_direction
+    }));
+    
+    console.log('[Controller] Setting section_materials to:', cleanMaterials);
+    
+    // Update state with completely new array
     this._state.composition = {
       ...this._state.composition,
       frame_design: {
         ...this._state.composition.frame_design,
-        section_materials: newMaterials.map(m => ({
-          section_id: m.section_id,
-          species: m.species,
-          grain_direction: m.grain_direction as 'horizontal' | 'vertical' | 'radiant' | 'diamond'
-        }))
+        section_materials: cleanMaterials
       }
     };
+    
+    console.log('[Controller] State after update:', this._state.composition.frame_design.section_materials);
     
     this.notifySubscribers();
   }

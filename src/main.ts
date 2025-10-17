@@ -102,11 +102,12 @@ class SceneManager {
   private _sectionMaterials: WoodMaterial[] = [];
 	private _selectedSectionIndices: Set<number> = new Set();
   private _rootNode: TransformNode | null = null;
-	private _currentCSGData: CSGDataResponse | null = null;  // Store CSG data for overlay positioning
+	private _currentCSGData: CSGDataResponse | null = null;
 	private _overlayMeshes: Map<number, Mesh> = new Map();
   private _hasPlayedPulseAnimation: boolean = false;
 	private _renderQueue: Promise<void> = Promise.resolve();
   private _isRendering = false;
+  private _sectionInteractionHandler: ((evt: PointerEvent) => void) | null = null;
 
   private constructor(canvasId: string, facade: WaveformDesignerFacade) {
     // Get canvas element
@@ -424,7 +425,14 @@ class SceneManager {
   private setupSectionInteraction(): void {
     console.log('[SceneManager] Setting up section interaction');
     
-    this._canvas.addEventListener('pointerdown', (evt: PointerEvent) => {
+    // Remove old listener if it exists
+    if (this._sectionInteractionHandler) {
+      this._canvas.removeEventListener('pointerdown', this._sectionInteractionHandler);
+      this._sectionInteractionHandler = null;
+    }
+    
+    // Create new handler
+    this._sectionInteractionHandler = (evt: PointerEvent) => {
       const pickResult = this._scene.pick(
         this._scene.pointerX,
         this._scene.pointerY
@@ -471,7 +479,10 @@ class SceneManager {
         }
         this.updateSectionUI(this._selectedSectionIndices);
       }
-    });
+    };
+    
+    // Attach the new handler
+    this._canvas.addEventListener('pointerdown', this._sectionInteractionHandler);
   }
   
   private selectSection(index: number): void {
@@ -718,6 +729,7 @@ class SceneManager {
       { radius: overlayRadius, tessellation: 32 },
       this._scene
     );
+    this._overlayMesh.isPickable = false;
     
     // Use local center from backend geometry data
     const localCenter = csgData.section_local_centers[index];
