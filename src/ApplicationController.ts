@@ -548,23 +548,6 @@ export class ApplicationController {
       }
     }
 
-    // CRITICAL: Ensure both dimensions match for circular shapes
-    // This prevents mismatch bugs from UI snapshot capture or state restoration
-    if (newComposition.frame_design.shape === 'circular') {
-      const size = newComposition.frame_design.finish_x;
-      if (newComposition.frame_design.finish_y !== size) {
-        console.warn(`[Controller] Correcting finish_y mismatch: ${newComposition.frame_design.finish_y} → ${size}`);
-        newComposition = {
-          ...newComposition,
-          frame_design: {
-            ...newComposition.frame_design,
-            finish_x: size,
-            finish_y: size,
-          },
-        };
-      }
-    }
-
     // 1. Detect what changed to determine the processing level.
     const changedParams = this._detectChangedParams(
       this._state.composition,

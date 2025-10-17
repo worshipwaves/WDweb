@@ -343,28 +343,6 @@ export class UIEngine {
   }
   
   /**
-   * Apply size defaults when size changes
-   */
-  applySizeDefaults(composition: any, newSize: number): any {
-    const sizeKey = String(newSize);
-    const defaults = composition.size_defaults?.[sizeKey];
-    
-    if (!defaults) return composition;
-    
-    const newComp = JSON.parse(JSON.stringify(composition));
-    
-    // Update size values
-    newComp.frame_design.finish_x = newSize;
-    newComp.frame_design.finish_y = newSize;
-    
-    // Apply size defaults
-    newComp.pattern_settings.number_slots = defaults.number_slots;
-    newComp.frame_design.separation = defaults.separation;
-    
-    return newComp;
-  }
-  
-  /**
    * Handle on_change_triggers for an element
    * Executes configured actions and updates only affected UI elements
    */

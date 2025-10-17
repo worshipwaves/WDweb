@@ -51,14 +51,15 @@ export class FrameGenerationService {
 						
 						// Map backend snake_case to frontend camelCase
 						const config: PanelConfig = {
-								outerRadius: data.panel_config.outer_radius,
+								finishX: data.panel_config.finish_x,
+								finishY: data.panel_config.finish_y,
 								thickness: data.panel_config.thickness,
 								separation: data.panel_config.separation,
 								numberSections: data.panel_config.number_sections,
-								shape: data.panel_config.shape || 'circular'  // Default to circular if missing
+								shape: data.panel_config.shape || 'circular'
 						};
 						
-						console.log(`[POC] Config: n=${config.numberSections}, radius=${config.outerRadius}, separation=${config.separation}`);
+						console.log(`[POC] Config: n=${config.numberSections}, size=${config.finishX}x${config.finishY}, shape=${config.shape}, separation=${config.separation}`);
 						
 						const slots: SlotData[] = data.slot_data || [];
 						console.log(`[POC] Total slots from backend: ${slots.length}`);

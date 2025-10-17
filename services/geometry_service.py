@@ -354,14 +354,15 @@ class GeometryService:
     
     def get_panel_parameters(self, state: CompositionStateDTO) -> Dict[str, Any]:
         """
-        Return only the parameters needed for CSG panel generation.
+        Return parameters needed for CSG panel generation.
         
         Args:
             state: The composition state containing frame design parameters
             
         Returns:
             Dictionary with panel configuration:
-                - outer_radius: Panel outer radius in inches (or half-width for rectangular)
+                - finish_x: Total composition width in inches
+                - finish_y: Total composition height in inches
                 - thickness: Material thickness in inches  
                 - separation: Gap between sections in inches
                 - number_sections: Number of panel sections (1-4)
@@ -369,17 +370,13 @@ class GeometryService:
         """
         frame = state.frame_design
         
-        # Calculate outer radius based on finish dimensions
-        # Using Y dimension as diameter (matching legacy behavior)
-        # For rectangular, this represents half the panel width
-        outer_radius = frame.finish_y / 2.0
-        
         result = {
-            "outer_radius": outer_radius,
-            "thickness": PANEL_THICKNESS,  # Use constant, not from DTO
+            "finish_x": frame.finish_x,
+            "finish_y": frame.finish_y,
+            "thickness": PANEL_THICKNESS,
             "separation": frame.separation,
             "number_sections": frame.number_sections,
-            "shape": frame.shape  # Pass through shape parameter
+            "shape": frame.shape
         }
         print(f"[DEBUG] get_panel_parameters returning: {result}")
         return result

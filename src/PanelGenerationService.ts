@@ -40,6 +40,138 @@ export class PanelGenerationService {
   }
   
   /**
+   * Calculate dimensions and positions for each section based on shape and layout
+   */
+  private calculateSectionDimensions(config: PanelConfig): SectionDimensions[] {
+    if (config.shape === 'circular') {
+      return this.calculateCircularSections(config);
+    }
+    
+    if (config.shape === 'rectangular') {
+      return this.calculateRectangularSections(config);
+    }
+    
+    throw new Error(`Unsupported shape: ${config.shape}`);
+  }
+  
+  private calculateCircularSections(config: PanelConfig): SectionDimensions[] {
+    const { finishX, finishY, numberSections, separation } = config;
+    const radius = Math.min(finishX, finishY) / 2;
+    const diameter = radius * 2;
+    
+    if (numberSections === 1) {
+      return [{ width: diameter, height: diameter, offsetX: 0, offsetY: 0 }];
+    }
+    
+    if (numberSections === 2) {
+      // Two circles side by side with gap
+      const offsetDistance = (diameter + separation) / 2;
+      return [
+        { width: diameter, height: diameter, offsetX: offsetDistance, offsetY: 0 },
+        { width: diameter, height: diameter, offsetX: -offsetDistance, offsetY: 0 }
+      ];
+    }
+    
+    if (numberSections === 3) {
+      // Three circles in triangular arrangement
+      const gapDist = (separation) / Math.sqrt(3);
+      return [
+        { width: diameter, height: diameter, offsetX: 0, offsetY: gapDist },           // Top
+        { width: diameter, height: diameter, offsetX: gapDist, offsetY: -gapDist },   // Bottom-right
+        { width: diameter, height: diameter, offsetX: -gapDist, offsetY: -gapDist }   // Bottom-left
+      ];
+    }
+    
+    if (numberSections === 4) {
+      // Four circles in 2x2 grid
+      const offsetDistance = (diameter + separation) / 2;
+      return [
+        { width: diameter, height: diameter, offsetX: offsetDistance, offsetY: offsetDistance },    // Top-right
+        { width: diameter, height: diameter, offsetX: offsetDistance, offsetY: -offsetDistance },   // Bottom-right
+        { width: diameter, height: diameter, offsetX: -offsetDistance, offsetY: -offsetDistance },  // Bottom-left
+        { width: diameter, height: diameter, offsetX: -offsetDistance, offsetY: offsetDistance }    // Top-left
+      ];
+    }
+    
+    throw new Error(`Unsupported number of sections for circular: ${numberSections}`);
+  }
+  
+  private calculateRectangularSections(config: PanelConfig): SectionDimensions[] {
+    const { finishX, finishY, numberSections, separation } = config;
+    
+    if (numberSections === 1) {
+      return [{ width: finishX, height: finishY, offsetX: 0, offsetY: 0 }];
+    }
+    
+    if (numberSections === 2) {
+      // Split vertically: [panel] [gap] [panel]
+      const sectionWidth = (finishX - separation) / 2;
+      const offsetDistance = (sectionWidth + separation) / 2;
+      return [
+        { width: sectionWidth, height: finishY, offsetX: offsetDistance, offsetY: 0 },
+        { width: sectionWidth, height: finishY, offsetX: -offsetDistance, offsetY: 0 }
+      ];
+    }
+    
+    if (numberSections === 4) {
+      // 2×2 grid with gaps
+      const sectionWidth = (finishX - separation) / 2;
+      const sectionHeight = (finishY - separation) / 2;
+      const offsetX = (sectionWidth + separation) / 2;
+      const offsetY = (sectionHeight + separation) / 2;
+      return [
+        { width: sectionWidth, height: sectionHeight, offsetX: offsetX, offsetY: offsetY },     // Top-right
+        { width: sectionWidth, height: sectionHeight, offsetX: offsetX, offsetY: -offsetY },    // Bottom-right
+        { width: sectionWidth, height: sectionHeight, offsetX: -offsetX, offsetY: -offsetY },   // Bottom-left
+        { width: sectionWidth, height: sectionHeight, offsetX: -offsetX, offsetY: offsetY }     // Top-left
+      ];
+    }
+    
+    throw new Error(`Unsupported number of sections for rectangular: ${numberSections}`);
+  }
+  
+  private createSectionBaseMesh(dim: SectionDimensions, config: PanelConfig): Mesh {
+    if (config.shape === 'circular') {
+      const cylinder = MeshBuilder.CreateCylinder('baseDisc', {
+        diameter: dim.width,
+        height: config.thickness,
+        tessellation: 64,
+        cap: Mesh.CAP_ALL
+      }, this.scene);
+      
+      cylinder.bakeCurrentTransformIntoVertices();
+      cylinder.refreshBoundingInfo();
+      
+      const mat = new StandardMaterial('discMat', this.scene);
+      mat.diffuseColor = new Color3(0.8, 0.8, 0.8);
+      mat.backFaceCulling = false;
+      cylinder.material = mat;
+      
+      return cylinder;
+    }
+    
+    if (config.shape === 'rectangular') {
+      const box = MeshBuilder.CreateBox('baseBox', {
+        width: dim.width,
+        depth: dim.height,
+        height: config.thickness
+      }, this.scene);
+      
+      box.bakeCurrentTransformIntoVertices();
+      box.refreshBoundingInfo();
+      
+      const mat = new StandardMaterial('boxMat', this.scene);
+      mat.diffuseColor = new Color3(0.8, 0.8, 0.8);
+      mat.backFaceCulling = false;
+      box.material = mat;
+      
+      return box;
+    }
+    
+    throw new Error(`Unsupported shape: ${config.shape}`);
+  }
+  
+  /**
    * Main entry point - creates panels using CSG approach
    */
 	createPanelsWithCSG(
@@ -53,75 +185,39 @@ export class PanelGenerationService {
       edge2_end: number[];
     }[]
   ): Mesh[] {
-    console.log('[POC] createPanelsWithCSG - n=' + config.numberSections);
+    console.log(`[POC] createPanelsWithCSG - shape=${config.shape}, n=${config.numberSections}`);
     
-    if (this.debugMode) {
-      const debugCutters = this.scene.meshes.filter(m => m.name.startsWith('debugSlotCutter_'));
-      console.log(`[DEBUG] Disposing ${debugCutters.length} old debug cutters`);
-      debugCutters.forEach(m => m.dispose());
-    }
-    
-    // For n=1, use old approach
-    if (config.numberSections === 1) {
-      console.log('[POC] Using legacy single-mesh approach for n=1');
-      const baseShape = config.shape === 'rectangular' 
-        ? this.createFlatBox(config)
-        : this.createFlatDisc(config);
-      
-      if (slots && slots.length > 0) {
-        const finalPanel = this.cutSlots(baseShape, slots, config);
-        return [finalPanel];
-      }
-      return [baseShape];
-    }
-    
-    console.log('[POC] Creating separate meshes for each section');
+    // Calculate section dimensions based on shape
+    const sectionDims = this.calculateSectionDimensions(config);
     const sectionMeshes: Mesh[] = [];
-    const sectionsToCreate = config.numberSections;
     
-    for (let sectionIndex = 0; sectionIndex < sectionsToCreate; sectionIndex++) {
+    for (let sectionIndex = 0; sectionIndex < sectionDims.length; sectionIndex++) {
       console.log(`[POC] === Section ${sectionIndex} ===`);
+      const dim = sectionDims[sectionIndex];
       
-      // Step 1: Create a full base shape for this section
-      const baseShape = config.shape === 'rectangular' 
-        ? this.createFlatBox(config)
-        : this.createFlatDisc(config);
-      console.log(`[POC] Created base ${config.shape === 'rectangular' ? 'box' : 'disc'}`);
-      
-      if (config.numberSections === 3) {
-        // NEW APPROACH: Wedge first, rotate, THEN cut slots
-        console.log(`[POC] Carving section ${sectionIndex} wedge from clean disc (no slots yet)`);
-        const sectionData = this.cutToSectionShape(baseShape, sectionIndex, config, sectionEdges);
+      // For circular n=2, n=3, n=4, use monolithic CSG approach (create full disc, then carve)
+      if (config.shape === 'circular' && config.numberSections > 1) {
+        console.log(`[POC] Using monolithic CSG approach for circular n=${config.numberSections}, section ${sectionIndex}`);
+        
+        // Step 1: Create FULL disc
+        const fullDisc = MeshBuilder.CreateCylinder('baseDisc', {
+          diameter: config.finishX,  // Full size, not section size
+          height: config.thickness,
+          tessellation: 64,
+          cap: Mesh.CAP_ALL
+        }, this.scene);
+        fullDisc.bakeCurrentTransformIntoVertices();
+        fullDisc.refreshBoundingInfo();
+        
+        // Step 2: Carve section shape using CSG
+        const sectionData = this.cutToSectionShape(fullDisc, sectionIndex, config, sectionEdges);
         const sectionMesh = sectionData.mesh;
         
-        // Rotate the wedge to correct orientation BEFORE cutting slots
-        sectionMesh.rotation.y = Math.PI;
-        sectionMesh.rotation.z = Math.PI;
-        sectionMesh.bakeCurrentTransformIntoVertices();
-        sectionMesh.refreshBoundingInfo();
-        sectionMesh.freezeWorldMatrix();
-        sectionMesh.isPickable = true;
-        sectionMesh.alwaysSelectAsActiveMesh = true;
+        // Step 3: Filter slots for this section
+        const sectionSlots = slots ? this.filterSlotsForSection(slots, sectionIndex, config) : [];
+        console.log(`[POC] Section ${sectionIndex} has ${sectionSlots.length} slots`);
         
-        // Sequential distribution: divide 48 slots evenly
-        let sectionSlots: SlotData[] = [];
-        if (slots && slots.length > 0) {
-          const slotsPerSection = Math.floor(slots.length / config.numberSections);
-          const startIdx = sectionIndex * slotsPerSection;
-          const rawSlots = slots.slice(startIdx, startIdx + slotsPerSection);
-          
-          // Transform slot coordinates AND vertices to match Y+Z rotation
-          const CNC_CENTER = config.outerRadius;
-          sectionSlots = rawSlots.map(slot => ({
-            ...slot,
-            vertices: slot.vertices ? slot.vertices.map(v => [
-              (2 * CNC_CENTER) - v[0],  // Mirror X around center
-              (2 * CNC_CENTER) - v[1]   // Mirror Y around center
-            ]) : undefined
-          }));
-        }
-        console.log(`[POC] Cutting ${sectionSlots.length} vertex-transformed slots into rotated section ${sectionIndex}`);
-        
+        // Step 4: Cut slots
         let finalMesh = sectionMesh;
         if (sectionSlots.length > 0) {
           finalMesh = this.cutSlots(sectionMesh, sectionSlots, config);
@@ -132,78 +228,46 @@ export class PanelGenerationService {
         finalMesh.refreshBoundingInfo();
         finalMesh.isPickable = true;
         finalMesh.alwaysSelectAsActiveMesh = true;
+        
         console.log(`[POC] Section ${sectionIndex} mesh created: ${finalMesh.name}`);
-        
         sectionMeshes.push(finalMesh);
-        
-      } else {
-        // EXISTING APPROACH FOR N=2 and N=4: Wedge first, then filtered slots
-        console.log(`[POC] Using wedge-first approach for n=${config.numberSections}`);
-        const sectionData = this.cutToSectionShape(baseShape, sectionIndex, config, sectionEdges);
-        const sectionMesh = sectionData.mesh;
-        
-        // Filter slots for this specific section
-        const sectionSlots = slots ? this.filterSlotsForSection(slots, sectionIndex, config) : [];
-        console.log(`[POC] Section ${sectionIndex} has ${sectionSlots.length} filtered slots`);
-        
-        let finalMesh = sectionMesh;
-        if (sectionSlots.length > 0) {
-          finalMesh = this.cutSlots(sectionMesh, sectionSlots, config);
-          sectionMesh.dispose();
-        }
-        
-        finalMesh.name = `section_${sectionIndex}`;
-        finalMesh.isPickable = true;
-        console.log(`[POC] Section ${sectionIndex} mesh created: ${finalMesh.name}`);
-        
-        sectionMeshes.push(finalMesh);
+        continue;  // Skip the rest of the loop
       }
+      
+      // Original modular approach for rectangular
+      // Create base mesh with actual section dimensions
+      const baseMesh = this.createSectionBaseMesh(dim, config);
+      
+      // Position the section at its offset (centered at origin)
+      baseMesh.position.x = dim.offsetX;
+      baseMesh.position.z = dim.offsetY;
+      
+      // CRITICAL: Bake position into vertices before CSG operations
+      // CSG.FromMesh() ignores .position property and only reads vertex data
+      baseMesh.bakeCurrentTransformIntoVertices();
+      
+      // Filter slots for this section
+      const sectionSlots = slots ? this.filterSlotsForSection(slots, sectionIndex, config) : [];
+      console.log(`[POC] Section ${sectionIndex} has ${sectionSlots.length} slots`);
+      
+      // Cut slots if any exist
+      let finalMesh = baseMesh;
+      if (sectionSlots.length > 0) {
+        finalMesh = this.cutSlots(baseMesh, sectionSlots, config);
+        baseMesh.dispose();
+      }
+      
+      finalMesh.name = `section_${sectionIndex}`;
+      finalMesh.refreshBoundingInfo();
+      finalMesh.isPickable = true;
+      finalMesh.alwaysSelectAsActiveMesh = true;
+      
+      console.log(`[POC] Section ${sectionIndex} mesh created: ${finalMesh.name}`);
+      sectionMeshes.push(finalMesh);
     }
     
     console.log(`[POC] Returning ${sectionMeshes.length} section meshes`);
     return sectionMeshes;
-  }
-	
-  private createFlatDisc(config: PanelConfig): Mesh {
-    const { outerRadius, thickness } = config;
-    
-    const cylinder = MeshBuilder.CreateCylinder('baseDisc', {
-      diameter: outerRadius * 2,
-      height: thickness,
-      tessellation: 64,
-      cap: Mesh.CAP_ALL
-    }, this.scene);
-    
-    cylinder.bakeCurrentTransformIntoVertices();
-    cylinder.refreshBoundingInfo();
-    
-    const mat = new StandardMaterial('discMat', this.scene);
-    mat.diffuseColor = new Color3(0.8, 0.8, 0.8);
-    mat.backFaceCulling = false;
-    cylinder.material = mat;
-    
-    return cylinder;
-  }
-	
-  private createFlatBox(config: PanelConfig): Mesh {
-    const { outerRadius, thickness } = config;
-    
-    const box = MeshBuilder.CreateBox('baseBox', {
-      width: outerRadius * 2,
-      depth: outerRadius * 2,
-      height: thickness
-    }, this.scene);
-    
-    box.rotation.y = Math.PI / 2;
-    box.bakeCurrentTransformIntoVertices();
-    box.refreshBoundingInfo();
-    
-    const mat = new StandardMaterial('boxMat', this.scene);
-    mat.diffuseColor = new Color3(0.8, 0.8, 0.8);
-    mat.backFaceCulling = false;
-    box.material = mat;
-    
-    return box;
   }
   
   private cutSlots(panelMesh: Mesh, slots: SlotData[], config: PanelConfig): Mesh { 
@@ -247,9 +311,14 @@ export class PanelGenerationService {
     mat.backFaceCulling = false;
     result.material = mat;
     
-    // Only rotate for n=1, n=2, n=4 (n=3 rotates after wedge cut)
-    if (config.numberSections !== 3) {
+    // Apply rotations to align with coordinate system expectations
+    if (config.numberSections === 3) {
+      // n=3 wedge cut needs Y rotation
       result.rotation.y = Math.PI;
+      result.bakeCurrentTransformIntoVertices();
+    } else {
+      // n=1, n=2, n=4 need triple rotation for correct orientation
+      result.rotation.y = Math.PI;  // 180° around Y (horizontal flip)
       result.bakeCurrentTransformIntoVertices();
     }
     
@@ -262,7 +331,9 @@ export class PanelGenerationService {
     }
     
     // Transform CNC coordinates to Babylon coordinates
-    const CNC_CENTER = config.outerRadius;
+    const CNC_CENTER = config.shape === 'circular'
+      ? Math.min(config.finishX, config.finishY) / 2
+      : Math.max(config.finishX, config.finishY) / 2;
     const vertices2D = slot.vertices.map(v => [
       v[0] - CNC_CENTER,  // CNC X → Babylon X
       v[1] - CNC_CENTER   // CNC Y → Babylon Z
@@ -304,6 +375,35 @@ export class PanelGenerationService {
     
     return customMesh;
   }
+
+  private filterSlotsForSection(slots: SlotData[], sectionIndex: number, config: PanelConfig): SlotData[] {
+    if (config.numberSections === 1) {
+      return slots;
+    }
+    
+    const sectionDims = this.calculateSectionDimensions(config);
+    const dim = sectionDims[sectionIndex];
+    
+    // Calculate CNC center point (backend uses this as origin)
+    const cncCenter = config.shape === 'circular' 
+      ? Math.min(config.finishX, config.finishY) / 2
+      : Math.max(config.finishX, config.finishY) / 2;
+    
+    // Filter slots that fall within this section's bounds
+    return slots.filter(slot => {
+      // Convert from CNC coordinates to centered coordinates
+      const slotX = slot.x - cncCenter;
+      const slotZ = slot.z - cncCenter;
+      
+      // Check if slot center is within section bounds
+      const minX = dim.offsetX - (dim.width / 2);
+      const maxX = dim.offsetX + (dim.width / 2);
+      const minZ = dim.offsetY - (dim.height / 2);
+      const maxZ = dim.offsetY + (dim.height / 2);
+      
+      return slotX >= minX && slotX <= maxX && slotZ >= minZ && slotZ <= maxZ;
+    });
+  }
   
   private cutToSectionShape(
     baseMesh: Mesh,
@@ -317,7 +417,8 @@ export class PanelGenerationService {
       edge2_end: number[];
     }[]
   ): { mesh: Mesh; innerVertex: { x: number; z: number } } {
-    const { numberSections, separation, outerRadius } = config;
+    const { numberSections, separation } = config;
+    const outerRadius = Math.min(config.finishX, config.finishY) / 2;
     
     console.log(`[POC] cutToSectionShape: section ${sectionIndex} of ${numberSections}`);
     
@@ -348,7 +449,7 @@ export class PanelGenerationService {
     }
     
     if (numberSections === 3) {
-      const sectionEdgeData = sectionEdges?.find((e: { section_index: number; edge1_start: number[] }) => e.section_index === sectionIndex);
+      const sectionEdgeData = sectionEdges?.find((e) => e.section_index === sectionIndex);
       if (!sectionEdgeData) {
         console.error(`[POC] No edge data found for section ${sectionIndex}`);
         return { mesh: baseMesh, innerVertex: { x: 0, z: 0 } };
@@ -468,50 +569,6 @@ export class PanelGenerationService {
     }
     
     return { mesh: baseMesh, innerVertex: { x: 0, z: 0 } };
-  }
-
-  private filterSlotsForSection(allSlots: SlotData[], sectionIndex: number, config: PanelConfig): SlotData[] {
-    const { numberSections, outerRadius } = config;
-    
-    if (numberSections === 1) {
-      return allSlots;
-    }
-    
-    if (numberSections === 2) {
-      const CNC_CENTER = outerRadius;
-      
-      const filtered = allSlots.filter(slot => {
-        const babylonX = slot.x - CNC_CENTER;
-        if (sectionIndex === 0) {
-          return babylonX > 0;
-        } else {
-          return babylonX < 0;
-        }
-      });
-      
-      return filtered;
-    }
-    
-    if (numberSections === 4) {
-      const CNC_CENTER = outerRadius;
-      
-      return allSlots.filter(slot => {
-        const babylonX = slot.x - CNC_CENTER;
-        const babylonZ = slot.z - CNC_CENTER;
-        
-        if (sectionIndex === 0) {
-          return babylonX > 0 && babylonZ > 0;
-        } else if (sectionIndex === 1) {
-          return babylonX > 0 && babylonZ < 0;
-        } else if (sectionIndex === 2) {
-          return babylonX < 0 && babylonZ < 0;
-        } else {
-          return babylonX < 0 && babylonZ > 0;
-        }
-      });
-    }
-    
-    return allSlots;
   }
   
   validateMesh(mesh: Mesh): boolean {

@@ -266,21 +266,29 @@
         "step": 1,
         "display_value_id": "slotsValue"
       },
-      "size": {
-        "id": "size",
+      "width": {
+        "id": "width",
         "type": "select",
-        "label": "Size",
+        "label": "Width",
         "state_path": "frame_design.finish_x",
         "options": [
+          {"value": 20, "label": "20\""},
+          {"value": 24, "label": "24\""},
+          {"value": 36, "label": "36\""},
+          {"value": 48, "label": "48\""},
+          {"value": 64, "label": "64\""}
+        ]
+      },
+      "height": {
+        "id": "height",
+        "type": "select",
+        "label": "Height",
+        "state_path": "frame_design.finish_y",
+        "options": [
+          {"value": 20, "label": "20\""},
           {"value": 24, "label": "24\""},
           {"value": 36, "label": "36\""},
           {"value": 48, "label": "48\""}
-        ],
-        "on_change_triggers": [
-          {
-            "action": "apply_size_defaults",
-            "source_path": "size_defaults"
-          }
         ]
       },
       "separation": {

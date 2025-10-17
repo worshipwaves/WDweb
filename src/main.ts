@@ -1311,15 +1311,9 @@ function captureUISnapshot(uiEngine: UIEngine, baseComposition: CompositionState
       }
     }
     
-    // Special handling for size - sets both finish_x AND finish_y
-    if (key === 'size') {
-      composition.frame_design.finish_x = value as number;
-      composition.frame_design.finish_y = value as number;
-    } else {
-      // UIEngine.setStateValue returns updated composition for all other fields
-      const updated = uiEngine.setStateValue(composition, config.state_path, value);
-      Object.assign(composition, updated);
-    }
+    // UIEngine.setStateValue returns updated composition for all fields
+    const updated = uiEngine.setStateValue(composition, config.state_path, value);
+    Object.assign(composition, updated);
   }
   
   return composition;
@@ -1683,6 +1677,8 @@ function updateConditionalUI(uiEngine: UIEngine, composition: CompositionStateDT
   const currentState: Record<string, string | number> = {
     shape: composition.frame_design.shape,
     sections: composition.frame_design.number_sections,
+    width: composition.frame_design.finish_x,
+    height: composition.frame_design.finish_y
   };
   
   uiEngine.updateConditionalOptions(currentState);

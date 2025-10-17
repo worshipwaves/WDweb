@@ -224,7 +224,8 @@ export type CompositionStateDTO = z.infer<typeof CompositionStateDTOSchema>;
 
 export const CSGDataResponseSchema = z.object({
   panel_config: z.object({
-    outer_radius: z.number(),
+    finish_x: z.number(),
+    finish_y: z.number(),
     thickness: z.number(),
     separation: z.number(),
     number_sections: z.number(),
