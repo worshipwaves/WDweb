@@ -204,7 +204,9 @@
       "grain_direction_angles": {
         "horizontal": 0,
         "vertical": 90,
-        "angled": "use_section_positioning"
+        "angled": "use_section_positioning",
+        "angled-radiant": "use_section_positioning_4_radiant",
+        "angled-diamond": "use_section_positioning_4_diamond"
       }
     },
     "geometry_constants": {
@@ -212,7 +214,8 @@
         "1": [0],
         "2": [0, 180],
         "3": [90, 330, 210],
-        "4": [45, 135, 225, 315]
+        "4_radiant": [135, 45, 315, 225],
+        "4_diamond": [45, 315, 225, 135]
       },
       "section_rotation_offsets": {
         "2": [0, 180],
@@ -309,7 +312,8 @@
         "options": [
           {"value": "horizontal", "label": "Horizontal"},
           {"value": "vertical", "label": "Vertical"},
-          {"value": "angled", "label": "Angled"}
+          {"value": "angled-radiant", "label": "Angled (Radiant)"},
+          {"value": "angled-diamond", "label": "Angled (Diamond)"}
         ],
         "default_value_from_endpoint": "/api/config/wood-materials",
         "default_value_path": "default_grain_direction"

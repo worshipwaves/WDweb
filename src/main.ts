@@ -44,29 +44,41 @@ function calculateGrainAngle(
   config: WoodMaterialsConfig
 ): number {
   const directionAngles = config.rendering_config.grain_direction_angles;
-  
-  // Check if this direction has a direct angle mapping
-  if (direction in directionAngles) {
-    const angle = directionAngles[direction];
+  const angleOrKey = directionAngles[direction];
+
+  // Case 1: Direct numeric angle (e.g., "horizontal": 0)
+  if (typeof angleOrKey === 'number') {
+    return angleOrKey;
+  }
+
+  // Case 2: String-based key for lookup
+  if (typeof angleOrKey === 'string') {
+    let anglesKey = '';
     
-    // If the value is a number, use it directly
-    if (typeof angle === 'number') {
-      return angle;
+    if (angleOrKey.startsWith('use_section_positioning_')) {
+      // Handles "use_section_positioning_4_radiant", etc.
+      anglesKey = angleOrKey.substring('use_section_positioning_'.length);
+    } else if (angleOrKey === 'use_section_positioning') {
+      // Handles the generic "angled" value
+      if (numberSections === 4) {
+        // Default n=4 to diamond, as it was the original behavior
+        anglesKey = '4_diamond'; 
+      } else {
+        anglesKey = String(numberSections);
+      }
     }
     
-    // If it's a string (like "use_section_positioning"), fall through
+    if (anglesKey) {
+      const angles = config.geometry_constants.section_positioning_angles[anglesKey];
+      if (angles && typeof angles[sectionId] === 'number') {
+        return angles[sectionId];
+      }
+    }
   }
   
-  // Use section positioning angles (for unmapped directions or special values)
-  const anglesKey = String(numberSections);
-  const angles = config.geometry_constants.section_positioning_angles[anglesKey];
-  
-  if (!angles || typeof angles[sectionId] !== 'number') {
-    console.warn(`[main.ts] No angle found for direction "${direction}", section ${sectionId}, n=${numberSections}`);
-    return 0;
-  }
-  
-  return angles[sectionId];
+  // Final fallback if nothing else matches
+  console.warn(`[main.ts] No angle found for direction "${direction}", section ${sectionId}, n=${numberSections}`);
+  return 0;
 }
 
 // Extend the global Window interface
