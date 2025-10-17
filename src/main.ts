@@ -55,17 +55,12 @@ function calculateGrainAngle(
   if (typeof angleOrKey === 'string') {
     let anglesKey = '';
     
-    if (angleOrKey.startsWith('use_section_positioning_')) {
-      // Handles "use_section_positioning_4_radiant", etc.
+    if (angleOrKey === 'use_section_positioning') {
+      // For radiant: n=1,2,3 use "1","2","3" but n=4 uses "4_radiant"
+      anglesKey = numberSections === 4 ? '4_radiant' : String(numberSections);
+    } else if (angleOrKey.startsWith('use_section_positioning_')) {
+      // Handles "use_section_positioning_4_diamond", etc.
       anglesKey = angleOrKey.substring('use_section_positioning_'.length);
-    } else if (angleOrKey === 'use_section_positioning') {
-      // Handles the generic "angled" value
-      if (numberSections === 4) {
-        // Default n=4 to diamond, as it was the original behavior
-        anglesKey = '4_diamond'; 
-      } else {
-        anglesKey = String(numberSections);
-      }
     }
     
     if (anglesKey) {
@@ -883,10 +878,10 @@ class SceneManager {
       console.log(`[SceneManager] Processing section ${index}: ${mesh.name}`);
       console.log(`[SceneManager] Current mesh material:`, mesh.material?.name || 'none');
 
-      // Get material settings for this section
-      let species = config.default_species;
-      let grainDirection: 'horizontal' | 'vertical' | 'angled' =
-        config.default_grain_direction as 'horizontal' | 'vertical' | 'angled';
+      // Get material settings for THIS section only
+			let species = config.default_species;
+			let grainDirection: 'horizontal' | 'vertical' | 'radiant' | 'diamond' =
+				config.default_grain_direction as 'horizontal' | 'vertical' | 'radiant' | 'diamond';
 
       const sectionMaterial = sectionMaterials.find(
         (m) => m.section_id === index
@@ -1185,6 +1180,9 @@ async function initializeUI(
   // 2. Then populate all UI elements from composition state
   syncUIFromState(uiEngine, initialState.composition);
   
+  // 2.5. Update grain direction options visibility for current sections count
+  updateGrainDirectionOptions(uiEngine, initialState.composition.frame_design.number_sections);
+  
   // 3. Bind all element change listeners generically
   bindElementListeners(uiEngine, controller, sceneManager);
   
@@ -1231,6 +1229,7 @@ function syncUIFromState(uiEngine: UIEngine, composition: CompositionStateDTO): 
     if (!config) return;
     
     const value = uiEngine.getStateValue(composition, config.state_path);
+
     if (value !== null && value !== undefined) {
       const typedValue: string | number = typeof value === 'number' ? value : String(value);
       uiEngine.writeElementValue(key, typedValue);
@@ -1305,7 +1304,7 @@ function captureUISnapshot(uiEngine: UIEngine, baseComposition: CompositionState
       composition.frame_design.finish_x = value as number;
       composition.frame_design.finish_y = value as number;
     } else {
-      // UIEngine.setStateValue returns updated composition
+      // UIEngine.setStateValue returns updated composition for all other fields
       const updated = uiEngine.setStateValue(composition, config.state_path, value);
       Object.assign(composition, updated);
     }
@@ -1342,13 +1341,76 @@ function bindElementListeners(uiEngine: UIEngine, controller: ApplicationControl
     // Generic behavior: sections updates slots step and validates
     if (key === 'sections') {
       element.addEventListener('change', () => {
-        const sections = parseInt((element as HTMLSelectElement).value);
-        uiEngine.updateSlotsStep(sections);
+        const newSections = parseInt((element as HTMLSelectElement).value);
+        const state = controller.getState();
+        const oldSectionMaterials = state.composition.frame_design.section_materials;
+        
+        // CRITICAL: Normalize section_materials array for new sections count
+        const grainConfig = uiEngine.getElementConfig('grainDirection');
+        const validDirections = grainConfig?.options
+          ?.filter(opt => {
+            if (!opt.show_when) return true;
+            const sections = opt.show_when.number_sections;
+            return sections ? sections.includes(newSections) : true;
+          })
+          .map(opt => String(opt.value)) || ['horizontal', 'vertical'];
+        
+        // Determine consensus grain direction from existing sections
+        const existingGrains = oldSectionMaterials
+          .filter(m => m.section_id < newSections)
+          .map(m => m.grain_direction);
+        const firstGrain = existingGrains[0];
+        const hasConsensus = existingGrains.length > 0 && 
+                            existingGrains.every(g => g === firstGrain) &&
+                            validDirections.includes(firstGrain);
+        const consensusGrain = hasConsensus ? firstGrain : 'vertical';
+        
+        const newSectionMaterials = [];
+        const woodConfig = controller.getWoodMaterialsConfig();
+        
+        for (let i = 0; i < newSections; i++) {
+          const oldMaterial = oldSectionMaterials.find(m => m.section_id === i);
+          
+          if (oldMaterial) {
+            // Carry forward existing material if grain direction is valid
+            const isGrainValid = validDirections.includes(oldMaterial.grain_direction);
+            
+            newSectionMaterials.push({
+              section_id: i,
+              species: oldMaterial.species,
+              grain_direction: isGrainValid ? oldMaterial.grain_direction : consensusGrain
+            });
+          } else {
+            // NEW section: use consensus grain from existing sections, or vertical
+            newSectionMaterials.push({
+              section_id: i,
+              species: woodConfig.default_species,
+              grain_direction: consensusGrain
+            });
+          }
+        }
+        
+        // Update controller state with normalized array
+        controller.updateSectionMaterialsArray(newSectionMaterials);
+        
+        // Update UI elements
+        uiEngine.updateSlotsStep(newSections);
+        updateGrainDirectionOptions(uiEngine, newSections);
+        
+        // Update dropdown to show carried-forward grain if all sections agree
+        const grainEl = uiEngine.getElement('grainDirection') as HTMLSelectElement;
+        if (grainEl && newSectionMaterials.length > 0) {
+          const firstGrain = newSectionMaterials[0].grain_direction;
+          const allSameGrain = newSectionMaterials.every(m => m.grain_direction === firstGrain);
+          if (allSameGrain) {
+            grainEl.value = firstGrain;
+          }
+        }
         
         const slotsEl = uiEngine.getElement('slots') as HTMLInputElement;
         if (slotsEl) {
           const currentSlots = parseInt(slotsEl.value);
-          const validSlots = uiEngine.validateSlotsDivisibility(currentSlots, sections);
+          const validSlots = uiEngine.validateSlotsDivisibility(currentSlots, newSections);
           if (validSlots !== currentSlots) {
             slotsEl.value = String(validSlots);
             const displayEl = document.getElementById('slotsValue');
@@ -1357,8 +1419,7 @@ function bindElementListeners(uiEngine: UIEngine, controller: ApplicationControl
         }
         
         // Trigger conditional UI update
-        const currentState = controller.getState();
-        updateConditionalUI(uiEngine, currentState.composition);
+        updateConditionalUI(uiEngine, state.composition);
       });
     }
     
@@ -1624,6 +1685,50 @@ function bindSelectAllCheckbox(
     controller.selectSection(sceneManager.getSelectedSections());
     sceneManager.updateSectionUI(sceneManager.getSelectedSections());
   });
+}
+
+/**
+ * Dynamically updates the grain direction options based on the number of sections.
+ */
+function updateGrainDirectionOptions(uiEngine: UIEngine, numSections: number): void {
+  const grainEl = uiEngine.getElement('grainDirection') as HTMLSelectElement;
+  const grainConfig = uiEngine.getElementConfig('grainDirection');
+  if (!grainEl || !grainConfig?.options) return;
+
+  let isCurrentValueVisible = false;
+
+  // Update visibility of each option
+  for (const option of grainConfig.options) {
+    const optionEl = grainEl.querySelector(`option[value="${option.value}"]`);
+    if (!optionEl) continue;
+
+    let shouldShow = true;
+    if (option.show_when) {
+      const sections = option.show_when.number_sections;
+      if (sections && !sections.includes(numSections)) {
+        shouldShow = false;
+      }
+    }
+
+    (optionEl as HTMLElement).style.display = shouldShow ? '' : 'none';
+    if (shouldShow && grainEl.value === option.value) {
+      isCurrentValueVisible = true;
+    }
+  }
+
+  // If the currently selected option is now hidden, reset to a valid default
+  if (!isCurrentValueVisible) {
+    // Find the first visible option to use as the new default
+    const firstVisibleOption = grainConfig.options.find(opt => {
+      if (!opt.show_when) return true;
+      const sections = opt.show_when.number_sections;
+      return sections ? sections.includes(numSections) : true;
+    });
+
+    if (firstVisibleOption) {
+      grainEl.value = String(firstVisibleOption.value);
+    }
+  }
 }
 
 /**

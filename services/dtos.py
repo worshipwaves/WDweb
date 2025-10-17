@@ -22,7 +22,7 @@ class WoodMaterialsConfigDTO(BaseModel):
     model_config = ConfigDict(frozen=True, populate_by_name=True)
     
     default_species: str
-    default_grain_direction: Literal["horizontal", "vertical", "angled"]
+    default_grain_direction: Literal["horizontal", "vertical", "radiant"]
     species_catalog: List[SpeciesCatalogItemDTO]
     texture_config: Dict[str, Any]
     rendering_config: Dict[str, float]
@@ -35,7 +35,7 @@ class SectionMaterialDTO(BaseModel):
     
     section_id: int = Field(ge=0, le=3)
     species: str
-    grain_direction: Literal["horizontal", "vertical", "angled"]
+    grain_direction: Literal["horizontal", "vertical", "radiant", "diamond"]
     
     
 # Frame and Physical Design DTOs

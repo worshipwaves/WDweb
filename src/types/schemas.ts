@@ -4,14 +4,14 @@ import { z } from 'zod';
 export const SectionMaterialSchema = z.object({
   section_id: z.number().int().min(0).max(3),
   species: z.string(),
-  grain_direction: z.enum(['horizontal', 'vertical', 'angled'])
+  grain_direction: z.enum(['horizontal', 'vertical', 'radiant', 'diamond'])
 }).strict();
 
 export type SectionMaterial = z.infer<typeof SectionMaterialSchema>;
 
 export const WoodMaterialsConfigSchema = z.object({
   default_species: z.string(),
-  default_grain_direction: z.enum(['horizontal', 'vertical', 'angled']),
+  default_grain_direction: z.enum(['horizontal', 'vertical', 'radiant']),
   species_catalog: z.array(z.object({
     id: z.string(),
     display: z.string(),

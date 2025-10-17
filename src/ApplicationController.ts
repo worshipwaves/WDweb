@@ -799,4 +799,21 @@ export class ApplicationController {
       this._facade.persistState(this._state);
     }
   }
+	
+	public updateSectionMaterialsArray(newMaterials: Array<{section_id: number, species: string, grain_direction: string}>): void {
+    // Update state with normalized section_materials array
+    this._state.composition = {
+      ...this._state.composition,
+      frame_design: {
+        ...this._state.composition.frame_design,
+        section_materials: newMaterials.map(m => ({
+          section_id: m.section_id,
+          species: m.species,
+          grain_direction: m.grain_direction as 'horizontal' | 'vertical' | 'radiant' | 'diamond'
+        }))
+      }
+    };
+    
+    this.notifySubscribers();
+  }
 }
