@@ -55,12 +55,12 @@ function calculateGrainAngle(
   if (typeof angleOrKey === 'string') {
     let anglesKey = '';
     
-    if (angleOrKey === 'use_section_positioning') {
+    if (angleOrKey.startsWith('use_section_positioning_')) {
+      // Handles "use_section_positioning_4_radiant", etc.
+      anglesKey = angleOrKey.substring('use_section_positioning_'.length);
+    } else if (angleOrKey === 'use_section_positioning') {
       // For radiant: n=1,2,3 use "1","2","3" but n=4 uses "4_radiant"
       anglesKey = numberSections === 4 ? '4_radiant' : String(numberSections);
-    } else if (angleOrKey.startsWith('use_section_positioning_')) {
-      // Handles "use_section_positioning_4_diamond", etc.
-      anglesKey = angleOrKey.substring('use_section_positioning_'.length);
     }
     
     if (anglesKey) {
@@ -102,12 +102,11 @@ class SceneManager {
   private _sectionMaterials: WoodMaterial[] = [];
 	private _selectedSectionIndices: Set<number> = new Set();
   private _rootNode: TransformNode | null = null;
-	private _currentCSGData: CSGDataResponse | null = null;
+	private _currentCSGData: CSGDataResponse | null = null;  // Store CSG data for overlay positioning
 	private _overlayMeshes: Map<number, Mesh> = new Map();
   private _hasPlayedPulseAnimation: boolean = false;
 	private _renderQueue: Promise<void> = Promise.resolve();
   private _isRendering = false;
-  private _sectionInteractionHandler: ((evt: PointerEvent) => void) | null = null;
 
   private constructor(canvasId: string, facade: WaveformDesignerFacade) {
     // Get canvas element
@@ -425,14 +424,7 @@ class SceneManager {
   private setupSectionInteraction(): void {
     console.log('[SceneManager] Setting up section interaction');
     
-    // Remove old listener if it exists
-    if (this._sectionInteractionHandler) {
-      this._canvas.removeEventListener('pointerdown', this._sectionInteractionHandler);
-      this._sectionInteractionHandler = null;
-    }
-    
-    // Create new handler
-    this._sectionInteractionHandler = (evt: PointerEvent) => {
+    this._canvas.addEventListener('pointerdown', (evt: PointerEvent) => {
       const pickResult = this._scene.pick(
         this._scene.pointerX,
         this._scene.pointerY
@@ -479,10 +471,7 @@ class SceneManager {
         }
         this.updateSectionUI(this._selectedSectionIndices);
       }
-    };
-    
-    // Attach the new handler
-    this._canvas.addEventListener('pointerdown', this._sectionInteractionHandler);
+    });
   }
   
   private selectSection(index: number): void {
@@ -729,7 +718,6 @@ class SceneManager {
       { radius: overlayRadius, tessellation: 32 },
       this._scene
     );
-    this._overlayMesh.isPickable = false;
     
     // Use local center from backend geometry data
     const localCenter = csgData.section_local_centers[index];
@@ -890,10 +878,10 @@ class SceneManager {
       console.log(`[SceneManager] Processing section ${index}: ${mesh.name}`);
       console.log(`[SceneManager] Current mesh material:`, mesh.material?.name || 'none');
 
-      // Get material settings for THIS section only
-			let species = config.default_species;
-			let grainDirection: 'horizontal' | 'vertical' | 'radiant' | 'diamond' =
-				config.default_grain_direction as 'horizontal' | 'vertical' | 'radiant' | 'diamond';
+      // Get material settings for this section
+      let species = config.default_species;
+      let grainDirection: 'horizontal' | 'vertical' | 'angled' =
+        config.default_grain_direction as 'horizontal' | 'vertical' | 'angled';
 
       const sectionMaterial = sectionMaterials.find(
         (m) => m.section_id === index
@@ -1192,9 +1180,6 @@ async function initializeUI(
   // 2. Then populate all UI elements from composition state
   syncUIFromState(uiEngine, initialState.composition);
   
-  // 2.5. Update grain direction options visibility for current sections count
-  updateGrainDirectionOptions(uiEngine, initialState.composition.frame_design.number_sections);
-  
   // 3. Bind all element change listeners generically
   bindElementListeners(uiEngine, controller, sceneManager);
   
@@ -1241,7 +1226,6 @@ function syncUIFromState(uiEngine: UIEngine, composition: CompositionStateDTO): 
     if (!config) return;
     
     const value = uiEngine.getStateValue(composition, config.state_path);
-
     if (value !== null && value !== undefined) {
       const typedValue: string | number = typeof value === 'number' ? value : String(value);
       uiEngine.writeElementValue(key, typedValue);
@@ -1311,9 +1295,15 @@ function captureUISnapshot(uiEngine: UIEngine, baseComposition: CompositionState
       }
     }
     
-    // UIEngine.setStateValue returns updated composition for all fields
-    const updated = uiEngine.setStateValue(composition, config.state_path, value);
-    Object.assign(composition, updated);
+    // Special handling for size - sets both finish_x AND finish_y
+    if (key === 'size') {
+      composition.frame_design.finish_x = value as number;
+      composition.frame_design.finish_y = value as number;
+    } else {
+      // UIEngine.setStateValue returns updated composition
+      const updated = uiEngine.setStateValue(composition, config.state_path, value);
+      Object.assign(composition, updated);
+    }
   }
   
   return composition;
@@ -1347,95 +1337,14 @@ function bindElementListeners(uiEngine: UIEngine, controller: ApplicationControl
     // Generic behavior: sections updates slots step and validates
     if (key === 'sections') {
       element.addEventListener('change', () => {
-        const newSections = parseInt((element as HTMLSelectElement).value);
-        const state = controller.getState();
-        const oldSectionMaterials = state.composition.frame_design.section_materials;
-        
-        // CRITICAL: Normalize section_materials array for new sections count
-        const grainConfig = uiEngine.getElementConfig('grainDirection');
-        const validDirections = grainConfig?.options
-          ?.filter(opt => {
-            if (!opt.show_when) return true;
-            const sections = opt.show_when.number_sections;
-            return sections ? sections.includes(newSections) : true;
-          })
-          .map(opt => String(opt.value)) || ['horizontal', 'vertical'];
-        
-        // Determine consensus from existing sections for BOTH species and grain
-        // CRITICAL: Only look at sections that will exist in the NEW configuration
-        const existingMaterials = oldSectionMaterials.filter(m => m.section_id < Math.min(oldSectionMaterials.length, newSections));
-        
-        console.log('[sections change] oldSectionMaterials:', oldSectionMaterials);
-        console.log('[sections change] existingMaterials for consensus:', existingMaterials);
-        console.log('[sections change] validDirections for n=' + newSections + ':', validDirections);
-        
-        // Check species consensus
-        const existingSpecies = existingMaterials.map(m => m.species);
-        const firstSpecies = existingSpecies[0];
-        const hasSpeciesConsensus = existingSpecies.length > 0 && 
-                                    existingSpecies.every(s => s === firstSpecies);
-        
-        // Check grain consensus
-        const existingGrains = existingMaterials.map(m => m.grain_direction);
-        const firstGrain = existingGrains[0];
-        const hasGrainConsensus = existingGrains.length > 0 && 
-                                  existingGrains.every(g => g === firstGrain) &&
-                                  validDirections.includes(firstGrain);
-        
-        console.log('[sections change] Species consensus:', hasSpeciesConsensus, firstSpecies);
-        console.log('[sections change] Grain consensus:', hasGrainConsensus, firstGrain);
-        
-        const woodConfig = controller.getWoodMaterialsConfig();
-        const consensusSpecies = hasSpeciesConsensus ? firstSpecies : woodConfig.default_species;
-        const consensusGrain = hasGrainConsensus ? firstGrain : 'vertical';
-        
-        console.log('[sections change] Will use consensus species:', consensusSpecies, 'grain:', consensusGrain);
-        
-        const newSectionMaterials = [];
-        
-        for (let i = 0; i < newSections; i++) {
-          const oldMaterial = oldSectionMaterials.find(m => m.section_id === i);
-          
-          if (oldMaterial) {
-            // Carry forward existing material if grain direction is valid
-            const isGrainValid = validDirections.includes(oldMaterial.grain_direction);
-            
-            newSectionMaterials.push({
-              section_id: i,
-              species: oldMaterial.species,
-              grain_direction: isGrainValid ? oldMaterial.grain_direction : consensusGrain
-            });
-          } else {
-            // NEW section: use consensus from existing sections
-            newSectionMaterials.push({
-              section_id: i,
-              species: consensusSpecies,
-              grain_direction: consensusGrain
-            });
-          }
-        }
-        
-        // Update controller state with normalized array
-        controller.updateSectionMaterialsArray(newSectionMaterials);
-        
-        // Update UI elements
-        uiEngine.updateSlotsStep(newSections);
-        updateGrainDirectionOptions(uiEngine, newSections);
-        
-        // Update dropdown to show carried-forward grain if all sections agree
-        const grainEl = uiEngine.getElement('grainDirection') as HTMLSelectElement;
-        if (grainEl && newSectionMaterials.length > 0) {
-          const firstGrain = newSectionMaterials[0].grain_direction;
-          const allSameGrain = newSectionMaterials.every(m => m.grain_direction === firstGrain);
-          if (allSameGrain) {
-            grainEl.value = firstGrain;
-          }
-        }
+        const sections = parseInt((element as HTMLSelectElement).value);
+        uiEngine.updateSlotsStep(sections);
+        updateGrainDirectionOptions(uiEngine, sections);
         
         const slotsEl = uiEngine.getElement('slots') as HTMLInputElement;
         if (slotsEl) {
           const currentSlots = parseInt(slotsEl.value);
-          const validSlots = uiEngine.validateSlotsDivisibility(currentSlots, newSections);
+          const validSlots = uiEngine.validateSlotsDivisibility(currentSlots, sections);
           if (validSlots !== currentSlots) {
             slotsEl.value = String(validSlots);
             const displayEl = document.getElementById('slotsValue');
@@ -1444,7 +1353,8 @@ function bindElementListeners(uiEngine: UIEngine, controller: ApplicationControl
         }
         
         // Trigger conditional UI update
-        updateConditionalUI(uiEngine, state.composition);
+        const currentState = controller.getState();
+        updateConditionalUI(uiEngine, currentState.composition);
       });
     }
     
@@ -1677,8 +1587,6 @@ function updateConditionalUI(uiEngine: UIEngine, composition: CompositionStateDT
   const currentState: Record<string, string | number> = {
     shape: composition.frame_design.shape,
     sections: composition.frame_design.number_sections,
-    width: composition.frame_design.finish_x,
-    height: composition.frame_design.finish_y
   };
   
   uiEngine.updateConditionalOptions(currentState);

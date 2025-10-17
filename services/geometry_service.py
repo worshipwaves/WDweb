@@ -363,6 +363,7 @@ class GeometryService:
             Dictionary with panel configuration:
                 - finish_x: Total composition width in inches
                 - finish_y: Total composition height in inches
+                - outer_radius: Panel outer radius (finish_x / 2 for circular)
                 - thickness: Material thickness in inches  
                 - separation: Gap between sections in inches
                 - number_sections: Number of panel sections (1-4)
@@ -370,9 +371,13 @@ class GeometryService:
         """
         frame = state.frame_design
         
+        # Calculate outer_radius for circular panels (used for overlay positioning)
+        outer_radius = frame.finish_x / 2.0
+        
         result = {
             "finish_x": frame.finish_x,
             "finish_y": frame.finish_y,
+            "outer_radius": outer_radius,
             "thickness": PANEL_THICKNESS,
             "separation": frame.separation,
             "number_sections": frame.number_sections,
