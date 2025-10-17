@@ -99,6 +99,9 @@ export class PanelGenerationService {
         sectionMesh.rotation.z = Math.PI;
         sectionMesh.bakeCurrentTransformIntoVertices();
         sectionMesh.refreshBoundingInfo();
+        sectionMesh.freezeWorldMatrix();
+        sectionMesh.isPickable = true;
+        sectionMesh.alwaysSelectAsActiveMesh = true;
         
         // Sequential distribution: divide 48 slots evenly
         let sectionSlots: SlotData[] = [];
@@ -126,7 +129,9 @@ export class PanelGenerationService {
         }
         
         finalMesh.name = `section_${sectionIndex}`;
+        finalMesh.refreshBoundingInfo();
         finalMesh.isPickable = true;
+        finalMesh.alwaysSelectAsActiveMesh = true;
         console.log(`[POC] Section ${sectionIndex} mesh created: ${finalMesh.name}`);
         
         sectionMeshes.push(finalMesh);
