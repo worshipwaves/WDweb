@@ -213,6 +213,12 @@ export class PanelGenerationService {
         const sectionData = this.cutToSectionShape(fullDisc, sectionIndex, config, sectionEdges);
         const sectionMesh = sectionData.mesh;
         
+        // FIX: Pre-rotate bottom sections for n=3 BEFORE cutting slots
+        if (config.numberSections === 3 && (sectionIndex === 1 || sectionIndex === 2)) {
+          sectionMesh.rotation.z = Math.PI;
+          sectionMesh.bakeCurrentTransformIntoVertices();
+        }
+        
         // Step 3: Filter slots for this section
         const sectionSlots = slots ? this.filterSlotsForSection(slots, sectionIndex, config) : [];
         console.log(`[POC] Section ${sectionIndex} has ${sectionSlots.length} slots`);
