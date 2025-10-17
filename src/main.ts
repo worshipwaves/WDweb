@@ -1355,18 +1355,37 @@ function bindElementListeners(uiEngine: UIEngine, controller: ApplicationControl
           })
           .map(opt => String(opt.value)) || ['horizontal', 'vertical'];
         
-        // Determine consensus grain direction from existing sections
-        const existingGrains = oldSectionMaterials
-          .filter(m => m.section_id < newSections)
-          .map(m => m.grain_direction);
+        // Determine consensus from existing sections for BOTH species and grain
+        // CRITICAL: Only look at sections that will exist in the NEW configuration
+        const existingMaterials = oldSectionMaterials.filter(m => m.section_id < Math.min(oldSectionMaterials.length, newSections));
+        
+        console.log('[sections change] oldSectionMaterials:', oldSectionMaterials);
+        console.log('[sections change] existingMaterials for consensus:', existingMaterials);
+        console.log('[sections change] validDirections for n=' + newSections + ':', validDirections);
+        
+        // Check species consensus
+        const existingSpecies = existingMaterials.map(m => m.species);
+        const firstSpecies = existingSpecies[0];
+        const hasSpeciesConsensus = existingSpecies.length > 0 && 
+                                    existingSpecies.every(s => s === firstSpecies);
+        
+        // Check grain consensus
+        const existingGrains = existingMaterials.map(m => m.grain_direction);
         const firstGrain = existingGrains[0];
-        const hasConsensus = existingGrains.length > 0 && 
-                            existingGrains.every(g => g === firstGrain) &&
-                            validDirections.includes(firstGrain);
-        const consensusGrain = hasConsensus ? firstGrain : 'vertical';
+        const hasGrainConsensus = existingGrains.length > 0 && 
+                                  existingGrains.every(g => g === firstGrain) &&
+                                  validDirections.includes(firstGrain);
+        
+        console.log('[sections change] Species consensus:', hasSpeciesConsensus, firstSpecies);
+        console.log('[sections change] Grain consensus:', hasGrainConsensus, firstGrain);
+        
+        const woodConfig = controller.getWoodMaterialsConfig();
+        const consensusSpecies = hasSpeciesConsensus ? firstSpecies : woodConfig.default_species;
+        const consensusGrain = hasGrainConsensus ? firstGrain : 'vertical';
+        
+        console.log('[sections change] Will use consensus species:', consensusSpecies, 'grain:', consensusGrain);
         
         const newSectionMaterials = [];
-        const woodConfig = controller.getWoodMaterialsConfig();
         
         for (let i = 0; i < newSections; i++) {
           const oldMaterial = oldSectionMaterials.find(m => m.section_id === i);
@@ -1381,10 +1400,10 @@ function bindElementListeners(uiEngine: UIEngine, controller: ApplicationControl
               grain_direction: isGrainValid ? oldMaterial.grain_direction : consensusGrain
             });
           } else {
-            // NEW section: use consensus grain from existing sections, or vertical
+            // NEW section: use consensus from existing sections
             newSectionMaterials.push({
               section_id: i,
-              species: woodConfig.default_species,
+              species: consensusSpecies,
               grain_direction: consensusGrain
             });
           }
