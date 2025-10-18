@@ -81,6 +81,42 @@ class ProcessingLevelService:
         print(f"[PROCESSING DIAGNOSTIC] Changed params: {changed_params}")
         print(f"[PROCESSING DIAGNOSTIC] Determined level: '{level}'")
         print(f"[PROCESSING DIAGNOSTIC] Previous max_amplitude: {previous_max_amplitude}")
+        
+        # CRITICAL: Preserve section_materials from incoming state (frontend owns this)
+        # Preserve valid section_materials and add defaults for new sections
+        if state.frame_design:
+            from services.dtos import SectionMaterialDTO
+            from services.config_service import ConfigService
+            from pathlib import Path
+            
+            config = ConfigService(Path("config/default_parameters.json"))
+            wood_config = config.get_wood_materials_config()
+            
+            num_sections = state.frame_design.number_sections
+            existing_materials = state.frame_design.section_materials or []
+            
+            # Filter to valid sections only
+            valid_materials = [m for m in existing_materials if m.section_id < num_sections]
+            
+            # Create defaults for missing sections (immutable)
+            existing_ids = {m.section_id for m in valid_materials}
+            new_defaults = [
+                SectionMaterialDTO(
+                    section_id=section_id,
+                    species=wood_config['default_species'],
+                    grain_direction=wood_config['default_grain_direction']
+                )
+                for section_id in range(num_sections)
+                if section_id not in existing_ids
+            ]
+            
+            # Combine and sort (creates new list, no mutation)
+            self._incoming_section_materials = sorted(
+                valid_materials + new_defaults, 
+                key=lambda m: m.section_id
+            )
+        else:
+            self._incoming_section_materials = []
 
         current_geometry = self._geometry_service.calculate_geometries_dto(state)
         current_max = current_geometry.max_amplitude_local
@@ -140,7 +176,13 @@ class ProcessingLevelService:
             print(f"[PROCESSING DIAGNOSTIC] Scaled {len(scaled_amplitudes)} amplitudes")
             print(f"[PROCESSING DIAGNOSTIC] Sample values: first={scaled_amplitudes[0]:.4f}, max={max(scaled_amplitudes):.4f}")
             
-            return state.model_copy(update={"processed_amplitudes": scaled_amplitudes})
+            updated_state = state.model_copy(update={"processed_amplitudes": scaled_amplitudes})
+            if state.frame_design and self._incoming_section_materials:
+                updated_frame = updated_state.frame_design.model_copy(
+                    update={"section_materials": self._incoming_section_materials}
+                )
+                updated_state = updated_state.model_copy(update={"frame_design": updated_frame})
+            return updated_state
         
         print("[PROCESSING DIAGNOSTIC] Invalid max_amplitude. Passing through.")
         return state
@@ -165,7 +207,13 @@ class ProcessingLevelService:
         # 3. Scale the normalized amplitudes to their final physical size.
         if state.processed_amplitudes and new_max_amplitude > 1e-9:
             scaled_amplitudes = [amp * new_max_amplitude for amp in state.processed_amplitudes]
-            return state.model_copy(update={"processed_amplitudes": scaled_amplitudes})
+            updated_state = state.model_copy(update={"processed_amplitudes": scaled_amplitudes})
+            if state.frame_design and self._incoming_section_materials:
+                updated_frame = updated_state.frame_design.model_copy(
+                    update={"section_materials": self._incoming_section_materials}
+                )
+                updated_state = updated_state.model_copy(update={"frame_design": updated_frame})
+            return updated_state
         
         print("[PROCESSING DIAGNOSTIC] No amplitudes to scale or max_amplitude is zero. Returning state as is.")
         return state

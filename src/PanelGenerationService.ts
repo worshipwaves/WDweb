@@ -333,12 +333,6 @@ export class PanelGenerationService {
       result.bakeCurrentTransformIntoVertices();
     }
     
-    // CRITICAL: Force complete rebuild of mesh data structures after rotation bake
-    // This ensures picking system has accurate geometry data, especially for n=4
-    result.createNormals(true);
-    result.refreshBoundingInfo(true, true);
-    result.computeWorldMatrix(true);
-    
     return result;
   }
   
