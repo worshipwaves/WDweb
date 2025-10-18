@@ -1679,18 +1679,11 @@ function updateGrainDirectionOptions(uiEngine: UIEngine, numSections: number): v
     }
   }
 
-  // If the currently selected option is now hidden, reset to a valid default
+  // If the currently selected option is now hidden, do NOT change the dropdown value
+  // Let initializeSectionMaterials handle the fallback logic, then Update Design will sync
   if (!isCurrentValueVisible) {
-    // Find the first visible option to use as the new default
-    const firstVisibleOption = grainConfig.options.find(opt => {
-      if (!opt.show_when) return true;
-      const sections = opt.show_when.number_sections;
-      return sections ? sections.includes(numSections) : true;
-    });
-
-    if (firstVisibleOption) {
-      grainEl.value = String(firstVisibleOption.value);
-    }
+    console.log(`[updateGrainDirectionOptions] Current grain "${grainEl.value}" hidden for n=${numSections}, keeping dropdown as-is`);
+    // Do nothing - dropdown keeps its old value, but it will be corrected by initializeSectionMaterials
   }
 }
 
