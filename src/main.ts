@@ -76,6 +76,16 @@ function calculateGrainAngle(
   return 0;
 }
 
+/**
+ * Make updateGrainDirectionOptions globally accessible for ApplicationController
+ */
+(window as any).updateGrainDirectionOptionsFromController = (newN: number) => {
+  // This will be set after UIEngine is initialized
+  if ((window as any)._uiEngineInstance) {
+    updateGrainDirectionOptions((window as any)._uiEngineInstance, newN);
+  }
+};
+
 // Extend the global Window interface
 declare global {
   interface Window {
@@ -1125,6 +1135,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Initialize UIEngine first - loads config from backend
       const uiEngine = new UIEngine();
       await uiEngine.loadConfig();
+			
+			// Make UIEngine accessible for grain direction updates from controller
+      (window as any)._uiEngineInstance = uiEngine;
       
       // Create the facade and controller
       const facade = new WaveformDesignerFacade();

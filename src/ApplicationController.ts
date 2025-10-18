@@ -22,6 +22,61 @@ import { PerformanceMonitor } from './PerformanceMonitor';
 // Subscriber callback type
 type StateSubscriber = (state: ApplicationState) => void;
 
+
+/**
+ * Check if a grain direction is available for a given number of sections.
+ */
+function isGrainAvailableForN(grain: string, n: number): boolean {
+  if (grain === 'diamond') return n === 4;
+  if (grain === 'radiant') return n >= 2;
+  return true; // horizontal/vertical always available
+}
+
+/**
+ * Initialize section_materials array when number_sections changes.
+ * Implements smart inheritance: unanimous species/grain → inherit, mixed → defaults.
+ */
+function initializeSectionMaterials(
+  oldN: number,
+  newN: number,
+  uiCapturedMaterials: SectionMaterial[],
+  config: WoodMaterialsConfig
+): SectionMaterial[] {
+  // If N is unchanged, do nothing
+  if (newN === oldN) {
+    return uiCapturedMaterials;
+  }
+
+  // Step 1: Determine intended species and grain from UI-captured state
+  const allSameSpecies = uiCapturedMaterials.length > 0 && 
+    uiCapturedMaterials.every(m => m.species === uiCapturedMaterials[0].species);
+  const allSameGrain = uiCapturedMaterials.length > 0 && 
+    uiCapturedMaterials.every(m => m.grain_direction === uiCapturedMaterials[0].grain_direction);
+
+  const intendedSpecies = allSameSpecies ? uiCapturedMaterials[0].species : config.default_species;
+  let intendedGrain = allSameGrain ? uiCapturedMaterials[0].grain_direction : config.default_grain_direction;
+
+  // Step 2: Validate intended grain against NEW number of sections
+  if (!isGrainAvailableForN(intendedGrain, newN)) {
+    console.log(`[initializeSectionMaterials] Grain "${intendedGrain}" not available for n=${newN}, falling back to vertical`);
+    intendedGrain = 'vertical';
+  }
+
+  // Step 3: Build new materials array from scratch to correct size (newN)
+  const newMaterials: SectionMaterial[] = [];
+  for (let i = 0; i < newN; i++) {
+    const species = uiCapturedMaterials[i]?.species || intendedSpecies;
+    newMaterials.push({
+      section_id: i,
+      species: species,
+      grain_direction: intendedGrain as 'horizontal' | 'vertical' | 'radiant' | 'diamond'
+    });
+  }
+
+  console.log(`[initializeSectionMaterials] Finalized for n=${newN}:`, newMaterials);
+  return newMaterials;
+}
+
 export class ApplicationController {
   private _state: ApplicationState | null = null;
   private _facade: WaveformDesignerFacade;
@@ -545,7 +600,37 @@ export class ApplicationController {
             separation: defaults.separation,
           },
         };
+				
+				// Update UI dropdown to hide/show grain options and reset to valid value if needed
+				if (typeof window !== 'undefined' && (window as any).updateGrainDirectionOptionsFromController) {
+					(window as any).updateGrainDirectionOptionsFromController(newN);
+				}
       }
+    }
+		
+		// Initialize section_materials when number_sections changes (CHAT 2 FIX)
+    const oldN = this._state.composition.frame_design.number_sections;
+    const newN = newComposition.frame_design.number_sections;
+
+    if (oldN !== newN) {
+    console.log(`[Controller] number_sections changed ${oldN}→${newN}, initializing materials`);
+    
+    // CRITICAL: Use materials from UI snapshot, NOT old state
+    const uiCapturedMaterials = newComposition.frame_design.section_materials || [];
+    const initializedMaterials = initializeSectionMaterials(
+      oldN,
+      newN,
+      uiCapturedMaterials,
+      this._woodMaterialsConfig
+    );
+      
+      newComposition = {
+        ...newComposition,
+        frame_design: {
+          ...newComposition.frame_design,
+          section_materials: initializedMaterials
+        }
+      };
     }
 
     // 1. Detect what changed to determine the processing level.
