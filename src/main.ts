@@ -105,8 +105,9 @@ class SceneManager {
 	private _currentCSGData: CSGDataResponse | null = null;  // Store CSG data for overlay positioning
 	private _overlayMeshes: Map<number, Mesh> = new Map();
   private _hasPlayedPulseAnimation: boolean = false;
-	private _renderQueue: Promise<void> = Promise.resolve();
+  private _renderQueue: Promise<void> = Promise.resolve();
   private _isRendering = false;
+  private _isInteractionSetup: boolean = false;
 
   private constructor(canvasId: string, facade: WaveformDesignerFacade) {
     // Get canvas element
@@ -422,7 +423,14 @@ class SceneManager {
   }
   
   private setupSectionInteraction(): void {
+    // CRITICAL: Only set up interaction once to prevent duplicate event listeners
+    if (this._isInteractionSetup) {
+      console.log('[SceneManager] Section interaction already set up, skipping');
+      return;
+    }
+    
     console.log('[SceneManager] Setting up section interaction');
+    this._isInteractionSetup = true;
     
     this._canvas.addEventListener('pointerdown', (evt: PointerEvent) => {
       const pickResult = this._scene.pick(
@@ -595,6 +603,9 @@ class SceneManager {
             ring.rotation.x = Math.PI / 2;
             ring.renderingGroupId = 1;
             ring.parent = this._rootNode;
+						
+            // CRITICAL: Disable picking on pulse rings so they don't block section clicks
+            ring.isPickable = false;						
             
             const ringMat = new StandardMaterial(`pulseRingMat_${index}_${pulseNum}`, this._scene);
             ringMat.diffuseColor = new Color3(0.3, 0.5, 0.8); // Blueish
