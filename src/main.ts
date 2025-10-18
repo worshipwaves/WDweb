@@ -558,11 +558,12 @@ class SceneManager {
         const angleRad = (bifurcationAngle * Math.PI) / 180;
         
         // Convert from CNC coordinates to Babylon coordinates
-        const CNC_CENTER = csgData.panel_config.outer_radius;
-        const localCenterBabylon = {
-          x: localCenter[0] - CNC_CENTER,
-          z: localCenter[1] - CNC_CENTER
-        };
+				const cncCenterX = csgData.panel_config.finish_x / 2.0;
+				const cncCenterY = csgData.panel_config.finish_y / 2.0;
+				const localCenterBabylon = {
+					x: localCenter[0] - cncCenterX,
+					z: localCenter[1] - cncCenterY
+				};
         
         // Calculate COMPLETE position in pre-bake space
         let xPos = localCenterBabylon.x + distanceFromCenter * Math.cos(angleRad);
@@ -712,9 +713,9 @@ class SceneManager {
     const maxDimension = Math.max(size.x, size.z);
     const overlayRadius = maxDimension * 0.05; // 5% of section size
     
-    // Create circular plane mesh
-    this._overlayMesh = MeshBuilder.CreateDisc(
-      'selectionOverlay',
+    // Create circular plane mesh with a unique name
+    const overlay = MeshBuilder.CreateDisc(
+      `selectionOverlay_${index}`,
       { radius: overlayRadius, tessellation: 32 },
       this._scene
     );
@@ -728,8 +729,8 @@ class SceneManager {
     const distanceFromCenter = minRadius * 0.6;
     const angleRad = (bifurcationAngle * Math.PI) / 180;
     
-    // Convert from CNC coordinates to Babylon coordinates
-    const CNC_CENTER = csgData.panel_config.outer_radius;
+		// Convert from CNC coordinates to Babylon coordinates
+    const CNC_CENTER = csgData.panel_config.finish_x / 2.0;
     const localCenterBabylon = {
       x: localCenter[0] - CNC_CENTER,
       z: localCenter[1] - CNC_CENTER
@@ -750,23 +751,26 @@ class SceneManager {
     const center = boundingInfo.boundingBox.center;
     
     // Position overlay on bifurcation ray, well above surface to avoid z-fighting
-    this._overlayMesh.position = new Vector3(xPos, center.y + 2, zPos);
+    overlay.position = new Vector3(xPos, center.y + 2, zPos);
     
     // Force overlay to render on top
-    this._overlayMesh.renderingGroupId = 1;
-    this._overlayMesh.rotation.x = Math.PI / 2; // Rotate to face upward
+    overlay.renderingGroupId = 1;
+    overlay.rotation.x = Math.PI / 2; // Rotate to face upward
     
     // Create semi-transparent white material
-    const overlayMat = new StandardMaterial('overlayMat', this._scene);
+    const overlayMat = new StandardMaterial(`overlayMat_${index}`, this._scene);
     overlayMat.diffuseColor = new Color3(1, 1, 1);
     overlayMat.alpha = 0.7;
     overlayMat.emissiveColor = new Color3(0.3, 0.3, 0.3); // Slight glow for visibility
     overlayMat.backFaceCulling = false;
     
-    this._overlayMesh.material = overlayMat;
-    this._overlayMesh.parent = this._rootNode;
+    overlay.material = overlayMat;
+    overlay.parent = this._rootNode;
+    
+    // CRITICAL: Disable picking on overlay so clicks pass through to section mesh
+    overlay.isPickable = false;
 
-    return this._overlayMesh;
+    return overlay;
   }
   
   private updateSectionUI(indices: Set<number>): void {

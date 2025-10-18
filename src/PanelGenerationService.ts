@@ -235,6 +235,11 @@ export class PanelGenerationService {
         finalMesh.isPickable = true;
         finalMesh.alwaysSelectAsActiveMesh = true;
         
+        // CRITICAL: Force full bounding info recalculation after all transformations
+        // This ensures click detection works across the entire mesh surface
+        finalMesh.computeWorldMatrix(true);
+        finalMesh.refreshBoundingInfo(true, true);
+        
         console.log(`[POC] Section ${sectionIndex} mesh created: ${finalMesh.name}`);
         sectionMeshes.push(finalMesh);
         continue;  // Skip the rest of the loop
@@ -327,6 +332,12 @@ export class PanelGenerationService {
       result.rotation.y = Math.PI;  // 180° around Y (horizontal flip)
       result.bakeCurrentTransformIntoVertices();
     }
+    
+    // CRITICAL: Force complete rebuild of mesh data structures after rotation bake
+    // This ensures picking system has accurate geometry data, especially for n=4
+    result.createNormals(true);
+    result.refreshBoundingInfo(true, true);
+    result.computeWorldMatrix(true);
     
     return result;
   }
