@@ -348,69 +348,6 @@ export class WaveformDesignerFacade {
     };
     
     return merge(freshDefaults, persisted);
-  }
-	
-  /**
-   * TypeScript port of the backend's core geometry calculation.
-   * This allows the frontend to stay in sync with max_amplitude_local
-   * without an extra API call.
-   */
-  calculateGeometriesCore_TS(state: CompositionStateDTO): { maxAmplitudeLocal: number } {
-    const { frame_design: frame, pattern_settings: pattern } = state;
-    const { finish_x, finish_y, number_sections, separation } = frame;
-    const { number_slots, bit_diameter, spacer, x_offset, y_offset, scale_center_point } = pattern;
-
-    if (number_slots <= 0) return { maxAmplitudeLocal: 0 };
-
-    const radius = Math.min(finish_x, finish_y) / 2.0;
-    const gc_x = finish_x / 2.0;
-    const gc_y = finish_y / 2.0;
-    
-    const slot_angle_deg = 360.0 / number_slots;
-    const half_slot_angle_rad = (slot_angle_deg / 2.0) * (Math.PI / 180.0);
-
-    const true_min_radius_from_NR = (bit_diameter + spacer) / (2 * Math.sin(half_slot_angle_rad));
-    const circum_radius = (spacer / 2.0) / Math.sin(half_slot_angle_rad);
-
-    let max_radius_local_from_LC = radius - y_offset;
-
-    if (number_sections > 1) {
-        let local_radius = radius;
-        if (number_sections === 2) {
-            const lc_x = gc_x + (separation / 2.0) + x_offset;
-            local_radius = radius - Math.abs(lc_x - gc_x);
-        } else if (number_sections === 3) {
-            const lc_distance_from_gc = (separation + (2 * x_offset)) / Math.sqrt(3);
-            const lc_y = gc_y + lc_distance_from_gc;
-            local_radius = radius - Math.abs(lc_y - gc_y);
-        } else if (number_sections === 4) {
-            const effective_side_len = separation + (2 * x_offset);
-            const lc_distance_from_gc = effective_side_len / Math.sqrt(2);
-            local_radius = radius - lc_distance_from_gc;
-        }
-        max_radius_local_from_LC = local_radius - y_offset;
-    }
-
-    if (max_radius_local_from_LC <= true_min_radius_from_NR) {
-        max_radius_local_from_LC = true_min_radius_from_NR + bit_diameter;
-    }
-
-    const min_radius_from_V = true_min_radius_from_NR - circum_radius;
-    let max_radius_from_V = max_radius_local_from_LC - circum_radius;
-    if (max_radius_from_V <= min_radius_from_V) {
-        max_radius_from_V = min_radius_from_V + bit_diameter;
-    }
-    
-    const base_cp_from_V = (min_radius_from_V + max_radius_from_V) / 2.0;
-    const center_point_from_V = base_cp_from_V * scale_center_point;
-    
-    const max_extension_outward = max_radius_from_V - center_point_from_V;
-    const max_extension_inward = center_point_from_V - min_radius_from_V;
-    let max_amplitude_from_V = 2.0 * Math.min(max_extension_outward, max_extension_inward);
-    
-    max_amplitude_from_V *= Math.cos(half_slot_angle_rad);
-    
-    return { maxAmplitudeLocal: max_amplitude_from_V > 0 ? max_amplitude_from_V : 0 };
   }	
   
   /**

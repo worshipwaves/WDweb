@@ -50,7 +50,7 @@ export const StylePresetSchema = z.object({
 export type StylePreset = z.infer<typeof StylePresetSchema>;
 
 export const FrameDesignSchema = z.object({
-  shape: z.string(),
+  shape: z.enum(['circular', 'rectangular', 'diamond']),
   frame_orientation: z.string(),
   finish_x: z.number(),
   finish_y: z.number(),
@@ -256,6 +256,7 @@ export type CSGDataResponse = z.infer<typeof CSGDataResponseSchema>;
 export const SmartCsgResponseSchema = z.object({
   csg_data: CSGDataResponseSchema,
   updated_state: CompositionStateDTOSchema,
+  max_amplitude_local: z.number(),
 });
 
 export type SmartCsgResponse = z.infer<typeof SmartCsgResponseSchema>;

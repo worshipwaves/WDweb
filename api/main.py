@@ -47,6 +47,7 @@ class CsgDataRequest(BaseModel):
 class CsgDataResponse(BaseModel):
     csg_data: Dict[str, Any]
     updated_state: CompositionStateDTO
+    max_amplitude_local: float
 
 @app.get("/")
 def health_check():

@@ -18,6 +18,7 @@
   },
   "pattern_settings": {
     "slot_style": "radial",
+		"pattern_diameter": 36.0,
     "number_slots": 48,
     "bit_diameter": 0.25,
     "spacer": 0.5,
@@ -244,6 +245,24 @@
           {"value": "rectangular", "label": "Rectangular"}
         ]
       },
+			"size": {
+        "id": "size",
+        "type": "select",
+        "label": "Size",
+        "state_path": "frame_design.finish_x",
+        "show_when": {"shape": ["circular"]},
+        "options": [
+          {"value": 24, "label": "24\""},
+          {"value": 36, "label": "36\""},
+          {"value": 48, "label": "48\""}
+        ],
+        "on_change_triggers": [
+          {
+            "action": "apply_size_defaults",
+            "source_path": "size_defaults"
+          }
+        ]
+      },
       "sections": {
         "id": "sections",
         "type": "select",
@@ -271,6 +290,7 @@
         "type": "select",
         "label": "Width",
         "state_path": "frame_design.finish_x",
+        "show_when": {"shape": ["rectangular", "diamond"]},
         "options": [
           {"value": 20, "label": "20\""},
           {"value": 24, "label": "24\""},
@@ -284,11 +304,25 @@
         "type": "select",
         "label": "Height",
         "state_path": "frame_design.finish_y",
+        "show_when": {"shape": ["rectangular", "diamond"]},
         "options": [
           {"value": 20, "label": "20\""},
           {"value": 24, "label": "24\""},
           {"value": 36, "label": "36\""},
           {"value": 48, "label": "48\""}
+        ]
+      },
+			"patternDiameter": {
+        "id": "patternDiameter",
+        "type": "select",
+        "label": "Pattern Dia.",
+        "state_path": "pattern_settings.pattern_diameter",
+        "show_when": { "shape": ["rectangular"] },
+        "options": [
+          {"value": 24, "label": "24\""},
+          {"value": 36, "label": "36\""},
+          {"value": 48, "label": "48\""},
+          {"value": 60, "label": "60\""}
         ]
       },
       "separation": {

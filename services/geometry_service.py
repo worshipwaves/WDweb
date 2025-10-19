@@ -158,7 +158,12 @@ def calculate_geometries_core(state: 'CompositionStateDTO') -> GeometryResultDTO
     slots_in_section = num_slots // number_sections if number_sections > 0 else num_slots
     
     # Global center and radius calculation
-    radius = min(finish_x, finish_y) / 2.0
+    if pattern.slot_style == 'radial':
+        # For radial patterns, the pattern's size is independent of the panel shape.
+        radius = pattern.pattern_diameter / 2.0
+    else:
+        # For other patterns (e.g., linear), the effective radius is tied to panel dimensions.
+        radius = min(finish_x, finish_y) / 2.0
     gc_x = finish_x / 2.0
     gc_y = finish_y / 2.0
     

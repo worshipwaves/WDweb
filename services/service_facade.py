@@ -250,7 +250,8 @@ class WaveformDesignerFacade:
         # Step 5: Return both so the frontend can sync its state.
         return {
             "csg_data": csg_data,
-            "updated_state": updated_state
+            "updated_state": updated_state,
+            "max_amplitude_local": geometry.max_amplitude_local
         }
     
     def get_composition_summary(self, state: CompositionStateDTO) -> Dict[str, Any]:

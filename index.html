@@ -63,6 +63,21 @@
         <h3>Design Parameters</h3>
         
         <div class="control-group">
+          <label for="shape">Shape:</label>
+          <select id="shape" class="control-input">
+            <option value="circular">Circular</option>
+            <option value="rectangular">Rectangular</option>
+          </select>
+        </div>
+        
+        <div class="control-group">
+          <label for="size">Size:</label>
+          <select id="size" class="control-input">
+            <!-- Options loaded from config -->
+          </select>
+        </div>
+
+        <div class="control-group">
           <label for="width">Width:</label>
           <select id="width" class="control-input">
             <!-- Options loaded from config -->
@@ -75,17 +90,9 @@
             <!-- Options loaded from config -->
           </select>
         </div>
-
-        <div class="control-group">
-          <label for="shape">Shape:</label>
-          <select id="shape" class="control-input">
-            <option value="circular">Circular</option>
-            <option value="rectangular">Rectangular</option>
-          </select>
-        </div>
         
         <div class="control-group">
-          <label for="slots">Slots: <span id="slotsValue"></span></label>
+          <label for="slots">Slots: <span id="slotsValue"></span></label>></span></label>
           <input type="range" id="slots" class="control-input" min="24" max="120" step="12">
         </div>
 

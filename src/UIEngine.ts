@@ -12,7 +12,8 @@ interface UIElementConfig {
   type: string;
   label: string;
   state_path: string;
-  options?: Array<{ value: string | number; label: string; disabled_when?: Record<string, string> }>;
+  show_when?: Record<string, Array<string | number>>;
+  options?: Array<{ value: string | number; label: string; disabled_when?: Record<string, string>; show_when?: Record<string, Array<number>> }>;
   options_from_endpoint?: string;
   options_path?: string;
   default_value_from_endpoint?: string;
@@ -453,6 +454,34 @@ export class UIEngine {
           optionEl.style.display = '';
         }
       });
+    });
+  }
+	
+	/**
+   * Update element visibility based on show_when conditions
+   */
+  updateElementVisibility(currentState: Record<string, any>): void {
+    const elementsConfig = this.config?.elements;
+    if (!elementsConfig) return;
+    
+    Object.entries(elementsConfig).forEach(([key, config]) => {
+      if (!config.show_when) return;
+      
+      const element = this.getElement(key);
+      if (!element) return;
+      
+      // Get the parent control-group div
+      const controlGroup = element.closest('.control-group');
+      if (!controlGroup) return;
+      
+      // Check if show_when conditions are met
+      const shouldShow = Object.entries(config.show_when).every(([stateKey, allowedValues]) => {
+        const currentValue = currentState[stateKey];
+        return allowedValues.includes(currentValue);
+      });
+      
+      // Show or hide the entire control group
+      (controlGroup as HTMLElement).style.display = shouldShow ? '' : 'none';
     });
   }
 }

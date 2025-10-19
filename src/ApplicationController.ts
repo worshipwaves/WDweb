@@ -579,11 +579,14 @@ export class ApplicationController {
 		// Create a mutable working copy to avoid reassigning the function parameter.
     let newComposition = initialComposition;
 
+    console.log('[handleCompositionUpdate] ENTRY - finish_x:', newComposition.frame_design.finish_x, 'finish_y:', newComposition.frame_design.finish_y);
+    
     // Check if the size has changed
     const oldSize = this._state.composition.frame_design.finish_x;
     const newSize = newComposition.frame_design.finish_x;
 
     if (oldSize !== newSize) {
+      console.log('[handleCompositionUpdate] Size changed detected, applying defaults');
       // Size has changed, apply smart defaults
       const sizeKey = String(newSize);
       const defaults = newComposition.size_defaults?.[sizeKey];
@@ -745,18 +748,15 @@ export class ApplicationController {
 
       // First, update the application state internally with the new, processed state.
       // We do this BEFORE notifying subscribers to prevent race conditions.
-      // Recalculate the max_amplitude_local from the NEWLY updated state from the server.
-      // This ensures our reference for the next rescale is always correct.
-      const newGeometry = this._facade.calculateGeometriesCore_TS(response.updated_state);
-      const newMaxAmplitude = newGeometry.maxAmplitudeLocal;
-
+      // The backend is now the single source of truth for calculations.
+      // We read the new max amplitude directly from the API response.
       this._state = {
         ...this._state,
         composition: response.updated_state,
         audio: { // Also update the audio tracking state
           ...this._state.audio,
-          // The new "previous" is the max amplitude we just calculated
-          previousMaxAmplitude: newMaxAmplitude,
+          // The new "previous" is the value calculated and returned by the backend.
+          previousMaxAmplitude: response.max_amplitude_local,
         },
       };
 

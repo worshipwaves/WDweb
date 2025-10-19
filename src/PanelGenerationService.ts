@@ -156,6 +156,10 @@ export class PanelGenerationService {
         depth: dim.height,
         height: config.thickness
       }, this.scene);
+			
+      // FIX: Pre-rotate the box by 90 degrees to align its UVs correctly
+      // This swaps the local X and Z axes relative to the world before baking.
+      box.rotation.y = Math.PI / 2;			
       
       box.bakeCurrentTransformIntoVertices();
       box.refreshBoundingInfo();
@@ -323,7 +327,11 @@ export class PanelGenerationService {
     result.material = mat;
     
     // Apply rotations to align with coordinate system expectations
-    if (config.numberSections === 3) {
+    if (config.shape === 'diamond') {
+      // Diamond: rotate 45° then flip
+      result.rotation.y = Math.PI * 1.25;  // 225° = 180° + 45°
+      result.bakeCurrentTransformIntoVertices();
+    } else if (config.numberSections === 3) {
       // n=3 wedge cut needs Y rotation
       result.rotation.y = Math.PI;
       result.bakeCurrentTransformIntoVertices();
@@ -342,12 +350,11 @@ export class PanelGenerationService {
     }
     
     // Transform CNC coordinates to Babylon coordinates
-    const CNC_CENTER = config.shape === 'circular'
-      ? Math.min(config.finishX, config.finishY) / 2
-      : Math.max(config.finishX, config.finishY) / 2;
+    const CNC_CENTER_X = config.finishX / 2.0;
+    const CNC_CENTER_Y = config.finishY / 2.0;
     const vertices2D = slot.vertices.map(v => [
-      v[0] - CNC_CENTER,  // CNC X → Babylon X
-      v[1] - CNC_CENTER   // CNC Y → Babylon Z
+      v[0] - CNC_CENTER_X,  // CNC X → Babylon X
+      v[1] - CNC_CENTER_Y   // CNC Y → Babylon Z
     ]);
     
     const positions: number[] = [];
@@ -396,15 +403,14 @@ export class PanelGenerationService {
     const dim = sectionDims[sectionIndex];
     
     // Calculate CNC center point (backend uses this as origin)
-    const cncCenter = config.shape === 'circular' 
-      ? Math.min(config.finishX, config.finishY) / 2
-      : Math.max(config.finishX, config.finishY) / 2;
+    const cncCenterX = config.finishX / 2.0;
+    const cncCenterY = config.finishY / 2.0;
     
     // Filter slots that fall within this section's bounds
     return slots.filter(slot => {
       // Convert from CNC coordinates to centered coordinates
-      const slotX = slot.x - cncCenter;
-      const slotZ = slot.z - cncCenter;
+      const slotX = slot.x - cncCenterX;
+      const slotZ = slot.z - cncCenterY;
       
       // Check if slot center is within section bounds
       const minX = dim.offsetX - (dim.width / 2);

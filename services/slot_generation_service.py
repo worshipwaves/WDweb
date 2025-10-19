@@ -7,12 +7,6 @@ from services.dtos import CompositionStateDTO, GeometryResultDTO
 class SlotGenerationService:
     """Service for generating slot coordinates from composition state."""
     
-    # ARCHITECTURAL FIX: Removed _build_geo_params method (2025-09-30)
-    # This method incorrectly recalculated geometry parameters locally,
-    # causing inconsistent results when panel size changed. Geometry
-    # calculation now happens once in GeometryService and is passed down
-    # as `geo_params`, ensuring a single source of truth.
-    
     def get_slot_data(self, state: CompositionStateDTO, geometry: GeometryResultDTO) -> List[Dict[str, Any]]:
         """
         Return slot data for CSG operations.
@@ -135,6 +129,7 @@ class SlotGenerationService:
             
             # Calculate per-slot visual adjustment if needed
             visual_adjustment = 0.0
+            # Visual correction only applies to multi-section CIRCULAR designs
             if state.visual_correction.apply_correction and number_sections > 1:
                 gc_x = state.frame_design.finish_x / 2.0
                 gc_y = state.frame_design.finish_y / 2.0
@@ -163,11 +158,14 @@ class SlotGenerationService:
                 while slot_global_angle_deg >= 360.0:
                     slot_global_angle_deg -= 360.0
                     
-                global_radius = state.frame_design.finish_y / 2.0
+                if state.frame_design.shape == 'circular':
+                    global_radius = state.frame_design.finish_x / 2.0
+                else:
+                    global_radius = state.pattern_settings.pattern_diameter / 2.0
                 max_reach_from_lc = geometry.max_radius_local
                 
                 visual_adjustment = self._calculate_center_point_adjustment(
-                    global_center, local_center, global_radius, slot_global_angle_deg,
+                    state, global_center, local_center, global_radius, slot_global_angle_deg,
                     max_reach_from_lc, number_sections, section_id
                 )
                 
@@ -190,7 +188,7 @@ class SlotGenerationService:
         return all_slots
     
     def _calculate_center_point_adjustment(
-        self, global_center_coords: Tuple[float, float], local_center_coords: Tuple[float, float],
+        self, state: CompositionStateDTO, global_center_coords: Tuple[float, float], local_center_coords: Tuple[float, float],
         global_circle_radius: float, slot_centerline_global_angle_deg: float,
         current_max_slot_reach_from_lc: float, number_sections: int, section_id: int
     ) -> float:
@@ -206,22 +204,48 @@ class SlotGenerationService:
         cos_theta = math.cos(theta_rad)
         sin_theta = math.sin(theta_rad)
         
-        A = 2 * (a * cos_theta + b * sin_theta)
-        B = a**2 + b**2 - r**2
-        
-        discriminant = A**2 - 4 * B
-        if discriminant < 0:
-            return 0.0
+        shape = state.frame_design.shape
+
+        if shape == 'rectangular':
+            # For a rectangle, find the intersection with the four bounding lines.
+            rect_half_width = state.frame_design.finish_x / 2.0
+            rect_half_height = state.frame_design.finish_y / 2.0
             
-        sqrt_disc = math.sqrt(discriminant)
-        t1 = (-A + sqrt_disc) / 2.0
-        t2 = (-A - sqrt_disc) / 2.0
-        
-        valid_t = [t for t in [t1, t2] if t >= -epsilon]
-        if not valid_t:
-            return 0.0
+            t_values: List[float] = []
+            # Intersection with vertical lines (x = +/- half_width)
+            if abs(cos_theta) > epsilon:
+                t_x1 = (rect_half_width - a) / cos_theta
+                t_x2 = (-rect_half_width - a) / cos_theta
+                if t_x1 >= -epsilon: t_values = t_values + [t_x1]
+                if t_x2 >= -epsilon: t_values = t_values + [t_x2]
+
+            # Intersection with horizontal lines (y = +/- half_height)
+            if abs(sin_theta) > epsilon:
+                t_y1 = (rect_half_height - b) / sin_theta
+                t_y2 = (-rect_half_height - b) / sin_theta
+                if t_y1 >= -epsilon: t_values = t_values + [t_y1]
+                if t_y2 >= -epsilon: t_values = t_values + [t_y2]
             
-        hypotLength = min(valid_t)
+            hypotLength = min(t_values) if t_values else 0.0
+
+        else:  # 'circular'
+            # Original line-circle intersection logic
+            A = 2 * (a * cos_theta + b * sin_theta)
+            B = a**2 + b**2 - r**2
+            
+            discriminant = A**2 - 4 * B
+            if discriminant < 0:
+                return 0.0
+            
+            sqrt_disc = math.sqrt(discriminant)
+            t1 = (-A + sqrt_disc) / 2.0
+            t2 = (-A - sqrt_disc) / 2.0
+            
+            valid_t = [t for t in [t1, t2] if t >= -epsilon]
+            if not valid_t:
+                return 0.0
+                
+            hypotLength = min(valid_t)
         
         baseAdjust = global_circle_radius - current_max_slot_reach_from_lc
         

@@ -4,7 +4,7 @@ Following Pragmatic Immutability principle - all DTOs are frozen
 """
 
 from typing import List, Dict, Optional, Literal, Tuple, Any
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 from pydantic.alias_generators import to_camel
 
 
@@ -43,7 +43,7 @@ class FrameDesignDTO(BaseModel):
     """Frame design parameters for the physical panel."""
     model_config = ConfigDict(frozen=True, populate_by_name=True)
     
-    shape: Literal["circular", "rectangular"]
+    shape: Literal["circular", "rectangular", "diamond"]
     frame_orientation: Literal["vertical", "horizontal"]
     finish_x: float = Field(ge=1.0, le=100.0)
     finish_y: float = Field(ge=1.0, le=100.0)
@@ -53,6 +53,16 @@ class FrameDesignDTO(BaseModel):
     species: str
     material_thickness: float = Field(ge=0.1, le=2.0)
     section_materials: List[SectionMaterialDTO] = Field(default_factory=list)
+    
+    @model_validator(mode='after')
+    def validate_circular_dimensions(self) -> 'FrameDesignDTO':
+        """Ensure circular shape has equal width and height."""
+        if self.shape == "circular" and abs(self.finish_x - self.finish_y) > 0.01:
+            raise ValueError(
+                f"Circular shape requires equal dimensions. "
+                f"Got finish_x={self.finish_x}, finish_y={self.finish_y}"
+            )
+        return self
 
 
 # Pattern and Slot Configuration DTOs
@@ -73,6 +83,7 @@ class PatternSettingsDTO(BaseModel):
     model_config = ConfigDict(frozen=True, populate_by_name=True)
     
     slot_style: Literal["radial", "linear", "sunburst"]
+    pattern_diameter: float = Field(default=36.0, ge=1.0, le=100.0)
     number_slots: int = Field(ge=1, le=3000)
     bit_diameter: float = Field(ge=0.0, le=2.0)
     spacer: float = Field(ge=0.0, le=10.0)

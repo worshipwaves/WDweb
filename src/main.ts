@@ -76,6 +76,9 @@ function calculateGrainAngle(
   return 0;
 }
 
+// Export calculateGrainAngle for debugging and controller access
+(window as any).calculateGrainAngle = calculateGrainAngle;
+
 /**
  * Make updateGrainDirectionOptions globally accessible for ApplicationController
  */
@@ -751,10 +754,11 @@ class SceneManager {
     const angleRad = (bifurcationAngle * Math.PI) / 180;
     
 		// Convert from CNC coordinates to Babylon coordinates
-    const CNC_CENTER = csgData.panel_config.finish_x / 2.0;
+    const CNC_CENTER_X = csgData.panel_config.finish_x / 2.0;
+    const CNC_CENTER_Y = csgData.panel_config.finish_y / 2.0;
     const localCenterBabylon = {
-      x: localCenter[0] - CNC_CENTER,
-      z: localCenter[1] - CNC_CENTER
+      x: localCenter[0] - CNC_CENTER_X,
+      z: localCenter[1] - CNC_CENTER_Y
     };
     
     // Calculate COMPLETE position in pre-bake space
@@ -1138,6 +1142,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			
 			// Make UIEngine accessible for grain direction updates from controller
       (window as any)._uiEngineInstance = uiEngine;
+      (window as any).uiEngine = uiEngine; // For debugging/diagnostics
       
       // Create the facade and controller
       const facade = new WaveformDesignerFacade();
@@ -1327,11 +1332,12 @@ function captureUISnapshot(uiEngine: UIEngine, baseComposition: CompositionState
     if (key === 'size') {
       composition.frame_design.finish_x = value as number;
       composition.frame_design.finish_y = value as number;
-    } else {
-      // UIEngine.setStateValue returns updated composition
-      const updated = uiEngine.setStateValue(composition, config.state_path, value);
-      Object.assign(composition, updated);
+      continue; // Skip setStateValue - both dimensions already set
     }
+    
+    // UIEngine.setStateValue returns updated composition
+    const updated = uiEngine.setStateValue(composition, config.state_path, value);
+    Object.assign(composition, updated);
   }
   
   return composition;
@@ -1386,7 +1392,7 @@ function bindElementListeners(uiEngine: UIEngine, controller: ApplicationControl
       });
     }
     
-    // Generic behavior: shape updates conditional options
+    // Generic behavior: shape updates conditional options and element visibility
     if (key === 'shape') {
       element.addEventListener('change', () => {
         // Read the CURRENT dropdown value, not the old state
@@ -1400,6 +1406,7 @@ function bindElementListeners(uiEngine: UIEngine, controller: ApplicationControl
         };
         
         uiEngine.updateConditionalOptions(updatedState);
+        uiEngine.updateElementVisibility(updatedState);
       });
     }
     
@@ -1441,6 +1448,18 @@ function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController,
         const config = uiEngine.getElementConfig(key);
         if (!config) return;
         
+        // CRITICAL: Skip elements that are hidden by show_when conditions
+        if (config.show_when) {
+          const shouldShow = Object.entries(config.show_when).every(([stateKey, allowedValues]) => {
+            const currentValue = newComposition.frame_design[stateKey as keyof typeof newComposition.frame_design];
+            return allowedValues.includes(currentValue);
+          });
+          if (!shouldShow) {
+            console.log(`[bindUpdateButton] Skipping hidden element: ${key}`);
+            return;
+          }
+        }
+        
         const value = uiEngine.readElementValue(key);
         
         // Skip null, undefined, or empty string values
@@ -1453,6 +1472,16 @@ function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController,
           if (!isNaN(numValue)) {
             typedValue = numValue;
           }
+        }
+        
+        // CRITICAL: Special handling for size - sets both finish_x AND finish_y
+        if (key === 'size') {
+          console.log(`[bindUpdateButton] SIZE HANDLER TRIGGERED: ${typedValue}`);
+          console.log(`[bindUpdateButton] Before: finish_x=${newComposition.frame_design.finish_x}, finish_y=${newComposition.frame_design.finish_y}`);
+          newComposition.frame_design.finish_x = typedValue as number;
+          newComposition.frame_design.finish_y = typedValue as number;
+          console.log(`[bindUpdateButton] After: finish_x=${newComposition.frame_design.finish_x}, finish_y=${newComposition.frame_design.finish_y}`);
+          return; // Skip normal setStateValue processing
         }
         
         // Check if this is a section-specific property (contains [])
@@ -1618,6 +1647,7 @@ function updateConditionalUI(uiEngine: UIEngine, composition: CompositionStateDT
   };
   
   uiEngine.updateConditionalOptions(currentState);
+  uiEngine.updateElementVisibility(currentState);
 }
 
 /**
