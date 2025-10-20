@@ -147,13 +147,18 @@ export class WoodMaterial extends PBRMaterial {
         const uvScale = panelSizeCm / textureSizeCm; // Scale DOWN to show portion of texture
         const maxSafeOffset = 1.0 - uvScale; // Maximum safe offset to keep within bounds
         
-        // Corner-based offset strategy for guaranteed different grain patterns
-        const cornerOffsets = [
-            { u: 0.0, v: maxSafeOffset },           // Section 0: NW corner
-            { u: maxSafeOffset, v: maxSafeOffset }, // Section 1: NE corner
-            { u: maxSafeOffset, v: 0.0 },           // Section 2: SE corner
-            { u: 0.0, v: 0.0 }                      // Section 3: SW corner
-        ];
+        // For radiant/diamond grain (grainAngleDeg varies per section), use center offset
+        // so rotation provides variation. For horizontal/vertical, use corner offsets.
+        const isRotatedGrain = grainAngleDeg !== 0 && grainAngleDeg !== 90;
+        
+        // Random sampling within safe interior zone (20-80% of available space)
+        const safeMin = maxSafeOffset * 0.2;
+        const safeMax = maxSafeOffset * 0.8;
+        const safeRange = safeMax - safeMin;
+        const cornerOffsets = Array.from({ length: 4 }, () => ({
+            u: safeMin + Math.random() * safeRange,
+            v: safeMin + Math.random() * safeRange
+        }));
         
         // Debug: Check parameters
         if (sectionIndex === undefined || sectionIndex === null) {
@@ -172,8 +177,8 @@ export class WoodMaterial extends PBRMaterial {
         }
         
         // Configure albedo/diffuse texture
-        this.albedoMap.wrapU = Texture.CLAMP_ADDRESSMODE;
-        this.albedoMap.wrapV = Texture.CLAMP_ADDRESSMODE;
+        this.albedoMap.wrapU = Texture.WRAP_ADDRESSMODE;
+        this.albedoMap.wrapV = Texture.WRAP_ADDRESSMODE;
         this.albedoMap.uScale = uvScale;
         this.albedoMap.vScale = uvScale;
         this.albedoMap.wAng = grainRotationRad;
@@ -182,8 +187,8 @@ export class WoodMaterial extends PBRMaterial {
         this.albedoTexture = this.albedoMap;
         
         // Configure normal map
-        this.normalMap.wrapU = Texture.CLAMP_ADDRESSMODE;
-        this.normalMap.wrapV = Texture.CLAMP_ADDRESSMODE;
+        this.normalMap.wrapU = Texture.WRAP_ADDRESSMODE;
+        this.normalMap.wrapV = Texture.WRAP_ADDRESSMODE;
         this.normalMap.uScale = uvScale;
         this.normalMap.vScale = uvScale;
         this.normalMap.wAng = grainRotationRad;
@@ -192,8 +197,8 @@ export class WoodMaterial extends PBRMaterial {
         this.bumpTexture = this.normalMap;
         
         // Configure roughness texture
-        this.roughnessMap.wrapU = Texture.CLAMP_ADDRESSMODE;
-        this.roughnessMap.wrapV = Texture.CLAMP_ADDRESSMODE;
+        this.roughnessMap.wrapU = Texture.WRAP_ADDRESSMODE;
+        this.roughnessMap.wrapV = Texture.WRAP_ADDRESSMODE;
         this.roughnessMap.uScale = uvScale;
         this.roughnessMap.vScale = uvScale;
         this.roughnessMap.wAng = grainRotationRad;

@@ -151,28 +151,79 @@ export class PanelGenerationService {
     }
     
     if (config.shape === 'rectangular') {
-      const box = MeshBuilder.CreateBox('baseBox', {
+      const baseMesh = MeshBuilder.CreateBox('baseBox', {
         width: dim.width,
-        depth: dim.height,
+        depth: dim.height, // Use depth for the "height" on the XZ plane
         height: config.thickness
       }, this.scene);
-			
-      // FIX: Pre-rotate the box by 90 degrees to align its UVs correctly
-      // This swaps the local X and Z axes relative to the world before baking.
-      box.rotation.y = Math.PI / 2;			
       
-      box.bakeCurrentTransformIntoVertices();
-      box.refreshBoundingInfo();
+      // Bake the transformation into the vertices to create a clean mesh for CSG.
+      baseMesh.bakeCurrentTransformIntoVertices();
+      baseMesh.refreshBoundingInfo();
       
-      const mat = new StandardMaterial('boxMat', this.scene);
+      // The material is just a placeholder for CSG, will be replaced later
+      const mat = new StandardMaterial('placeholderMat', this.scene);
       mat.diffuseColor = new Color3(0.8, 0.8, 0.8);
       mat.backFaceCulling = false;
-      box.material = mat;
-      
-      return box;
+      baseMesh.material = mat;
+
+      return baseMesh;
     }
     
     throw new Error(`Unsupported shape: ${config.shape}`);
+  }
+	
+	/**
+   * Creates a single triangular section for a diamond panel using CSG.
+   * A diamond panel is composed of 4 such sections.
+   */
+  private _createDiamondSectionCSG(width: number, height: number, separation: number, thickness: number): Mesh {
+    // Oversize the initial box to ensure clean cuts
+    const oversize = 2;
+    const baseBox = MeshBuilder.CreateBox('base', {
+      width: width + oversize,
+      depth: height + oversize,
+      height: thickness * 3 // Extra thickness for CSG robustness
+    }, this.scene);
+    baseBox.position.x = width / 2;
+    baseBox.position.z = height / 2;
+    baseBox.bakeCurrentTransformIntoVertices();
+    let baseCSG = CSG.FromMesh(baseBox);
+
+    // Create large, thin boxes to act as cutting planes
+    const cutterWidth = Math.max(width, height) * 4;
+    const cutterHeight = thickness * 5;
+
+    // Cutter 1: Defines the outer diagonal edge of the triangle
+    const cutter1 = MeshBuilder.CreateBox('cutter1', { width: cutterWidth, height: cutterHeight, depth: 2 }, this.scene);
+    cutter1.position = new Vector3(width / 2, 0, height / 2);
+    cutter1.rotation.y = Math.atan2(height, width); // Align with the diagonal
+    cutter1.position.x -= (cutterWidth / 2 - 1) * Math.cos(cutter1.rotation.y);
+    cutter1.position.z -= (cutterWidth / 2 - 1) * Math.sin(cutter1.rotation.y);
+
+    // Cutter 2: Defines the inner vertical separation edge
+    const cutter2 = MeshBuilder.CreateBox('cutter2', { width: 2, height: cutterHeight, depth: cutterWidth }, this.scene);
+    cutter2.position.x = separation / 2;
+    
+    // Cutter 3: Defines the inner horizontal separation edge
+    const cutter3 = MeshBuilder.CreateBox('cutter3', { width: cutterWidth, height: cutterHeight, depth: 2 }, this.scene);
+    cutter3.position.z = separation / 2;
+    
+    // Perform subtractions
+    baseCSG = baseCSG.subtract(CSG.FromMesh(cutter1));
+    baseCSG = baseCSG.subtract(CSG.FromMesh(cutter2));
+    baseCSG = baseCSG.subtract(CSG.FromMesh(cutter3));
+
+    // Dispose of temporary meshes
+    baseBox.dispose();
+    cutter1.dispose();
+    cutter2.dispose();
+    cutter3.dispose();
+    
+    // Return the final manifold mesh for this section
+    const sectionMesh = baseCSG.toMesh('diamondSection', null, this.scene);
+    sectionMesh.bakeCurrentTransformIntoVertices();
+    return sectionMesh;
   }
   
   /**
@@ -190,6 +241,98 @@ export class PanelGenerationService {
     }[]
   ): Mesh[] {
     console.log(`[POC] createPanelsWithCSG - shape=${config.shape}, n=${config.numberSections}`);
+		
+		if (config.shape === 'diamond') {
+      // This is a simpler, more robust "Top-Down CSG" approach.
+      // 1. Create the full diamond panel.
+      // 2. Use large cutting boxes to slice it into the final sections.
+      // 3. Use a simple, correct, quadrant-based slot filter.
+
+      const finalMeshes: Mesh[] = [];
+      const { finishX, finishY, thickness, separation, numberSections } = config;
+
+      // Step 1: Create the full, solid diamond base mesh.
+      const fullDiamond = MeshBuilder.CreateCylinder('baseDiamond', {
+        diameter: 1, height: thickness, tessellation: 4, cap: Mesh.CAP_ALL
+      }, this.scene);
+      fullDiamond.scaling = new Vector3(finishX, 1, finishY);
+      fullDiamond.bakeCurrentTransformIntoVertices();
+      const baseCSG = CSG.FromMesh(fullDiamond);
+      fullDiamond.dispose();
+
+      // Step 2: Define the section geometries by slicing the base diamond.
+      const sectionCSGs: CSG[] = [];
+      const oversize = Math.max(finishX, finishY) * 2; // Cutter size
+      const halfSep = separation / 2;
+
+      if (numberSections === 1) {
+        sectionCSGs.push(baseCSG);
+      } else if (numberSections === 2) {
+        const rightCutter = MeshBuilder.CreateBox('rc', { width: oversize, depth: oversize, height: thickness * 2 }, this.scene);
+        rightCutter.position = new Vector3(oversize / 2 + halfSep, 0, 0);
+        const leftCutter = MeshBuilder.CreateBox('lc', { width: oversize, depth: oversize, height: thickness * 2 }, this.scene);
+        leftCutter.position = new Vector3(-oversize / 2 - halfSep, 0, 0);
+
+        sectionCSGs.push(baseCSG.intersect(CSG.FromMesh(rightCutter))); // Section 0 (Right)
+        sectionCSGs.push(baseCSG.intersect(CSG.FromMesh(leftCutter)));  // Section 1 (Left)
+        rightCutter.dispose();
+        leftCutter.dispose();
+      } else if (numberSections === 4) {
+        const cutters = [
+          { x: oversize / 2 + halfSep, z: oversize / 2 + halfSep },  // TR (0)
+          { x: oversize / 2 + halfSep, z: -oversize / 2 - halfSep }, // BR (1)
+          { x: -oversize / 2 - halfSep, z: -oversize / 2 - halfSep}, // BL (2)
+          { x: -oversize / 2 - halfSep, z: oversize / 2 + halfSep }  // TL (3)
+        ];
+        cutters.forEach(pos => {
+          const cutter = MeshBuilder.CreateBox('qc', { width: oversize, depth: oversize, height: thickness * 2 }, this.scene);
+          cutter.position = new Vector3(pos.x, 0, pos.z);
+          sectionCSGs.push(baseCSG.intersect(CSG.FromMesh(cutter)));
+          cutter.dispose();
+        });
+      }
+
+      // Step 3: Process each section - convert to mesh, filter slots, and cut.
+      for (let i = 0; i < sectionCSGs.length; i++) {
+        const sectionMesh = sectionCSGs[i].toMesh(`section_base_${i}`, null, this.scene);
+
+        // Step 3a: Custom, correct slot filtering for diamond shape.
+        const sectionSlots = slots ? slots.filter(slot => {
+          const slotX = slot.x - (finishX / 2.0); // Center coordinates
+          const slotZ = slot.z - (finishY / 2.0);
+          
+          if (numberSections === 4) {
+            if (i === 0) return slotX >= 0 && slotZ >= 0; // TR
+            if (i === 1) return slotX >= 0 && slotZ < 0;  // BR
+            if (i === 2) return slotX < 0 && slotZ < 0;   // BL
+            if (i === 3) return slotX < 0 && slotZ >= 0;  // TL
+          } else if (numberSections === 2) {
+            if (i === 0) return slotX >= 0; // Right
+            if (i === 1) return slotX < 0;  // Left
+          }
+          return true; // n=1 gets all slots
+        }) : [];
+        
+        // Step 3b: Cut slots.
+        let finalMesh = sectionMesh;
+        if (sectionSlots.length > 0) {
+          finalMesh = this.cutSlots(sectionMesh, sectionSlots, config);
+          if (sectionMesh !== finalMesh) {
+            sectionMesh.dispose();
+          }
+        }
+
+        // Step 3c: Finalize mesh properties.
+        finalMesh.name = `section_${i}`;
+        finalMesh.computeWorldMatrix(true);
+        finalMesh.refreshBoundingInfo(true, true);
+        finalMesh.isPickable = true;
+        finalMesh.alwaysSelectAsActiveMesh = true;
+        finalMeshes.push(finalMesh);
+      }
+      
+      return finalMeshes;
+    }
     
     // Calculate section dimensions based on shape
     const sectionDims = this.calculateSectionDimensions(config);
@@ -327,11 +470,7 @@ export class PanelGenerationService {
     result.material = mat;
     
     // Apply rotations to align with coordinate system expectations
-    if (config.shape === 'diamond') {
-      // Diamond: rotate 45° then flip
-      result.rotation.y = Math.PI * 1.25;  // 225° = 180° + 45°
-      result.bakeCurrentTransformIntoVertices();
-    } else if (config.numberSections === 3) {
+    if (config.numberSections === 3) {
       // n=3 wedge cut needs Y rotation
       result.rotation.y = Math.PI;
       result.bakeCurrentTransformIntoVertices();

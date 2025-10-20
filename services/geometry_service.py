@@ -158,20 +158,34 @@ def calculate_geometries_core(state: 'CompositionStateDTO') -> GeometryResultDTO
     slots_in_section = num_slots // number_sections if number_sections > 0 else num_slots
     
     # Global center and radius calculation
-    if pattern.slot_style == 'radial':
-        # For radial patterns, the pattern's size is independent of the panel shape.
-        radius = pattern.pattern_diameter / 2.0
-    else:
-        # For other patterns (e.g., linear), the effective radius is tied to panel dimensions.
-        radius = min(finish_x, finish_y) / 2.0
     gc_x = finish_x / 2.0
     gc_y = finish_y / 2.0
+    
+    # Determine the effective radius for the pattern based on shape and slot style.
+    if shape == 'circular':
+        # For circular panels, the pattern radius is ALWAYS the panel radius.
+        radius = finish_x / 2.0
+    elif shape == 'diamond':
+        if pattern.slot_style == 'radial':
+            # Use the inscribed circle radius for a diamond with a radial pattern.
+            d1, d2 = finish_x, finish_y
+            denominator = 2 * math.sqrt(d1**2 + d2**2)
+            radius = (d1 * d2) / denominator if denominator > 1e-9 else min(d1, d2) / 2.0
+        else: # Linear style on a diamond
+            radius = min(finish_x, finish_y) / 2.0
+    else: # Rectangular (and other potential shapes)
+        if pattern.slot_style == 'radial':
+            # UNIVERSAL: Use inscribed circle (min dimension / 2) for all rectangular
+            radius = min(finish_x, finish_y) / 2.0
+        else: # Linear style on a rectangular
+            radius = min(finish_x, finish_y) / 2.0
     
     # Calculate local centers for multi-section designs
     if number_sections == 1:
         section_local_centers = [(gc_x, gc_y)]
     elif number_sections == 2:
-        # For both circular and rectangular, sections split vertically
+        # For circular and rectangular, sections split vertically
+        # For diamond, use same split but geometry is constrained by inscribed circle
         lc_x_right = gc_x + (separation / 2.0) + x_offset
         lc_x_left = gc_x - (separation / 2.0) - x_offset
         section_local_centers = [(lc_x_right, gc_y), (lc_x_left, gc_y)]
@@ -251,28 +265,29 @@ def calculate_geometries_core(state: 'CompositionStateDTO') -> GeometryResultDTO
             circum_radius = spacer * num_slots
         
         # Max radius from local center calculation
+        # UNIVERSAL APPROACH: Always use inscribed circle for radial patterns
+        # This works for all shapes (circular, rectangular, diamond, future shapes)
         R_global_y_offset = radius - y_offset
         
         if number_sections > 1 and section_local_centers:
-            # Get section 0's LC (all sections identical, just rotated)
+            # Calculate local radius by subtracting LC offset from global inscribed circle
             lc_x, lc_y = section_local_centers[0]
             
-            # Calculate distance from LC to frame at bifurcation angle
+            # Distance from LC to global center
             if number_sections == 2:
-                # Bifurcation at 0° (pointing right)
-                local_radius = radius - abs(lc_x - gc_x)
+                # Bifurcation at 0° (pointing right), offset is horizontal
+                lc_offset = abs(lc_x - gc_x)
             elif number_sections == 3:
-                # Bifurcation at 90° (pointing up)
-                local_radius = radius - abs(lc_y - gc_y)
+                # Bifurcation at 90° (pointing up), offset is vertical
+                lc_offset = abs(lc_y - gc_y)
             elif number_sections == 4:
-                # Bifurcation at 45° (diagonal)
-                dist_to_gc = math.sqrt((lc_x - gc_x)**2 + (lc_y - gc_y)**2)
-                local_radius = radius - dist_to_gc
+                # Bifurcation at 45° (diagonal), offset is Euclidean distance
+                lc_offset = math.sqrt((lc_x - gc_x)**2 + (lc_y - gc_y)**2)
             else:
-                # Fallback for other n values
-                local_radius = radius
+                lc_offset = 0.0
                 
-            # Apply y_offset to get max reach from LC
+            # Local radius = inscribed circle minus LC offset
+            local_radius = radius - lc_offset
             max_radius_local_from_LC = local_radius - y_offset
         else:
             max_radius_local_from_LC = R_global_y_offset

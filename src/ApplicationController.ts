@@ -531,41 +531,81 @@ export class ApplicationController {
     });
   }
 	
-  private _detectChangedParams(
-    oldComp: CompositionStateDTO,
-    newComp: CompositionStateDTO
-  ): string[] {
-    const changed = new Set<string>();
+	private _detectChangedParams(
+		oldComp: CompositionStateDTO,
+		newComp: CompositionStateDTO
+	): string[] {
+		const changed = new Set<string>();
 
-    // Type-safe recursive comparison function
-    const compareObjects = (
-      o1: Record<string, unknown>,
-      o2: Record<string, unknown>
-    ) => {
-      for (const key of Object.keys(o1)) {
-        const val1 = o1[key];
-        const val2 = o2[key];
+		// Special handling for section_materials array
+		const compareSectionMaterials = (
+			oldMaterials: Array<{section_id: number, species: string, grain_direction: string}>,
+			newMaterials: Array<{section_id: number, species: string, grain_direction: string}>
+		): boolean => {
+			if (oldMaterials.length !== newMaterials.length) return true;
+			
+			// Sort both arrays by section_id for consistent comparison
+			const oldSorted = [...oldMaterials].sort((a, b) => a.section_id - b.section_id);
+			const newSorted = [...newMaterials].sort((a, b) => a.section_id - b.section_id);
+			
+			// Compare each element
+			for (let i = 0; i < oldSorted.length; i++) {
+				const old = oldSorted[i];
+				const newer = newSorted[i];
+				
+				if (
+					old.section_id !== newer.section_id ||
+					old.species !== newer.species ||
+					old.grain_direction !== newer.grain_direction
+				) {
+					return true;
+				}
+			}
+			
+			return false;
+		};
 
-        // Recurse into nested objects, ensuring they are valid objects before doing so.
-        if (
-          typeof val1 === 'object' && val1 !== null && !Array.isArray(val1) &&
-          val2 && typeof val2 === 'object' && !Array.isArray(val2)
-        ) {
-          compareObjects(
-            val1 as Record<string, unknown>,
-            val2 as Record<string, unknown>
-          );
-        } else if (JSON.stringify(val1) !== JSON.stringify(val2)) {
-          // For primitives or arrays, a simple string comparison is sufficient
-          // and safer than direct comparison for non-primitives.
-          changed.add(key);
-        }
-      }
-    };
+		// Type-safe recursive comparison function
+		const compareObjects = (
+			o1: Record<string, unknown>,
+			o2: Record<string, unknown>,
+			path: string = ''
+		) => {
+			for (const key of Object.keys(o1)) {
+				const val1 = o1[key];
+				const val2 = o2[key];
+				const currentPath = path ? `${path}.${key}` : key;
 
-    compareObjects(oldComp, newComp);
-    return Array.from(changed);
-  }
+				// Special case: section_materials array
+				if (currentPath === 'frame_design.section_materials') {
+					if (Array.isArray(val1) && Array.isArray(val2)) {
+						if (compareSectionMaterials(val1 as any, val2 as any)) {
+							changed.add('section_materials');
+						}
+					}
+					continue;
+				}
+
+				// Recurse into nested objects
+				if (
+					typeof val1 === 'object' && val1 !== null && !Array.isArray(val1) &&
+					val2 && typeof val2 === 'object' && !Array.isArray(val2)
+				) {
+					compareObjects(
+						val1 as Record<string, unknown>,
+						val2 as Record<string, unknown>,
+						currentPath
+					);
+				} else if (JSON.stringify(val1) !== JSON.stringify(val2)) {
+					// For primitives or other arrays
+					changed.add(key);
+				}
+			}
+		};
+
+		compareObjects(oldComp, newComp);
+		return Array.from(changed);
+	}
   
   /**
    * Handles a request to update the composition, using the smart processing pipeline.
