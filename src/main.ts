@@ -1444,32 +1444,18 @@ function captureUISnapshot(uiEngine: UIEngine, baseComposition: CompositionState
       continue; // Skip setStateValue - both dimensions already set
     }
 		
-		// CRITICAL FIX: Capture section_materials from UI dropdowns, not baseComposition
-    if (key === 'woodSpecies' || key === 'grainDirection') {
-      const speciesEl = document.getElementById('woodSpecies') as HTMLSelectElement;
-      const grainEl = document.getElementById('grainDirection') as HTMLSelectElement;
-      
-      if (speciesEl && grainEl) {
-        const numSections = composition.frame_design.number_sections;
-        composition.frame_design.section_materials = [];
-        for (let i = 0; i < numSections; i++) {
-          composition.frame_design.section_materials.push({
-            section_id: i,
-            species: speciesEl.value,
-            grain_direction: grainEl.value as 'horizontal' | 'vertical' | 'radiant' | 'diamond'
-          });
-        }
-      }
-      continue; // Skip setStateValue - already handled
-    }
-    
-    // UIEngine.setStateValue returns updated composition
-    const updated = uiEngine.setStateValue(composition, config.state_path, value);
-    Object.assign(composition, updated);
-  }
-  
-  return composition;
-}
+		if (key === 'woodSpecies' || key === 'grainDirection') {
+			// Skip - materials are handled by bindUpdateButton's section-specific logic
+			continue;
+		}
+				
+				// UIEngine.setStateValue returns updated composition
+				const updated = uiEngine.setStateValue(composition, config.state_path, value);
+				Object.assign(composition, updated);
+			}
+			
+			return composition;
+		}
 
 /**
  * Bind change listeners to all elements generically
@@ -1514,9 +1500,15 @@ function bindElementListeners(uiEngine: UIEngine, controller: ApplicationControl
           }
         }
         
-        // Trigger conditional UI update
-        const currentState = controller.getState();
-        updateConditionalUI(uiEngine, currentState.composition);
+        // Read current UI values, not state
+				const shapeEl = uiEngine.getElement('shape') as HTMLSelectElement;
+				const finishXEl = uiEngine.getElement('width') || uiEngine.getElement('size');
+				const updatedState = {
+					shape: shapeEl?.value || 'circular',
+					number_sections: sections,
+					finish_x: finishXEl ? parseFloat((finishXEl as HTMLSelectElement).value) : 36
+				};
+				updateConditionalUI(uiEngine, updatedState);
       });
     }
     
@@ -1682,21 +1674,23 @@ function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController,
         }
       }
       
-      // Submit to controller and re-render scene
+			// Submit to controller and re-render scene
       await controller.handleCompositionUpdate(newComposition);
-			
-			// Restore checkbox state
-      if (preservedCheckboxState && checkbox) {
-        checkbox.checked = preservedCheckboxState.checked;
-        checkbox.indeterminate = preservedCheckboxState.indeterminate;
+      
+      // CLEAR SELECTION AFTER UPDATE
+      sceneManager.clearSelection();
+      controller.selectSection(sceneManager.getSelectedSections());
+      sceneManager.updateSectionUI(sceneManager.getSelectedSections());
+      
+      // Update checkbox to reflect cleared selection
+      if (checkbox) {
+        checkbox.checked = false;
+        checkbox.indeterminate = false;
       }
-			
-			// Update conditional UI after backend processing completes
+      
+      // Update conditional UI after backend processing completes
       const updatedState = controller.getState();
       updateConditionalUI(uiEngine, updatedState.composition);
-      
-      // DO NOT clear selection after update with the new UI model
-      // The selection state should persist.
     })();
   });
 }
