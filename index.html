@@ -47,6 +47,7 @@
     <div id="ui-overlay">
       <div class="ui-controls-top">
         <button id="resetCameraButton" title="Reset Camera View">↺</button>
+        <button id="zoomToggleButton" title="Toggle Zoom">⊕</button>
       </div>
 			<div class="ui-controls-top-left">
 				<button id="newFileButton" title="Upload New File">
@@ -154,8 +155,8 @@
         
         if (!option3) return;
         
-        if (shape === 'rectangular') {
-          // Hide n=3 option entirely
+        if (shape === 'rectangular' || shape === 'diamond') {
+          // Hide n=3 option entirely for rectangular and diamond
           option3.style.display = 'none';
           option3.disabled = true;
           

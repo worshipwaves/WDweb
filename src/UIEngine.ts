@@ -197,9 +197,14 @@ export class UIEngine {
     if (!option || !option.disabled_when) return false;
     
     // Check if disabled_when conditions are met
-    return Object.entries(option.disabled_when).every(([key, value]) => {
-      return currentState[key] === value;
-    });
+        const shouldDisable = Object.entries(option.disabled_when).every(([stateKey, stateValue]) => {
+          const currentValue = currentState[stateKey];
+          // Support both single values and arrays
+          if (Array.isArray(stateValue)) {
+            return stateValue.includes(currentValue);
+          }
+          return currentValue === stateValue;
+        });
   }
   
   /**

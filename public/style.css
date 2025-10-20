@@ -77,6 +77,27 @@ html, body {
   background-color: rgba(255, 255, 255, 0.2);
 }
 
+#zoomToggleButton {
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background-color 0.2s;
+  margin-top: 0.5rem;
+}
+
+#zoomToggleButton:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
 /* New File Upload Button */
 .ui-controls-top-left {
   position: absolute;

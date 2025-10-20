@@ -48,6 +48,13 @@ function calculateGrainAngle(
 
   // Case 1: Direct numeric angle (e.g., "horizontal": 0)
   if (typeof angleOrKey === 'number') {
+    // CRITICAL: Box UVs are rotated 90° relative to cylinder UVs
+    // For rectangular: horizontal should be 90°, vertical should be 0°
+    // For circular/diamond: horizontal is 0°, vertical is 90° (as configured)
+    const shape = (window.sceneManager as any)?._currentCSGData?.csg_data?.panel_config?.shape;
+    if (shape === 'rectangular') {
+      return (angleOrKey + 90) % 360;
+    }
     return angleOrKey;
   }
 
@@ -66,6 +73,12 @@ function calculateGrainAngle(
     if (anglesKey) {
       const angles = config.geometry_constants.section_positioning_angles[anglesKey];
       if (angles && typeof angles[sectionId] === 'number') {
+        // CRITICAL: Box UVs are rotated 90° relative to cylinder UVs
+        // Apply same offset for radiant/diamond on rectangular panels
+        const shape = (window.sceneManager as any)?._currentCSGData?.csg_data?.panel_config?.shape;
+        if (shape === 'rectangular') {
+          return (angles[sectionId] + 90) % 360;
+        }
         return angles[sectionId];
       }
     }
@@ -387,6 +400,11 @@ class SceneManager {
       
       // Play pulse animation once after initial render
       this.pulseAllSections();
+			
+			// Auto-fit camera to new geometry
+      const idealRadius = this.calculateIdealRadius();
+      console.log(`[SceneManager] Setting camera radius to ${idealRadius} (was ${this._camera.radius})`);
+      this._camera.radius = idealRadius;
       
       // Setup interaction
       this.setupSectionInteraction();
@@ -394,27 +412,32 @@ class SceneManager {
       // Conditionally enable selection UI for multi-section layouts
       const sectionIndicator = document.getElementById('sectionIndicator');
       if (this._sectionMeshes.length > 1) {
-        if (sectionIndicator) sectionIndicator.style.display = 'flex';
-        
-        // Select all sections by default on initial render
-        this._selectedSectionIndices.clear();
-        for (let i = 0; i < this._sectionMeshes.length; i++) {
-          this._selectedSectionIndices.add(i);
-        }
-        
-        // Create the persistent overlays (static dots) for the default selection
-        this._overlayMeshes.clear();
-        this._selectedSectionIndices.forEach(index => {
-          const overlay = this.createCircularOverlay(index);
-          if (overlay) {
-            this._overlayMeshes.set(index, overlay);
-          }
-        });
-        
-        // Create the new chip UI and update its visual state
-        this._createSectionChipsUI(this._sectionMeshes.length);
-        this.updateSectionUI(this._selectedSectionIndices);
-      } else {
+			if (sectionIndicator) sectionIndicator.style.display = 'flex';
+			
+			// ONLY auto-select on first render
+			if (this._isFirstRender) {
+				this._selectedSectionIndices.clear();
+				for (let i = 0; i < this._sectionMeshes.length; i++) {
+					this._selectedSectionIndices.add(i);
+				}
+				
+				this._overlayMeshes.clear();
+				this._selectedSectionIndices.forEach(index => {
+					const overlay = this.createCircularOverlay(index);
+					if (overlay) {
+						this._overlayMeshes.set(index, overlay);
+					}
+				});
+				
+				this._isFirstRender = false;
+			} else {
+				// On subsequent renders, clear selection
+				this.clearSelection();
+			}
+			
+			this._createSectionChipsUI(this._sectionMeshes.length);
+			this.updateSectionUI(this._selectedSectionIndices);
+		} else {
         // For n=1, hide the selection UI and clear any selection state
         if (sectionIndicator) sectionIndicator.style.display = 'none';
         this.clearSelection();
@@ -669,6 +692,18 @@ class SceneManager {
         
       }, index * 3100); // Start next section after previous completes all pulses
     });
+		
+		// Calculate total animation duration for all sections
+    const totalDuration = (numSections * 3100); // Last section animation + buffer
+    
+    // Clear selection after all pulse animations complete
+    setTimeout(() => {
+      this.clearSelection();
+      if (window.controller) {
+        window.controller.selectSection(this._selectedSectionIndices);
+      }
+      this.updateSectionUI(this._selectedSectionIndices);
+    }, totalDuration);
     
     this._hasPlayedPulseAnimation = true;
   }
@@ -834,9 +869,7 @@ class SceneManager {
     const config = window.controller.getWoodMaterialsConfig();
   
     if (indices.size === 0) {
-      // No sections selected, maybe show a placeholder or default
-      speciesEl.value = config.default_species;
-      grainEl.value = config.default_grain_direction;
+      // No sections selected - leave dropdowns unchanged
     } else if (indices.size === 1) {
       const index = indices.values().next().value;
       const sectionMaterial = materials.find(m => m.section_id === index);
@@ -1046,12 +1079,82 @@ class SceneManager {
     
     this._engine.dispose();
   }
+	
+	public toggleZoom(zoomIn: boolean): void {
+    // Calculate target based on current radius and zoom direction
+    let targetRadius: number;
+    const currentRadius = this._camera.radius;
+    
+    if (zoomIn) {
+      // Zoom in: divide by 2 (more aggressive - two clicks gets to 25% of original)
+      targetRadius = currentRadius / 2;
+      // Clamp to minimum
+      if (targetRadius < this._camera.lowerRadiusLimit) {
+        targetRadius = this._camera.lowerRadiusLimit;
+      }
+    } else {
+      // Zoom out: multiply by 2 (two clicks returns to original)
+      targetRadius = currentRadius * 2;
+      // Clamp to maximum
+      if (targetRadius > this._camera.upperRadiusLimit) {
+        targetRadius = this._camera.upperRadiusLimit;
+      }
+    }
+    
+    const duration = 800;
+    const fps = 60;
+    
+    const animRadius = new Animation(
+      'radiusAnim', 'radius', fps,
+      Animation.ANIMATIONTYPE_FLOAT,
+      Animation.ANIMATIONLOOPMODE_CONSTANT
+    );
+    
+    animRadius.setKeys([
+      { frame: 0, value: currentRadius },
+      { frame: (duration / 1000) * fps, value: targetRadius }
+    ]);
+    
+    this._camera.animations = [animRadius];
+    this._scene.beginAnimation(this._camera, 0, (duration / 1000) * fps, false);
+  }
+	
+	/**
+   * Calculate ideal camera radius based on mesh bounding box
+   */
+  private calculateIdealRadius(): number {
+    if (!this._rootNode) return 47; // Fallback to default
+    
+    // Get bounding info of all meshes under root node
+    const childMeshes = this._rootNode.getChildMeshes();
+    if (childMeshes.length === 0) return 47;
+    
+    // Calculate combined bounding box
+    let min = new Vector3(Infinity, Infinity, Infinity);
+    let max = new Vector3(-Infinity, -Infinity, -Infinity);
+    
+    childMeshes.forEach(mesh => {
+      const boundingInfo = mesh.getBoundingInfo();
+      const meshMin = boundingInfo.boundingBox.minimumWorld;
+      const meshMax = boundingInfo.boundingBox.maximumWorld;
+      
+      min = Vector3.Minimize(min, meshMin);
+      max = Vector3.Maximize(max, meshMax);
+    });
+    
+    // Calculate diagonal of bounding box
+    const size = max.subtract(min);
+    const diagonal = size.length();
+    
+    // Return radius with comfortable margin (1.5x diagonal)
+    return diagonal * 1.5;
+  }
   
   public resetCamera(): void {
     // Target values
     const targetAlpha = Math.PI / 2;
     const targetBeta = Math.PI / 2;
-    const targetRadius = 47;
+    const targetRadius = this.calculateIdealRadius();
     const targetPosition = Vector3.Zero();
     
     // Animation duration
@@ -1222,6 +1325,9 @@ async function initializeUI(
   // 5. Bind camera reset button
   bindCameraResetButton(sceneManager);
   
+  // 5b. Bind zoom toggle button
+  bindZoomToggleButton(sceneManager);
+  
   // 6. Bind new file upload button
   bindNewFileButton(controller);
   
@@ -1246,6 +1352,9 @@ async function initializeUI(
   
   // 12. Initial conditional logic (like disabling n=3 for rectangular)
   updateConditionalUI(uiEngine, initialState.composition);
+	
+	// 13. Ensure all sections options are visible (fix n=3 regression)
+  ensureSectionsOptionsVisible();
 }
 
 /**
@@ -1334,6 +1443,25 @@ function captureUISnapshot(uiEngine: UIEngine, baseComposition: CompositionState
       composition.frame_design.finish_y = value as number;
       continue; // Skip setStateValue - both dimensions already set
     }
+		
+		// CRITICAL FIX: Capture section_materials from UI dropdowns, not baseComposition
+    if (key === 'woodSpecies' || key === 'grainDirection') {
+      const speciesEl = document.getElementById('woodSpecies') as HTMLSelectElement;
+      const grainEl = document.getElementById('grainDirection') as HTMLSelectElement;
+      
+      if (speciesEl && grainEl) {
+        const numSections = composition.frame_design.number_sections;
+        composition.frame_design.section_materials = [];
+        for (let i = 0; i < numSections; i++) {
+          composition.frame_design.section_materials.push({
+            section_id: i,
+            species: speciesEl.value,
+            grain_direction: grainEl.value as 'horizontal' | 'vertical' | 'radiant' | 'diamond'
+          });
+        }
+      }
+      continue; // Skip setStateValue - already handled
+    }
     
     // UIEngine.setStateValue returns updated composition
     const updated = uiEngine.setStateValue(composition, config.state_path, value);
@@ -1395,18 +1523,19 @@ function bindElementListeners(uiEngine: UIEngine, controller: ApplicationControl
     // Generic behavior: shape updates conditional options and element visibility
     if (key === 'shape') {
       element.addEventListener('change', () => {
-        // Read the CURRENT dropdown value, not the old state
         const shapeValue = (element as HTMLSelectElement).value;
         const currentState = controller.getState();
-        
-        // Create updated state with new shape value
-        const updatedState: Record<string, string | number> = {
+        const currentComposition = currentState.composition;
+
+        // Create a snapshot of the current UI state to pass to the update function
+        const updatedState: Record<string, any> = {
           shape: shapeValue,
-          sections: currentState.composition.frame_design.number_sections,
+          number_sections: currentComposition.frame_design.number_sections,
+          finish_x: currentComposition.frame_design.finish_x,
         };
         
-        uiEngine.updateConditionalOptions(updatedState);
-        uiEngine.updateElementVisibility(updatedState);
+        // Update conditional UI based on the new shape
+        updateConditionalUI(uiEngine, updatedState);
       });
     }
     
@@ -1439,8 +1568,17 @@ function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController,
   
   updateButton.addEventListener('click', () => {
     void (async () => {
+			
+			// Preserve checkbox state during update
+      const checkbox = document.getElementById('selectAllCheckbox') as HTMLInputElement;
+      const preservedCheckboxState = checkbox ? {
+        checked: checkbox.checked,
+        indeterminate: checkbox.indeterminate
+      } : null;
       const currentState = controller.getState();
-      const newComposition: CompositionStateDTO = JSON.parse(JSON.stringify(currentState.composition)) as CompositionStateDTO;
+      
+      // CRITICAL FIX: Use captureUISnapshot to properly read section_materials from UI dropdowns
+      const newComposition: CompositionStateDTO = captureUISnapshot(uiEngine, currentState.composition);
       
       // Read all element values and update composition (skip empty/invalid values)
       const elementKeys = uiEngine.getElementKeys();
@@ -1546,6 +1684,16 @@ function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController,
       
       // Submit to controller and re-render scene
       await controller.handleCompositionUpdate(newComposition);
+			
+			// Restore checkbox state
+      if (preservedCheckboxState && checkbox) {
+        checkbox.checked = preservedCheckboxState.checked;
+        checkbox.indeterminate = preservedCheckboxState.indeterminate;
+      }
+			
+			// Update conditional UI after backend processing completes
+      const updatedState = controller.getState();
+      updateConditionalUI(uiEngine, updatedState.composition);
       
       // DO NOT clear selection after update with the new UI model
       // The selection state should persist.
@@ -1585,6 +1733,24 @@ function bindCameraResetButton(
   
   resetButton.addEventListener('click', () => {
     sceneManager.resetCamera();
+  });
+}
+
+/**
+ * Bind zoom toggle button
+ */
+function bindZoomToggleButton(
+  sceneManager: ReturnType<typeof SceneManager.create>
+): void {
+  const zoomButton = document.getElementById('zoomToggleButton');
+  if (!zoomButton) return;
+  
+  let isZoomedIn = false;
+  
+  zoomButton.addEventListener('click', () => {
+    isZoomedIn = !isZoomedIn;
+    sceneManager.toggleZoom(isZoomedIn);
+    zoomButton.textContent = isZoomedIn ? '⊖' : '⊕';
   });
 }
 
@@ -1640,14 +1806,31 @@ function setupUploadInterface(uiEngine: UIEngine, controller: ApplicationControl
 /**
  * Update conditional UI (e.g., disable n=3 for rectangular)
  */
-function updateConditionalUI(uiEngine: UIEngine, composition: CompositionStateDTO): void {
-  const currentState: Record<string, string | number> = {
-    shape: composition.frame_design.shape,
-    sections: composition.frame_design.number_sections,
+function updateConditionalUI(uiEngine: UIEngine, compositionOrSnapshot: Partial<CompositionStateDTO> | Record<string, any>): void {
+  // This function now accepts either a full DTO or a simple snapshot object
+  // to make it more flexible for event handlers.
+  const currentState: Record<string, any> = {
+    shape: compositionOrSnapshot.frame_design?.shape ?? compositionOrSnapshot.shape,
+    number_sections: compositionOrSnapshot.frame_design?.number_sections ?? compositionOrSnapshot.number_sections,
+    finish_x: compositionOrSnapshot.frame_design?.finish_x ?? compositionOrSnapshot.finish_x,
   };
-  
+
   uiEngine.updateConditionalOptions(currentState);
   uiEngine.updateElementVisibility(currentState);
+}
+
+/**
+ * CRITICAL FIX: Re-enable n=3 for circular shapes
+ * This fixes regression where n=3 was hidden instead of just disabled
+ */
+function ensureSectionsOptionsVisible(): void {
+  const sectionsEl = document.getElementById('sections') as HTMLSelectElement;
+  if (!sectionsEl) return;
+  
+  // Make sure all options are visible (not display:none)
+  Array.from(sectionsEl.options).forEach(option => {
+    (option as HTMLOptionElement).style.display = '';
+  });
 }
 
 /**
@@ -1659,6 +1842,10 @@ function bindSelectAllCheckbox(
 ): void {
   const checkbox = document.getElementById('selectAllCheckbox') as HTMLInputElement;
   if (!checkbox) return;
+	
+	// Initialize checkbox to unchecked
+  checkbox.checked = false;
+  checkbox.indeterminate = false;	
 
   checkbox.addEventListener('change', () => {
     const numSections = controller.getState().composition.frame_design.number_sections;
@@ -1709,11 +1896,10 @@ function updateGrainDirectionOptions(uiEngine: UIEngine, numSections: number): v
     }
   }
 
-  // If the currently selected option is now hidden, do NOT change the dropdown value
-  // Let initializeSectionMaterials handle the fallback logic, then Update Design will sync
+  // CRITICAL FIX: Sync UI dropdown to match initializeSectionMaterials fallback
   if (!isCurrentValueVisible) {
-    console.log(`[updateGrainDirectionOptions] Current grain "${grainEl.value}" hidden for n=${numSections}, keeping dropdown as-is`);
-    // Do nothing - dropdown keeps its old value, but it will be corrected by initializeSectionMaterials
+    console.log(`[updateGrainDirectionOptions] Current grain "${grainEl.value}" hidden for n=${numSections}, syncing to vertical`);
+    grainEl.value = 'vertical'; // Match initializeSectionMaterials fallback logic
   }
 }
 

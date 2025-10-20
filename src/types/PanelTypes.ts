@@ -9,7 +9,7 @@ export interface PanelConfig {
     thickness: number;       // Material thickness in inches
     separation: number;      // Gap between sections in inches
     numberSections: number;  // Number of sections (1-4)
-    shape: 'circular' | 'rectangular';  // Panel shape
+    shape: 'circular' | 'rectangular' | 'diamond';  // Panel shape
 }
 
 /**

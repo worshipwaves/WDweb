@@ -158,10 +158,9 @@ class SlotGenerationService:
                 while slot_global_angle_deg >= 360.0:
                     slot_global_angle_deg -= 360.0
                     
-                if state.frame_design.shape == 'circular':
-                    global_radius = state.frame_design.finish_x / 2.0
-                else:
-                    global_radius = state.pattern_settings.pattern_diameter / 2.0
+                # CRITICAL: Use inscribed circle for ALL shapes
+                # geometry.radius already has the correct inscribed circle
+                global_radius = geometry.radius
                 max_reach_from_lc = geometry.max_radius_local
                 
                 visual_adjustment = self._calculate_center_point_adjustment(
