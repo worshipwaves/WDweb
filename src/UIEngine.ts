@@ -6,6 +6,9 @@
  * - Dynamically loads options from endpoints
  * - Executes conditional logic (like disabling n=3 for rectangular)
  */
+ 
+import { z } from 'zod';
+ 
 
 interface UIElementConfig {
   id: string;
@@ -62,6 +65,42 @@ interface UIConfig {
   upload: UIUploadConfig;
 }
 
+// Zod schemas for runtime validation
+const UIElementConfigSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  label: z.string(),
+  state_path: z.string()
+}).passthrough();
+
+const UIButtonConfigSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  title: z.string().optional(),
+  action: z.string()
+}).passthrough();
+
+const UIUploadConfigSchema = z.object({
+  container_id: z.string(),
+  drop_zone_id: z.string(),
+  file_input_id: z.string(),
+  accepted_mime_types: z.array(z.string()),
+  accepted_extensions: z.array(z.string()),
+  max_file_size_mb: z.number(),
+  hint_delay_ms: z.number(),
+  messages: z.object({
+    invalid_type: z.string(),
+    file_too_large: z.string(),
+    drop_hint: z.string()
+  }).passthrough()
+}).passthrough();
+
+const UIConfigSchema = z.object({
+  elements: z.record(z.string(), UIElementConfigSchema),
+  buttons: z.record(z.string(), UIButtonConfigSchema),
+  upload: UIUploadConfigSchema
+}).passthrough();
+
 export class UIEngine {
   private config: UIConfig | null = null;
   private elementCache: Map<string, string> = new Map();
@@ -75,8 +114,20 @@ export class UIEngine {
       throw new Error('Failed to load UI configuration');
     }
     
-    const data = await response.json();
-    this.config = data._ui_config;
+    const raw = await response.json() as unknown;
+    
+    if (typeof raw !== 'object' || raw === null || !('_ui_config' in raw)) {
+      throw new Error('Invalid config structure: missing _ui_config');
+    }
+    
+    const parsed = UIConfigSchema.safeParse((raw as { _ui_config: unknown })._ui_config);
+    if (!parsed.success) {
+      console.error('UIConfig validation failed:', parsed.error.format());
+			console.error('Detailed errors:', JSON.stringify(parsed.error.format(), null, 2));
+      throw new Error('UIConfig validation failed');
+    }
+    
+    this.config = parsed.data;
     
     // Build element ID cache
     if (this.config) {
@@ -145,9 +196,14 @@ export class UIEngine {
       return null;
     }
     
-    const data = await response.json();
+    const raw = await response.json() as unknown;
     const path = elementConfig.default_value_path || '';
-    const defaultValue = path.split('.').reduce((obj, key) => obj?.[key], data);
+    const defaultValue = path.split('.').reduce((obj: unknown, key: string) => {
+      if (typeof obj === 'object' && obj !== null && key in obj) {
+        return (obj as Record<string, unknown>)[key];
+      }
+      return undefined;
+    }, raw);
     
     return defaultValue || null;
   }
@@ -164,11 +220,16 @@ export class UIEngine {
       return [];
     }
     
-    const data = await response.json();
+    const raw = await response.json() as unknown;
     
     // Navigate to options using path (e.g., "species_catalog")
     const path = elementConfig.options_path || '';
-    const options = path.split('.').reduce((obj, key) => obj?.[key], data);
+    const options = path.split('.').reduce((obj: unknown, key: string) => {
+      if (typeof obj === 'object' && obj !== null && key in obj) {
+        return (obj as Record<string, unknown>)[key];
+      }
+      return undefined;
+    }, raw);
     
     if (!Array.isArray(options)) {
       console.error(`[UIEngine] Invalid options data for ${key}`);
@@ -197,8 +258,8 @@ export class UIEngine {
     if (!option || !option.disabled_when) return false;
     
     // Check if disabled_when conditions are met
-        const shouldDisable = Object.entries(option.disabled_when).every(([stateKey, stateValue]) => {
-          const currentValue = currentState[stateKey];
+    return Object.entries(option.disabled_when).every(([stateKey, stateValue]) => {
+      const currentValue = currentState[stateKey];
           // Support both single values and arrays
           if (Array.isArray(stateValue)) {
             return stateValue.includes(currentValue);
@@ -269,26 +330,35 @@ export class UIEngine {
   /**
    * Get value from composition state using state_path
    */
-  getStateValue(composition: any, statePath: string): any {
+  getStateValue(composition: Record<string, unknown>, statePath: string): unknown {
     const parts = statePath.split('.');
-    let value = composition;
+    let value: unknown = composition;
     
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
       
       if (part.includes('[]')) {
-        // Handle array paths like "section_materials[]"
         const arrayPart = part.replace('[]', '');
-        value = value[arrayPart];
-        
-        if (Array.isArray(value) && value.length > 0) {
-          // Get first element, then continue processing remaining parts
-          value = value[0];
+        if (typeof value === 'object' && value !== null && arrayPart in value) {
+          const arrayValue = (value as Record<string, unknown>)[arrayPart];
+          if (Array.isArray(arrayValue) && arrayValue.length > 0) {
+            value = arrayValue[0];
+          } else {
+            return null;
+          }
         } else {
           return null;
         }
       } else {
-        value = value?.[part];
+        if (typeof value === 'object' && value !== null && part in value) {
+          value = (value as Record<string, unknown>)[part];
+        } else {
+          return null;
+        }
+      }
+      
+      if (value === undefined || value === null) {
+        return null;
       }
     }
     
@@ -298,22 +368,31 @@ export class UIEngine {
   /**
    * Set value in composition state using state_path (immutable)
    */
-  setStateValue(composition: any, statePath: string, value: any): any {
+  setStateValue(composition: Record<string, unknown>, statePath: string, value: string | number): Record<string, unknown> {
     // Handle special case for array properties like "section_materials[].species"
     if (statePath.includes('[]')) {
-      const newComposition = JSON.parse(JSON.stringify(composition));
+      const newComposition = JSON.parse(JSON.stringify(composition)) as Record<string, unknown>;
       const [arrayPath, property] = statePath.split('[].');
       const parts = arrayPath.split('.');
       
-      let current = newComposition;
+      let current: Record<string, unknown> = newComposition;
       for (const part of parts) {
-        current = current[part];
+        if (part in current) {
+          const next = current[part];
+          if (typeof next === 'object' && next !== null) {
+            current = next as Record<string, unknown>;
+          }
+        }
       }
       
       // Update all array items with the value
       if (Array.isArray(current) && property) {
-        current.forEach((item: any) => {
-          item[property] = value;
+        current.forEach((item: unknown, index: number) => {
+          if (typeof item === 'object' && item !== null) {
+            const typedItem = item as Record<string, unknown>;
+            typedItem[property] = value;
+            current[index] = typedItem;
+          }
         });
       }
       
@@ -322,14 +401,23 @@ export class UIEngine {
     
     // Handle normal nested paths
     const parts = statePath.split('.');
-    const newComposition = JSON.parse(JSON.stringify(composition));
+    const newComposition = JSON.parse(JSON.stringify(composition)) as Record<string, unknown>;
     
-    let current = newComposition;
+    let current: Record<string, unknown> = newComposition;
     for (let i = 0; i < parts.length - 1; i++) {
-      current = current[parts[i]];
+      const part = parts[i];
+      if (part && part in current) {
+        const next = current[part];
+        if (typeof next === 'object' && next !== null) {
+          current = next as Record<string, unknown>;
+        }
+      }
     }
     
-    current[parts[parts.length - 1]] = value;
+    const lastPart = parts[parts.length - 1];
+    if (lastPart) {
+      current[lastPart] = value;
+    }
     return newComposition;
   }
   
@@ -352,7 +440,7 @@ export class UIEngine {
    * Handle on_change_triggers for an element
    * Executes configured actions and updates only affected UI elements
    */
-  handleOnChangeTriggers(elementKey: string, newValue: any, currentState: any): void {
+  handleOnChangeTriggers(elementKey: string, newValue: string | number, currentState: Record<string, unknown>): void {
     const config = this.getElementConfig(elementKey);
     if (!config?.on_change_triggers) return;
     
@@ -368,17 +456,22 @@ export class UIEngine {
    * Apply size defaults and update affected UI elements
    * @private
    */
-  private _applyOnChangeSizeDefaults(newSize: number, sourcePath: string, currentState: any): void {
+  private _applyOnChangeSizeDefaults(newSize: number, sourcePath: string, currentState: Record<string, unknown>): void {
     const sizeKey = String(newSize);
     const sizeDefaults = this._getNestedValue(currentState, sourcePath);
-    const defaults = sizeDefaults?.[sizeKey];
     
-    if (!defaults) return;
+    if (typeof sizeDefaults !== 'object' || sizeDefaults === null) return;
+    
+    const defaults = (sizeDefaults as Record<string, unknown>)[sizeKey];
+    
+    if (typeof defaults !== 'object' || defaults === null) return;
+    
+    const typedDefaults = defaults as Record<string, unknown>;
     
     // Map of state paths to their new values
     const updates = {
-      'pattern_settings.number_slots': defaults.number_slots,
-      'frame_design.separation': defaults.separation,
+      'pattern_settings.number_slots': typedDefaults.number_slots,
+      'frame_design.separation': typedDefaults.separation,
     };
     
     // Find affected elements by reverse-lookup on state_path
@@ -407,8 +500,13 @@ export class UIEngine {
    * Get nested value from object using dot notation path
    * @private
    */
-  private _getNestedValue(obj: any, path: string): any {
-    return path.split('.').reduce((current, key) => current?.[key], obj);
+  private _getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+    return path.split('.').reduce((current: unknown, key: string) => {
+      if (typeof current === 'object' && current !== null && key in current) {
+        return (current as Record<string, unknown>)[key];
+      }
+      return undefined;
+    }, obj as unknown);
   }
   
   /**
@@ -424,7 +522,7 @@ export class UIEngine {
   /**
    * Handle conditional option disabling (e.g., n=3 for rectangular)
    */
-  updateConditionalOptions(currentState: Record<string, any>): void {
+  updateConditionalOptions(currentState: Record<string, unknown>): void {
     const elementsConfig = this.config?.elements;
     if (!elementsConfig) return;
     
@@ -465,7 +563,7 @@ export class UIEngine {
 	/**
    * Update element visibility based on show_when conditions
    */
-  updateElementVisibility(currentState: Record<string, any>): void {
+  updateElementVisibility(currentState: Record<string, unknown>): void {
     const elementsConfig = this.config?.elements;
     if (!elementsConfig) return;
     

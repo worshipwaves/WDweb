@@ -8,7 +8,8 @@ import { PanelConfig, SlotData } from './types/PanelTypes';
 
 interface CSGDataResponse {
     panel_config: {
-        outer_radius: number;
+        finish_x: number;
+        finish_y: number;
         thickness: number;
         separation: number;
         number_sections: number;
@@ -47,11 +48,9 @@ export class FrameGenerationService {
      */
 		public createFrameMeshes(data: CSGDataResponse): Mesh[] {
 				try {
-						console.log('[POC] FrameGenerationService.createFrameMeshes called');
-						
 						// Map backend snake_case to frontend camelCase
 						const config: PanelConfig = {
-								finishX: data.panel_config.finish_x,
+								finishX: (data.panel_config as { finish_x: number }).finish_x,
 								finishY: data.panel_config.finish_y,
 								thickness: data.panel_config.thickness,
 								separation: data.panel_config.separation,
@@ -59,21 +58,16 @@ export class FrameGenerationService {
 								shape: data.panel_config.shape || 'circular'
 						};
 						
-						console.log(`[POC] Config: n=${config.numberSections}, size=${config.finishX}x${config.finishY}, shape=${config.shape}, separation=${config.separation}`);
-						
 						const slots: SlotData[] = data.slot_data || [];
-						console.log(`[POC] Total slots from backend: ${slots.length}`);
 
 						// Pass section edges if available (for n=3)
 						const sectionEdges = data.section_edges || [];
-						console.log(`[POC] Section edges from backend:`, sectionEdges);
 						
 						// Create panels using CSG - now returns array
 						const panels = this.panelService.createPanelsWithCSG(config, slots, sectionEdges);
 						
-						console.log(`[POC] FrameGenerationService returning ${panels.length} meshes`);
 						return panels;
-				} catch (error) {
+				} catch (error: unknown) {
 						console.error('[POC] Error creating frame meshes:', error);
 						throw error;
 				}
@@ -83,6 +77,6 @@ export class FrameGenerationService {
 		public createFrameMesh(data: CSGDataResponse): Mesh {
 				console.warn('[POC] Using deprecated createFrameMesh - should use createFrameMeshes');
 				const meshes = this.createFrameMeshes(data);
-				return meshes[0] || null;
+				return meshes[0];
 		}
 }

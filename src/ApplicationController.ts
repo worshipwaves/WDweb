@@ -7,6 +7,7 @@
  */
 
 import { AudioCacheService } from './AudioCacheService';
+import { PerformanceMonitor } from './PerformanceMonitor';
 import {
   CompositionStateDTO,
   ApplicationState,
@@ -14,10 +15,10 @@ import {
   type CSGDataResponse,
   type WoodMaterialsConfig,
   WoodMaterialsConfigSchema,
+  type SectionMaterial,
 } from './types/schemas';
-import { WaveformDesignerFacade, Action } from './WaveformDesignerFacade';
 import { fetchAndValidate } from './utils/validation';
-import { PerformanceMonitor } from './PerformanceMonitor';
+import { WaveformDesignerFacade, Action } from './WaveformDesignerFacade';
 
 // Subscriber callback type
 type StateSubscriber = (state: ApplicationState) => void;
@@ -58,7 +59,6 @@ function initializeSectionMaterials(
 
   // Step 2: Validate intended grain against NEW number of sections
   if (!isGrainAvailableForN(intendedGrain, newN)) {
-    console.log(`[initializeSectionMaterials] Grain "${intendedGrain}" not available for n=${newN}, falling back to vertical`);
     intendedGrain = 'vertical';
   }
 
@@ -69,11 +69,10 @@ function initializeSectionMaterials(
     newMaterials.push({
       section_id: i,
       species: species,
-      grain_direction: intendedGrain as 'horizontal' | 'vertical' | 'radiant' | 'diamond'
+      grain_direction: intendedGrain
     });
   }
 
-  console.log(`[initializeSectionMaterials] Finalized for n=${newN}:`, newMaterials);
   return newMaterials;
 }
 
@@ -86,11 +85,12 @@ export class ApplicationController {
   private _sceneManager: { 
     renderComposition: (csgData: CSGDataResponse) => Promise<void>;
     applySectionMaterials: () => void;
+    applySingleSectionMaterial?: (sectionId: number) => void;
   } | null = null;
 	private _audioCache: AudioCacheService;
   private _woodMaterialsConfig: WoodMaterialsConfig | null = null;
   private _selectedSectionIndices: Set<number> = new Set();
-  private _idleTextureLoader: any = null; // IdleTextureLoader instance
+  private _idleTextureLoader: unknown = null; // IdleTextureLoader instance
   
   constructor(facade: WaveformDesignerFacade) {
     this._facade = facade;
@@ -114,10 +114,8 @@ export class ApplicationController {
         'http://localhost:8000/api/config/wood-materials',
         WoodMaterialsConfigSchema
       );
-      console.log('[Controller] Wood materials config loaded:', this._woodMaterialsConfig);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Controller] Failed to load configuration:', error);
-      throw error;
     }
     
     // Load fresh defaults first
@@ -193,6 +191,7 @@ export class ApplicationController {
   registerSceneManager(sceneManager: { 
     renderComposition: (csgData: CSGDataResponse) => Promise<void>;
     applySectionMaterials: () => void;
+    applySingleSectionMaterial?: (sectionId: number) => void;
   }): void {
     this._sceneManager = sceneManager;
   }	
@@ -218,13 +217,14 @@ export class ApplicationController {
 			return;
 		}
 		
-		const textureCache = (this._sceneManager as any)._textureCache;
+		const textureCache = this._sceneManager ? (this._sceneManager as { _textureCache?: { getTexture: (path: string) => { isReady: () => boolean; onLoadObservable: { addOnce: (callback: () => void) => void } } } })._textureCache : undefined;
 		if (!textureCache) {
 			console.warn('[Controller] TextureCache not available');
 			return;
 		}
 		
-		const walnut = this._woodMaterialsConfig.species_catalog.find((s: any) => s.id === 'walnut-black-american');
+		const walnut = this._woodMaterialsConfig.species_catalog.find(s => s.id === 'walnut-black-american');
+		
 		if (!walnut) {
 			console.warn('[Controller] Walnut species not found in catalog');
 			return;
@@ -234,23 +234,21 @@ export class ApplicationController {
 		const sizeInfo = this._woodMaterialsConfig.texture_config.size_map.large;
 		const albedoPath = `${basePath}/${walnut.id}/Varnished/${sizeInfo.folder}/Diffuse/wood-${walnut.wood_number}_${walnut.id}-varnished-${sizeInfo.dimensions}_d.png`;
 		
-		console.log('[Controller] Waiting for walnut albedo texture:', albedoPath);
-		
 		// Get the texture from cache
+		if (!textureCache) return;
+		
 		const texture = textureCache.getTexture(albedoPath);
 		
 		if (texture.isReady()) {
-			console.log('[Controller] Walnut texture already ready');
 			return; // Already ready
 		}
 		
 		// Wait for texture to load
-		console.log('[Controller] Walnut texture loading...');
-		return new Promise((resolve) => {
+		return new Promise<void>((resolve) => {
 			texture.onLoadObservable.addOnce(() => {
-				console.log('[Controller] Walnut texture loaded');
 				resolve();
 			});
+			
 			
 			// Timeout after 5 seconds to prevent infinite wait
 			setTimeout(() => {
@@ -355,8 +353,6 @@ export class ApplicationController {
 			}
 			*/
 			
-			console.log('[Controller] Texture preloading DISABLED for testing');
-      
       PerformanceMonitor.start('csg_generation_and_render');
 			
 			// Compare user's pre-upload UI choices with backend defaults
@@ -375,13 +371,10 @@ export class ApplicationController {
         );
         
         if (this._sceneManager) {
-          console.log('[Controller] Starting renderComposition...');
           await this._sceneManager.renderComposition(response);
-          console.log('[Controller] renderComposition complete, waiting for visibility...');
           
           // Wait a frame to ensure render is actually visible
           await new Promise(resolve => requestAnimationFrame(resolve));
-          console.log('[Controller] Render should now be visible');
         }
       }
       
@@ -389,14 +382,11 @@ export class ApplicationController {
       
       // CRITICAL: Wait for walnut textures to be ready before removing overlay
       // This prevents user seeing black meshes while textures load
-      console.log('[Controller] Waiting for walnut textures to be ready...');
       await this.waitForWalnutTextures();
-      console.log('[Controller] Walnut textures ready - removing overlay');
       
       PerformanceMonitor.end('total_upload_to_render');
       
       // Reset processing stage after successful render
-      console.log('[Controller] Resetting processing stage to idle');
       await this.dispatch({
         type: 'PROCESSING_UPDATE',
         payload: { stage: 'idle', progress: 0 },
@@ -579,7 +569,7 @@ export class ApplicationController {
 				// Special case: section_materials array
 				if (currentPath === 'frame_design.section_materials') {
 					if (Array.isArray(val1) && Array.isArray(val2)) {
-						if (compareSectionMaterials(val1 as any, val2 as any)) {
+						if (compareSectionMaterials(val1 as Array<{section_id: number, species: string, grain_direction: string}>, val2 as Array<{section_id: number, species: string, grain_direction: string}>)) {
 							changed.add('section_materials');
 						}
 					}
@@ -619,14 +609,11 @@ export class ApplicationController {
 		// Create a mutable working copy to avoid reassigning the function parameter.
     let newComposition = initialComposition;
 
-    console.log('[handleCompositionUpdate] ENTRY - finish_x:', newComposition.frame_design.finish_x, 'finish_y:', newComposition.frame_design.finish_y);
-    
     // Check if the size has changed
     const oldSize = this._state.composition.frame_design.finish_x;
     const newSize = newComposition.frame_design.finish_x;
 
     if (oldSize !== newSize) {
-      console.log('[handleCompositionUpdate] Size changed detected, applying defaults');
       // Size has changed, apply smart defaults
       const sizeKey = String(newSize);
       const defaults = newComposition.size_defaults?.[sizeKey];
@@ -645,8 +632,10 @@ export class ApplicationController {
         };
 				
 				// Update UI dropdown to hide/show grain options and reset to valid value if needed
-				if (typeof window !== 'undefined' && (window as any).updateGrainDirectionOptionsFromController) {
-					(window as any).updateGrainDirectionOptionsFromController(newN);
+				if (typeof window !== 'undefined' && (window as { updateGrainDirectionOptionsFromController?: (n: number) => void }).updateGrainDirectionOptionsFromController) {
+					(window as { updateGrainDirectionOptionsFromController?: (n: number) => void }).updateGrainDirectionOptionsFromController?.(newN);
+					const updateFn = (window as { updateGrainDirectionOptionsFromController?: (n: number) => void }).updateGrainDirectionOptionsFromController;
+					if (updateFn) updateFn(newN);
 				}
       }
     }
@@ -656,7 +645,6 @@ export class ApplicationController {
     const newN = newComposition.frame_design.number_sections;
 
     if (oldN !== newN) {
-    console.log(`[Controller] number_sections changed ${oldN}→${newN}, initializing materials`);
     
     // CRITICAL: Use materials from UI snapshot, NOT old state
     const uiCapturedMaterials = newComposition.frame_design.section_materials || [];
@@ -682,9 +670,6 @@ export class ApplicationController {
       newComposition
     );
 
-    // DIAGNOSTIC: Log what changed
-    console.log('[Controller] Changed params detected:', changedParams);
-
     // If nothing relevant changed, just update the local state without an API call.
     if (changedParams.length === 0) {
       await this.dispatch({ type: 'COMPOSITION_UPDATED', payload: newComposition });
@@ -697,7 +682,6 @@ export class ApplicationController {
     );
 
     if (onlyMaterialsChanged) {
-      console.log('[Controller] Material-only change detected - applying without backend call');
       
       // Update state locally
       this._state = {
@@ -716,7 +700,7 @@ export class ApplicationController {
           : new Set(Array.from({ length: this._state.composition.frame_design.number_sections }, (_, i) => i));
 
         targets.forEach(sectionId => {
-          this._sceneManager.applySingleSectionMaterial(sectionId);
+          this._sceneManager.applySingleSectionMaterial?.(sectionId);
         });
       }
       
@@ -830,7 +814,6 @@ export class ApplicationController {
    * Select a section for material editing
    */
   selectSection(indices: Set<number>): void {
-    console.log(`[Controller] Selection updated:`, Array.from(indices));
     this._selectedSectionIndices = new Set(indices);
   }
   
@@ -853,8 +836,6 @@ export class ApplicationController {
     if (!this._state) {
       throw new Error('State not initialized');
     }
-    
-    console.log(`[Controller] Updating section ${sectionId} material: ${species}, ${grainDirection} (frontend-only)`);
     
     // Get current section materials or create default array
     const currentMaterials = this._state.composition.frame_design.section_materials || [];
@@ -889,7 +870,7 @@ export class ApplicationController {
     
     // Notify SceneManager to update ONLY the changed section (no CSG regeneration)
     if (this._sceneManager) {
-      this._sceneManager.applySingleSectionMaterial(sectionId);
+      this._sceneManager.applySingleSectionMaterial?.(sectionId);
     }
     
     // Notify subscribers of state change
@@ -909,16 +890,12 @@ export class ApplicationController {
   }
 	
 	public updateSectionMaterialsArray(newMaterials: Array<{section_id: number, species: string, grain_direction: string}>): void {
-    console.log('[Controller] updateSectionMaterialsArray called with:', newMaterials);
-    
     // CRITICAL: Completely replace the array, don't merge with old entries
     const cleanMaterials = newMaterials.map(m => ({
       section_id: m.section_id,
       species: m.species,
       grain_direction: m.grain_direction
     }));
-    
-    console.log('[Controller] Setting section_materials to:', cleanMaterials);
     
     // Update state with completely new array
     this._state.composition = {
@@ -928,8 +905,6 @@ export class ApplicationController {
         section_materials: cleanMaterials
       }
     };
-    
-    console.log('[Controller] State after update:', this._state.composition.frame_design.section_materials);
     
     this.notifySubscribers();
   }

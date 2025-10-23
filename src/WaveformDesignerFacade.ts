@@ -323,31 +323,32 @@ export class WaveformDesignerFacade {
    * Preserves user customizations while adding new schema fields
    */
   mergeStates(freshDefaults: ApplicationState, persisted: ApplicationState): ApplicationState {
-    const merge = (target: any, source: any): any => {
-      if (!source || typeof source !== 'object' || Array.isArray(source)) {
+    const merge = (target: unknown, source: unknown): unknown => {
+      if (typeof source !== 'object' || source === null || Array.isArray(source)) {
         return source;
       }
       
-      if (!target || typeof target !== 'object' || Array.isArray(target)) {
+      if (typeof target !== 'object' || target === null || Array.isArray(target)) {
         return source;
       }
-      
-      const result: any = { ...target };
-      
-      for (const key in source) {
-        if (source.hasOwnProperty(key)) {
-          if (typeof source[key] === 'object' && source[key] !== null && !Array.isArray(source[key])) {
-            result[key] = merge(target[key], source[key]);
-          } else {
-            result[key] = source[key];
-          }
+
+      const result: Record<string, unknown> = { ...(target as Record<string, unknown>) };
+
+      for (const key of Object.keys(source)) {
+        const sourceValue = (source as Record<string, unknown>)[key];
+        const targetValue = result[key];
+
+        if (sourceValue && typeof sourceValue === 'object' && !Array.isArray(sourceValue)) {
+          result[key] = merge(targetValue, sourceValue);
+        } else {
+          result[key] = sourceValue;
         }
       }
       
       return result;
     };
     
-    return merge(freshDefaults, persisted);
+    return merge(freshDefaults, persisted) as ApplicationState;
   }	
   
   /**

@@ -46,13 +46,11 @@ class PerformanceMonitorClass {
     this.completedEntries.push(entry);
     this.entries.delete(name);
     
-    console.log(`[PerfMonitor] ${name}: ${duration.toFixed(2)}ms`);
     return duration;
   }
   
-  mark(name: string): void {
+  mark(_name: string): void {
     if (!this.enabled) return;
-    console.log(`[PerfMonitor] Mark: ${name} at ${performance.now().toFixed(2)}ms`);
   }
   
   getReport(): string {

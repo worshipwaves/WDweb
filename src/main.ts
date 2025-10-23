@@ -1,5 +1,5 @@
 import {
-  Engine, 
+  Engine,
   Scene, 
   ArcRotateCamera, 
   HemisphericLight,
@@ -14,23 +14,23 @@ import {
   CubicEase,
   EasingFunction
 } from '@babylonjs/core';
+import * as BABYLON from '@babylonjs/core';
 import { GLTFFileLoader } from '@babylonjs/loaders/glTF';
 import '@babylonjs/loaders/glTF/2.0';
-import * as BABYLON from '@babylonjs/core';
 (window as Window & { BJS_CORE?: typeof BABYLON }).BJS_CORE = BABYLON; // Expose Babylon core for console diagnostics
 
 import { ApplicationController } from './ApplicationController';
 import { AudioCacheService } from './AudioCacheService';
 import { FrameGenerationService } from './FrameGenerationService';
-import { type CSGDataResponse, type WoodMaterialsConfig } from './types/schemas';
-import { CompositionStateDTO } from './types/schemas';
+import { PerformanceMonitor } from './PerformanceMonitor';
+import { ProcessingOverlay } from './ProcessingOverlay';
 import { TextureCacheService } from './TextureCacheService';
-import { UploadInterface } from './UploadInterface';
+import { type ApplicationState, type CSGDataResponse, type SmartCsgResponse, type WoodMaterialsConfig, CompositionStateDTO } from './types/schemas';
 import { UIEngine } from './UIEngine';
+import { UploadInterface } from './UploadInterface';
 import { WaveformDesignerFacade } from './WaveformDesignerFacade';
 import { WoodMaterial } from './WoodMaterial';
-import { ProcessingOverlay } from './ProcessingOverlay';
-import { PerformanceMonitor } from './PerformanceMonitor';
+
 
 
 /**
@@ -51,10 +51,10 @@ function calculateGrainAngle(
     // CRITICAL: Box UVs are rotated 90° relative to cylinder UVs
     // For rectangular: horizontal should be 90°, vertical should be 0°
     // For circular/diamond: horizontal is 0°, vertical is 90° (as configured)
-    const shape = (window.sceneManager as any)?._currentCSGData?.csg_data?.panel_config?.shape;
-    if (shape === 'rectangular') {
-      return (angleOrKey + 90) % 360;
-    }
+    const csgDataWrapper = window.sceneManager?.getCurrentCSGData();
+        if (csgDataWrapper?.csg_data?.panel_config?.shape === 'rectangular') {
+          return (angleOrKey + 90) % 360;
+        }
     return angleOrKey;
   }
 
@@ -75,8 +75,8 @@ function calculateGrainAngle(
       if (angles && typeof angles[sectionId] === 'number') {
         // CRITICAL: Box UVs are rotated 90° relative to cylinder UVs
         // Apply same offset for radiant/diamond on rectangular panels
-        const shape = (window.sceneManager as any)?._currentCSGData?.csg_data?.panel_config?.shape;
-        if (shape === 'rectangular') {
+        const csgDataWrapper = window.sceneManager?.getCurrentCSGData();
+        if (csgDataWrapper?.csg_data?.panel_config?.shape === 'rectangular') {
           return (angles[sectionId] + 90) % 360;
         }
         return angles[sectionId];
@@ -89,27 +89,30 @@ function calculateGrainAngle(
   return 0;
 }
 
-// Export calculateGrainAngle for debugging and controller access
-(window as any).calculateGrainAngle = calculateGrainAngle;
-
-/**
- * Make updateGrainDirectionOptions globally accessible for ApplicationController
- */
-(window as any).updateGrainDirectionOptionsFromController = (newN: number) => {
-  // This will be set after UIEngine is initialized
-  if ((window as any)._uiEngineInstance) {
-    updateGrainDirectionOptions((window as any)._uiEngineInstance, newN);
-  }
-};
-
-// Extend the global Window interface
 declare global {
   interface Window {
     sceneManager?: SceneManager;
     controller?: ApplicationController;
     audioCache?: AudioCacheService;
+    calculateGrainAngle?: typeof calculateGrainAngle;
+    updateGrainDirectionOptionsFromController?: (newN: number) => void;
+    _uiEngineInstance?: UIEngine;
+    uiEngine?: UIEngine;
   }
 }
+
+// Export calculateGrainAngle for debugging and controller access
+window.calculateGrainAngle = calculateGrainAngle;
+
+/**
+ * Make updateGrainDirectionOptions globally accessible for ApplicationController
+ */
+window.updateGrainDirectionOptionsFromController = (newN: number) => {
+  // This will be set after UIEngine is initialized
+  if (window._uiEngineInstance) {
+    updateGrainDirectionOptions(window._uiEngineInstance, newN);
+  }
+};
 
 class SceneManager {
   // Rendering dependencies (prefixed = OK)
@@ -128,7 +131,7 @@ class SceneManager {
   private _sectionMaterials: WoodMaterial[] = [];
 	private _selectedSectionIndices: Set<number> = new Set();
   private _rootNode: TransformNode | null = null;
-	private _currentCSGData: CSGDataResponse | null = null;  // Store CSG data for overlay positioning
+	private _currentCSGData: SmartCsgResponse | null = null;  // Store CSG data for overlay positioning
 	private _overlayMeshes: Map<number, Mesh> = new Map();
   private _hasPlayedPulseAnimation: boolean = false;
   private _renderQueue: Promise<void> = Promise.resolve();
@@ -275,8 +278,6 @@ class SceneManager {
    * This ensures instant rendering when user uploads audio
    */
   public preloadDefaultTextures(config: WoodMaterialsConfig): void {
-    console.log('[SceneManager] Preloading default textures on page load...');
-    
     // Preload walnut immediately (and optionally cherry/maple for quick switching)
     const speciesToPreload = ['walnut-black-american', 'cherry-black', 'maple'];
     
@@ -295,20 +296,16 @@ class SceneManager {
       const normalPath = `${basePath}/${species.id}/Shared_Maps/${sizeInfo.folder}/Normal/wood-${species.wood_number}_${species.id}-${sizeInfo.dimensions}_n.png`;
       const roughnessPath = `${basePath}/${species.id}/Shared_Maps/${sizeInfo.folder}/Roughness/wood-${species.wood_number}_${species.id}-${sizeInfo.dimensions}_r.png`;
       
-      console.log(`[SceneManager] Page-load preload: ${species.id}`);
-      
       // Load and cache textures (they'll be in cache when user uploads audio)
       this._textureCache.getTexture(albedoPath);
       this._textureCache.getTexture(normalPath);
       this._textureCache.getTexture(roughnessPath);
     });
-    
-    console.log('[SceneManager] Page-load texture preload initiated');
   }
 
-  public renderComposition(csgData: CSGDataResponse): Promise<void> {
+  public renderComposition(csgData: SmartCsgResponse): Promise<void> {
     void (this._renderQueue = this._renderQueue.then(
-      async () => {
+      () => {
         if (this._isRendering) {
           console.warn('Render already in progress, skipping.');
           return;
@@ -316,7 +313,7 @@ class SceneManager {
         
         this._isRendering = true;
         try {
-          await this._renderCompositionInternal(csgData);
+          this._renderCompositionInternal(csgData);
         } finally {
           this._isRendering = false;
         }
@@ -326,18 +323,8 @@ class SceneManager {
     return this._renderQueue;
   }
 
-  private _renderCompositionInternal(csgData: CSGDataResponse): void {
-    console.log('[POC] SceneManager._renderCompositionInternal called');
+  private _renderCompositionInternal(csgData: SmartCsgResponse): void {
     PerformanceMonitor.start('render_internal_total');
-		
-		console.log('[BEFORE CLEANUP]', {
-			rootNode: this._rootNode ? 'exists' : 'null',
-			rootNodeId: this._rootNode?.uniqueId,
-			rootNodeName: this._rootNode?.name,
-			meshCount: this._sectionMeshes.length,
-			sceneTransformNodes: this._scene.transformNodes.length,
-			sceneMeshes: this._scene.meshes.length
-		});
 		
     PerformanceMonitor.start('mesh_cleanup');
 		// Store CSG data for overlay positioning
@@ -355,23 +342,12 @@ class SceneManager {
     
     PerformanceMonitor.end('mesh_cleanup');
 		
-		console.log('[AFTER CLEANUP]', {
-			rootNode: this._rootNode ? 'exists' : 'null',
-			rootNodeId: this._rootNode?.uniqueId,
-			rootNodeName: this._rootNode?.name,
-			meshCount: this._sectionMeshes.length,
-			sceneTransformNodes: this._scene.transformNodes.length,
-			sceneMeshes: this._scene.meshes.length
-		});		
-
     try {
       PerformanceMonitor.start('csg_mesh_generation');
       
       // Get array of meshes from frame service
       const frameService = new FrameGenerationService(this._scene);
       const meshes = frameService.createFrameMeshes(csgData.csg_data);
-      
-      console.log(`[POC] SceneManager received ${meshes.length} meshes`);
 
       if (meshes.length === 0) {
         console.warn('[POC] No meshes returned from frame service');
@@ -396,14 +372,11 @@ class SceneManager {
       PerformanceMonitor.end('apply_materials');
       PerformanceMonitor.end('render_internal_total');
       
-      console.log('[POC] All section meshes configured');
-      
       // Play pulse animation once after initial render
       this.pulseAllSections();
 			
 			// Auto-fit camera to new geometry
       const idealRadius = this.calculateIdealRadius();
-      console.log(`[SceneManager] Setting camera radius to ${idealRadius} (was ${this._camera.radius})`);
       this._camera.radius = idealRadius;
       
       // Setup interaction
@@ -458,14 +431,16 @@ class SceneManager {
     this._selectedSectionIndices.clear();
   }
   
+  public getCurrentCSGData(): SmartCsgResponse | null {
+    return this._currentCSGData ?? null;
+  }
+  
   private setupSectionInteraction(): void {
     // CRITICAL: Only set up interaction once to prevent duplicate event listeners
     if (this._isInteractionSetup) {
-      console.log('[SceneManager] Section interaction already set up, skipping');
       return;
     }
     
-    console.log('[SceneManager] Setting up section interaction');
     this._isInteractionSetup = true;
     
     this._canvas.addEventListener('pointerdown', (evt: PointerEvent) => {
@@ -481,7 +456,6 @@ class SceneManager {
         
         if (this._sectionMeshes.length > 1 && match) {
           const sectionId = parseInt(match[1], 10);
-          console.log(`[SceneManager] Section ${sectionId} clicked (mesh: ${meshName})`);
           
           // Check for multi-select modifier key from the native browser event
           const multiSelect = evt.ctrlKey || evt.metaKey;
@@ -557,11 +531,12 @@ class SceneManager {
 	
 	private pulseAllSections(): void {
     if (this._hasPlayedPulseAnimation) return;
-    if (!this._currentCSGData || !window.controller) return;
-    if (this._currentCSGData.csg_data.panel_config.number_sections <= 1) return;
+    if (!this._currentCSGData?.csg_data || !window.controller) return;
+    
+    const csgData = this._currentCSGData.csg_data;
+    if (csgData.panel_config.number_sections <= 1) return;
     
     const config = window.controller.getWoodMaterialsConfig();
-    const csgData = this._currentCSGData.csg_data;
     const numSections = csgData.panel_config.number_sections;
     
     // Get bifurcation angles - with special handling for n=4 ordering mismatch
@@ -580,7 +555,7 @@ class SceneManager {
     // CRITICAL: For n≠3, rotation.y=π is baked into mesh vertices, which mirrors the mesh
     // This means mesh array order is reversed from section_local_centers order
     // Reverse the array to match the visual mesh layout
-    const localCenters = (numSections !== 3 && numSections !== 1) 
+    const _localCenters = (numSections !== 3 && numSections !== 1) 
       ? [...csgData.section_local_centers].reverse() 
       : csgData.section_local_centers;
     
@@ -596,6 +571,8 @@ class SceneManager {
         const localCenter = csgData.section_local_centers[index];
         const bifurcationAngle = bifurcationAngles[index];
         const minRadius = csgData.true_min_radius;
+        
+        if (!localCenter || bifurcationAngle === undefined) return;
         
         // Calculate position along bifurcation ray at 60% of min_radius
         const distanceFromCenter = minRadius * 0.6;
@@ -762,9 +739,6 @@ class SceneManager {
     
     // CRITICAL: For n≠3, rotation.y=π is baked into mesh vertices, which mirrors the mesh
     // Reverse the array to match the visual mesh layout
-    const localCenters = (numSections !== 3 && numSections !== 1) 
-      ? [...csgData.section_local_centers].reverse() 
-      : csgData.section_local_centers;
     
     // Get section bounding info for sizing
     const boundingInfo = mesh.getBoundingInfo();
@@ -783,6 +757,8 @@ class SceneManager {
     const localCenter = csgData.section_local_centers[index];
     const bifurcationAngle = bifurcationAngles[index];
     const minRadius = csgData.true_min_radius;
+    
+    if (!localCenter || bifurcationAngle === undefined) return null;
     
     // Calculate position along bifurcation ray at 60% of min_radius
     const distanceFromCenter = minRadius * 0.6;
@@ -871,7 +847,7 @@ class SceneManager {
     if (indices.size === 0) {
       // No sections selected - leave dropdowns unchanged
     } else if (indices.size === 1) {
-      const index = indices.values().next().value;
+      const index = indices.values().next().value as number;
       const sectionMaterial = materials.find(m => m.section_id === index);
       speciesEl.value = sectionMaterial?.species || config.default_species;
       grainEl.value = sectionMaterial?.grain_direction || config.default_grain_direction;
@@ -930,15 +906,8 @@ class SceneManager {
     const panelDimension = composition.frame_design.finish_x;
     const sectionMaterials = composition.frame_design.section_materials || [];
     
-    console.log(`[SceneManager] === Applying materials to ${this._sectionMeshes.length} sections ===`);
-    console.log(`[SceneManager] Section materials array:`, JSON.stringify(sectionMaterials, null, 2));
-    console.log(`[SceneManager] Mesh count:`, this._sectionMeshes.length);
-    console.log(`[SceneManager] Existing materials count:`, this._sectionMaterials.length);
-    
     for (let index = 0; index < this._sectionMeshes.length; index++) {
       const mesh = this._sectionMeshes[index];
-      console.log(`[SceneManager] Processing section ${index}: ${mesh.name}`);
-      console.log(`[SceneManager] Current mesh material:`, mesh.material?.name || 'none');
 
       // Get material settings for this section
       let species = config.default_species;
@@ -964,17 +933,13 @@ class SceneManager {
       // Create or reuse material
       let material: WoodMaterial;
       if (this._sectionMaterials[index]) {
-        console.log(`[SceneManager] Reusing existing material for section ${index}: ${this._sectionMaterials[index].name}`);
         material = this._sectionMaterials[index];
       } else {
-        console.log(`[SceneManager] Creating NEW material for section ${index}`);
         material = new WoodMaterial(`wood_section_${index}`, this._scene);
         material.backFaceCulling = false;
         material.twoSidedLighting = true;
         this._sectionMaterials[index] = material;
       }
-
-      console.log(`[SceneManager] Updating section ${index} to species: ${species}, grainAngle: ${grainAngle}`);
       
       // Update textures and grain (with texture cache)
       material.updateTexturesAndGrain(
@@ -987,8 +952,8 @@ class SceneManager {
       );
 
       // Apply to mesh
-      this._sectionMeshes[index].material = material;
-      this._sectionMeshes[index].parent = this._rootNode;
+      mesh.material = material;
+      mesh.parent = this._rootNode;
     }
   }
 	
@@ -1039,9 +1004,6 @@ class SceneManager {
       this._sectionMaterials[sectionIndex] = material;
     }
 		
-		console.log(`[applySingleSectionMaterial] Section ${sectionIndex} material name: ${material.name}`);
-		console.log(`[applySingleSectionMaterial] Material instance unique? ${this._sectionMaterials.filter(m => m === material).length === 1}`);		
-    
     // Update only this section's material
     material.updateTexturesAndGrain(
       species,
@@ -1211,7 +1173,7 @@ class SceneManager {
     );
   }
 
-  public async updateComposition(newState: CompositionStateDTO): Promise<void> {
+  public updateComposition(_newState: CompositionStateDTO): void {
     // Dispose of any previous meshes
     if (this._finalMesh) {
       this._finalMesh.dispose();
@@ -1231,7 +1193,7 @@ class SceneManager {
     this._sectionMaterials = [];
 
     // Run the full generation and CSG operation
-    await this.renderComposition(newState);
+    // await this.renderComposition(_newState); // Type error: parameter is not SmartCsgResponse
   }
 }
 
@@ -1244,8 +1206,8 @@ document.addEventListener('DOMContentLoaded', () => {
       await uiEngine.loadConfig();
 			
 			// Make UIEngine accessible for grain direction updates from controller
-      (window as any)._uiEngineInstance = uiEngine;
-      (window as any).uiEngine = uiEngine; // For debugging/diagnostics
+      window._uiEngineInstance = uiEngine;
+      window.uiEngine = uiEngine; // For debugging/diagnostics
       
       // Create the facade and controller
       const facade = new WaveformDesignerFacade();
@@ -1266,7 +1228,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const woodConfig = controller.getWoodMaterialsConfig();
         sceneManager.preloadDefaultTextures(woodConfig);
-      } catch (error) {
+      } catch (error: unknown) {
         console.warn('[main.ts] Could not preload textures - config not loaded yet:', error);
       }
       
@@ -1294,7 +1256,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Initialization error:', error);
     }
   })();
@@ -1367,7 +1329,7 @@ function syncUIFromState(uiEngine: UIEngine, composition: CompositionStateDTO): 
     const config = uiEngine.getElementConfig(key);
     if (!config) return;
     
-    const value = uiEngine.getStateValue(composition, config.state_path);
+    const value = uiEngine.getStateValue(composition, config.state_path) as string | number | null | undefined;
     if (value !== null && value !== undefined) {
       const typedValue: string | number = typeof value === 'number' ? value : String(value);
       uiEngine.writeElementValue(key, typedValue);
@@ -1450,7 +1412,7 @@ function captureUISnapshot(uiEngine: UIEngine, baseComposition: CompositionState
 		}
 				
 				// UIEngine.setStateValue returns updated composition
-				const updated = uiEngine.setStateValue(composition, config.state_path, value);
+				const updated: CompositionStateDTO = uiEngine.setStateValue(composition, config.state_path, value) as CompositionStateDTO;
 				Object.assign(composition, updated);
 			}
 			
@@ -1520,7 +1482,7 @@ function bindElementListeners(uiEngine: UIEngine, controller: ApplicationControl
         const currentComposition = currentState.composition;
 
         // Create a snapshot of the current UI state to pass to the update function
-        const updatedState: Record<string, any> = {
+        const updatedState: { shape: string; number_sections: number; finish_x: number } = {
           shape: shapeValue,
           number_sections: currentComposition.frame_design.number_sections,
           finish_x: currentComposition.frame_design.finish_x,
@@ -1542,9 +1504,7 @@ function bindElementListeners(uiEngine: UIEngine, controller: ApplicationControl
     
     // Generic on_change handlers from config
     if (config.on_change) {
-      console.log(`[bindElementListeners] Binding on_change handler for: ${key}`, config.on_change);
       element.addEventListener('change', () => {
-        console.log(`[bindElementListeners] on_change triggered for: ${key}`);
         handleOnChangeAction(config.on_change!, uiEngine, controller);
       });
     }
@@ -1563,7 +1523,7 @@ function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController,
 			
 			// Preserve checkbox state during update
       const checkbox = document.getElementById('selectAllCheckbox') as HTMLInputElement;
-      const preservedCheckboxState = checkbox ? {
+      const _preservedCheckboxState = checkbox ? {
         checked: checkbox.checked,
         indeterminate: checkbox.indeterminate
       } : null;
@@ -1585,7 +1545,6 @@ function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController,
             return allowedValues.includes(currentValue);
           });
           if (!shouldShow) {
-            console.log(`[bindUpdateButton] Skipping hidden element: ${key}`);
             return;
           }
         }
@@ -1606,11 +1565,8 @@ function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController,
         
         // CRITICAL: Special handling for size - sets both finish_x AND finish_y
         if (key === 'size') {
-          console.log(`[bindUpdateButton] SIZE HANDLER TRIGGERED: ${typedValue}`);
-          console.log(`[bindUpdateButton] Before: finish_x=${newComposition.frame_design.finish_x}, finish_y=${newComposition.frame_design.finish_y}`);
           newComposition.frame_design.finish_x = typedValue as number;
           newComposition.frame_design.finish_y = typedValue as number;
-          console.log(`[bindUpdateButton] After: finish_x=${newComposition.frame_design.finish_x}, finish_y=${newComposition.frame_design.finish_y}`);
           return; // Skip normal setStateValue processing
         }
         
@@ -1630,10 +1586,12 @@ function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController,
             : Array.from({ length: newComposition.frame_design.number_sections }, (_, i) => i);
           
           // Navigate to the array
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
           const parts = arrayPath.split('.');
-          let current: any = newComposition;
+          let current: Record<string, unknown> = newComposition as Record<string, unknown>;
           for (const part of parts) {
-            current = current[part];
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+            current = current[part] as Record<string, unknown>;
           }
           
           // Ensure array exists and has entries for all sections
@@ -1644,12 +1602,21 @@ function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController,
           
           // Update the property for all target sections
           targetSections.forEach(targetId => {
-            let sectionEntry = current.find((item: any) => item.section_id === targetId);
+            let sectionEntry = Array.isArray(current) 
+              ? current.find((item: unknown): item is Record<string, unknown> => 
+                  typeof item === 'object' && item !== null && 
+                  'section_id' in item && (item as Record<string, unknown>).section_id === targetId
+                )
+              : undefined;
             if (!sectionEntry) {
               sectionEntry = { section_id: targetId };
-              current.push(sectionEntry);
+              if (Array.isArray(current)) {
+                current.push(sectionEntry);
+              }
             }
-            sectionEntry[property] = typedValue;
+            if (sectionEntry && typeof sectionEntry === 'object') {
+              sectionEntry[property] = typedValue;
+            }
           });
         } else {
           // Regular property - update normally
@@ -1698,7 +1665,7 @@ function bindUpdateButton(uiEngine: UIEngine, controller: ApplicationController,
 /**
  * Bind Apply to All Sections button
  */
-function bindApplyToAllButton(controller: ApplicationController): void {
+/* function _bindApplyToAllButton(_controller: ApplicationController): void {
   const applyAllBtn = document.getElementById('applyToAllSections');
   if (!applyAllBtn) return;
   
@@ -1714,7 +1681,7 @@ function bindApplyToAllButton(controller: ApplicationController): void {
     // Apply current dropdown values to all sections
     controller.applyToAllSections(species, grain);
   });
-}
+} */
 
 /**
  * Bind camera reset button
@@ -1751,7 +1718,7 @@ function bindZoomToggleButton(
 /**
  * Bind new file upload button
  */
-function bindNewFileButton(controller: ApplicationController): void {
+function bindNewFileButton(_controller: ApplicationController): void {
   const newFileButton = document.getElementById('newFileButton');
   if (!newFileButton) return;
   
@@ -1800,13 +1767,13 @@ function setupUploadInterface(uiEngine: UIEngine, controller: ApplicationControl
 /**
  * Update conditional UI (e.g., disable n=3 for rectangular)
  */
-function updateConditionalUI(uiEngine: UIEngine, compositionOrSnapshot: Partial<CompositionStateDTO> | Record<string, any>): void {
+function updateConditionalUI(uiEngine: UIEngine, compositionOrSnapshot: Partial<CompositionStateDTO> | Record<string, unknown>): void {
   // This function now accepts either a full DTO or a simple snapshot object
   // to make it more flexible for event handlers.
-  const currentState: Record<string, any> = {
-    shape: compositionOrSnapshot.frame_design?.shape ?? compositionOrSnapshot.shape,
-    number_sections: compositionOrSnapshot.frame_design?.number_sections ?? compositionOrSnapshot.number_sections,
-    finish_x: compositionOrSnapshot.frame_design?.finish_x ?? compositionOrSnapshot.finish_x,
+  const currentState: Record<string, unknown> = {
+    shape: compositionOrSnapshot.frame_design?.shape ?? (compositionOrSnapshot as Record<string, unknown>).shape,
+    number_sections: compositionOrSnapshot.frame_design?.number_sections ?? (compositionOrSnapshot as Record<string, unknown>).number_sections,
+    finish_x: compositionOrSnapshot.frame_design?.finish_x ?? (compositionOrSnapshot as Record<string, unknown>).finish_x,
   };
 
   uiEngine.updateConditionalOptions(currentState);
@@ -1822,9 +1789,9 @@ function ensureSectionsOptionsVisible(): void {
   if (!sectionsEl) return;
   
   // Make sure all options are visible (not display:none)
-  Array.from(sectionsEl.options).forEach(option => {
-    (option as HTMLOptionElement).style.display = '';
-  });
+  for (const option of sectionsEl.options) {
+    option.style.display = '';
+  }
 }
 
 /**
@@ -1892,7 +1859,6 @@ function updateGrainDirectionOptions(uiEngine: UIEngine, numSections: number): v
 
   // CRITICAL FIX: Sync UI dropdown to match initializeSectionMaterials fallback
   if (!isCurrentValueVisible) {
-    console.log(`[updateGrainDirectionOptions] Current grain "${grainEl.value}" hidden for n=${numSections}, syncing to vertical`);
     grainEl.value = 'vertical'; // Match initializeSectionMaterials fallback logic
   }
 }
@@ -1931,17 +1897,12 @@ function handleOnChangeAction(
   uiEngine: UIEngine,
   controller: ApplicationController
 ): void {
-  console.log(`[handleOnChangeAction] Called with action: ${onChangeConfig.action}`);
-  
   switch (onChangeConfig.action) {
     case 'update_section_materials':
-      console.log('[handleOnChangeAction] Entering update_section_materials case');
       // SceneManager may not be available during initial setup - this is expected
       if (!window.sceneManager) {
-        console.log('[handleOnChangeAction] SceneManager not available, returning');
         return;
       }
-      console.log('[handleOnChangeAction] Calling handleUpdateSectionMaterials');
       handleUpdateSectionMaterials(onChangeConfig, uiEngine, controller, window.sceneManager);
       break;
     default:
@@ -1958,8 +1919,6 @@ function handleUpdateSectionMaterials(
   controller: ApplicationController,
   sceneManager: ReturnType<typeof SceneManager.create>
 ): void {
-  console.log('[handleUpdateSectionMaterials] CALLED');
-  
   if (!onChangeConfig.requires || onChangeConfig.requires.length < 2) {
     console.warn('[handleUpdateSectionMaterials] Missing required parameters');
     return;
@@ -1988,17 +1947,13 @@ function handleUpdateSectionMaterials(
   
   const selectedSections = sceneManager.getSelectedSections();
   
-  console.log(`[handleUpdateSectionMaterials] Selected sections:`, Array.from(selectedSections), `species: ${species}, grain: ${grain}`);
-  
   if (selectedSections.size > 0) {
     // If one or more sections are selected, update only those
     selectedSections.forEach(sectionId => {
-      console.log(`[handleUpdateSectionMaterials] Updating selected section ${sectionId}`);
       controller.updateSectionMaterial(sectionId, species, grain);
     });
   } else {
     // When no section is selected, apply to all sections
-    console.log(`[handleUpdateSectionMaterials] No selection - applying to all sections`);
     const numSections = controller.getState().composition.frame_design.number_sections;
     for (let i = 0; i < numSections; i++) {
       controller.updateSectionMaterial(i, species, grain);

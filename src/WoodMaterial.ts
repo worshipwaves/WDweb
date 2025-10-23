@@ -1,10 +1,7 @@
-import { 
-    PBRMaterial,
-    Scene,
-    Texture
-} from '@babylonjs/core';
-import type { WoodMaterialsConfig } from './types/schemas';
+import { PBRMaterial, Scene, Texture } from '@babylonjs/core';
+
 import { PerformanceMonitor } from './PerformanceMonitor';
+import type { WoodMaterialsConfig } from './types/schemas';
 
 /**
  * Custom wood material class that extends PBRMaterial.
@@ -121,8 +118,6 @@ export class WoodMaterial extends PBRMaterial {
         const normalPath = `${assetRoot}Shared_Maps/${sizeFolder}/Normal/wood-${woodNumber}_${species}-${dimensions}_n.png`;
         const roughnessPath = `${assetRoot}Shared_Maps/${sizeFolder}/Roughness/wood-${woodNumber}_${species}-${dimensions}_r.png`;
         
-        console.log(`[WoodMaterial] Loading albedo from: ${albedoPath}`);
-        
         // Use texture cache if available, otherwise load directly
         if (textureCache) {
             this.albedoMap = textureCache.getTexture(albedoPath);
@@ -131,10 +126,10 @@ export class WoodMaterial extends PBRMaterial {
         } else {
             // Fallback: load without cache
             this.albedoMap = new Texture(
-                albedoPath, 
-                this.scene, 
-                undefined, undefined, undefined, 
-                () => { console.log(`[WoodMaterial] Albedo loaded successfully`); },
+                albedoPath,
+                this.scene,
+                undefined, undefined, undefined,
+                null,
                 (message) => { console.error(`[WoodMaterial] Albedo load failed: ${message}`); }
             );
             this.normalMap = new Texture(normalPath, this.scene);
@@ -149,7 +144,7 @@ export class WoodMaterial extends PBRMaterial {
         
         // For radiant/diamond grain (grainAngleDeg varies per section), use center offset
         // so rotation provides variation. For horizontal/vertical, use corner offsets.
-        const isRotatedGrain = grainAngleDeg !== 0 && grainAngleDeg !== 90;
+        const _isRotatedGrain = grainAngleDeg !== 0 && grainAngleDeg !== 90;
         
         // Random sampling within safe interior zone (20-80% of available space)
         const safeMin = maxSafeOffset * 0.2;
@@ -207,7 +202,6 @@ export class WoodMaterial extends PBRMaterial {
         this.metallicTexture = this.roughnessMap;
         this.useRoughnessFromMetallicTextureGreen = true;
         
-        console.log(`[WoodMaterial] Textures loaded for ${species}`);
         PerformanceMonitor.end(`material_update_${species}`);
     }
     

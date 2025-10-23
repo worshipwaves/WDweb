@@ -14,10 +14,19 @@ import {
 } from '@babylonjs/core';
 
 interface PanelConfig {
-  outerRadius: number;
   thickness: number;
   separation: number;
   numberSections: number;
+  shape: string;
+  finishX: number;
+  finishY: number;
+}
+
+interface SectionDimensions {
+  width: number;
+  height: number;
+  offsetX: number;
+  offsetY: number;
 }
 
 interface SlotData {
@@ -240,8 +249,6 @@ export class PanelGenerationService {
       edge2_end: number[];
     }[]
   ): Mesh[] {
-    console.log(`[POC] createPanelsWithCSG - shape=${config.shape}, n=${config.numberSections}`);
-		
 		if (config.shape === 'diamond') {
       // This is a simpler, more robust "Top-Down CSG" approach.
       // 1. Create the full diamond panel.
@@ -339,12 +346,10 @@ export class PanelGenerationService {
     const sectionMeshes: Mesh[] = [];
     
     for (let sectionIndex = 0; sectionIndex < sectionDims.length; sectionIndex++) {
-      console.log(`[POC] === Section ${sectionIndex} ===`);
       const dim = sectionDims[sectionIndex];
       
       // For circular n=2, n=3, n=4, use monolithic CSG approach (create full disc, then carve)
       if (config.shape === 'circular' && config.numberSections > 1) {
-        console.log(`[POC] Using monolithic CSG approach for circular n=${config.numberSections}, section ${sectionIndex}`);
         
         // Step 1: Create FULL disc
         const fullDisc = MeshBuilder.CreateCylinder('baseDisc', {
@@ -368,7 +373,6 @@ export class PanelGenerationService {
         
         // Step 3: Filter slots for this section
         const sectionSlots = slots ? this.filterSlotsForSection(slots, sectionIndex, config) : [];
-        console.log(`[POC] Section ${sectionIndex} has ${sectionSlots.length} slots`);
         
         // Step 4: Cut slots
         let finalMesh = sectionMesh;
@@ -387,7 +391,6 @@ export class PanelGenerationService {
         finalMesh.computeWorldMatrix(true);
         finalMesh.refreshBoundingInfo(true, true);
         
-        console.log(`[POC] Section ${sectionIndex} mesh created: ${finalMesh.name}`);
         sectionMeshes.push(finalMesh);
         continue;  // Skip the rest of the loop
       }
@@ -406,7 +409,6 @@ export class PanelGenerationService {
       
       // Filter slots for this section
       const sectionSlots = slots ? this.filterSlotsForSection(slots, sectionIndex, config) : [];
-      console.log(`[POC] Section ${sectionIndex} has ${sectionSlots.length} slots`);
       
       // Cut slots if any exist
       let finalMesh = baseMesh;
@@ -420,19 +422,16 @@ export class PanelGenerationService {
       finalMesh.isPickable = true;
       finalMesh.alwaysSelectAsActiveMesh = true;
       
-      console.log(`[POC] Section ${sectionIndex} mesh created: ${finalMesh.name}`);
       sectionMeshes.push(finalMesh);
     }
     
-    console.log(`[POC] Returning ${sectionMeshes.length} section meshes`);
     return sectionMeshes;
   }
   
   private cutSlots(panelMesh: Mesh, slots: SlotData[], config: PanelConfig): Mesh { 
-    console.log(`[POC] Starting CSG slot cutting: ${slots.length} slots`);
     let resultCSG = CSG.FromMesh(panelMesh);
-    let successfulCuts = 0;
-    let failedCuts = 0;
+    let _successfulCuts = 0;
+    let _failedCuts = 0;
     
     for (let i = 0; i < slots.length; i++) {
       const slot = slots[i];
@@ -441,10 +440,10 @@ export class PanelGenerationService {
       try {
         const slotCSG = CSG.FromMesh(slotBox);
         resultCSG = resultCSG.subtract(slotCSG);
-        successfulCuts++;
+        _successfulCuts++;
       } catch (error) {
         console.error(`[CSG] Failed at slot ${i}:`, error);
-        failedCuts++;
+        _failedCuts++;
       }
       
       if (this.debugMode) {
@@ -457,8 +456,6 @@ export class PanelGenerationService {
         slotBox.dispose();
       }
     }
-    
-    console.log(`[POC] CSG complete: ${successfulCuts} successful, ${failedCuts} failed cuts`);
     
     panelMesh.dispose();
     const result = resultCSG.toMesh(`${panelMesh.name}_withSlots`, null, this.scene);
@@ -575,8 +572,6 @@ export class PanelGenerationService {
   ): { mesh: Mesh; innerVertex: { x: number; z: number } } {
     const { numberSections, separation } = config;
     const outerRadius = Math.min(config.finishX, config.finishY) / 2;
-    
-    console.log(`[POC] cutToSectionShape: section ${sectionIndex} of ${numberSections}`);
     
     if (numberSections === 2) {
       const cutBox = MeshBuilder.CreateBox('cutter', {

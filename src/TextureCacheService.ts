@@ -6,9 +6,10 @@
  */
 
 import { Texture, Scene } from '@babylonjs/core';
-import type { WoodMaterialsConfig } from './types/schemas';
-import { PerformanceMonitor } from './PerformanceMonitor';
+
 import { IdleTextureLoader } from './IdleTextureLoader';
+import { PerformanceMonitor } from './PerformanceMonitor';
+import type { WoodMaterialsConfig } from './types/schemas';
 
 export class TextureCacheService {
   private _textureCache: Map<string, Texture> = new Map();
@@ -35,7 +36,6 @@ export class TextureCacheService {
     }
     
     // Not in cache - load and cache it
-    console.log(`[TextureCache] Loading and caching: ${path}`);
     const texture = new Texture(path, this._scene);
     this._textureCache.set(path, texture);
     
@@ -50,8 +50,6 @@ export class TextureCacheService {
    * Phase 3: Remaining species (low priority background)
    */
   async preloadAllTextures(config: WoodMaterialsConfig): Promise<IdleTextureLoader> {
-    console.log('[TextureCache] Loading first species (array position 0) immediately...');
-    
     const textureConfig = config.texture_config;
     const basePath = textureConfig.base_texture_path;
     
@@ -62,11 +60,9 @@ export class TextureCacheService {
     // Load FIRST species in array immediately (blocks render)
     const firstSpecies = config.species_catalog[0];
     if (firstSpecies) {
-      console.log(`[TextureCache] Loading ${firstSpecies.id} (immediate)...`);
       PerformanceMonitor.start('first_species_texture_download');
       await this._preloadSpeciesTexturesAsync(firstSpecies, basePath, folderName, sizeInfo.dimensions);
       PerformanceMonitor.end('first_species_texture_download');
-      console.log(`[TextureCache] ✓ ${firstSpecies.id} ready - render can proceed`);
     }
     
     // Create idle loader for remaining species (array order = priority)

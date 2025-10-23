@@ -10,8 +10,19 @@
 import type { TextureCacheService } from './TextureCacheService';
 import type { WoodMaterialsConfig } from './types/schemas';
 
+// Allow access to internal methods for this specific class
+interface InternalTextureCacheService extends TextureCacheService {
+  _preloadSpeciesTexturesAsync(
+    species: { id: string; wood_number: string },
+    basePath: string,
+    folderName: string,
+    dimensions: string
+  ): Promise<void>;
+  _textureCache: Map<string, unknown>;
+}
+
 export class IdleTextureLoader {
-  private textureCache: TextureCacheService;
+  private textureCache: InternalTextureCacheService;
   private config: WoodMaterialsConfig;
   private loadQueue: Array<{ id: string; wood_number: string }> = [];
   private isLoading: boolean = false;
@@ -21,7 +32,7 @@ export class IdleTextureLoader {
   private onProgressCallback?: (loaded: number, total: number) => void;
   
   constructor(textureCache: TextureCacheService, config: WoodMaterialsConfig) {
-    this.textureCache = textureCache;
+    this.textureCache = textureCache as InternalTextureCacheService;
     this.config = config;
     this.setupUserActivityDetection();
   }
@@ -34,8 +45,6 @@ export class IdleTextureLoader {
     // Build queue from array order
     this.loadQueue = this.config.species_catalog.slice(startIndex);
     
-    console.log(`[IdleLoader] Starting background load of ${this.loadQueue.length} species`);
-    
     // Start loading during idle time
     this.scheduleNextLoad();
   }
@@ -45,7 +54,6 @@ export class IdleTextureLoader {
    */
   private scheduleNextLoad(): void {
     if (this.loadQueue.length === 0) {
-      console.log('[IdleLoader] All species loaded');
       return;
     }
     
@@ -79,8 +87,6 @@ export class IdleTextureLoader {
     this.isLoading = true;
     const species = this.loadQueue.shift()!;
     
-    console.log(`[IdleLoader] Loading ${species.id} (${this.loadQueue.length} remaining)`);
-    
     // Add timeout to detect hung loads
     const timeoutMs = 10000; // 10 seconds
     const loadPromise = (async () => {
@@ -92,14 +98,12 @@ export class IdleTextureLoader {
       const dimensions = sizeInfo.dimensions;
       
       // Load textures using cache's method
-      await (this.textureCache as any)._preloadSpeciesTexturesAsync(
+      await this.textureCache._preloadSpeciesTexturesAsync(
         species,
         basePath,
         folderName,
         dimensions
       );
-      
-      console.log(`[IdleLoader] ✓ ${species.id} loaded`);
       } catch (error) {
         console.error(`[IdleLoader] Failed to load ${species.id}:`, error);
       }
@@ -121,7 +125,6 @@ export class IdleTextureLoader {
     // Update progress AFTER setting isLoading = false for correct calculation
     if (this.onProgressCallback) {
       const status = this.getStatus();
-      console.log(`[IdleLoader] Progress update: ${status.loaded}/${status.total}`);
       this.onProgressCallback(status.loaded, status.total);
     }
     
@@ -155,7 +158,6 @@ export class IdleTextureLoader {
       return;
     }
     
-    console.log('[IdleLoader] Resuming background loading');
     this.isPaused = false;
     
     // Only schedule if not already loading and no pending callback
@@ -209,7 +211,7 @@ export class IdleTextureLoader {
     
     const albedoPath = `${basePath}/${species.id}/Varnished/${sizeInfo.folder}/Diffuse/wood-${species.wood_number}_${species.id}-varnished-${sizeInfo.dimensions}_d.png`;
     
-    return (this.textureCache as any)._textureCache.has(albedoPath);
+    return this.textureCache._textureCache.has(albedoPath);
   }
   
   /**
@@ -230,7 +232,7 @@ export class IdleTextureLoader {
     const basePath = textureConfig.base_texture_path;
     const sizeInfo = textureConfig.size_map.large;
     
-    await (this.textureCache as any)._preloadSpeciesTexturesAsync(
+    await this.textureCache._preloadSpeciesTexturesAsync(
       species,
       basePath,
       sizeInfo.folder,
