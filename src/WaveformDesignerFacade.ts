@@ -151,11 +151,15 @@ export class WaveformDesignerFacade {
       phase: 'upload',
       composition,
       audio: {
-        originalAmplitudes: null,
+        rawSamples: null,
         previousMaxAmplitude: null,
         audioSessionId: null,
       },
       ui: {
+        leftPanelVisible: false,
+        rightPanelVisible: false,
+        selectedCategory: null,
+        selectedOption: null,
         currentStyleIndex: 0,
         isAutoPlaying: false,
         showHint: false,

@@ -278,17 +278,26 @@ export const AudioDataSchema = z.object({
 
 export type AudioData = z.infer<typeof AudioDataSchema>;
 
+// Hero Forge UI state schema
+export const UIStateSchema = z.object({
+  leftPanelVisible: z.boolean(),
+  rightPanelVisible: z.boolean(),
+  selectedCategory: z.string().nullable(),
+  selectedOption: z.string().nullable(),
+  currentStyleIndex: z.number(),
+  isAutoPlaying: z.boolean(),
+  showHint: z.boolean(),
+  renderQuality: z.enum(['low', 'medium', 'high']),
+});
+
+export type UIState = z.infer<typeof UIStateSchema>;
+
 // The single, authoritative schema for the entire application state
 export const ApplicationStateSchema = z.object({
-  phase: z.enum(['upload', 'discovery', 'reveal', 'customization']),
+  phase: z.enum(['upload', 'discovery', 'reveal', 'intent', 'customize']),
   composition: CompositionStateDTOSchema,
   audio: AudioDataSchema, // New addition for smart processing
-  ui: z.object({
-    currentStyleIndex: z.number(),
-    isAutoPlaying: z.boolean(),
-    showHint: z.boolean(),
-    renderQuality: z.enum(['low', 'medium', 'high']),
-  }),
+  ui: UIStateSchema,
   processing: z.object({
     stage: z.enum(['idle', 'uploading', 'preparing_textures', 'demucs', 'rendering']),
     progress: z.number(),
