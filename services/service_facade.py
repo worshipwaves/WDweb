@@ -176,6 +176,9 @@ class WaveformDesignerFacade:
             try:
                 # Pass pre-calculated geometry to slot generation
                 result["slot_data"] = self._slot_generation_service.get_slot_data(state, geometry)
+                if state.pattern_settings.slot_style == "linear" and result["slot_data"]:
+                    print(f"[DEBUG] First linear slot vertices: {result['slot_data'][0]['vertices']}")
+                    print(f"[DEBUG] First linear slot dims: width={result['slot_data'][0]['width']:.4f}, length={result['slot_data'][0]['length']:.4f}")
             except ValueError:
                 # Keep empty slot_data if generation fails
                 pass

@@ -198,13 +198,22 @@ def calculate_geometries_core(state: 'CompositionStateDTO') -> GeometryResultDTO
             for angle_deg in [90, 330, 210]  # Top, bottom-right, bottom-left
         ]
     elif number_sections == 4:
-        effective_side_len = separation + (2 * x_offset)
-        lc_distance_from_gc = effective_side_len / math.sqrt(2) if math.sqrt(2) > 1e-9 else effective_side_len
-        section_local_centers = [
-            (gc_x + lc_distance_from_gc * math.cos(math.radians(angle_deg)),
-             gc_y + lc_distance_from_gc * math.sin(math.radians(angle_deg)))
-            for angle_deg in [45, 315, 225, 135]  # TR, BR, BL, TL
-        ]
+        if pattern.slot_style == "linear":
+            # Linear: 4 sections side-by-side horizontally
+            section_width = (finish_x - 3 * separation) / 4
+            section_local_centers = [
+                (gc_x + (-finish_x/2 + section_width/2 + i * (section_width + separation)), gc_y)
+                for i in range(4)
+            ]
+        else:
+            # Radial: 2x2 grid at diagonal positions
+            effective_side_len = separation + (2 * x_offset)
+            lc_distance_from_gc = effective_side_len / math.sqrt(2) if math.sqrt(2) > 1e-9 else effective_side_len
+            section_local_centers = [
+                (gc_x + lc_distance_from_gc * math.cos(math.radians(angle_deg)),
+                 gc_y + lc_distance_from_gc * math.sin(math.radians(angle_deg)))
+                for angle_deg in [45, 315, 225, 135]  # TR, BR, BL, TL
+            ]
     else:
         section_local_centers = []
     
@@ -332,6 +341,23 @@ def calculate_geometries_core(state: 'CompositionStateDTO') -> GeometryResultDTO
         if max_amplitude_from_V < 0:
             max_amplitude_from_V = 0.0
     
+    # Override max_amplitude for linear slots (different geometry)
+    slot_style = pattern.slot_style
+    if slot_style == "linear":
+        if shape == "rectangular":
+            # Linear slots: simple vertical constraint
+            max_amplitude_from_V = finish_y - 2.0 * y_offset
+            center_point_from_V = finish_y / 2.0
+        elif shape == "circular":
+            # Linear slots in circular: limited by inscribed circle at edges
+            # Use conservative estimate: diameter minus offsets
+            max_amplitude_from_V = (2.0 * radius) - 2.0 * y_offset
+            center_point_from_V = radius
+        elif shape == "diamond":
+            # Linear slots in diamond: similar to circular
+            max_amplitude_from_V = finish_y - 2.0 * y_offset
+            center_point_from_V = finish_y / 2.0
+    
     # Return properly typed DTO
     return GeometryResultDTO(
         shape=shape,
@@ -401,7 +427,8 @@ class GeometryService:
             "thickness": PANEL_THICKNESS,
             "separation": frame.separation,
             "number_sections": frame.number_sections,
-            "shape": frame.shape
+            "shape": frame.shape,
+            "slot_style": state.pattern_settings.slot_style
         }
         print(f"[DEBUG] get_panel_parameters returning: {result}")
         return result

@@ -20,6 +20,7 @@ interface PanelConfig {
   shape: string;
   finishX: number;
   finishY: number;
+	slotStyle: string;
 }
 
 interface SectionDimensions {
@@ -123,18 +124,43 @@ export class PanelGenerationService {
     }
     
     if (numberSections === 4) {
-      // 2×2 grid with gaps
-      const sectionWidth = (finishX - separation) / 2;
-      const sectionHeight = (finishY - separation) / 2;
-      const offsetX = (sectionWidth + separation) / 2;
-      const offsetY = (sectionHeight + separation) / 2;
-      return [
-        { width: sectionWidth, height: sectionHeight, offsetX: offsetX, offsetY: offsetY },     // Top-right
-        { width: sectionWidth, height: sectionHeight, offsetX: offsetX, offsetY: -offsetY },    // Bottom-right
-        { width: sectionWidth, height: sectionHeight, offsetX: -offsetX, offsetY: -offsetY },   // Bottom-left
-        { width: sectionWidth, height: sectionHeight, offsetX: -offsetX, offsetY: offsetY }     // Top-left
-      ];
+      // Branch on slot style: linear = side-by-side, radial = 2×2 grid
+      if (config.slotStyle === 'linear') {
+        // Four rectangles side-by-side horizontally
+        const sectionWidth = (finishX - separation * 3) / 4;
+        const spacing = sectionWidth + separation;
+        const startOffset = -finishX / 2 + sectionWidth / 2;
+        return [
+          { width: sectionWidth, height: finishY, offsetX: startOffset + spacing * 0, offsetY: 0 },
+          { width: sectionWidth, height: finishY, offsetX: startOffset + spacing * 1, offsetY: 0 },
+          { width: sectionWidth, height: finishY, offsetX: startOffset + spacing * 2, offsetY: 0 },
+          { width: sectionWidth, height: finishY, offsetX: startOffset + spacing * 3, offsetY: 0 }
+        ];
+      } else {
+        // Radial: 2×2 grid with gaps (existing behavior)
+        const sectionWidth = (finishX - separation) / 2;
+        const sectionHeight = (finishY - separation) / 2;
+        const offsetX = (sectionWidth + separation) / 2;
+        const offsetY = (sectionHeight + separation) / 2;
+        return [
+          { width: sectionWidth, height: sectionHeight, offsetX: offsetX, offsetY: offsetY },     // Top-right
+          { width: sectionWidth, height: sectionHeight, offsetX: offsetX, offsetY: -offsetY },    // Bottom-right
+          { width: sectionWidth, height: sectionHeight, offsetX: -offsetX, offsetY: -offsetY },   // Bottom-left
+          { width: sectionWidth, height: sectionHeight, offsetX: -offsetX, offsetY: offsetY }     // Top-left
+        ];
+      }
     }
+		
+		if (numberSections === 3) {
+			// Three rectangles side-by-side horizontally
+			const sectionWidth = (finishX - separation * 2) / 3;
+			const spacing = sectionWidth + separation;
+			return [
+				{ width: sectionWidth, height: finishY, offsetX: spacing, offsetY: 0 },      // Right
+				{ width: sectionWidth, height: finishY, offsetX: 0, offsetY: 0 },           // Center
+				{ width: sectionWidth, height: finishY, offsetX: -spacing, offsetY: 0 }     // Left
+			];
+		}		
     
     throw new Error(`Unsupported number of sections for rectangular: ${numberSections}`);
   }
@@ -428,8 +454,14 @@ export class PanelGenerationService {
     return sectionMeshes;
   }
   
-  private cutSlots(panelMesh: Mesh, slots: SlotData[], config: PanelConfig): Mesh { 
-    let resultCSG = CSG.FromMesh(panelMesh);
+  private cutSlots(panelMesh: Mesh, slots: SlotData[], config: PanelConfig): Mesh {
+		console.log(`[CSG-DEBUG] Cutting ${slots.length} slots from panel`);
+		console.log(`[CSG-DEBUG] Panel vertices before CSG:`, panelMesh.getTotalVertices());
+		if (slots.length > 0) {
+			console.log(`[CSG-DEBUG] First slot:`, slots[0]);
+		}
+		
+		let resultCSG = CSG.FromMesh(panelMesh);
     let _successfulCuts = 0;
     let _failedCuts = 0;
     
@@ -457,8 +489,10 @@ export class PanelGenerationService {
       }
     }
     
-    panelMesh.dispose();
-    const result = resultCSG.toMesh(`${panelMesh.name}_withSlots`, null, this.scene);
+		panelMesh.dispose();
+		const result = resultCSG.toMesh(`${panelMesh.name}_withSlots`, null, this.scene);
+		console.log(`[CSG-DEBUG] Result mesh vertices:`, result.getTotalVertices());
+		console.log(`[CSG-DEBUG] Result has positions:`, result.getVerticesData(VertexBuffer.PositionKind) !== null);
     
     const mat = new StandardMaterial('finalPanelMat', this.scene);
     mat.diffuseColor = new Color3(0.9, 0.7, 0.5);
@@ -480,8 +514,11 @@ export class PanelGenerationService {
     return result;
   }
   
-  private createSlotBox(slot: SlotData, config: PanelConfig): Mesh {
-    if (!slot.vertices || slot.vertices.length !== 4) {
+	private createSlotBox(slot: SlotData, config: PanelConfig): Mesh {
+		console.log(`[SLOT-DEBUG] Creating slot box for slot at x=${slot.x}, z=${slot.z}`);
+		console.log(`[SLOT-DEBUG] Vertices:`, slot.vertices.map(v => `[${v[0].toFixed(2)}, ${v[1].toFixed(2)}]`).join(', '));
+		
+		if (!slot.vertices || slot.vertices.length !== 4) {
       throw new Error(`Slot missing required vertices data`);
     }
     
@@ -506,8 +543,19 @@ export class PanelGenerationService {
       positions.push(v[0], extrudeHeight, v[1]);
     }
     
-    const indices: number[] = [
-      0, 2, 1, 0, 3, 2,  // Bottom
+    // Check if vertices form axis-aligned rectangle (linear slots)
+    const isLinearRect = Math.abs(vertices2D[0][0] - vertices2D[1][0]) < 0.001 &&
+                         Math.abs(vertices2D[2][0] - vertices2D[3][0]) < 0.001;
+    
+    const indices: number[] = isLinearRect ? [
+      0, 1, 2, 0, 2, 3,  // Bottom (rectangle winding)
+      4, 6, 5, 4, 7, 6,  // Top
+      0, 4, 5, 0, 5, 1,  // Sides
+      1, 5, 6, 1, 6, 2,
+      2, 6, 7, 2, 7, 3,
+      3, 7, 4, 3, 4, 0
+    ] : [
+      0, 2, 1, 0, 3, 2,  // Bottom (trapezoid winding)
       4, 5, 6, 4, 6, 7,  // Top
       0, 1, 5, 0, 5, 4,  // Sides
       1, 2, 6, 1, 6, 5,

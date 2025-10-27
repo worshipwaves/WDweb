@@ -289,35 +289,23 @@
       },
       "width": {
         "id": "width",
-        "type": "select",
+        "type": "range",
         "label": "Width",
         "state_path": "frame_design.finish_x",
-        "show_when": {"shape": ["rectangular", "diamond"]},
-        "options": [
-          {"value": 20, "label": "20\""},
-          {"value": 24, "label": "24\""},
-          {"value": 36, "label": "36\""},
-          {"value": 48, "label": "48\""},
-          {"value": 60, "label": "60\""},
-					{"value": 72, "label": "72\""},
-					{"value": 84, "label": "84\""}
-        ]
+        "min": 12,
+        "max": 84,
+        "step": 1.0,
+        "display_value_id": "widthValue"
       },
       "height": {
         "id": "height",
-        "type": "select",
+        "type": "range",
         "label": "Height",
         "state_path": "frame_design.finish_y",
-        "show_when": {"shape": ["rectangular", "diamond"]},
-        "options": [
-          {"value": 20, "label": "20\""},
-          {"value": 24, "label": "24\""},
-          {"value": 36, "label": "36\""},
-          {"value": 48, "label": "48\""},
-          {"value": 60, "label": "60\""},
-					{"value": 72, "label": "72\""},
-					{"value": 84, "label": "84\""}
-        ]
+        "min": 12,
+        "max": 84,
+        "step": 1.0,
+        "display_value_id": "heightValue"
       },
 			"patternDiameter": {
         "id": "patternDiameter",
@@ -392,6 +380,699 @@
         "invalid_type": "Please upload an audio file (MP3, WAV, or FLAC)",
         "file_too_large": "File size must be less than {max_size}MB",
         "drop_hint": "Drop your audio file here"
+      }
+    }
+  },
+  "thumbnail_config": {
+    "base_path": "/assets/style/thumbnails",
+    "filter_base_path": "/assets/style/filters",
+    "extension": ".png"
+  },
+  "categories": {
+    "style": {
+      "label": "STYLE",
+      "subcategories": {
+        "panel": {
+          "label": "Panel",
+          "filters": {
+            "shape": {
+              "type": "single",
+              "label": "Shape",
+              "ui_state_path": "ui.active_filters.shape",
+              "options": [
+                { "id": "circular", "label": "Circular", "thumbnail": "shape_circular" },
+                { "id": "rectangular", "label": "Rectangular", "thumbnail": "shape_rectangular" },
+                { "id": "diamond", "label": "Diamond", "thumbnail": "shape_diamond" }
+              ],
+              "default": "circular"
+            },
+            "slot_pattern": {
+              "type": "single",
+              "label": "Slot Pattern",
+              "ui_state_path": "ui.active_filters.slot_pattern",
+              "options": [
+                { "id": "radial", "label": "Radial", "thumbnail": "pattern_radial" },
+                { "id": "linear", "label": "Linear", "thumbnail": "pattern_linear" }
+              ],
+              "default": "radial"
+            }
+          },
+          "options": {
+            "number_sections": {
+              "label": "Number of Sections",
+              "validation_rules": {
+                "circular_radial": [1, 2, 3, 4],
+                "circular_linear": [1, 2],
+                "rectangular_radial": [1, 2, 4],
+                "rectangular_linear": [1, 2, 3, 4],
+                "diamond_radial": [1, 2, 4],
+                "diamond_linear": [1, 2]
+              },
+              "thumbnails": {
+                "circular_radial_n1": {
+                  "label": "Circular Radial - 1 Section",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "circular",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 1,
+                    "frame_design.paired_composition": false,
+                    "frame_design.finish_x": 36.0,
+                    "frame_design.finish_y": 36.0
+                  }
+                },
+                "circular_radial_n2": {
+                  "label": "Circular Radial - 2 Sections",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "circular",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": false,
+                    "frame_design.finish_x": 36.0,
+                    "frame_design.finish_y": 36.0
+                  }
+                },
+                "circular_radial_n3": {
+                  "label": "Circular Radial - 3 Sections",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "circular",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 3,
+                    "frame_design.paired_composition": false,
+                    "frame_design.finish_x": 36.0,
+                    "frame_design.finish_y": 36.0
+                  }
+                },
+                "circular_radial_n4": {
+                  "label": "Circular Radial - 4 Sections",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "circular",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 4,
+                    "frame_design.paired_composition": false,
+                    "frame_design.finish_x": 36.0,
+                    "frame_design.finish_y": 36.0
+                  }
+                },
+                "circular_radial_paired_36_left": {
+                  "label": "Paired 36\"/30\" - Taller Left",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "circular",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 36,
+                    "frame_design.secondary_height": 30,
+                    "frame_design.installation_gap": 3,
+                    "frame_design.orientation": "taller_left",
+                    "frame_design.separation": 0,
+                    "frame_design.finish_x": 36.0,
+                    "frame_design.finish_y": 36.0
+                  }
+                },
+                "circular_radial_paired_36_right": {
+                  "label": "Paired 36\"/30\" - Taller Right",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "circular",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 36,
+                    "frame_design.secondary_height": 30,
+                    "frame_design.installation_gap": 3,
+                    "frame_design.orientation": "taller_right",
+                    "frame_design.separation": 0,
+                    "frame_design.finish_x": 36.0,
+                    "frame_design.finish_y": 36.0
+                  }
+                },
+                "circular_radial_paired_42_left": {
+                  "label": "Paired 42\"/35\" - Taller Left",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "circular",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 42,
+                    "frame_design.secondary_height": 35,
+                    "frame_design.installation_gap": 3.5,
+                    "frame_design.orientation": "taller_left",
+                    "frame_design.separation": 0,
+                    "frame_design.finish_x": 36.0,
+                    "frame_design.finish_y": 36.0
+                  }
+                },
+                "circular_radial_paired_42_right": {
+                  "label": "Paired 42\"/35\" - Taller Right",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "circular",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 42,
+                    "frame_design.secondary_height": 35,
+                    "frame_design.installation_gap": 3.5,
+                    "frame_design.orientation": "taller_right",
+                    "frame_design.separation": 0,
+                    "frame_design.finish_x": 36.0,
+                    "frame_design.finish_y": 36.0
+                  }
+                },
+                "circular_linear_n1": {
+                  "label": "Circular Linear - 1 Section",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "circular",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 1,
+                    "frame_design.paired_composition": false,
+                    "frame_design.finish_x": 36.0,
+                    "frame_design.finish_y": 36.0
+                  }
+                },
+                "circular_linear_n2": {
+                  "label": "Circular Linear - 2 Sections",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "circular",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": false,
+                    "frame_design.finish_x": 36.0,
+                    "frame_design.finish_y": 36.0
+                  }
+                },
+                "circular_linear_paired_36_left": {
+                  "label": "Paired 36\"/30\" - Taller Left",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "circular",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 36,
+                    "frame_design.secondary_height": 30,
+                    "frame_design.installation_gap": 3,
+                    "frame_design.orientation": "taller_left",
+                    "frame_design.separation": 0,
+                    "frame_design.finish_x": 36.0,
+                    "frame_design.finish_y": 36.0
+                  }
+                },
+                "circular_linear_paired_36_right": {
+                  "label": "Paired 36\"/30\" - Taller Right",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "circular",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 36,
+                    "frame_design.secondary_height": 30,
+                    "frame_design.installation_gap": 3,
+                    "frame_design.orientation": "taller_right",
+                    "frame_design.separation": 0,
+                    "frame_design.finish_x": 36.0,
+                    "frame_design.finish_y": 36.0
+                  }
+                },
+                "circular_linear_paired_42_left": {
+                  "label": "Paired 42\"/35\" - Taller Left",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "circular",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 42,
+                    "frame_design.secondary_height": 35,
+                    "frame_design.installation_gap": 3.5,
+                    "frame_design.orientation": "taller_left",
+                    "frame_design.separation": 0,
+                    "frame_design.finish_x": 36.0,
+                    "frame_design.finish_y": 36.0
+                  }
+                },
+                "circular_linear_paired_42_right": {
+                  "label": "Paired 42\"/35\" - Taller Right",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "circular",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 42,
+                    "frame_design.secondary_height": 35,
+                    "frame_design.installation_gap": 3.5,
+                    "frame_design.orientation": "taller_right",
+                    "frame_design.separation": 0,
+                    "frame_design.finish_x": 36.0,
+                    "frame_design.finish_y": 36.0
+                  }
+                },
+                "rectangular_radial_n1": {
+                  "label": "Rectangular Radial - 1 Section",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "rectangular",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 1,
+                    "frame_design.paired_composition": false
+                  }
+                },
+                "rectangular_radial_n2": {
+                  "label": "Rectangular Radial - 2 Sections",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "rectangular",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": false
+                  }
+                },
+                "rectangular_radial_n4": {
+                  "label": "Rectangular Radial - 4 Sections",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "rectangular",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 4,
+                    "frame_design.paired_composition": false
+                  }
+                },
+                "rectangular_radial_paired_36_left": {
+                  "label": "Paired 36\"/30\" - Taller Left",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "rectangular",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 36,
+                    "frame_design.secondary_height": 30,
+                    "frame_design.installation_gap": 3,
+                    "frame_design.orientation": "taller_left",
+                    "frame_design.separation": 0
+                  }
+                },
+                "rectangular_radial_paired_36_right": {
+                  "label": "Paired 36\"/30\" - Taller Right",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "rectangular",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 36,
+                    "frame_design.secondary_height": 30,
+                    "frame_design.installation_gap": 3,
+                    "frame_design.orientation": "taller_right",
+                    "frame_design.separation": 0
+                  }
+                },
+                "rectangular_radial_paired_42_left": {
+                  "label": "Paired 42\"/35\" - Taller Left",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "rectangular",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 42,
+                    "frame_design.secondary_height": 35,
+                    "frame_design.installation_gap": 3.5,
+                    "frame_design.orientation": "taller_left",
+                    "frame_design.separation": 0
+                  }
+                },
+                "rectangular_radial_paired_42_right": {
+                  "label": "Paired 42\"/35\" - Taller Right",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "rectangular",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 42,
+                    "frame_design.secondary_height": 35,
+                    "frame_design.installation_gap": 3.5,
+                    "frame_design.orientation": "taller_right",
+                    "frame_design.separation": 0
+                  }
+                },
+                "rectangular_linear_n1": {
+                  "label": "Rectangular Linear - 1 Section",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "rectangular",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 1,
+                    "frame_design.paired_composition": false
+                  }
+                },
+                "rectangular_linear_n2": {
+                  "label": "Rectangular Linear - 2 Sections (Side-by-Side)",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "rectangular",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": false
+                  }
+                },
+                "rectangular_linear_n3": {
+                  "label": "Rectangular Linear - 3 Sections (Side-by-Side)",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "rectangular",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 3,
+                    "frame_design.paired_composition": false
+                  }
+                },
+                "rectangular_linear_n4": {
+                  "label": "Rectangular Linear - 4 Sections (Side-by-Side)",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "rectangular",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 4,
+                    "frame_design.paired_composition": false
+                  }
+                },
+                "rectangular_linear_paired_36_left": {
+                  "label": "Paired 36\"/30\" - Taller Left",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "rectangular",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 36,
+                    "frame_design.secondary_height": 30,
+                    "frame_design.installation_gap": 3,
+                    "frame_design.orientation": "taller_left",
+                    "frame_design.separation": 0
+                  }
+                },
+                "rectangular_linear_paired_36_right": {
+                  "label": "Paired 36\"/30\" - Taller Right",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "rectangular",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 36,
+                    "frame_design.secondary_height": 30,
+                    "frame_design.installation_gap": 3,
+                    "frame_design.orientation": "taller_right",
+                    "frame_design.separation": 0
+                  }
+                },
+                "rectangular_linear_paired_42_left": {
+                  "label": "Paired 42\"/35\" - Taller Left",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "rectangular",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 42,
+                    "frame_design.secondary_height": 35,
+                    "frame_design.installation_gap": 3.5,
+                    "frame_design.orientation": "taller_left",
+                    "frame_design.separation": 0
+                  }
+                },
+                "rectangular_linear_paired_42_right": {
+                  "label": "Paired 42\"/35\" - Taller Right",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "rectangular",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 42,
+                    "frame_design.secondary_height": 35,
+                    "frame_design.installation_gap": 3.5,
+                    "frame_design.orientation": "taller_right",
+                    "frame_design.separation": 0
+                  }
+                },
+                "diamond_radial_n1": {
+                  "label": "Diamond Radial - 1 Section",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "diamond",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 1,
+                    "frame_design.paired_composition": false
+                  }
+                },
+                "diamond_radial_n2": {
+                  "label": "Diamond Radial - 2 Sections",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "diamond",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": false
+                  }
+                },
+                "diamond_radial_n4": {
+                  "label": "Diamond Radial - 4 Sections",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "diamond",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 4,
+                    "frame_design.paired_composition": false
+                  }
+                },
+                "diamond_radial_paired_36_left": {
+                  "label": "Paired 36\"/30\" - Taller Left",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "diamond",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 36,
+                    "frame_design.secondary_height": 30,
+                    "frame_design.installation_gap": 3,
+                    "frame_design.orientation": "taller_left",
+                    "frame_design.separation": 0
+                  }
+                },
+                "diamond_radial_paired_36_right": {
+                  "label": "Paired 36\"/30\" - Taller Right",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "diamond",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 36,
+                    "frame_design.secondary_height": 30,
+                    "frame_design.installation_gap": 3,
+                    "frame_design.orientation": "taller_right",
+                    "frame_design.separation": 0
+                  }
+                },
+                "diamond_radial_paired_42_left": {
+                  "label": "Paired 42\"/35\" - Taller Left",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "diamond",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 42,
+                    "frame_design.secondary_height": 35,
+                    "frame_design.installation_gap": 3.5,
+                    "frame_design.orientation": "taller_left",
+                    "frame_design.separation": 0
+                  }
+                },
+                "diamond_radial_paired_42_right": {
+                  "label": "Paired 42\"/35\" - Taller Right",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "diamond",
+                    "pattern_settings.slot_style": "radial",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 42,
+                    "frame_design.secondary_height": 35,
+                    "frame_design.installation_gap": 3.5,
+                    "frame_design.orientation": "taller_right",
+                    "frame_design.separation": 0
+                  }
+                },
+                "diamond_linear_n1": {
+                  "label": "Diamond Linear - 1 Section",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "diamond",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 1,
+                    "frame_design.paired_composition": false
+                  }
+                },
+                "diamond_linear_n2": {
+                  "label": "Diamond Linear - 2 Sections",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "diamond",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": false
+                  }
+                },
+                "diamond_linear_paired_36_left": {
+                  "label": "Paired 36\"/30\" - Taller Left",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "diamond",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 36,
+                    "frame_design.secondary_height": 30,
+                    "frame_design.installation_gap": 3,
+                    "frame_design.orientation": "taller_left",
+                    "frame_design.separation": 0
+                  }
+                },
+                "diamond_linear_paired_36_right": {
+                  "label": "Paired 36\"/30\" - Taller Right",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "diamond",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 36,
+                    "frame_design.secondary_height": 30,
+                    "frame_design.installation_gap": 3,
+                    "frame_design.orientation": "taller_right",
+                    "frame_design.separation": 0
+                  }
+                },
+                "diamond_linear_paired_42_left": {
+                  "label": "Paired 42\"/35\" - Taller Left",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "diamond",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 42,
+                    "frame_design.secondary_height": 35,
+                    "frame_design.installation_gap": 3.5,
+                    "frame_design.orientation": "taller_left",
+                    "frame_design.separation": 0
+                  }
+                },
+                "diamond_linear_paired_42_right": {
+                  "label": "Paired 42\"/35\" - Taller Right",
+                  "tooltip": "This is a tooltip",
+                  "state_updates": {
+                    "frame_design.shape": "diamond",
+                    "pattern_settings.slot_style": "linear",
+                    "frame_design.number_sections": 2,
+                    "frame_design.paired_composition": true,
+                    "frame_design.primary_height": 42,
+                    "frame_design.secondary_height": 35,
+                    "frame_design.installation_gap": 3.5,
+                    "frame_design.orientation": "taller_right",
+                    "frame_design.separation": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "assembled": {
+          "label": "Assembled",
+          "note": "Future implementation - multi-panel assembly",
+          "filters": {},
+          "options": {}
+        }
+      }
+    },
+    "layout": {
+      "label": "LAYOUT",
+      "subcategories": {
+        "positioning": {
+          "label": "Positioning",
+          "filters": {},
+          "options": {
+            "main": {
+              "type": "slider_group",
+              "element_keys": ["width", "height", "separation", "slots"]
+            }
+          }
+        }
+      }
+    },
+    "wood": {
+      "label": "WOOD",
+      "subcategories": {
+        "material": {
+          "label": "Material",
+          "filters": {},
+          "options": {
+            "main": {
+              "type": "wood_material_inline_grid"
+            }
+          }
+        }
+      }
+    },
+    "audio": {
+      "label": "AUDIO",
+      "subcategories": {
+        "tour": {
+          "label": "Tour",
+          "note": "Experience Amazing Grace with instant preview (Asset library coming in Phase 6)",
+          "filters": {},
+          "options": {}
+        },
+        "library": {
+          "label": "Library",
+          "note": "Browse curated hymns, prayers, scriptures, and blessings (Asset library coming in Phase 6)",
+          "filters": {},
+          "options": {}
+        },
+        "upload": {
+          "label": "Upload",
+          "filters": {},
+          "options": {
+            "file_upload": {
+              "type": "upload_interface"
+            }
+          }
+        }
+      }
+    },
+    "backing": {
+      "label": "BACKING",
+      "subcategories": {
+        "material": {
+          "label": "Material",
+          "note": "Backing options coming soon",
+          "filters": {},
+          "options": {}
+        }
       }
     }
   }

@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-
 export const SectionMaterialSchema = z.object({
   section_id: z.number().int().min(0).max(3),
   species: z.string(),
@@ -230,6 +229,7 @@ export const CSGDataResponseSchema = z.object({
     separation: z.number(),
     number_sections: z.number(),
     shape: z.string().optional(),
+		slot_style: z.string().optional(),
   }),
   slot_data: z.array(z.object({
     vertices: z.array(z.array(z.number())).optional(),
@@ -291,6 +291,101 @@ export const UIStateSchema = z.object({
 });
 
 export type UIState = z.infer<typeof UIStateSchema>;
+
+// ============================================================================
+// FOUR-PANEL ARCHITECTURE SCHEMAS (STYLE Category Config)
+// ============================================================================
+
+/**
+ * Thumbnail configuration schema
+ */
+export const ThumbnailConfigSchema = z.object({
+  base_path: z.string(),
+  filter_base_path: z.string(),
+  extension: z.string()
+});
+
+/**
+ * Filter option schema
+ */
+export const FilterOptionSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  thumbnail: z.string()
+});
+
+/**
+ * Filter configuration schema
+ */
+export const FilterConfigSchema = z.object({
+  type: z.enum(['single', 'stack']),
+  label: z.string(),
+  ui_state_path: z.string(),
+  options: z.array(FilterOptionSchema),
+  default: z.string()
+});
+
+/**
+ * State updates schema - flexible record for dotted path notation
+ */
+export const StateUpdatesSchema = z.record(
+  z.string(),
+  z.union([z.string(), z.number(), z.boolean()])
+);
+
+/**
+ * Thumbnail option configuration schema
+ */
+export const ThumbnailOptionConfigSchema = z.object({
+  label: z.string(),
+  tooltip: z.string(),
+  state_updates: StateUpdatesSchema
+});
+
+/**
+ * Options configuration schema
+ */
+export const OptionsConfigSchema = z.object({
+  label: z.string(),
+  validation_rules: z.record(z.string(), z.array(z.number())),
+  thumbnails: z.record(z.string(), ThumbnailOptionConfigSchema)
+});
+
+/**
+ * Subcategory configuration schema
+ */
+export const SubcategoryConfigSchema = z.object({
+  label: z.string(),
+  note: z.string().optional(),
+  filters: z.record(z.string(), FilterConfigSchema),
+  options: z.record(z.string(), OptionsConfigSchema)
+});
+
+/**
+ * Style category configuration schema
+ */
+export const StyleCategoryConfigSchema = z.object({
+  label: z.string(),
+  subcategories: z.record(z.string(), SubcategoryConfigSchema)
+});
+
+/**
+ * Categories configuration schema
+ */
+export const CategoriesConfigSchema = z.object({
+  style: StyleCategoryConfigSchema
+});
+
+// Type exports
+export type ThumbnailConfig = z.infer<typeof ThumbnailConfigSchema>;
+export type FilterOption = z.infer<typeof FilterOptionSchema>;
+export type FilterConfig = z.infer<typeof FilterConfigSchema>;
+export type StateUpdates = z.infer<typeof StateUpdatesSchema>;
+export type ThumbnailOptionConfig = z.infer<typeof ThumbnailOptionConfigSchema>;
+export type OptionsConfig = z.infer<typeof OptionsConfigSchema>;
+export type SubcategoryConfig = z.infer<typeof SubcategoryConfigSchema>;
+export type StyleCategoryConfig = z.infer<typeof StyleCategoryConfigSchema>;
+export type CategoriesConfig = z.infer<typeof CategoriesConfigSchema>;
 
 // The single, authoritative schema for the entire application state
 export const ApplicationStateSchema = z.object({

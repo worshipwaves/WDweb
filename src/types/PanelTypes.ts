@@ -44,3 +44,183 @@ export interface CSGData {
     section_local_centers: [number, number][];  // Local center [x, y] for each section
     true_min_radius: number;  // Minimum radius where slots begin
 }
+
+// ============================================
+// UI NAVIGATION TYPES (Hero Forge-style panels)
+// ============================================
+
+/**
+ * Configuration for left panel category buttons
+ */
+export interface CategoryConfig {
+  id: string;
+  label: string;
+  icon: string; // Unicode emoji
+  enabled: boolean;
+}
+
+/**
+ * Configuration for panel content routing
+ */
+export interface PanelContentConfig {
+  category: string;
+  component: string;
+  data?: Record<string, unknown>;
+}
+
+/**
+ * Category definitions for left panel navigation
+ */
+export const CATEGORIES: CategoryConfig[] = [
+  { id: 'audio', label: 'Audio', icon: '🎵', enabled: true },
+  { id: 'style', label: 'Style', icon: '🎨', enabled: true },
+  { id: 'layout', label: 'Layout', icon: '📏', enabled: true },
+  { id: 'wood', label: 'Wood', icon: '🪵', enabled: true },
+  { id: 'backing', label: 'Backing', icon: '🖼', enabled: true },
+  { id: 'share', label: 'Share', icon: '📤', enabled: false },
+  { id: 'order', label: 'Order', icon: '🛒', enabled: false }
+];
+
+/**
+ * Base interface for all panel components
+ * Architecture: Components are stateless, render based on input, emit events
+ */
+export interface PanelComponent {
+  /**
+   * Render component to DOM element
+   * @returns HTMLElement with event handlers attached
+   */
+  render(): HTMLElement;
+  
+  /**
+   * Clean up event listeners and DOM references
+   */
+  destroy(): void;
+}
+
+/**
+ * Configuration for thumbnail grid items
+ */
+export interface ThumbnailItem {
+  id: string;
+  label: string;
+  thumbnailUrl?: string;
+  disabled?: boolean;
+}
+
+/**
+ * Configuration for slider controls
+ */
+export interface SliderConfig {
+  id: string;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  value: number;
+  unit?: string;
+}
+
+/**
+ * Configuration for right panel options
+ */
+export interface PanelOption {
+  id: string;
+  label: string;
+  value: string | number;
+  thumbnail?: string;
+  action?: 'select' | 'navigate';
+}
+
+// ============================================================================
+// FOUR-PANEL ARCHITECTURE TYPES (STYLE Category Config)
+// ============================================================================
+
+/**
+ * Configuration for thumbnail paths and extensions
+ */
+export interface ThumbnailConfig {
+  base_path: string;
+  filter_base_path: string;
+  extension: string;
+}
+
+/**
+ * Filter option for Right Secondary panel
+ */
+export interface FilterOption {
+  id: string;
+  label: string;
+  thumbnail: string;
+}
+
+/**
+ * Filter configuration (shape, slot_pattern, etc.)
+ */
+export interface FilterConfig {
+  type: 'single' | 'stack';
+  label: string;
+  ui_state_path: string;
+  options: FilterOption[];
+  default: string;
+}
+
+/**
+ * State updates applied when thumbnail is selected
+ * Uses dotted path notation matching config structure
+ */
+export interface StateUpdates {
+  'frame_design.shape'?: string;
+  'frame_design.number_sections'?: number;
+  'frame_design.paired_composition'?: boolean;
+  'frame_design.primary_height'?: number;
+  'frame_design.secondary_height'?: number;
+  'frame_design.installation_gap'?: number;
+  'frame_design.orientation'?: string;
+  'frame_design.separation'?: number;
+  'pattern_settings.slot_style'?: string;
+  [key: string]: string | number | boolean | undefined;
+}
+
+/**
+ * Individual thumbnail configuration
+ */
+export interface ThumbnailOptionConfig {
+  label: string;
+  tooltip: string;
+  state_updates: StateUpdates;
+}
+
+/**
+ * Options configuration for a subcategory
+ */
+export interface OptionsConfig {
+  label: string;
+  validation_rules: Record<string, number[]>;
+  thumbnails: Record<string, ThumbnailOptionConfig>;
+}
+
+/**
+ * Subcategory configuration (panel, assembled, etc.)
+ */
+export interface SubcategoryConfig {
+  label: string;
+  note?: string;
+  filters: Record<string, FilterConfig>;
+  options: Record<string, OptionsConfig>;
+}
+
+/**
+ * Category configuration (style, audio, etc.)
+ */
+export interface StyleCategoryConfig {
+  label: string;
+  subcategories: Record<string, SubcategoryConfig>;
+}
+
+/**
+ * Top-level categories configuration
+ */
+export interface CategoriesConfig {
+  style: StyleCategoryConfig;
+}

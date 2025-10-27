@@ -7,6 +7,11 @@
  */
 
 import { AudioCacheService } from './AudioCacheService';
+import { PanelStackManager } from './components/PanelStackManager';
+import { RightPanelContentRenderer } from './components/RightPanelContent';
+import { SliderGroup } from './components/SliderGroup';
+import { ThumbnailGrid } from './components/ThumbnailGrid';
+import { WoodMaterialInlineGrid } from './components/WoodMaterialInlineGrid';
 import { PerformanceMonitor } from './PerformanceMonitor';
 import {
   CompositionStateDTO,
@@ -19,6 +24,7 @@ import {
 } from './types/schemas';
 import { fetchAndValidate } from './utils/validation';
 import { WaveformDesignerFacade, Action } from './WaveformDesignerFacade';
+import type { ThumbnailConfig, CategoriesConfig } from './types/PanelTypes';
 
 // Subscriber callback type
 type StateSubscriber = (state: ApplicationState) => void;
@@ -82,6 +88,7 @@ export class ApplicationController {
   private _subscribers: Set<StateSubscriber> = new Set();
   private _autoplayTimer?: number;
   private _hintTimer?: number;
+  private _panelStack: PanelStackManager | null = null;
   private _sceneManager: { 
     renderComposition: (csgData: CSGDataResponse) => Promise<void>;
     applySectionMaterials: () => void;
@@ -91,10 +98,19 @@ export class ApplicationController {
   private _woodMaterialsConfig: WoodMaterialsConfig | null = null;
   private _selectedSectionIndices: Set<number> = new Set();
   private _idleTextureLoader: unknown = null; // IdleTextureLoader instance
+	private _panelStack: PanelStackManager | null = null;
+	
+	// Four-panel navigation state
+  private _activeCategory: string | null = null;
+  private _activeSubcategory: string | null = null;
+  private _activeFilters: Map<string, string> = new Map();
+  private _thumbnailConfig: ThumbnailConfig | null = null;
+  private _categoriesConfig: CategoriesConfig | null = null;
   
   constructor(facade: WaveformDesignerFacade) {
     this._facade = facade;
 		this._audioCache = new AudioCacheService();
+		this._panelStack = new PanelStackManager('right-panel-stack');
   }
 	
 	public get audioCache(): AudioCacheService {
@@ -108,12 +124,31 @@ export class ApplicationController {
     try {
       // Initialize facade (loads style presets)
       await this._facade.initialize();
+			
+			// Initialize panel references (DOM is ready at this point)
+      this._leftSecondaryPanel = document.getElementById('left-secondary-panel');
+      this._rightSecondaryPanel = document.getElementById('right-secondary-panel');
+      this._rightMainPanel = document.getElementById('right-main-panel');
+      
+      if (!this._leftSecondaryPanel || !this._rightSecondaryPanel || !this._rightMainPanel) {
+        console.warn('[Controller] Four-panel DOM elements not found');
+      }
       
       // Load wood materials configuration
       this._woodMaterialsConfig = await fetchAndValidate<WoodMaterialsConfig>(
         'http://localhost:8000/api/config/wood-materials',
         WoodMaterialsConfigSchema
       );
+			
+			// Load thumbnail and categories configuration
+      const defaultParams = await fetch('http://localhost:8000/api/config/default-parameters').then(r => r.json()) as {
+        thumbnail_config?: ThumbnailConfig;
+        categories?: CategoriesConfig;
+      };
+      
+      this._thumbnailConfig = defaultParams.thumbnail_config || null;
+      this._categoriesConfig = defaultParams.categories || null;
+			
     } catch (error: unknown) {
       console.error('[Controller] Failed to load configuration:', error);
     }
@@ -127,6 +162,48 @@ export class ApplicationController {
     if (restored && restored.audio.rawSamples && restored.audio.rawSamples.length > 0) {
       // Deep merge: preserved user settings + new schema fields from defaults
       this._state = this._facade.mergeStates(freshDefaults, restored);
+      
+      // CRITICAL: Scale normalized amplitudes to physical space
+      // Persisted state may contain 0-1 normalized values that need scaling
+      const amps = this._state.composition.processed_amplitudes;
+      if (amps && amps.length > 0) {
+        const maxAmp = Math.max(...amps.map(Math.abs));
+        if (maxAmp > 0 && maxAmp <= 1.5) {
+          console.log(`[Controller] Detected normalized amplitudes (max=${maxAmp.toFixed(4)}), scaling to physical space`);
+          
+          // Call backend to get max_amplitude_local for current geometry
+          const response = await fetch('http://localhost:8000/geometry/csg-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              state: this._state.composition,
+              changed_params: [],
+              previous_max_amplitude: null
+            })
+          });
+          
+          if (response.ok) {
+            const csgData = await response.json() as { max_amplitude_local: number };
+            const maxAmplitudeLocal = csgData.max_amplitude_local;
+            
+            // Scale amplitudes to physical dimensions
+            const scaledAmps = amps.map(a => a * maxAmplitudeLocal);
+            this._state = {
+              ...this._state,
+              composition: {
+                ...this._state.composition,
+                processed_amplitudes: scaledAmps
+              },
+              audio: {
+                ...this._state.audio,
+                previousMaxAmplitude: maxAmplitudeLocal
+              }
+            };
+            
+            console.log(`[Controller] Scaled amplitudes: max=${Math.max(...scaledAmps).toFixed(4)}`);
+          }
+        }
+      }
       
       // Re-cache the raw samples on load
       if (this._state.audio.audioSessionId) {
@@ -144,6 +221,9 @@ export class ApplicationController {
     }
     
     this.notifySubscribers();
+    
+    // Update panels based on new state
+    this.handlePanelUpdates(this._state);
   }
   
   /**
@@ -519,6 +599,579 @@ export class ApplicationController {
     this._subscribers.forEach(callback => {
       callback(this._state!);
     });
+  }
+	
+	/**
+   * Handle panel updates based on state changes
+   * Called automatically when state changes affect UI
+   */
+  private handlePanelUpdates(state: ApplicationState): void {
+    if (!this._panelStack) return;
+    
+    // Clear panels on phase change
+    if (state.ui.phase === 'upload') {
+      this._panelStack.clearStack();
+    }
+  }
+	
+	/**
+   * Handle category selection from left panel
+   * Clears right panel stack and renders category-specific content
+   */
+  handleCategorySelected(categoryId: string): void {
+    if (!this._panelStack || !this._state) return;
+    
+    this._activeCategory = categoryId;
+    this._activeSubcategory = null;
+    this._activeFilters.clear();
+    
+    // All categories now use the four-panel architecture
+    this._handleStyleCategorySelected();
+  }
+  
+  /**
+   * Handle STYLE category selection (four-panel architecture)
+   * @private
+   */
+  private _handleStyleCategorySelected(): void {
+    if (!this._categoriesConfig || !this._activeCategory || !this._thumbnailConfig) return;
+    const categoryConfig = this._categoriesConfig[this._activeCategory as keyof CategoriesConfig];
+    if (!categoryConfig) return;
+    
+    // Hide legacy panel stack
+    if (this._panelStack) {
+      this._panelStack.clearStack();
+    }
+    const stackContainer = document.getElementById('right-panel-stack');
+    if (stackContainer) {
+      stackContainer.style.display = 'none';
+    }
+    
+    const subcategories = Object.entries(categoryConfig.subcategories).map(([id, config]) => ({ id, config }));
+
+    if (subcategories.length === 1) {
+      // Auto-select single subcategory, hide secondary panel
+      if (this._leftSecondaryPanel) {
+        this._leftSecondaryPanel.style.display = 'none';
+        this._leftSecondaryPanel.classList.remove('visible');
+      }
+      this._handleSubcategorySelected(subcategories[0].id);
+    } else if (subcategories.length > 1) {
+      // Show placeholder and subcategory choices for multiple options
+      if (this._rightMainPanel) {
+        this._rightMainPanel.innerHTML = '<div class="panel-content"><div style="padding: 40px 20px; text-align: center; color: rgba(255, 255, 255, 0.6);"><div style="font-size: 48px; margin-bottom: 16px;">←</div><div style="font-size: 16px; font-weight: 500;">Select a subcategory</div></div></div>';
+        this._rightMainPanel.style.display = 'block';
+      }
+      import('./components/LeftSecondaryPanel').then(({ LeftSecondaryPanel }) => {
+        const panel = new LeftSecondaryPanel(subcategories, this._activeSubcategory, (id: string) => this._handleSubcategorySelected(id));
+        if (this._leftSecondaryPanel) {
+          this._leftSecondaryPanel.innerHTML = '';
+          this._leftSecondaryPanel.appendChild(panel.render());
+          this._leftSecondaryPanel.style.display = 'block';
+          this._leftSecondaryPanel.classList.add('visible');
+        }
+      }).catch((error: unknown) => console.error('[Controller] Failed to load LeftSecondaryPanel:', error));
+    } else {
+      // No subcategories found, show placeholder
+      if (this._leftSecondaryPanel) {
+        this._leftSecondaryPanel.style.display = 'none';
+        this._leftSecondaryPanel.classList.remove('visible');
+      }
+      if (this._rightMainPanel) {
+        this._rightMainPanel.innerHTML = '<div class="panel-content"><div class="panel-placeholder"><p>No options available for this category yet.</p></div></div>';
+        this._rightMainPanel.style.display = 'block';
+      }
+    }
+  }
+  
+  /**
+   * Handle subcategory selection (Left Secondary → Right Secondary + Right Main)
+   * @private
+   */
+  private _handleSubcategorySelected(subcategoryId: string): void {
+    if (!this._categoriesConfig || !this._activeCategory) return;
+    const categoryConfig = this._categoriesConfig[this._activeCategory as keyof CategoriesConfig];
+    if (!categoryConfig) return;
+
+    this._activeSubcategory = subcategoryId;
+
+    const subcategory = categoryConfig.subcategories[subcategoryId];
+    if (!subcategory) return;
+    
+    // Initialize filters to defaults
+    Object.entries(subcategory.filters).forEach(([filterId, filterConfig]) => {
+      this._activeFilters.set(filterId, filterConfig.default);
+    });
+    
+    // Render right secondary panel (filters) if they exist
+    const filters = Object.entries(subcategory.filters).map(([id, config]) => ({ id, config }));
+    if (filters.length > 0 && this._rightSecondaryPanel && this._thumbnailConfig) {
+      import('./components/RightSecondaryPanel').then(({ RightSecondaryPanel }) => {
+        const panel = new RightSecondaryPanel(
+          filters,
+          this._activeFilters,
+          this._thumbnailConfig!,
+          (filterId: string, value: string) => this._handleFilterSelected(filterId, value)
+        );
+        this._rightSecondaryPanel!.innerHTML = '';
+        this._rightSecondaryPanel!.appendChild(panel.render());
+        this._rightSecondaryPanel!.style.display = 'block';
+        this._rightSecondaryPanel!.classList.add('visible');
+      });
+    } else if (this._rightSecondaryPanel) {
+      // Hide if no filters
+      this._rightSecondaryPanel.style.display = 'none';
+      this._rightSecondaryPanel.classList.remove('visible');
+    }
+
+    // Always render the main panel after subcategory selection
+    this._renderRightMainFiltered();
+  }
+  
+  /**
+   * Handle filter selection (Right Secondary → updates Right Main display only)
+   * CRITICAL: Does NOT update composition state
+   * @private
+   */
+  private _handleFilterSelected(filterId: string, value: string): void {
+    if (!this._activeSubcategory) return;
+    
+    // Update filter selection (transient display state)
+    this._activeFilters.set(filterId, value);
+    
+    // Re-render Right Secondary panel to show updated selection state
+    if (this._rightSecondaryPanel && this._thumbnailConfig && this._categoriesConfig && this._activeCategory && this._activeSubcategory) {
+      const categoryConfig = this._categoriesConfig[this._activeCategory as keyof CategoriesConfig];
+      const subcategory = categoryConfig?.subcategories[this._activeSubcategory];
+      if (subcategory) {
+        const filters = Object.entries(subcategory.filters).map(([id, config]) => ({ id, config }));
+        import('./components/RightSecondaryPanel').then(({ RightSecondaryPanel }) => {
+          const panel = new RightSecondaryPanel(
+            filters,
+            this._activeFilters,
+            this._thumbnailConfig!,
+            (filterId: string, value: string) => this._handleFilterSelected(filterId, value)
+          );
+          this._rightSecondaryPanel!.innerHTML = '';
+          this._rightSecondaryPanel!.appendChild(panel.render());
+        });
+      }
+    }
+    
+    // Re-render Right Main with new filter combination
+    this._renderRightMainFiltered();
+    
+    // NO dispatch() call - filters don't update composition state
+  }
+  
+  /**
+   * Render Right Main panel with current filter combination
+   * @private
+   */
+  private _renderRightMainFiltered(): void {
+    if (!this._categoriesConfig || !this._activeCategory || !this._activeSubcategory || !this._rightMainPanel) return;
+
+    const categoryConfig = this._categoriesConfig[this._activeCategory as keyof CategoriesConfig];
+    const subcategory = categoryConfig?.subcategories[this._activeSubcategory];
+    if (!subcategory) return;
+
+    this._rightMainPanel.innerHTML = '';
+    const panelContent = document.createElement('div');
+    panelContent.className = 'panel-content';
+
+    // Check for a placeholder note
+    if (subcategory.note) {
+      panelContent.innerHTML = `<div class="panel-placeholder"><p>${subcategory.note}</p></div>`;
+      this._rightMainPanel.appendChild(panelContent);
+      return;
+    }
+
+    // Generic content rendering
+    const optionKey = Object.keys(subcategory.options)[0];
+    const optionConfig = subcategory.options[optionKey];
+
+    if (optionConfig) {
+      switch (optionConfig.type) {
+        case 'slider_group': {
+          const sliderConfigs = (optionConfig.element_keys || []).map(key => {
+            const elConfig = window.uiEngine?.getElementConfig(key);
+            const value = window.uiEngine?.getStateValue(this._state!.composition, elConfig!.state_path) as number;
+            return {
+              id: key,
+              label: elConfig!.label,
+              min: elConfig!.min!,
+              max: elConfig!.max!,
+              step: elConfig!.step!,
+              value: value ?? elConfig!.min!,
+              unit: '"',
+            };
+          });
+          const sliderGroup = new SliderGroup(
+            sliderConfigs,
+            (id, value) => {
+              void this._updateStateValue(id, value);
+            },
+            this._state!.composition.frame_design.number_sections
+          );
+          panelContent.appendChild(sliderGroup.render());
+          break;
+        }
+
+        case 'wood_material_inline_grid': {
+          if (this._woodMaterialsConfig) {
+            // Create header
+            const header = document.createElement('div');
+            header.className = 'panel-header';
+            header.innerHTML = '<h3>Wood Material</h3>';
+            panelContent.appendChild(header);
+            
+            // Create body
+            const body = document.createElement('div');
+            body.className = 'panel-body';
+            panelContent.appendChild(body);
+            
+            // Render grid into body
+            const { species, grain_direction } = this._state!.composition.frame_design.section_materials[0] || {};
+            const grid = new WoodMaterialInlineGrid(
+              this._woodMaterialsConfig.species_catalog,
+              this._state!.composition.frame_design.shape,
+              this._state!.composition.frame_design.number_sections,
+              species || this._woodMaterialsConfig.default_species,
+              grain_direction || this._woodMaterialsConfig.default_grain_direction,
+              (selectedSpecies, selectedGrain) => {
+                void this._updateWoodMaterial('species', selectedSpecies);
+                void this._updateWoodMaterial('grain_direction', selectedGrain);
+              }
+            );
+            body.appendChild(grid.render());
+          }
+          break;
+        }
+				
+        case 'upload_interface': {
+          // Create header
+          const header = document.createElement('div');
+          header.className = 'panel-header';
+          header.innerHTML = '<h3>Upload Audio</h3>';
+          panelContent.appendChild(header);
+          
+          // Create body with upload controls
+          const body = document.createElement('div');
+          body.className = 'panel-body';
+          body.style.display = 'flex';
+          body.style.flexDirection = 'column';
+          body.style.gap = '16px';
+          body.style.padding = '20px';
+          
+          // Create file input (hidden)
+          const fileInput = document.createElement('input');
+          fileInput.type = 'file';
+          fileInput.accept = 'audio/*';
+          fileInput.style.display = 'none';
+          body.appendChild(fileInput);
+          
+          // Create upload button
+          const uploadButton = document.createElement('button');
+          uploadButton.className = 'upload-button';
+          uploadButton.style.padding = '16px 24px';
+          uploadButton.style.fontSize = '16px';
+          uploadButton.style.fontWeight = '500';
+          uploadButton.style.backgroundColor = 'rgba(100, 150, 255, 0.2)';
+          uploadButton.style.border = '2px solid rgba(100, 150, 255, 0.5)';
+          uploadButton.style.borderRadius = '8px';
+          uploadButton.style.color = 'rgba(255, 255, 255, 0.9)';
+          uploadButton.style.cursor = 'pointer';
+          uploadButton.style.transition = 'all 0.2s ease';
+          uploadButton.innerHTML = '📁 Choose Audio File';
+          uploadButton.addEventListener('click', () => fileInput.click());
+          body.appendChild(uploadButton);
+          
+          // Create drop zone
+          const dropZone = document.createElement('div');
+          dropZone.style.padding = '40px 20px';
+          dropZone.style.border = '2px dashed rgba(255, 255, 255, 0.3)';
+          dropZone.style.borderRadius = '8px';
+          dropZone.style.textAlign = 'center';
+          dropZone.style.color = 'rgba(255, 255, 255, 0.6)';
+          dropZone.style.cursor = 'pointer';
+          dropZone.innerHTML = '<div style="font-size: 48px; margin-bottom: 16px;">⬆️</div><div>Or drag and drop your audio file here</div><div style="margin-top: 8px; font-size: 12px; opacity: 0.7;">Supported formats: MP3, WAV, FLAC, M4A</div>';
+          dropZone.addEventListener('click', () => fileInput.click());
+          body.appendChild(dropZone);
+          
+          // File input change handler
+          fileInput.addEventListener('change', (e) => {
+            const target = e.target as HTMLInputElement;
+            if (target.files && target.files.length > 0) {
+              const currentState = this.getState();
+              const uiComposition = currentState.composition;
+              void this.dispatch({ 
+                type: 'FILE_UPLOADED', 
+                payload: { file: target.files[0], uiSnapshot: uiComposition }
+              });
+            }
+          });
+          
+          // Drag and drop handlers
+          dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.style.borderColor = 'rgba(100, 150, 255, 0.8)';
+            dropZone.style.backgroundColor = 'rgba(100, 150, 255, 0.1)';
+          });
+          
+          dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+            dropZone.style.backgroundColor = 'transparent';
+          });
+          
+          dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+            dropZone.style.backgroundColor = 'transparent';
+            
+            if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+              const currentState = this.getState();
+              const uiComposition = currentState.composition;
+              void this.dispatch({ 
+                type: 'FILE_UPLOADED', 
+                payload: { file: e.dataTransfer.files[0], uiSnapshot: uiComposition }
+              });
+            }
+          });
+          
+          panelContent.appendChild(body);
+          break;
+        }				
+
+        // Default to ThumbnailGrid for "Style" category
+        default: {
+          const filterKey = Array.from(this._activeFilters.values()).join('_');
+          const validNValues = optionConfig.validation_rules?.[filterKey] || [];
+          const allThumbnails = optionConfig.thumbnails || {};
+
+          const thumbnailItems = Object.entries(allThumbnails)
+            .filter(([key]) => key.startsWith(filterKey))
+            .map(([key, config]) => ({
+              id: key,
+              label: config.label,
+              thumbnailUrl: `${this._thumbnailConfig!.base_path}/${key}${this._thumbnailConfig!.extension}`,
+              disabled: !validNValues.includes(config.state_updates['frame_design.number_sections'] as number),
+            }));
+
+          const thumbnailGrid = new ThumbnailGrid(
+            thumbnailItems,
+            (id) => this._handleThumbnailSelected(id),
+            null // Active selection logic can be added later
+          );
+          panelContent.appendChild(thumbnailGrid.render());
+          break;
+        }
+      }
+    }
+
+    this._rightMainPanel.appendChild(panelContent);
+  }
+  
+  /**
+   * Handle thumbnail selection (Right Main → updates composition state)
+   * Applies state_updates from config
+   * @private
+   */
+  private async _handleThumbnailSelected(thumbnailKey: string): Promise<void> {
+    if (!this._categoriesConfig?.style || !this._activeSubcategory || !this._state) return;
+    
+    const subcategory = this._categoriesConfig.style.subcategories[this._activeSubcategory];
+    const thumbnail = subcategory.options.number_sections?.thumbnails[thumbnailKey];
+    
+    if (!thumbnail) return;
+    
+    // Apply all state_updates from config
+    const newComposition = structuredClone(this._state.composition);
+    
+    Object.entries(thumbnail.state_updates).forEach(([path, value]) => {
+      this._setNestedValue(newComposition, path, value);
+    });
+    
+    // Trigger rendering pipeline directly
+    await this.handleCompositionUpdate(newComposition);
+  }
+
+  /**
+   * Handle option selection from right panel
+   * @private
+   */
+  private _handleOptionSelected(
+    option: string,
+    value: unknown,
+    contentRenderer: RightPanelContentRenderer,
+    uiConfig: { elements: Record<string, unknown> }
+  ): void {
+    if (!this._panelStack || !this._state) return;
+
+    // Handle navigation to cascading panels
+    if (option === 'navigate') {
+      this._handleNavigation(value as string, contentRenderer, uiConfig);
+      return;
+    }
+
+    // Handle direct state updates
+    void this._updateStateValue(option, value);
+  }
+	
+	/**
+   * Update state value and trigger re-render
+   * @private
+   */
+  private async _updateStateValue(option: string, value: unknown): Promise<void> {
+    if (!this._state) return;
+
+    // Create updated composition
+    const newComposition = structuredClone(this._state.composition);
+
+    // Map option names to state paths
+    const statePathMap: Record<string, string> = {
+      shape: 'frame_design.shape',
+      number_sections: 'frame_design.number_sections',
+      finish_x: 'frame_design.finish_x',
+      finish_y: 'frame_design.finish_y',
+      diameter: 'frame_design.finish_x',
+      size: 'frame_design.finish_x', // Alias for UI sliders
+			width: 'frame_design.finish_x',
+      height: 'frame_design.finish_y',
+      separation: 'frame_design.separation',
+      slots: 'pattern_settings.number_slots',
+    };
+
+    const statePath = statePathMap[option];
+    
+    if (statePath) {
+      // Update nested property
+      this._setNestedValue(newComposition, statePath, value);
+      
+      // Special handling: 'size' updates both dimensions for circular/square panels
+      if (option === 'size' || option === 'diameter') {
+        this._setNestedValue(newComposition, 'frame_design.finish_y', value);
+      }
+      
+      // Special handling: circular shapes require finish_x === finish_y
+      const shape = newComposition.frame_design?.shape;
+      if (shape === 'circular') {
+        if (option === 'width') {
+          this._setNestedValue(newComposition, 'frame_design.finish_y', value);
+        } else if (option === 'height') {
+          this._setNestedValue(newComposition, 'frame_design.finish_x', value);
+        }
+      }
+      
+      // Trigger rendering pipeline directly
+      await this.handleCompositionUpdate(newComposition);
+    }
+  }
+	
+	/**
+   * Set nested object value using dot notation path
+   * @private
+   */
+  private _setNestedValue(
+    obj: Record<string, unknown>,
+    path: string,
+    value: unknown
+  ): void {
+    const parts = path.split('.');
+    let current: Record<string, unknown> = obj;
+    
+    for (let i = 0; i < parts.length - 1; i++) {
+      const part = parts[i];
+      if (!(part in current) || typeof current[part] !== 'object' || current[part] === null) {
+        current[part] = {};
+      }
+      current = current[part] as Record<string, unknown>;
+    }
+    
+    const lastPart = parts[parts.length - 1];
+    current[lastPart] = value;
+  }
+	
+	/**
+   * Update wood material properties (species or grain_direction)
+   * Applies to all sections or selected sections
+   * @private
+   */
+  private async _updateWoodMaterial(
+    property: 'species' | 'grain_direction',
+    value: string
+  ): Promise<void> {
+    if (!this._state) return;
+
+    const newComposition = structuredClone(this._state.composition);
+    
+    // Type-safe access to section_materials
+    interface SectionMaterial {
+      section_id: number;
+      species: string;
+      grain_direction: string;
+    }
+    
+    const materials = (newComposition.frame_design.section_materials as unknown as SectionMaterial[]) || [];
+    
+    // Update all sections (TODO: respect section selection in future)
+    materials.forEach(material => {
+      material[property] = value;
+    });
+    
+    // Trigger rendering pipeline directly
+    await this.handleCompositionUpdate(newComposition);
+  }
+
+  /**
+   * Handle navigation to cascading panels
+   * @private
+   */
+  private _handleNavigation(
+    target: string,
+    contentRenderer: RightPanelContentRenderer,
+    uiConfig: { elements: Record<string, unknown> }
+  ): void {
+    if (!this._panelStack || !this._state) return;
+
+    switch (target) {
+      case 'species': {
+        const panel = contentRenderer.renderWoodSpeciesPanel(
+          this._state.composition,
+          uiConfig,
+          (species: string) => {
+            void this._updateWoodMaterial('species', species);
+            this._panelStack?.popPanel();
+          },
+          () => {
+            this._panelStack?.popPanel();
+          }
+        );
+        this._panelStack.pushPanel(panel);
+        break;
+      }
+
+      case 'grain': {
+        const panel = contentRenderer.renderGrainDirectionPanel(
+          this._state.composition,
+          (grain: string) => {
+            void this._updateWoodMaterial('grain_direction', grain);
+            this._panelStack?.popPanel();
+          },
+          () => {
+            this._panelStack?.popPanel();
+          }
+        );
+        this._panelStack.pushPanel(panel);
+        break;
+      }
+
+      default:
+        console.warn('Unknown navigation target:', target);
+    }
   }
 	
 	private _detectChangedParams(

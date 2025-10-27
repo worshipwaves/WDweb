@@ -55,7 +55,8 @@ export class FrameGenerationService {
 								thickness: data.panel_config.thickness,
 								separation: data.panel_config.separation,
 								numberSections: data.panel_config.number_sections,
-								shape: data.panel_config.shape || 'circular'
+								shape: data.panel_config.shape || 'circular',
+								slotStyle: (data.panel_config as { slot_style?: string }).slot_style || 'radial'
 						};
 						
 						const slots: SlotData[] = data.slot_data || [];

@@ -171,8 +171,8 @@ class SceneManager {
     if (!GLTFFileLoader) {
       console.error('GLTF loader not available');
     }
-
-    // Handle window resize
+		
+		// Handle window resize
     window.addEventListener('resize', () => {
       this._engine.resize();
     });
@@ -1172,8 +1172,8 @@ class SceneManager {
       0, totalFrames, false
     );
   }
-
-  public updateComposition(_newState: CompositionStateDTO): void {
+	
+	public updateComposition(_newState: CompositionStateDTO): void {
     // Dispose of any previous meshes
     if (this._finalMesh) {
       this._finalMesh.dispose();
@@ -1215,6 +1215,9 @@ document.addEventListener('DOMContentLoaded', () => {
 			window.controller = controller;
       window.audioCache = controller.audioCache;
       await controller.initialize();	
+			
+			// DEBUG: Expose controller for diagnostics
+			(window as any).__controller__ = controller;
       
       // Create the scene manager
       const sceneManager = SceneManager.create('renderCanvas', facade);
@@ -1301,6 +1304,14 @@ async function initializeUI(
   
   // 9. Initialize processing overlay
   new ProcessingOverlay('processingOverlay', controller);
+	
+	// 9.5 Initialize left panel renderer
+  const { LeftPanelRenderer } = await import('./components/LeftPanelRenderer');
+  const leftPanelRenderer = new LeftPanelRenderer(
+    'left-main-panel',
+    (categoryId) => controller.handleCategorySelected(categoryId)
+  );
+  leftPanelRenderer.render();
   
   // 10. Subscribe to state changes (only sync UI on phase transitions, not every change)
   controller.subscribe((state) => {
