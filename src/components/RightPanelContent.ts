@@ -487,11 +487,9 @@ export class RightPanelContentRenderer {
       unit?: string;
     }> = [];
 
-    // Map of slider element IDs to their state paths
-    const sliderElements = ['size', 'diameter', 'separation', 'slots'];
-
-    sliderElements.forEach(elementId => {
-      const element = config.elements[elementId] as
+    // Iterate through ALL elements in config, not a hardcoded list
+    Object.entries(config.elements).forEach(([elementId, element]) => {
+      const typedElement = element as
         | {
             type?: string;
             label?: string;
@@ -503,32 +501,32 @@ export class RightPanelContentRenderer {
           }
         | undefined;
 
-      if (!element) return;
+      if (!typedElement) return;
 
       // Handle range type
-      if (element.type === 'range' && element.min !== undefined && element.max !== undefined) {
-        const statePath = element.state_path || '';
+      if (typedElement.type === 'range' && typedElement.min !== undefined && typedElement.max !== undefined) {
+        const statePath = typedElement.state_path || '';
         const value = this._getStateValueByPath(state, statePath);
 
         sliders.push({
           id: elementId,
-          label: element.label || elementId,
-          min: element.min,
-          max: element.max,
-          step: element.step || 1,
-          value: typeof value === 'number' ? value : element.min,
+          label: typedElement.label || elementId,
+          min: typedElement.min,
+          max: typedElement.max,
+          step: typedElement.step || 1,
+          value: typeof value === 'number' ? value : typedElement.min,
           unit: '"',
         });
       }
 
       // Handle select type (convert to slider range)
-      if (element.type === 'select' && element.options) {
-        const values = element.options.map(opt => opt.value);
+      if (typedElement.type === 'select' && typedElement.options) {
+        const values = typedElement.options.map(opt => opt.value);
         const min = Math.min(...values);
         const max = Math.max(...values);
         const step = values.length > 1 ? values[1] - values[0] : 1;
 
-        const statePath = element.state_path || '';
+        const statePath = typedElement.state_path || '';
         const value = this._getStateValueByPath(state, statePath);
 
         sliders.push({

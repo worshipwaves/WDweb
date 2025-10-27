@@ -89,6 +89,7 @@ class PatternSettingsDTO(BaseModel):
     spacer: float = Field(ge=0.0, le=10.0)
     x_offset: float = Field(ge=0.0, le=10.0)
     y_offset: float = Field(ge=0.0, le=10.0)
+    side_margin: float = Field(ge=0.0, le=10.0)
     scale_center_point: float = Field(ge=0.1, le=10.0)
     amplitude_exponent: float = Field(ge=0.25, le=4.0)
     orientation: Literal["auto", "horizontal", "vertical"]

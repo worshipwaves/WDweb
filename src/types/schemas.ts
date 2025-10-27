@@ -77,6 +77,7 @@ export const PatternSettingsSchema = z.object({
   spacer: z.number(),
   x_offset: z.number(),
   y_offset: z.number(),
+  side_margin: z.number(),
   scale_center_point: z.number(),
   amplitude_exponent: z.number(),
   orientation: z.string(),

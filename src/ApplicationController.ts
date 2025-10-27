@@ -1043,6 +1043,7 @@ export class ApplicationController {
       height: 'frame_design.finish_y',
       separation: 'frame_design.separation',
       slots: 'pattern_settings.number_slots',
+			side_margin: 'pattern_settings.side_margin',
     };
 
     const statePath = statePathMap[option];

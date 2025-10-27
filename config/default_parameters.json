@@ -24,6 +24,7 @@
     "spacer": 0.5,
     "x_offset": 0.75,
     "y_offset": 1.5,
+    "side_margin": 1.5,
     "scale_center_point": 1.0,
     "amplitude_exponent": 1.0,
     "orientation": "auto",
@@ -329,6 +330,16 @@
         "max": 4.0,
         "step": 0.5,
         "display_value_id": "separationValue"
+      },
+      "side_margin": {
+        "id": "side_margin",
+        "type": "range",
+        "label": "Side Margin",
+        "state_path": "pattern_settings.side_margin",
+        "min": 0.0,
+        "max": 6.0,
+        "step": 0.1,
+        "display_value_id": "sideMarginValue"
       },
       "woodSpecies": {
         "id": "woodSpecies",
@@ -1018,7 +1029,7 @@
           "options": {
             "main": {
               "type": "slider_group",
-              "element_keys": ["width", "height", "separation", "slots"]
+              "element_keys": ["width", "height", "separation", "slots", "side_margin"]
             }
           }
         }

@@ -116,15 +116,18 @@ class SlotGenerationService:
         
         finish_x = frame.finish_x
         finish_y = frame.finish_y
-        x_offset = pattern.x_offset
         y_offset = pattern.y_offset
+        side_margin = pattern.side_margin
         spacer = pattern.spacer
         separation = frame.separation
         bit_diameter = pattern.bit_diameter
         
-        # Calculate section dimensions
-        section_width = (finish_x - separation * (number_sections - 1)) / number_sections
-        slot_width = (section_width - x_offset * 2 - spacer * (slots_per_section - 1)) / slots_per_section
+        # Calculate usable width after applying side margins (analogous to x_offset for radial)
+        usable_width = finish_x - 2.0 * side_margin
+        
+        # Calculate section dimensions within usable region
+        section_width = (usable_width - separation * (number_sections - 1)) / number_sections
+        slot_width = (section_width - spacer * (slots_per_section - 1)) / slots_per_section
         
         # Y position limits
         center_y = finish_y / 2.0
@@ -143,9 +146,9 @@ class SlotGenerationService:
             amplitude = max(amplitude, safety_minimum)
             amplitude = min(amplitude, max_amplitude_limit)
             
-            # Calculate X positions
-            section_x_offset = section_id * (section_width + separation)
-            slot_x_start = section_x_offset + x_offset + local_slot_index * (slot_width + spacer)
+            # Calculate X positions (starting from side_margin boundary)
+            section_x_offset = side_margin + section_id * (section_width + separation)
+            slot_x_start = section_x_offset + local_slot_index * (slot_width + spacer)
             slot_x_end = slot_x_start + slot_width
             
             # Calculate Y positions (symmetric about center)
