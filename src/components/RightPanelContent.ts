@@ -515,7 +515,7 @@ export class RightPanelContentRenderer {
           max: typedElement.max,
           step: typedElement.step || 1,
           value: typeof value === 'number' ? value : typedElement.min,
-          unit: '"',
+          unit: elementId === 'slots' ? '' : '"',
         });
       }
 
@@ -536,7 +536,7 @@ export class RightPanelContentRenderer {
           max,
           step,
           value: typeof value === 'number' ? value : min,
-          unit: '"',
+          unit: elementId === 'slots' ? '' : '"',
         });
       }
     });

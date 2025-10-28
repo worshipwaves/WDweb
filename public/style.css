@@ -266,7 +266,7 @@ html, body {
   min-width: auto; 
   
   /* Glassmorphism effect */
-  background-color: rgba(17, 17, 17, 0.6);
+  background-color: rgba(17, 17, 17, 0.525);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
   
@@ -1117,10 +1117,49 @@ html, body {
   cursor: pointer;
 }
 
+/* Slider group container */
+.slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  padding: 16px 0;
+}
+
+/* Individual slider control */
+.slider-control {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Label row (label + value) */
+.slider-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.slider-label-row label {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 1);
+  text-transform: capitalize;
+}
+
+/* Value display */
+.slider-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(217, 164, 100, 0.9);
+  min-width: 50px;
+  text-align: right;
+}
+
 .value-display {
   min-width: 40px;
   text-align: right;
-  font-size: 13px;
+  font-size: 14px;
   color: rgba(255, 255, 255, 0.8);
 }
 
@@ -1155,5 +1194,21 @@ html, body {
     width: 60px;
     height: 60px;
   }
-}	 
+}
+
+/* Tooltip styling */
+.tooltip {
+  position: fixed;
+  max-width: 200px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.9);
+  color: #fff;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+  z-index: 10000;
+  word-wrap: break-word;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
 	 

@@ -12,7 +12,8 @@ import {
   TransformNode,
   Animation,
   CubicEase,
-  EasingFunction
+  EasingFunction,
+  Layer
 } from '@babylonjs/core';
 import * as BABYLON from '@babylonjs/core';
 import { GLTFFileLoader } from '@babylonjs/loaders/glTF';
@@ -133,6 +134,9 @@ class SceneManager {
   private _rootNode: TransformNode | null = null;
 	private _currentCSGData: SmartCsgResponse | null = null;  // Store CSG data for overlay positioning
 	private _overlayMeshes: Map<number, Mesh> = new Map();
+	private _backgroundLayer: Layer | null = null;
+	private _cameraOffset: number = 0;
+  private _isDesktopLayout: boolean = true;
   private _hasPlayedPulseAnimation: boolean = false;
   private _renderQueue: Promise<void> = Promise.resolve();
   private _isRendering = false;
@@ -167,6 +171,13 @@ class SceneManager {
     // Setup lighting
     this.setupLighting();
 
+    // Setup background
+    //this.setupBackground(); // COMMENT OUT TO NOT USE IMAGE BACKGROUND
+
+    // Initial layout check
+    this.checkLayoutMode();
+    this.updateCameraOffset();
+
     // Register GLTF loader
     if (!GLTFFileLoader) {
       console.error('GLTF loader not available');
@@ -175,6 +186,8 @@ class SceneManager {
 		// Handle window resize
     window.addEventListener('resize', () => {
       this._engine.resize();
+      this.checkLayoutMode();
+      this.updateCameraOffset();
     });
 
     // Start render loop
@@ -202,7 +215,7 @@ class SceneManager {
     manager._rootNode.rotation.x = Math.PI / 2;
     
     // Set initial camera position
-    manager._camera.setTarget(Vector3.Zero());
+    manager._camera.setTarget(new Vector3(manager._cameraOffset, 0, 0));
     manager._camera.radius = 47;
     
     return manager;
@@ -271,6 +284,64 @@ class SceneManager {
     // Create a neutral environment color for PBR reflections
     this._scene.ambientColor = new Color3(0.2, 0.2, 0.2);
     this._scene.environmentColor = new Color3(0.8, 0.8, 0.8);
+  }
+	
+	private setupBackground(): void {
+    // Use Layer for 2D background image (standard Babylon.js approach)
+    this._backgroundLayer = new Layer(
+      'backgroundLayer',
+      '/assets/backgrounds/clouds3.webp',
+      this._scene,
+      true
+    );
+  }
+	
+	private checkLayoutMode(): void {
+    const DESKTOP_BREAKPOINT = 768;
+    this._isDesktopLayout = window.innerWidth >= DESKTOP_BREAKPOINT;
+  }
+	
+	public updateCameraOffset(): void {
+    if (!this._isDesktopLayout) {
+      // Mobile: no horizontal offset
+      this._cameraOffset = 0;
+      this._camera.target.x = 0;
+      return;
+    }
+    
+    // Desktop: calculate offset based on visible panel widths
+    const leftMainPanel = document.getElementById('left-main-panel');
+    const leftSecondaryPanel = document.getElementById('left-secondary-panel');
+    const rightSecondaryPanel = document.getElementById('right-secondary-panel');
+    const rightMainPanel = document.getElementById('right-main-panel');
+    
+    // Calculate left side width (main panel only)
+    let leftWidth = 0;
+    if (leftMainPanel && window.getComputedStyle(leftMainPanel).display !== 'none') {
+      leftWidth += leftMainPanel.offsetWidth + 16; // Include gap
+    }
+    
+    // Calculate right side width (main panel only)
+    let rightWidth = 0;
+    if (rightMainPanel && window.getComputedStyle(rightMainPanel).display !== 'none') {
+      rightWidth += rightMainPanel.offsetWidth + 16;
+    }
+    
+    // Calculate offset in pixels (positive = shift right, negative = shift left)
+    const offsetPixels = (leftWidth - rightWidth) / 1;
+    
+    // Convert pixels to scene units
+    // Camera FOV affects visible width at a given distance
+    const distance = this._camera.radius;
+    const fov = this._camera.fov || 0.8;
+    const canvasWidth = this._canvas.width;
+    const visibleWidth = 2 * distance * Math.tan(fov / 2);
+    const pixelsPerUnit = canvasWidth / visibleWidth;
+    const offsetUnits = offsetPixels / pixelsPerUnit;
+    
+    // Apply offset to camera target
+    this._cameraOffset = offsetUnits;
+    this._camera.target.x = this._cameraOffset;
   }
 
   /**
@@ -1117,7 +1188,7 @@ class SceneManager {
     const targetAlpha = Math.PI / 2;
     const targetBeta = Math.PI / 2;
     const targetRadius = this.calculateIdealRadius();
-    const targetPosition = Vector3.Zero();
+    const targetPosition = new Vector3(this._cameraOffset, 0, 0);
     
     // Animation duration
     const duration = 1000;

@@ -106,6 +106,7 @@ export interface ThumbnailItem {
   label: string;
   thumbnailUrl?: string;
   disabled?: boolean;
+  tooltip?: string;
 }
 
 /**

@@ -81,18 +81,20 @@ def find_max_amplitude_linear_constrained(
     """
     slots_per_section = number_slots // number_sections if number_sections > 0 else number_slots
     
-    # Calculate usable width after applying side margins
-    usable_width = finish_x - 2.0 * side_margin
+    # Calculate panel width first, then apply margin PER PANEL
+    panel_width = (finish_x - separation * (number_sections - 1)) / number_sections
+    usable_width_per_panel = panel_width - 2.0 * side_margin
     
-    # Calculate section width and slot positions within usable region
-    section_width = (usable_width - separation * (number_sections - 1)) / number_sections
+    # Calculate section width and slot positions within usable panel region
+    section_width = usable_width_per_panel
     slot_width = section_width / slots_per_section if slots_per_section > 0 else section_width
     
     # Generate X positions for all slots immutably (CNC coordinates, centered at origin)
     gc_x = finish_x / 2.0
     
     def generate_slot_x_position(section_id: int, local_slot_index: int) -> float:
-        section_x_offset = side_margin + section_id * (section_width + separation)
+        panel_x_start = section_id * (panel_width + separation)
+        section_x_offset = panel_x_start + side_margin
         slot_x_cnc = section_x_offset + (local_slot_index + 0.5) * slot_width
         return slot_x_cnc - gc_x  # Relative to center
     

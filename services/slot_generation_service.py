@@ -122,11 +122,12 @@ class SlotGenerationService:
         separation = frame.separation
         bit_diameter = pattern.bit_diameter
         
-        # Calculate usable width after applying side margins (analogous to x_offset for radial)
-        usable_width = finish_x - 2.0 * side_margin
+        # Calculate panel width first, then apply margin PER PANEL
+        panel_width = (finish_x - separation * (number_sections - 1)) / number_sections
+        usable_width_per_panel = panel_width - 2.0 * side_margin
         
-        # Calculate section dimensions within usable region
-        section_width = (usable_width - separation * (number_sections - 1)) / number_sections
+        # Calculate section dimensions within usable panel region
+        section_width = usable_width_per_panel
         slot_width = (section_width - spacer * (slots_per_section - 1)) / slots_per_section
         
         # Y position limits
@@ -146,8 +147,9 @@ class SlotGenerationService:
             amplitude = max(amplitude, safety_minimum)
             amplitude = min(amplitude, max_amplitude_limit)
             
-            # Calculate X positions (starting from side_margin boundary)
-            section_x_offset = side_margin + section_id * (section_width + separation)
+            # Calculate X positions (per-panel margin)
+            panel_x_start = section_id * (panel_width + separation)
+            section_x_offset = panel_x_start + side_margin
             slot_x_start = section_x_offset + local_slot_index * (slot_width + spacer)
             slot_x_end = slot_x_start + slot_width
             

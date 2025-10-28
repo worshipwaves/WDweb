@@ -654,7 +654,13 @@ export class ApplicationController {
       if (this._leftSecondaryPanel) {
         this._leftSecondaryPanel.style.display = 'none';
         this._leftSecondaryPanel.classList.remove('visible');
-      }
+      }			
+			// Update camera offset after panel hides
+      requestAnimationFrame(() => {
+        if (this._sceneManager && 'updateCameraOffset' in this._sceneManager) {
+          (this._sceneManager as { updateCameraOffset: () => void }).updateCameraOffset();
+        }
+      });
       this._handleSubcategorySelected(subcategories[0].id);
     } else if (subcategories.length > 1) {
       // Show placeholder and subcategory choices for multiple options
@@ -670,6 +676,13 @@ export class ApplicationController {
           this._leftSecondaryPanel.style.display = 'block';
           this._leftSecondaryPanel.classList.add('visible');
         }
+				
+				// Update camera offset after panel visibility changes
+        requestAnimationFrame(() => {
+          if (this._sceneManager && 'updateCameraOffset' in this._sceneManager) {
+            (this._sceneManager as { updateCameraOffset: () => void }).updateCameraOffset();
+          }
+        });
       }).catch((error: unknown) => console.error('[Controller] Failed to load LeftSecondaryPanel:', error));
     } else {
       // No subcategories found, show placeholder
@@ -723,6 +736,13 @@ export class ApplicationController {
       this._rightSecondaryPanel.style.display = 'none';
       this._rightSecondaryPanel.classList.remove('visible');
     }
+		
+		// Update camera offset after right secondary visibility changes
+    requestAnimationFrame(() => {
+      if (this._sceneManager && 'updateCameraOffset' in this._sceneManager) {
+        (this._sceneManager as { updateCameraOffset: () => void }).updateCameraOffset();
+      }
+    });
 
     // Always render the main panel after subcategory selection
     this._renderRightMainFiltered();
@@ -803,7 +823,7 @@ export class ApplicationController {
               max: elConfig!.max!,
               step: elConfig!.step!,
               value: value ?? elConfig!.min!,
-              unit: '"',
+              unit: key === 'slots' ? '' : '"',
             };
           });
           const sliderGroup = new SliderGroup(
@@ -959,6 +979,7 @@ export class ApplicationController {
               label: config.label,
               thumbnailUrl: `${this._thumbnailConfig!.base_path}/${key}${this._thumbnailConfig!.extension}`,
               disabled: !validNValues.includes(config.state_updates['frame_design.number_sections'] as number),
+              tooltip: config.tooltip,
             }));
 
           const thumbnailGrid = new ThumbnailGrid(

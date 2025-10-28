@@ -24,7 +24,7 @@
     "spacer": 0.5,
     "x_offset": 0.75,
     "y_offset": 1.5,
-    "side_margin": 1.5,
+    "side_margin": 1.0,
     "scale_center_point": 1.0,
     "amplitude_exponent": 1.0,
     "orientation": "auto",
@@ -1054,13 +1054,13 @@
       "subcategories": {
         "tour": {
           "label": "Tour",
-          "note": "Experience Amazing Grace with instant preview (Asset library coming in Phase 6)",
+          "note": "Experience Amazing Grace with instant preview",
           "filters": {},
           "options": {}
         },
         "library": {
           "label": "Library",
-          "note": "Browse curated hymns, prayers, scriptures, and blessings (Asset library coming in Phase 6)",
+          "note": "Browse curated hymns, prayers, scriptures, and blessings",
           "filters": {},
           "options": {}
         },

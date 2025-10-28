@@ -9,12 +9,14 @@
  */
 
 import type { PanelComponent, ThumbnailItem } from '../types/PanelTypes';
+import { Tooltip } from './Tooltip';
 
 export class ThumbnailGrid implements PanelComponent {
   private _container: HTMLElement | null = null;
   private _items: ThumbnailItem[];
   private _currentSelection: string | null;
   private _onSelect: (id: string) => void;
+  private _tooltip: Tooltip = new Tooltip();
   
   constructor(
     items: ThumbnailItem[],
@@ -67,6 +69,16 @@ export class ThumbnailGrid implements PanelComponent {
       if (!item.disabled) {
         card.addEventListener('click', () => {
           this._onSelect(item.id);
+        });
+      }
+			
+			// Tooltip handlers
+      if (item.tooltip) {
+        card.addEventListener('mouseenter', () => {
+          this._tooltip.show(item.tooltip!, card);
+        });
+        card.addEventListener('mouseleave', () => {
+          this._tooltip.hide();
         });
       }
       
