@@ -169,6 +169,102 @@
       }
     }
   },
+	"archetype_defaults": {
+    "circular_radial_n1": {
+      "number_sections": 1,
+      "number_slots": 48,
+      "separation": 2
+    },
+    "circular_radial_n2": {
+      "number_sections": 2,
+      "number_slots": 48,
+      "separation": 2
+    },
+    "circular_radial_n3": {
+      "number_sections": 3,
+      "number_slots": 48,
+      "separation": 2
+    },
+    "circular_radial_n4": {
+      "number_sections": 4,
+      "number_slots": 48,
+      "separation": 2
+    },
+    "circular_linear_n1": {
+      "number_sections": 1,
+      "number_slots": 24,
+      "separation": 0,
+      "side_margin": 3
+    },
+    "circular_linear_n2": {
+      "number_sections": 2,
+      "number_slots": 24,
+      "separation": 2,
+      "side_margin": 3
+    },
+    "rectangular_radial_n1": {
+      "number_sections": 1,
+      "number_slots": 48,
+      "separation": 0
+    },
+    "rectangular_radial_n2": {
+      "number_sections": 2,
+      "number_slots": 48,
+      "separation": 2
+    },
+    "rectangular_radial_n4": {
+      "number_sections": 4,
+      "number_slots": 48,
+      "separation": 2
+    },
+    "rectangular_linear_n1": {
+      "number_sections": 1,
+      "number_slots": 18,
+      "separation": 0
+    },
+    "rectangular_linear_n2": {
+      "number_sections": 2,
+      "number_slots": 36,
+      "separation": 2
+    },
+    "rectangular_linear_n3": {
+      "number_sections": 3,
+      "number_slots": 54,
+      "separation": 2
+    },
+    "rectangular_linear_n4": {
+      "number_sections": 4,
+      "number_slots": 72,
+      "separation": 2
+    },
+    "diamond_radial_n1": {
+      "number_sections": 1,
+      "number_slots": 48,
+      "separation": 0
+    },
+    "diamond_radial_n2": {
+      "number_sections": 2,
+      "number_slots": 48,
+      "separation": 3
+    },
+    "diamond_radial_n4": {
+      "number_sections": 4,
+      "number_slots": 48,
+      "separation": 2
+    },
+    "diamond_linear_n1": {
+      "number_sections": 1,
+      "number_slots": 24,
+      "separation": 0,
+      "side_margin": 5
+    },
+    "diamond_linear_n2": {
+      "number_sections": 2,
+      "number_slots": 24,
+      "separation": 2,
+      "side_margin": 5
+    }
+  },
   "wood_materials": {
     "default_species": "walnut-black-american",
     "default_grain_direction": "vertical",
@@ -336,10 +432,13 @@
         "type": "range",
         "label": "Side Margin",
         "state_path": "pattern_settings.side_margin",
-        "min": 0.0,
+        "min": 1.0,
         "max": 6.0,
-        "step": 0.1,
-        "display_value_id": "sideMarginValue"
+        "step": 0.5,
+        "display_value_id": "sideMarginValue",
+        "show_when": {
+          "slot_style": ["linear"]
+        }
       },
       "woodSpecies": {
         "id": "woodSpecies",
@@ -484,74 +583,6 @@
                     "pattern_settings.slot_style": "radial",
                     "frame_design.number_sections": 4,
                     "frame_design.paired_composition": false,
-                    "frame_design.finish_x": 36.0,
-                    "frame_design.finish_y": 36.0
-                  }
-                },
-                "circular_radial_paired_36_left": {
-                  "label": "Paired 36\"/30\" - Taller Left",
-                  "tooltip": "This is a tooltip",
-                  "state_updates": {
-                    "frame_design.shape": "circular",
-                    "pattern_settings.slot_style": "radial",
-                    "frame_design.number_sections": 2,
-                    "frame_design.paired_composition": true,
-                    "frame_design.primary_height": 36,
-                    "frame_design.secondary_height": 30,
-                    "frame_design.installation_gap": 3,
-                    "frame_design.orientation": "taller_left",
-                    "frame_design.separation": 0,
-                    "frame_design.finish_x": 36.0,
-                    "frame_design.finish_y": 36.0
-                  }
-                },
-                "circular_radial_paired_36_right": {
-                  "label": "Paired 36\"/30\" - Taller Right",
-                  "tooltip": "This is a tooltip",
-                  "state_updates": {
-                    "frame_design.shape": "circular",
-                    "pattern_settings.slot_style": "radial",
-                    "frame_design.number_sections": 2,
-                    "frame_design.paired_composition": true,
-                    "frame_design.primary_height": 36,
-                    "frame_design.secondary_height": 30,
-                    "frame_design.installation_gap": 3,
-                    "frame_design.orientation": "taller_right",
-                    "frame_design.separation": 0,
-                    "frame_design.finish_x": 36.0,
-                    "frame_design.finish_y": 36.0
-                  }
-                },
-                "circular_radial_paired_42_left": {
-                  "label": "Paired 42\"/35\" - Taller Left",
-                  "tooltip": "This is a tooltip",
-                  "state_updates": {
-                    "frame_design.shape": "circular",
-                    "pattern_settings.slot_style": "radial",
-                    "frame_design.number_sections": 2,
-                    "frame_design.paired_composition": true,
-                    "frame_design.primary_height": 42,
-                    "frame_design.secondary_height": 35,
-                    "frame_design.installation_gap": 3.5,
-                    "frame_design.orientation": "taller_left",
-                    "frame_design.separation": 0,
-                    "frame_design.finish_x": 36.0,
-                    "frame_design.finish_y": 36.0
-                  }
-                },
-                "circular_radial_paired_42_right": {
-                  "label": "Paired 42\"/35\" - Taller Right",
-                  "tooltip": "This is a tooltip",
-                  "state_updates": {
-                    "frame_design.shape": "circular",
-                    "pattern_settings.slot_style": "radial",
-                    "frame_design.number_sections": 2,
-                    "frame_design.paired_composition": true,
-                    "frame_design.primary_height": 42,
-                    "frame_design.secondary_height": 35,
-                    "frame_design.installation_gap": 3.5,
-                    "frame_design.orientation": "taller_right",
-                    "frame_design.separation": 0,
                     "frame_design.finish_x": 36.0,
                     "frame_design.finish_y": 36.0
                   }

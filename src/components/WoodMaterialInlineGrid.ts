@@ -85,6 +85,11 @@ export class WoodMaterialInlineGrid implements PanelComponent {
         button.classList.add('disabled');
         button.disabled = true;
       }
+			
+			// Add a specific demo ID for the walnut + vertical grain button
+      if (species.id === 'walnut-black-american' && grain.id === 'vertical') {
+        button.dataset.demoId = 'wood_walnut';
+      }
       
       if (species.id === this._currentSpecies && grain.id === this._currentGrain) {
         button.classList.add('active');

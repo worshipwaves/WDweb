@@ -235,6 +235,20 @@ export class ApplicationController {
     }
     return this._state;
   }
+	
+	/**
+   * Forcibly resets the application to a fresh, default state.
+   * Used by the demo player to ensure a clean start.
+   */
+  public async resetToDefaultState(): Promise<void> {
+    this._state = await this._facade.createInitialState();
+    this.notifySubscribers();
+    // Also clear any visual remnants from previous state
+    if (this._sceneManager) {
+      const csgData = await this._facade.getSmartCSGData(this._state.composition, [], null);
+      await this._sceneManager.renderComposition(csgData);
+    }
+  }
   
   /**
    * Dispatch an action to update state
@@ -633,21 +647,49 @@ export class ApplicationController {
    * Handle STYLE category selection (four-panel architecture)
    * @private
    */
-  private _handleStyleCategorySelected(): void {
+	private _handleStyleCategorySelected(): void {
     if (!this._categoriesConfig || !this._activeCategory || !this._thumbnailConfig) return;
     const categoryConfig = this._categoriesConfig[this._activeCategory as keyof CategoriesConfig];
     if (!categoryConfig) return;
+		
+		const subcategories = Object.entries(categoryConfig.subcategories).map(([id, config]) => ({ id, config }));
+    
+		// Auto-select subcategory and filters based on current state
+    const currentComposition = this._state?.composition;
+    if (currentComposition) {
+      if (subcategories.length === 1) {
+        // Correctly select the single subcategory for Layout, Wood, etc.
+        this._activeSubcategory = subcategories[0].id;
+      } else if (this._activeCategory === 'style') {
+        // Preserve the original, specific logic only for the 'style' category.
+        this._activeSubcategory = currentComposition.frame_design.paired_composition
+          ? 'assembled'
+          : 'panel';
+      } else {
+        this._activeSubcategory = null;
+      }
+      
+      this._activeFilters.set('shape', currentComposition.frame_design.shape);
+      this._activeFilters.set('slot_pattern', currentComposition.pattern_settings.slot_style);
+    }
     
     // Hide legacy panel stack
-    if (this._panelStack) {
-      this._panelStack.clearStack();
-    }
-    const stackContainer = document.getElementById('right-panel-stack');
-    if (stackContainer) {
-      stackContainer.style.display = 'none';
-    }
-    
-    const subcategories = Object.entries(categoryConfig.subcategories).map(([id, config]) => ({ id, config }));
+		if (this._panelStack) {
+			this._panelStack.clearStack();
+		}
+		const stackContainer = document.getElementById('right-panel-stack');
+		if (stackContainer) {
+			stackContainer.style.display = 'none';
+		}
+		
+		// If auto-selection succeeded, defer right panel rendering to next tick
+		// This ensures all state and async imports complete before rendering
+		if (currentComposition && this._activeSubcategory) {
+			const selectedSubcategory = this._activeSubcategory;
+			requestAnimationFrame(() => {
+				this._handleSubcategorySelected(selectedSubcategory);
+			});
+		}
 
     if (subcategories.length === 1) {
       // Auto-select single subcategory, hide secondary panel
@@ -661,7 +703,7 @@ export class ApplicationController {
           (this._sceneManager as { updateCameraOffset: () => void }).updateCameraOffset();
         }
       });
-      this._handleSubcategorySelected(subcategories[0].id);
+      // Single-subcategory rendering handled by deferred requestAnimationFrame above
     } else if (subcategories.length > 1) {
       // Show placeholder and subcategory choices for multiple options
       if (this._rightMainPanel) {
@@ -713,8 +755,10 @@ export class ApplicationController {
     
     // Initialize filters to defaults
     Object.entries(subcategory.filters).forEach(([filterId, filterConfig]) => {
-      this._activeFilters.set(filterId, filterConfig.default);
-    });
+			if (!this._activeFilters.has(filterId)) {
+				this._activeFilters.set(filterId, filterConfig.default);
+			}
+		});
     
     // Render right secondary panel (filters) if they exist
     const filters = Object.entries(subcategory.filters).map(([id, config]) => ({ id, config }));
@@ -789,22 +833,24 @@ export class ApplicationController {
    * @private
    */
   private _renderRightMainFiltered(): void {
-    if (!this._categoriesConfig || !this._activeCategory || !this._activeSubcategory || !this._rightMainPanel) return;
+		if (!this._categoriesConfig || !this._activeCategory || !this._activeSubcategory || !this._rightMainPanel) return;
 
-    const categoryConfig = this._categoriesConfig[this._activeCategory as keyof CategoriesConfig];
-    const subcategory = categoryConfig?.subcategories[this._activeSubcategory];
-    if (!subcategory) return;
+		const categoryConfig = this._categoriesConfig[this._activeCategory as keyof CategoriesConfig];
+		const subcategory = categoryConfig?.subcategories[this._activeSubcategory];
+		if (!subcategory) return;
 
-    this._rightMainPanel.innerHTML = '';
-    const panelContent = document.createElement('div');
-    panelContent.className = 'panel-content';
+		this._rightMainPanel.innerHTML = '';
+		const panelContent = document.createElement('div');
+		panelContent.className = 'panel-content';
 
-    // Check for a placeholder note
-    if (subcategory.note) {
-      panelContent.innerHTML = `<div class="panel-placeholder"><p>${subcategory.note}</p></div>`;
-      this._rightMainPanel.appendChild(panelContent);
-      return;
-    }
+		// Check for a placeholder note
+		if (subcategory.note) {
+			panelContent.innerHTML = `<div class="panel-placeholder"><p>${subcategory.note}</p></div>`;
+			this._rightMainPanel.appendChild(panelContent);
+			this._rightMainPanel.style.display = 'block';
+			this._rightMainPanel.classList.add('visible');
+			return;
+		}
 
     // Generic content rendering
     const optionKey = Object.keys(subcategory.options)[0];
@@ -893,6 +939,7 @@ export class ApplicationController {
           // Create upload button
           const uploadButton = document.createElement('button');
           uploadButton.className = 'upload-button';
+					uploadButton.dataset.demoId = 'upload_button';
           uploadButton.style.padding = '16px 24px';
           uploadButton.style.fontSize = '16px';
           uploadButton.style.fontWeight = '500';
@@ -982,10 +1029,15 @@ export class ApplicationController {
               tooltip: config.tooltip,
             }));
 
+          const activeSelection = this._getActiveThumbnailId(
+            allThumbnails,
+            this._state!.composition
+          );
+
           const thumbnailGrid = new ThumbnailGrid(
             thumbnailItems,
             (id) => this._handleThumbnailSelected(id),
-            null // Active selection logic can be added later
+            activeSelection
           );
           panelContent.appendChild(thumbnailGrid.render());
           break;
@@ -994,6 +1046,51 @@ export class ApplicationController {
     }
 
     this._rightMainPanel.appendChild(panelContent);
+    this._rightMainPanel.style.display = 'block';
+    this._rightMainPanel.classList.add('visible');
+  }
+	
+	/**
+   * Get active thumbnail ID by matching current state to thumbnail state_updates
+   * @private
+   */
+  private _getActiveThumbnailId(
+    thumbnails: Record<string, ThumbnailOptionConfig>,
+    currentState: CompositionStateDTO
+  ): string | null {
+    for (const [thumbnailId, config] of Object.entries(thumbnails)) {
+      const updates = config.state_updates;
+      
+      const matches = Object.entries(updates).every(([path, value]) => {
+        const currentValue = this._getNestedValue(currentState, path);
+        return currentValue === value;
+      });
+      
+      if (matches) {
+        return thumbnailId;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Get nested value from composition state using dot notation
+   * @private
+   */
+  private _getNestedValue(state: CompositionStateDTO, path: string): unknown {
+    const parts = path.split('.');
+    let current: unknown = state;
+    
+    for (const part of parts) {
+      if (typeof current === 'object' && current !== null && part in current) {
+        current = (current as Record<string, unknown>)[part];
+      } else {
+        return undefined;
+      }
+    }
+    
+    return current;
   }
   
   /**
@@ -1043,55 +1140,29 @@ export class ApplicationController {
   }
 	
 	/**
-   * Update state value and trigger re-render
-   * @private
-   */
-  private async _updateStateValue(option: string, value: unknown): Promise<void> {
-    if (!this._state) return;
+ * Update state value and trigger re-render
+ * Uses UI config as single source of truth for state paths
+ * @private
+ */
+	private async _updateStateValue(option: string, value: unknown): Promise<void> {
+		if (!this._state) return;
 
-    // Create updated composition
-    const newComposition = structuredClone(this._state.composition);
+		const newComposition = structuredClone(this._state.composition);
 
-    // Map option names to state paths
-    const statePathMap: Record<string, string> = {
-      shape: 'frame_design.shape',
-      number_sections: 'frame_design.number_sections',
-      finish_x: 'frame_design.finish_x',
-      finish_y: 'frame_design.finish_y',
-      diameter: 'frame_design.finish_x',
-      size: 'frame_design.finish_x', // Alias for UI sliders
-			width: 'frame_design.finish_x',
-      height: 'frame_design.finish_y',
-      separation: 'frame_design.separation',
-      slots: 'pattern_settings.number_slots',
-			side_margin: 'pattern_settings.side_margin',
-    };
+		// UIEngine is the authoritative source for element configs
+		const elementConfig = window.uiEngine?.getElementConfig(option);
+		
+		if (!elementConfig?.state_path) {
+			console.warn(`[Controller] No state_path found for option: ${option}`);
+			return;
+		}
 
-    const statePath = statePathMap[option];
-    
-    if (statePath) {
-      // Update nested property
-      this._setNestedValue(newComposition, statePath, value);
-      
-      // Special handling: 'size' updates both dimensions for circular/square panels
-      if (option === 'size' || option === 'diameter') {
-        this._setNestedValue(newComposition, 'frame_design.finish_y', value);
-      }
-      
-      // Special handling: circular shapes require finish_x === finish_y
-      const shape = newComposition.frame_design?.shape;
-      if (shape === 'circular') {
-        if (option === 'width') {
-          this._setNestedValue(newComposition, 'frame_design.finish_y', value);
-        } else if (option === 'height') {
-          this._setNestedValue(newComposition, 'frame_design.finish_x', value);
-        }
-      }
-      
-      // Trigger rendering pipeline directly
-      await this.handleCompositionUpdate(newComposition);
-    }
-  }
+		// Update the nested value using state_path from UIEngine
+		this._setNestedValue(newComposition, elementConfig.state_path, value);
+
+		// Trigger composition update
+		await this.handleCompositionUpdate(newComposition);
+	}
 	
 	/**
    * Set nested object value using dot notation path
@@ -1128,23 +1199,40 @@ export class ApplicationController {
   ): Promise<void> {
     if (!this._state) return;
 
+    // Create a new composition state immutably
     const newComposition = structuredClone(this._state.composition);
     
-    // Type-safe access to section_materials
-    interface SectionMaterial {
-      section_id: number;
-      species: string;
-      grain_direction: string;
-    }
+    // Ensure the materials array exists
+    const materials = newComposition.frame_design.section_materials || [];
+    const numSections = newComposition.frame_design.number_sections;
     
-    const materials = (newComposition.frame_design.section_materials as unknown as SectionMaterial[]) || [];
-    
-    // Update all sections (TODO: respect section selection in future)
-    materials.forEach(material => {
-      material[property] = value;
+    // Determine which section indices to update
+    const targetIndices = this._selectedSectionIndices.size > 0
+      ? Array.from(this._selectedSectionIndices)
+      : Array.from({ length: numSections }, (_, i) => i); // If none selected, target all
+
+    // Update only the target sections
+    targetIndices.forEach(sectionId => {
+      let material = materials.find(m => m.section_id === sectionId);
+      
+      if (material) {
+        // Update existing material entry
+        material[property] = value;
+      } else {
+        // Create a new material entry if it doesn't exist
+        const newMaterial: SectionMaterial = {
+          section_id: sectionId,
+          species: property === 'species' ? value : this._woodMaterialsConfig?.default_species || 'walnut-black-american',
+          grain_direction: property === 'grain_direction' ? value as 'horizontal' | 'vertical' | 'radiant' | 'diamond' : this._woodMaterialsConfig?.default_grain_direction || 'vertical'
+        };
+        materials.push(newMaterial);
+      }
     });
-    
-    // Trigger rendering pipeline directly
+
+    // Ensure the materials array is sorted by section_id for consistency
+    newComposition.frame_design.section_materials = materials.sort((a, b) => a.section_id - b.section_id);
+
+    // Trigger the rendering pipeline with the updated composition
     await this.handleCompositionUpdate(newComposition);
   }
 

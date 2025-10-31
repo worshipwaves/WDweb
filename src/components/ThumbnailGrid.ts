@@ -36,6 +36,17 @@ export class ThumbnailGrid implements PanelComponent {
       const card = document.createElement('button');
       card.className = 'thumbnail-card';
       card.dataset.itemId = item.id;
+			
+			// Map common items to specific demo IDs
+      const demoIdMap: { [key: string]: string } = {
+        'circular_radial_n2': 'thumbnail_split',
+        'walnut-black-american': 'wood_walnut',
+        // Add other mappings as needed
+      };
+      
+      if (demoIdMap[item.id]) {
+        card.dataset.demoId = demoIdMap[item.id];
+      }
       
       if (item.id === this._currentSelection) {
         card.classList.add('selected');
@@ -60,10 +71,10 @@ export class ThumbnailGrid implements PanelComponent {
       }
       
       // Label
-      const label = document.createElement('span');
+/*       const label = document.createElement('span');
       label.className = 'thumbnail-label';
       label.textContent = item.label;
-      card.appendChild(label);
+      card.appendChild(label); */
       
       // Event handler
       if (!item.disabled) {

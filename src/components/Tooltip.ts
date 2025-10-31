@@ -35,7 +35,7 @@ export class Tooltip {
       tooltip.style.top = `${rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2)}px`;
       
       this._element = tooltip;
-    }, 500);
+    }, 10);
   }
   
   hide(): void {

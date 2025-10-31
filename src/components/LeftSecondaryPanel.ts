@@ -42,6 +42,7 @@ export class LeftSecondaryPanel implements PanelComponent {
       const button = document.createElement('button');
       button.className = 'subcategory-button';
       button.dataset.subcategoryId = item.id;
+			button.dataset.demoId = `subcategory_${item.id}`;
       
       if (item.id === this._currentSelection) {
         button.classList.add('selected');

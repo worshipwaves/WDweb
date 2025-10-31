@@ -47,6 +47,7 @@ export class LeftPanelRenderer {
         class="category-button ${disabledClass}" 
         data-category="${cat.id}"
         ${disabledAttr}
+				data-demo-id="category_${cat.id}"
       >
         <span class="category-icon">${cat.icon}</span>
         <span class="category-label">${cat.label}</span>

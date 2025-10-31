@@ -31,6 +31,7 @@ import { UIEngine } from './UIEngine';
 import { UploadInterface } from './UploadInterface';
 import { WaveformDesignerFacade } from './WaveformDesignerFacade';
 import { WoodMaterial } from './WoodMaterial';
+import { DemoPlayer } from './demo/DemoPlayer';
 
 
 
@@ -99,6 +100,7 @@ declare global {
     updateGrainDirectionOptionsFromController?: (newN: number) => void;
     _uiEngineInstance?: UIEngine;
     uiEngine?: UIEngine;
+    demoPlayer?: DemoPlayer;
   }
 }
 
@@ -279,7 +281,7 @@ class SceneManager {
     this._scene.environmentIntensity = 0.6;
     
     // Create a greige background (off-white with grey tint)
-    this._scene.clearColor = new Color3(0.86, 0.84, 0.82).toColor4();
+    this._scene.clearColor = new Color3(0.90, 0.88, 0.86).toColor4();
     
     // Create a neutral environment color for PBR reflections
     this._scene.ambientColor = new Color3(0.2, 0.2, 0.2);
@@ -342,6 +344,13 @@ class SceneManager {
     // Apply offset to camera target
     this._cameraOffset = offsetUnits;
     this._camera.target.x = this._cameraOffset;
+		
+		// ALSO apply the pixel offset to the bottom controls container
+    const controlsContainer = document.querySelector('.ui-controls-bottom-center') as HTMLElement;
+    if (controlsContainer) {
+      // We use the pixel offset directly for CSS transforms
+      controlsContainer.style.transform = `translateX(calc(-50% + ${offsetPixels / 2}px))`;
+    }
   }
 
   /**
@@ -445,6 +454,9 @@ class SceneManager {
       
       // Play pulse animation once after initial render
       this.pulseAllSections();
+			
+			// Notify the demo player that the render is complete
+      document.dispatchEvent(new CustomEvent('demo:renderComplete'));
 			
 			// Auto-fit camera to new geometry
       const idealRadius = this.calculateIdealRadius();
@@ -1182,6 +1194,35 @@ class SceneManager {
     // Return radius with comfortable margin (1.5x diagonal)
     return diagonal * 1.5;
   }
+	
+	public startCinematicRotation(onAnimationEnd?: () => void): void {
+    const duration = 10000; // 10 seconds for a slow, cinematic feel
+    const fps = 60;
+    const totalFrames = (duration / 1000) * fps;
+
+    const animAlpha = new Animation(
+      'cinematicAlpha', 'alpha', fps,
+      Animation.ANIMATIONTYPE_FLOAT,
+      Animation.ANIMATIONLOOPMODE_CONSTANT // Don't loop
+    );
+
+    animAlpha.setKeys([
+      { frame: 0, value: this._camera.alpha },
+      { frame: totalFrames, value: this._camera.alpha + (2 * Math.PI) }
+    ]);
+    
+    // Apply easing for a smoother start and end
+    const easingFunction = new CubicEase();
+    easingFunction.setEasingMode(EasingFunction.EASINGMODE_EASEINOUT);
+    animAlpha.setEasingFunction(easingFunction);
+
+    this._camera.animations = [animAlpha];
+    const animatable = this._scene.beginAnimation(this._camera, 0, totalFrames, false); // `false` to not loop
+
+    if (onAnimationEnd) {
+      animatable.onAnimationEnd = onAnimationEnd;
+    }
+  }
   
   public resetCamera(): void {
     // Target values
@@ -1366,9 +1407,22 @@ async function initializeUI(
   
   // 6. Bind new file upload button
   bindNewFileButton(controller);
+	
+  // 6a. Subscribe to state changes to keep UI elements in sync
+  controller.subscribe((newState) => {
+    console.log('[main.ts] State updated, syncing all UI elements.');
+    // This function will now run every time the state changes.
+    syncUIFromState(uiEngine, newState.composition);
+    
+    // It's also important to re-run conditional logic after a state sync.
+    updateConditionalUI(uiEngine, newState.composition);
+  });	
   
   // 7. Bind select all checkbox
   bindSelectAllCheckbox(controller, sceneManager);
+	
+	// 7b. Bind start tour button
+  bindStartTourButton(uiEngine, controller, sceneManager);
   
   // 8. Setup upload interface
   setupUploadInterface(uiEngine, controller);
@@ -1856,6 +1910,7 @@ function updateConditionalUI(uiEngine: UIEngine, compositionOrSnapshot: Partial<
     shape: compositionOrSnapshot.frame_design?.shape ?? (compositionOrSnapshot as Record<string, unknown>).shape,
     number_sections: compositionOrSnapshot.frame_design?.number_sections ?? (compositionOrSnapshot as Record<string, unknown>).number_sections,
     finish_x: compositionOrSnapshot.frame_design?.finish_x ?? (compositionOrSnapshot as Record<string, unknown>).finish_x,
+    slot_style: compositionOrSnapshot.pattern_settings?.slot_style ?? (compositionOrSnapshot as Record<string, unknown>).slot_style,
   };
 
   uiEngine.updateConditionalOptions(currentState);
@@ -1874,6 +1929,29 @@ function ensureSectionsOptionsVisible(): void {
   for (const option of sectionsEl.options) {
     option.style.display = '';
   }
+}
+
+/**
+ * Bind the "Start Tour" button to initialize and run the demo.
+ */
+function bindStartTourButton(
+  _uiEngine: UIEngine, 
+  controller: ApplicationController,
+  sceneManager: SceneManager
+): void {
+  const startButton = document.getElementById('startTourButton');
+  if (!startButton) return;
+
+  const demoPlayer = new DemoPlayer(controller, sceneManager);
+  window.demoPlayer = demoPlayer; // Expose for debugging
+
+  startButton.addEventListener('click', () => {
+    // Simple confirmation before starting
+    const confirmed = confirm("Start the guided tour? This will reset the current design.");
+    if (confirmed) {
+      demoPlayer.start();
+    }
+  });
 }
 
 /**
