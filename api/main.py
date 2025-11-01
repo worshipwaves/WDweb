@@ -9,6 +9,8 @@ import os
 from services.dtos import CompositionStateDTO
 from services.service_facade import WaveformDesignerFacade
 from services.config_service import ConfigService
+from fastapi import Response
+from dev_utils.performance_monitor import performance_monitor
 
 # Define project root directory (parent of api directory)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -53,6 +55,19 @@ class CsgDataResponse(BaseModel):
 def health_check():
     """Basic health check endpoint."""
     return {"status": "ok", "message": "Welcome to WaveDesigner API"}
+    
+@app.get("/api/performance-report", response_class=Response)
+def get_performance_report():
+    """Returns the latest performance report as plain text."""
+    report = performance_monitor.get_report()
+    performance_monitor.reset()  # Reset after fetching to prepare for the next run
+    return Response(content=report, media_type="text/plain")
+
+@app.get("/api/performance-reset")
+def reset_performance_report():
+    """Manually resets the performance monitor."""
+    performance_monitor.reset()
+    return {"status": "ok", "message": "Performance monitor reset."}    
 
 @app.get("/api/config/wood-materials")
 def get_wood_materials_config():

@@ -98,7 +98,6 @@ export class ApplicationController {
   private _woodMaterialsConfig: WoodMaterialsConfig | null = null;
   private _selectedSectionIndices: Set<number> = new Set();
   private _idleTextureLoader: unknown = null; // IdleTextureLoader instance
-	private _panelStack: PanelStackManager | null = null;
 	
 	// Four-panel navigation state
   private _activeCategory: string | null = null;

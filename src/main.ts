@@ -174,7 +174,7 @@ class SceneManager {
     this.setupLighting();
 
     // Setup background
-    //this.setupBackground(); // COMMENT OUT TO NOT USE IMAGE BACKGROUND
+    this.setupBackground(); // COMMENT OUT TO NOT USE IMAGE BACKGROUND
 
     // Initial layout check
     this.checkLayoutMode();
@@ -292,7 +292,7 @@ class SceneManager {
     // Use Layer for 2D background image (standard Babylon.js approach)
     this._backgroundLayer = new Layer(
       'backgroundLayer',
-      '/assets/backgrounds/clouds3.webp',
+      '/assets/backgrounds/stucco.jpg',
       this._scene,
       true
     );
