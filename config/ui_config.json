@@ -291,7 +291,7 @@
                     "frame_design.secondary_height": 30,
                     "frame_design.installation_gap": 3,
                     "frame_design.orientation": "taller_left",
-                    "frame_design.separation": 0,
+                    "frame_design.separation": 2,
                     "frame_design.finish_x": 36.0,
                     "frame_design.finish_y": 36.0
                   }
@@ -308,7 +308,7 @@
                     "frame_design.secondary_height": 30,
                     "frame_design.installation_gap": 3,
                     "frame_design.orientation": "taller_right",
-                    "frame_design.separation": 0,
+                    "frame_design.separation": 2,
                     "frame_design.finish_x": 36.0,
                     "frame_design.finish_y": 36.0
                   }
@@ -325,7 +325,7 @@
                     "frame_design.secondary_height": 35,
                     "frame_design.installation_gap": 3.5,
                     "frame_design.orientation": "taller_left",
-                    "frame_design.separation": 0,
+                    "frame_design.separation": 2,
                     "frame_design.finish_x": 36.0,
                     "frame_design.finish_y": 36.0
                   }
@@ -342,7 +342,7 @@
                     "frame_design.secondary_height": 35,
                     "frame_design.installation_gap": 3.5,
                     "frame_design.orientation": "taller_right",
-                    "frame_design.separation": 0,
+                    "frame_design.separation": 2,
                     "frame_design.finish_x": 36.0,
                     "frame_design.finish_y": 36.0
                   }
@@ -389,7 +389,7 @@
                     "frame_design.secondary_height": 30,
                     "frame_design.installation_gap": 3,
                     "frame_design.orientation": "taller_left",
-                    "frame_design.separation": 0
+                    "frame_design.separation": 2
                   }
                 },
                 "rectangular_radial_paired_36_right": {
@@ -404,7 +404,7 @@
                     "frame_design.secondary_height": 30,
                     "frame_design.installation_gap": 3,
                     "frame_design.orientation": "taller_right",
-                    "frame_design.separation": 0
+                    "frame_design.separation": 2
                   }
                 },
                 "rectangular_radial_paired_42_left": {
@@ -419,7 +419,7 @@
                     "frame_design.secondary_height": 35,
                     "frame_design.installation_gap": 3.5,
                     "frame_design.orientation": "taller_left",
-                    "frame_design.separation": 0
+                    "frame_design.separation": 2
                   }
                 },
                 "rectangular_radial_paired_42_right": {
@@ -434,7 +434,7 @@
                     "frame_design.secondary_height": 35,
                     "frame_design.installation_gap": 3.5,
                     "frame_design.orientation": "taller_right",
-                    "frame_design.separation": 0
+                    "frame_design.separation": 2
                   }
                 },
                 "rectangular_linear_n1": {
@@ -489,7 +489,7 @@
                     "frame_design.secondary_height": 30,
                     "frame_design.installation_gap": 3,
                     "frame_design.orientation": "taller_left",
-                    "frame_design.separation": 0
+                    "frame_design.separation": 2
                   }
                 },
                 "rectangular_linear_paired_36_right": {
@@ -504,7 +504,7 @@
                     "frame_design.secondary_height": 30,
                     "frame_design.installation_gap": 3,
                     "frame_design.orientation": "taller_right",
-                    "frame_design.separation": 0
+                    "frame_design.separation": 2
                   }
                 },
                 "rectangular_linear_paired_42_left": {
@@ -519,7 +519,7 @@
                     "frame_design.secondary_height": 35,
                     "frame_design.installation_gap": 3.5,
                     "frame_design.orientation": "taller_left",
-                    "frame_design.separation": 0
+                    "frame_design.separation": 2
                   }
                 },
                 "rectangular_linear_paired_42_right": {
@@ -534,7 +534,7 @@
                     "frame_design.secondary_height": 35,
                     "frame_design.installation_gap": 3.5,
                     "frame_design.orientation": "taller_right",
-                    "frame_design.separation": 0
+                    "frame_design.separation": 2
                   }
                 },
                 "diamond_radial_n1": {
@@ -579,7 +579,7 @@
                     "frame_design.secondary_height": 30,
                     "frame_design.installation_gap": 3,
                     "frame_design.orientation": "taller_left",
-                    "frame_design.separation": 0
+                    "frame_design.separation": 2
                   }
                 },
                 "diamond_radial_paired_36_right": {
@@ -594,7 +594,7 @@
                     "frame_design.secondary_height": 30,
                     "frame_design.installation_gap": 3,
                     "frame_design.orientation": "taller_right",
-                    "frame_design.separation": 0
+                    "frame_design.separation": 2
                   }
                 },
                 "diamond_radial_paired_42_left": {
@@ -609,7 +609,7 @@
                     "frame_design.secondary_height": 35,
                     "frame_design.installation_gap": 3.5,
                     "frame_design.orientation": "taller_left",
-                    "frame_design.separation": 0
+                    "frame_design.separation": 2
                   }
                 },
                 "diamond_radial_paired_42_right": {
@@ -624,7 +624,7 @@
                     "frame_design.secondary_height": 35,
                     "frame_design.installation_gap": 3.5,
                     "frame_design.orientation": "taller_right",
-                    "frame_design.separation": 0
+                    "frame_design.separation": 2
                   }
                 },
                 "diamond_linear_n1": {
@@ -659,7 +659,7 @@
                     "frame_design.secondary_height": 30,
                     "frame_design.installation_gap": 3,
                     "frame_design.orientation": "taller_left",
-                    "frame_design.separation": 0
+                    "frame_design.separation": 2
                   }
                 },
                 "diamond_linear_paired_36_right": {
@@ -674,7 +674,7 @@
                     "frame_design.secondary_height": 30,
                     "frame_design.installation_gap": 3,
                     "frame_design.orientation": "taller_right",
-                    "frame_design.separation": 0
+                    "frame_design.separation": 2
                   }
                 },
                 "diamond_linear_paired_42_left": {
@@ -689,7 +689,7 @@
                     "frame_design.secondary_height": 35,
                     "frame_design.installation_gap": 3.5,
                     "frame_design.orientation": "taller_left",
-                    "frame_design.separation": 0
+                    "frame_design.separation": 2
                   }
                 },
                 "diamond_linear_paired_42_right": {
@@ -704,7 +704,7 @@
                     "frame_design.secondary_height": 35,
                     "frame_design.installation_gap": 3.5,
                     "frame_design.orientation": "taller_right",
-                    "frame_design.separation": 0
+                    "frame_design.separation": 2
                   }
                 }
               }
