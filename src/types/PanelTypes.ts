@@ -186,29 +186,11 @@ export interface FilterIconDefinition {
 }
 
 /**
- * State updates applied when thumbnail is selected
- * Uses dotted path notation matching config structure
- */
-export interface StateUpdates {
-  'frame_design.shape'?: string;
-  'frame_design.number_sections'?: number;
-  'frame_design.paired_composition'?: boolean;
-  'frame_design.primary_height'?: number;
-  'frame_design.secondary_height'?: number;
-  'frame_design.installation_gap'?: number;
-  'frame_design.orientation'?: string;
-  'frame_design.separation'?: number;
-  'pattern_settings.slot_style'?: string;
-  [key: string]: string | number | boolean | undefined;
-}
-
-/**
  * Individual thumbnail configuration
  */
 export interface ThumbnailOptionConfig {
   label: string;
   tooltip: string;
-  state_updates: StateUpdates;
 }
 
 /**
@@ -216,8 +198,12 @@ export interface ThumbnailOptionConfig {
  */
 export interface OptionsConfig {
   label: string;
-  validation_rules: Record<string, number[]>;
-  thumbnails: Record<string, ThumbnailOptionConfig>;
+  type?: string;
+  archetype_source?: string;
+  display_field?: string;
+  sort_by?: string;
+  validation_rules?: Record<string, number[]>;
+  thumbnails?: Record<string, ThumbnailOptionConfig>;
 }
 
 /**

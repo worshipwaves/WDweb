@@ -1067,57 +1067,35 @@ export class ApplicationController {
           break;
         }				
 
-        // Default to ThumbnailGrid for "Style" category
-        default: {
-          const allThumbnails = optionConfig.thumbnails || {};
-
-          const thumbnailItems = Object.entries(allThumbnails)
-            .filter(([key, config]) => {
-              // Apply icon filter selections (empty Set = show all)
+        case 'archetype_grid': {
+          const matchingArchetypes = Array.from(this._archetypes.values())
+            .filter(archetype => {
+              // Apply active filters
               const activeShapes = this._activeFilters.get('shape') || new Set();
-              if (activeShapes.size > 0) {
-                const thumbnailShape = config.state_updates['frame_design.shape'] as string;
-                if (!activeShapes.has(thumbnailShape)) {
-                  return false;
-                }
+              if (activeShapes.size > 0 && !activeShapes.has(archetype.shape)) {
+                return false;
               }
               
               const activePatterns = this._activeFilters.get('slot_pattern') || new Set();
-              if (activePatterns.size > 0) {
-                const thumbnailPattern = config.state_updates['pattern_settings.slot_style'] as string;
-                if (!activePatterns.has(thumbnailPattern)) {
-                  return false;
-                }
+              if (activePatterns.size > 0 && !activePatterns.has(archetype.slot_style)) {
+                return false;
               }
               
               return true;
             })
-            .map(([key, config]) => {
-              // Check validation rules per thumbnail
-              const thumbnailShape = config.state_updates['frame_design.shape'] as string;
-              const thumbnailPattern = config.state_updates['pattern_settings.slot_style'] as string;
-              const thumbnailN = config.state_updates['frame_design.number_sections'] as number;
-              const ruleKey = `${thumbnailShape}_${thumbnailPattern}`;
-              const validNValues = optionConfig.validation_rules?.[ruleKey] || [];
-              const isDisabled = validNValues.length > 0 && !validNValues.includes(thumbnailN);
-              
-              return {
-                id: key,
-                label: config.label,
-                thumbnailUrl: `${this._thumbnailConfig!.base_path}/${key}${this._thumbnailConfig!.extension}`,
-                disabled: isDisabled,
-                tooltip: config.tooltip,
-              };
-            });
-
-          const activeSelection = this._getActiveThumbnailId(
-            allThumbnails,
-            this._state!.composition
-          );
-
+            .map(archetype => ({
+              id: archetype.id,
+              label: archetype.label,
+              thumbnailUrl: archetype.thumbnail,
+              disabled: false, // Future validation logic here
+              tooltip: archetype.tooltip
+            }));
+            
+          const activeSelection = this._getActiveArchetypeId();
+          
           const thumbnailGrid = new ThumbnailGrid(
-            thumbnailItems,
-            (id) => this._handleThumbnailSelected(id),
+            matchingArchetypes,
+            (id) => this._handleArchetypeSelected(id),
             activeSelection
           );
           panelContent.appendChild(thumbnailGrid.render());
@@ -1135,20 +1113,18 @@ export class ApplicationController {
    * Get active thumbnail ID by matching current state to thumbnail state_updates
    * @private
    */
-  private _getActiveThumbnailId(
-    thumbnails: Record<string, ThumbnailOptionConfig>,
-    currentState: CompositionStateDTO
-  ): string | null {
-    for (const [thumbnailId, config] of Object.entries(thumbnails)) {
-      const updates = config.state_updates;
-      
-      const matches = Object.entries(updates).every(([path, value]) => {
-        const currentValue = this._getNestedValue(currentState, path);
-        return currentValue === value;
-      });
+  private _getActiveArchetypeId(): string | null {
+    if (!this._state) return null;
+    
+    for (const archetype of this._archetypes.values()) {
+      const comp = this._state.composition;
+      const matches = 
+        comp.frame_design.shape === archetype.shape &&
+        comp.frame_design.number_sections === archetype.number_sections &&
+        comp.pattern_settings.slot_style === archetype.slot_style;
       
       if (matches) {
-        return thumbnailId;
+        return archetype.id;
       }
     }
     
@@ -1179,26 +1155,27 @@ export class ApplicationController {
    * Applies state_updates from config
    * @private
    */
-  private async _handleThumbnailSelected(thumbnailKey: string): Promise<void> {
-    if (!this._categoriesConfig || !this._activeCategory || !this._activeSubcategory || !this._state) return;
-
-    const categoryConfig = this._categoriesConfig[this._activeCategory as keyof typeof this._categoriesConfig];
-    if (!categoryConfig) return;
-
-    const subcategory = categoryConfig.subcategories[this._activeSubcategory];
-    const optionKey = Object.keys(subcategory.options)[0];
-    const thumbnail = subcategory.options[optionKey]?.thumbnails?.[thumbnailKey];
+  private async _handleArchetypeSelected(archetypeId: string): Promise<void> {
+    if (!this._state) return;
     
-    if (!thumbnail) return;
+    const archetype = this._archetypes.get(archetypeId);
+    if (!archetype) {
+      console.warn(`[Controller] Archetype not found: ${archetypeId}`);
+      return;
+    }
     
-    // Apply all state_updates from config
     const newComposition = structuredClone(this._state.composition);
     
-    Object.entries(thumbnail.state_updates).forEach(([path, value]) => {
-      this._setNestedValue(newComposition, path, value);
-    });
+    // Apply all properties from the archetype to the composition state
+    newComposition.frame_design.shape = archetype.shape;
+    newComposition.frame_design.number_sections = archetype.number_sections;
+    newComposition.frame_design.separation = archetype.separation;
+    newComposition.pattern_settings.slot_style = archetype.slot_style;
+    newComposition.pattern_settings.number_slots = archetype.number_slots;
+    if (archetype.side_margin !== undefined) {
+      newComposition.pattern_settings.side_margin = archetype.side_margin;
+    }
     
-    // Trigger rendering pipeline directly
     await this.handleCompositionUpdate(newComposition);
   }
 

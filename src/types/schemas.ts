@@ -48,6 +48,21 @@ export const StylePresetSchema = z.object({
 
 export type StylePreset = z.infer<typeof StylePresetSchema>;
 
+export const ArchetypeSchema = z.object({
+  id: z.string(),
+  shape: z.string(),
+  slot_style: z.string(),
+  label: z.string(),
+  tooltip: z.string(),
+  thumbnail: z.string(),
+  number_sections: z.number(),
+  number_slots: z.number(),
+  separation: z.number(),
+  side_margin: z.number().optional()
+}).strict();
+
+export type Archetype = z.infer<typeof ArchetypeSchema>;
+
 export const FrameDesignSchema = z.object({
   shape: z.enum(['circular', 'rectangular', 'diamond']),
   frame_orientation: z.string(),
