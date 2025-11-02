@@ -11,7 +11,7 @@ export class Tooltip {
   private _element: HTMLElement | null = null;
   private _showTimer: number | null = null;
   
-  show(text: string, targetElement: HTMLElement): void {
+  show(text: string, targetElement: HTMLElement, position: 'left' | 'above' = 'left'): void {
     this.hide();
     
     this._showTimer = window.setTimeout(() => {
@@ -22,17 +22,22 @@ export class Tooltip {
       
       const rect = targetElement.getBoundingClientRect();
       
-      // Position tooltip 16px left of the right main panel's left edge
-      const rightMainPanel = document.querySelector('.panel-right-main') as HTMLElement;
-      if (rightMainPanel) {
-        const panelRect = rightMainPanel.getBoundingClientRect();
-        tooltip.style.left = `${panelRect.left - tooltip.offsetWidth - 40}px`;
+      if (position === 'above') {
+        // Center horizontally above the target element
+        tooltip.style.left = `${rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2)}px`;
+        tooltip.style.top = `${rect.top - tooltip.offsetHeight - 8}px`;
       } else {
-        // Fallback if panel not found
-        tooltip.style.left = `${rect.left - tooltip.offsetWidth - 20}px`;
+        // Default: Position tooltip 16px left of the right main panel's left edge
+        const rightMainPanel = document.querySelector('.panel-right-main') as HTMLElement;
+        if (rightMainPanel) {
+          const panelRect = rightMainPanel.getBoundingClientRect();
+          tooltip.style.left = `${panelRect.left - tooltip.offsetWidth - 40}px`;
+        } else {
+          // Fallback if panel not found
+          tooltip.style.left = `${rect.left - tooltip.offsetWidth - 20}px`;
+        }
+        tooltip.style.top = `${rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2)}px`;
       }
-      
-      tooltip.style.top = `${rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2)}px`;
       
       this._element = tooltip;
     }, 10);

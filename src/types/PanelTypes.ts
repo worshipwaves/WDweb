@@ -153,6 +153,7 @@ export interface FilterOption {
   id: string;
   label: string;
   thumbnail: string;
+	tooltip?: string;
 }
 
 /**
@@ -164,6 +165,26 @@ export interface FilterConfig {
   ui_state_path: string;
   options: FilterOption[];
   default: string;
+}
+
+/**
+ * Filter icon group for FilterIconStrip component
+ */
+export interface FilterIconGroup {
+  id: string;
+  type: 'shape' | 'waveform';
+  label: string;
+  icons: FilterIconDefinition[];
+}
+
+/**
+ * Individual filter icon definition
+ */
+export interface FilterIconDefinition {
+  id: string;
+  svgPath: string;
+  tooltip: string;
+  stateValue: string;
 }
 
 /**

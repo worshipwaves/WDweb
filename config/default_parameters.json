@@ -505,27 +505,27 @@
         "panel": {
           "label": "Panel",
           "filters": {
-            "shape": {
-              "type": "single",
-              "label": "Shape",
-              "ui_state_path": "ui.active_filters.shape",
-              "options": [
-                { "id": "circular", "label": "Circular", "thumbnail": "shape_circular" },
-                { "id": "rectangular", "label": "Rectangular", "thumbnail": "shape_rectangular" },
-                { "id": "diamond", "label": "Diamond", "thumbnail": "shape_diamond" }
-              ],
-              "default": "circular"
-            },
-            "slot_pattern": {
-              "type": "single",
-              "label": "Slot Pattern",
-              "ui_state_path": "ui.active_filters.slot_pattern",
-              "options": [
-                { "id": "radial", "label": "Radial", "thumbnail": "pattern_radial" },
-                { "id": "linear", "label": "Linear", "thumbnail": "pattern_linear" }
-              ],
-              "default": "radial"
-            }
+						"shape": {
+							"type": "single",
+							"label": "Shape",
+							"ui_state_path": "ui.active_filters.shape",
+							"options": [
+								{ "id": "circular", "label": "Circular", "thumbnail": "shape_circular", "tooltip": "Circular Panel" },
+								{ "id": "rectangular", "label": "Rectangular", "thumbnail": "shape_rectangular", "tooltip": "Rectangular Panel" },
+								{ "id": "diamond", "label": "Diamond", "thumbnail": "shape_diamond", "tooltip": "Diamond Panel" }
+							],
+							"default": "circular"
+						},
+						"slot_pattern": {
+							"type": "single",
+							"label": "Slot Pattern",
+							"ui_state_path": "ui.active_filters.slot_pattern",
+							"options": [
+								{ "id": "radial", "label": "Radial", "thumbnail": "pattern_radial", "tooltip": "Radial Waveform" },
+								{ "id": "linear", "label": "Linear", "thumbnail": "pattern_linear", "tooltip": "Linear Waveform" }
+							],
+							"default": "radial"
+						}
           },
           "options": {
             "number_sections": {

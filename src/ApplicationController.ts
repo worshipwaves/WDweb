@@ -8,6 +8,8 @@
 
 import { AudioCacheService } from './AudioCacheService';
 import { PanelStackManager } from './components/PanelStackManager';
+import { FilterIconStrip } from './components/FilterIconStrip';
+import type { FilterIconGroup } from './types/PanelTypes';
 import { RightPanelContentRenderer } from './components/RightPanelContent';
 import { SliderGroup } from './components/SliderGroup';
 import { ThumbnailGrid } from './components/ThumbnailGrid';
@@ -102,9 +104,16 @@ export class ApplicationController {
 	// Four-panel navigation state
   private _activeCategory: string | null = null;
   private _activeSubcategory: string | null = null;
-  private _activeFilters: Map<string, string> = new Map();
+  private _activeFilters: Map<string, Set<string>> = new Map();
+	private _categoryFilterState: Map<string, Map<string, Set<string>>> = new Map();
   private _thumbnailConfig: ThumbnailConfig | null = null;
   private _categoriesConfig: CategoriesConfig | null = null;
+  
+  // Four-panel DOM references
+  private _leftSecondaryPanel: HTMLElement | null = null;
+  private _rightSecondaryPanel: HTMLElement | null = null;
+  private _rightMainPanel: HTMLElement | null = null;
+  private _filterIconStrip: FilterIconStrip | null = null;
   
   constructor(facade: WaveformDesignerFacade) {
     this._facade = facade;
@@ -634,9 +643,22 @@ export class ApplicationController {
   handleCategorySelected(categoryId: string): void {
     if (!this._panelStack || !this._state) return;
     
+    // Save current category's filter state before switching
+    if (this._activeCategory && this._activeFilters.size > 0) {
+      this._categoryFilterState.set(this._activeCategory, new Map(this._activeFilters));
+    }
+    
+    // Switch to new category
     this._activeCategory = categoryId;
     this._activeSubcategory = null;
-    this._activeFilters.clear();
+    
+    // Restore saved filter state for this category, or start fresh
+    const savedFilters = this._categoryFilterState.get(categoryId);
+    if (savedFilters) {
+      this._activeFilters = new Map(savedFilters);
+    } else {
+      this._activeFilters.clear();
+    }
     
     // All categories now use the four-panel architecture
     this._handleStyleCategorySelected();
@@ -668,8 +690,13 @@ export class ApplicationController {
         this._activeSubcategory = null;
       }
       
-      this._activeFilters.set('shape', currentComposition.frame_design.shape);
-      this._activeFilters.set('slot_pattern', currentComposition.pattern_settings.slot_style);
+      // Initialize filters only if not already set (first visit to category)
+      if (!this._activeFilters.has('shape')) {
+        this._activeFilters.set('shape', new Set<string>());
+      }
+      if (!this._activeFilters.has('slot_pattern')) {
+        this._activeFilters.set('slot_pattern', new Set<string>());
+      }
     }
     
     // Hide legacy panel stack
@@ -752,33 +779,12 @@ export class ApplicationController {
     const subcategory = categoryConfig.subcategories[subcategoryId];
     if (!subcategory) return;
     
-    // Initialize filters to defaults
+    // Initialize filters to empty Set (no filter = show ALL)
     Object.entries(subcategory.filters).forEach(([filterId, filterConfig]) => {
 			if (!this._activeFilters.has(filterId)) {
-				this._activeFilters.set(filterId, filterConfig.default);
+				this._activeFilters.set(filterId, new Set());
 			}
 		});
-    
-    // Render right secondary panel (filters) if they exist
-    const filters = Object.entries(subcategory.filters).map(([id, config]) => ({ id, config }));
-    if (filters.length > 0 && this._rightSecondaryPanel && this._thumbnailConfig) {
-      import('./components/RightSecondaryPanel').then(({ RightSecondaryPanel }) => {
-        const panel = new RightSecondaryPanel(
-          filters,
-          this._activeFilters,
-          this._thumbnailConfig!,
-          (filterId: string, value: string) => this._handleFilterSelected(filterId, value)
-        );
-        this._rightSecondaryPanel!.innerHTML = '';
-        this._rightSecondaryPanel!.appendChild(panel.render());
-        this._rightSecondaryPanel!.style.display = 'block';
-        this._rightSecondaryPanel!.classList.add('visible');
-      });
-    } else if (this._rightSecondaryPanel) {
-      // Hide if no filters
-      this._rightSecondaryPanel.style.display = 'none';
-      this._rightSecondaryPanel.classList.remove('visible');
-    }
 		
 		// Update camera offset after right secondary visibility changes
     requestAnimationFrame(() => {
@@ -792,39 +798,68 @@ export class ApplicationController {
   }
   
   /**
-   * Handle filter selection (Right Secondary → updates Right Main display only)
+   * Handle filter selection (Icon strip → updates Right Main display only)
    * CRITICAL: Does NOT update composition state
    * @private
    */
-  private _handleFilterSelected(filterId: string, value: string): void {
+  private _handleFilterSelected(filterId: string, selections: Set<string>): void {
     if (!this._activeSubcategory) return;
     
     // Update filter selection (transient display state)
-    this._activeFilters.set(filterId, value);
-    
-    // Re-render Right Secondary panel to show updated selection state
-    if (this._rightSecondaryPanel && this._thumbnailConfig && this._categoriesConfig && this._activeCategory && this._activeSubcategory) {
-      const categoryConfig = this._categoriesConfig[this._activeCategory as keyof CategoriesConfig];
-      const subcategory = categoryConfig?.subcategories[this._activeSubcategory];
-      if (subcategory) {
-        const filters = Object.entries(subcategory.filters).map(([id, config]) => ({ id, config }));
-        import('./components/RightSecondaryPanel').then(({ RightSecondaryPanel }) => {
-          const panel = new RightSecondaryPanel(
-            filters,
-            this._activeFilters,
-            this._thumbnailConfig!,
-            (filterId: string, value: string) => this._handleFilterSelected(filterId, value)
-          );
-          this._rightSecondaryPanel!.innerHTML = '';
-          this._rightSecondaryPanel!.appendChild(panel.render());
-        });
-      }
-    }
+    this._activeFilters.set(filterId, selections);
     
     // Re-render Right Main with new filter combination
     this._renderRightMainFiltered();
     
     // NO dispatch() call - filters don't update composition state
+  }
+	
+	/**
+   * Build filter icon groups from subcategory filter config
+   * @private
+   */
+  private _buildFilterIconGroups(filters: Record<string, import('./types/PanelTypes').FilterConfig>): FilterIconGroup[] {
+    const groups: FilterIconGroup[] = [];
+    
+    // Build shape filter group (Panel Shape)
+    if (filters.shape) {
+      groups.push({
+        id: 'shape',
+        type: 'shape',
+        label: 'Panel Shape',
+        icons: filters.shape.options.map(opt => ({
+        id: opt.id,
+        svgPath: `/assets/icons/${opt.id === 'circular' ? 'circle' : opt.id === 'rectangular' ? 'rectangle' : 'diamond'}.svg`,
+        tooltip: opt.tooltip || `${opt.label} Panel`,
+        stateValue: opt.id
+      }))
+      });
+    }
+    
+    // Build slot_pattern filter group (Waveform Pattern)
+    if (filters.slot_pattern) {
+      groups.push({
+        id: 'slot_pattern',
+        type: 'waveform',
+        label: 'Waveform Pattern',
+        icons: filters.slot_pattern.options.map(opt => ({
+					id: opt.id,
+					svgPath: `/assets/icons/${opt.id}.svg`,
+					tooltip: opt.tooltip || `${opt.label} Waveform`,
+					stateValue: opt.id
+				}))
+      });
+    }
+    
+    return groups;
+  }
+  
+  /**
+   * Handle icon filter change from FilterIconStrip
+   * @private
+   */
+  private _handleIconFilterChange(groupId: string, selections: Set<string>): void {
+    this._handleFilterSelected(groupId, selections);
   }
   
   /**
@@ -839,8 +874,22 @@ export class ApplicationController {
 		if (!subcategory) return;
 
 		this._rightMainPanel.innerHTML = '';
+		
+		// Render filter icon strip if filters exist - OUTSIDE panel-content
+		if (subcategory.filters && Object.keys(subcategory.filters).length > 0) {
+			const filterGroups = this._buildFilterIconGroups(subcategory.filters);
+			if (filterGroups.length > 0) {
+				this._filterIconStrip = new FilterIconStrip(
+					filterGroups,
+					this._activeFilters,
+					(groupId, iconId) => this._handleIconFilterChange(groupId, iconId)
+				);
+				this._rightMainPanel.appendChild(this._filterIconStrip.render());
+			}
+		}
+		
 		const panelContent = document.createElement('div');
-		panelContent.className = 'panel-content';
+		panelContent.className = 'panel-content panel-content-scrollable';
 
 		// Check for a placeholder note
 		if (subcategory.note) {
@@ -1014,19 +1063,46 @@ export class ApplicationController {
 
         // Default to ThumbnailGrid for "Style" category
         default: {
-          const filterKey = Array.from(this._activeFilters.values()).join('_');
-          const validNValues = optionConfig.validation_rules?.[filterKey] || [];
           const allThumbnails = optionConfig.thumbnails || {};
 
           const thumbnailItems = Object.entries(allThumbnails)
-            .filter(([key]) => key.startsWith(filterKey))
-            .map(([key, config]) => ({
-              id: key,
-              label: config.label,
-              thumbnailUrl: `${this._thumbnailConfig!.base_path}/${key}${this._thumbnailConfig!.extension}`,
-              disabled: !validNValues.includes(config.state_updates['frame_design.number_sections'] as number),
-              tooltip: config.tooltip,
-            }));
+            .filter(([key, config]) => {
+              // Apply icon filter selections (empty Set = show all)
+              const activeShapes = this._activeFilters.get('shape') || new Set();
+              if (activeShapes.size > 0) {
+                const thumbnailShape = config.state_updates['frame_design.shape'] as string;
+                if (!activeShapes.has(thumbnailShape)) {
+                  return false;
+                }
+              }
+              
+              const activePatterns = this._activeFilters.get('slot_pattern') || new Set();
+              if (activePatterns.size > 0) {
+                const thumbnailPattern = config.state_updates['pattern_settings.slot_style'] as string;
+                if (!activePatterns.has(thumbnailPattern)) {
+                  return false;
+                }
+              }
+              
+              return true;
+            })
+            .map(([key, config]) => {
+              // Check validation rules per thumbnail
+              const thumbnailShape = config.state_updates['frame_design.shape'] as string;
+              const thumbnailPattern = config.state_updates['pattern_settings.slot_style'] as string;
+              const thumbnailN = config.state_updates['frame_design.number_sections'] as number;
+              const ruleKey = `${thumbnailShape}_${thumbnailPattern}`;
+              const validNValues = optionConfig.validation_rules?.[ruleKey] || [];
+              const isDisabled = validNValues.length > 0 && !validNValues.includes(thumbnailN);
+              
+              return {
+                id: key,
+                label: config.label,
+                thumbnailUrl: `${this._thumbnailConfig!.base_path}/${key}${this._thumbnailConfig!.extension}`,
+                disabled: isDisabled,
+                tooltip: config.tooltip,
+              };
+            });
 
           const activeSelection = this._getActiveThumbnailId(
             allThumbnails,

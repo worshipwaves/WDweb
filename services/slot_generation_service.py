@@ -137,7 +137,11 @@ class SlotGenerationService:
             local_slot_index = slot_index % slots_per_section
             
             # Determine margins for this section
-            if section_id == 0:
+            if number_sections == 1:
+                # Single section: side_margin on both edges (both are exterior)
+                left_margin = side_margin
+                right_margin = side_margin
+            elif section_id == 0:
                 # First section: side_margin on left (outer), x_offset on right (interior)
                 left_margin = side_margin
                 right_margin = x_offset
@@ -146,7 +150,7 @@ class SlotGenerationService:
                 left_margin = x_offset
                 right_margin = side_margin
             else:
-                # Internal: x_offset on both sides
+                # Internal sections: x_offset on both sides
                 left_margin = x_offset
                 right_margin = x_offset
             
