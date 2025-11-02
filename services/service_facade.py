@@ -12,6 +12,7 @@ from services.processing_level_service import ProcessingLevelService
 from services.dtos import CompositionStateDTO
 from services.audio_processing_service import AudioProcessingService
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 class WaveformDesignerFacade:
     """
@@ -33,7 +34,7 @@ class WaveformDesignerFacade:
         """
         # Create configuration service (single source of truth for defaults)
         self._config_service = ConfigService(
-            config_path=Path("config/default_parameters.json")
+            PROJECT_ROOT / "config"
         )
         
         # Create base services
@@ -53,7 +54,8 @@ class WaveformDesignerFacade:
         # Add the new processing level service
         self._processing_level_service = ProcessingLevelService(
             audio_service=self._audio_processing_service,
-            slot_service=self._slot_generation_service
+            slot_service=self._slot_generation_service,
+            config_service=self._config_service
         )        
     
     def generate_composition(self, state: CompositionStateDTO) -> CompositionStateDTO:

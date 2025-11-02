@@ -32,7 +32,7 @@ app.add_middleware(
 facade = WaveformDesignerFacade()
 
 # Create ConfigService instance for configuration endpoints
-config_service = ConfigService(PROJECT_ROOT / "config" / "default_parameters.json")
+config_service = ConfigService(PROJECT_ROOT / "config")
 
 # Pydantic model for the audio processing response
 class AudioProcessResponse(BaseModel):
@@ -67,7 +67,22 @@ def get_performance_report():
 def reset_performance_report():
     """Manually resets the performance monitor."""
     performance_monitor.reset()
-    return {"status": "ok", "message": "Performance monitor reset."}    
+    return {"status": "ok", "message": "Performance monitor reset."}
+
+@app.get("/api/config/archetypes")
+def get_archetypes():
+    """Load archetype definitions with enriched metadata"""
+    return config_service.get_archetypes()
+
+@app.get("/api/config/ui")
+def get_ui_config():
+    """Load UI configuration (elements, categories, thumbnails)"""
+    return config_service.get_ui_config()
+
+@app.get("/api/config/composition-defaults")
+def get_composition_defaults():
+    """Load composition default values for initial DTO"""
+    return config_service.get_composition_defaults()   
 
 @app.get("/api/config/wood-materials")
 def get_wood_materials_config():
@@ -109,9 +124,7 @@ def get_csg_data(request: CsgDataRequest) -> Dict[str, Any]:
     """
     try:
         # Log the processing level for debugging
-        from services.processing_level_service import ProcessingLevelService
-        level_service = ProcessingLevelService(None, None)
-        level = level_service.get_processing_level(request.changed_params)
+        level = facade._processing_level_service.get_processing_level(request.changed_params)
         print(f"[API] Processing level: {level} for params: {request.changed_params}")
         
         # For geometry changes, verify amplitudes look normalized

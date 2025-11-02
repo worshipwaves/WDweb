@@ -499,8 +499,9 @@
     "extension": ".png"
   },
   "categories": {
-    "style": {
-      "label": "STYLE",
+    "wood": {
+      "label": "WOOD",
+      "order": 2,
       "subcategories": {
         "panel": {
           "label": "Panel",
@@ -1045,17 +1046,21 @@
         },
         "assembled": {
           "label": "Assembled",
-          "note": "Future implementation - multi-panel assembly",
+          "note": "Assembled panel compositions coming soon",
           "filters": {},
           "options": {}
-        }
-      }
-    },
-    "layout": {
-      "label": "LAYOUT",
-      "subcategories": {
-        "positioning": {
-          "label": "Positioning",
+        },
+        "wood_species": {
+          "label": "Wood Species",
+          "filters": {},
+          "options": {
+            "main": {
+              "type": "wood_material_inline_grid"
+            }
+          }
+        },
+        "layout": {
+          "label": "Layout",
           "filters": {},
           "options": {
             "main": {
@@ -1063,25 +1068,48 @@
               "element_keys": ["width", "height", "separation", "slots", "side_margin"]
             }
           }
+        },
+        "backing": {
+          "label": "Backing",
+          "note": "Backing options coming soon",
+          "filters": {},
+          "options": {}
+        },
+        "frames": {
+          "label": "Frames",
+          "note": "Custom frame options coming soon",
+          "filters": {},
+          "options": {}
         }
       }
     },
-    "wood": {
-      "label": "WOOD",
+    "print": {
+      "label": "PRINT",
+      "order": 3,
       "subcategories": {
-        "material": {
-          "label": "Material",
+        "canvas": {
+          "label": "Canvas",
+          "note": "Canvas print options coming soon",
           "filters": {},
-          "options": {
-            "main": {
-              "type": "wood_material_inline_grid"
-            }
-          }
+          "options": {}
+        },
+        "fine_art_paper": {
+          "label": "Fine Art Paper",
+          "note": "Fine art paper prints coming soon",
+          "filters": {},
+          "options": {}
+        },
+        "metal": {
+          "label": "Metal",
+          "note": "Metal print options coming soon",
+          "filters": {},
+          "options": {}
         }
       }
     },
     "audio": {
       "label": "AUDIO",
+      "order": 1,
       "subcategories": {
         "tour": {
           "label": "Tour",
@@ -1089,14 +1117,14 @@
           "filters": {},
           "options": {}
         },
-        "library": {
-          "label": "Library",
+        "collections": {
+          "label": "Collections",
           "note": "Browse curated hymns, prayers, scriptures, and blessings",
           "filters": {},
           "options": {}
         },
-        "upload": {
-          "label": "Upload",
+        "custom": {
+          "label": "Custom",
           "filters": {},
           "options": {
             "file_upload": {
@@ -1106,16 +1134,17 @@
         }
       }
     },
-    "backing": {
-      "label": "BACKING",
-      "subcategories": {
-        "material": {
-          "label": "Material",
-          "note": "Backing options coming soon",
-          "filters": {},
-          "options": {}
-        }
-      }
+    "share": {
+      "label": "SHARE",
+      "order": 4,
+      "note": "Share and save your designs coming soon",
+      "subcategories": {}
+    },
+    "order": {
+      "label": "ORDER",
+      "order": 5,
+      "note": "Custom order processing coming soon",
+      "subcategories": {}
     }
   }
 }

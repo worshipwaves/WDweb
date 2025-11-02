@@ -2,6 +2,7 @@
 from typing import List, Dict, Any, Optional
 from services.dtos import CompositionStateDTO, GeometryResultDTO
 from services.geometry_service import GeometryService
+from services.config_service import ConfigService
 
 
 class ProcessingLevelService:
@@ -48,10 +49,11 @@ class ProcessingLevelService:
 
     LEVEL_HIERARCHY = ["display", "post", "slots", "geometry", "audio"]
 
-    def __init__(self, audio_service, slot_service):
+    def __init__(self, audio_service, slot_service, config_service: ConfigService):
         self._audio_service = audio_service
         self._geometry_service = GeometryService()
         self._slot_service = slot_service
+        self._config_service = config_service
         self._cached_max_amplitude_local = {}  # Placeholder for future caching
 
     def get_processing_level(self, changed_params: List[str]) -> str:
@@ -86,11 +88,8 @@ class ProcessingLevelService:
         # Preserve valid section_materials and add defaults for new sections
         if state.frame_design:
             from services.dtos import SectionMaterialDTO
-            from services.config_service import ConfigService
-            from pathlib import Path
             
-            config = ConfigService(Path("config/default_parameters.json"))
-            wood_config = config.get_wood_materials_config()
+            wood_config = self._config_service.get_wood_materials_config()
             
             num_sections = state.frame_design.number_sections
             existing_materials = state.frame_design.section_materials or []

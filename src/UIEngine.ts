@@ -108,43 +108,49 @@ export class UIEngine {
   /**
    * Load UI configuration from backend
    */
-  async loadConfig(): Promise<void> {
-    const response = await fetch('/api/config/default-parameters');
-    if (!response.ok) {
-      throw new Error('Failed to load UI configuration');
-    }
-    
-    const raw = await response.json() as unknown;
-    
-    if (typeof raw !== 'object' || raw === null || !('_ui_config' in raw)) {
-      throw new Error('Invalid config structure: missing _ui_config');
-    }
-    
-    const parsed = UIConfigSchema.safeParse((raw as { _ui_config: unknown })._ui_config);
-    if (!parsed.success) {
-      console.error('UIConfig validation failed:', parsed.error.format());
+	async loadConfig(): Promise<void> {
+		console.log('[UIEngine] Starting loadConfig...');
+		console.log('[UIEngine] Fetching from /api/config/ui...');
+		const response = await fetch('http://localhost:8000/api/config/ui');
+		console.log('[UIEngine] Fetch response:', response.status);
+		
+		if (!response.ok) {
+			throw new Error('Failed to load UI configuration');
+		}
+		
+		console.log('[UIEngine] Parsing JSON...');
+		const raw = await response.json() as unknown;
+		console.log('[UIEngine] JSON parsed, validating...');
+		
+		const parsed = UIConfigSchema.safeParse(raw);
+		console.log('[UIEngine] Validation result:', parsed.success);
+		
+		if (!parsed.success) {
+			console.error('UIConfig validation failed:', parsed.error.format());
 			console.error('Detailed errors:', JSON.stringify(parsed.error.format(), null, 2));
-      throw new Error('UIConfig validation failed');
-    }
-    
-    this.config = parsed.data;
-    
-    // Build element ID cache
-    if (this.config) {
-      Object.entries(this.config.elements).forEach(([key, element]) => {
-        this.elementCache.set(key, element.id);
-      });
-      
-      Object.entries(this.config.buttons).forEach(([key, button]) => {
-        this.elementCache.set(key, button.id);
-      });
-      
-      // Upload IDs
-      this.elementCache.set('uploadContainer', this.config.upload.container_id);
-      this.elementCache.set('uploadDropZone', this.config.upload.drop_zone_id);
-      this.elementCache.set('fileInput', this.config.upload.file_input_id);
-    }
-  }
+			throw new Error('UIConfig validation failed');
+		}
+		
+		console.log('[UIEngine] Config validated successfully');
+		this.config = parsed.data;
+		
+		// Build element ID cache
+		if (this.config) {
+			Object.entries(this.config.elements).forEach(([key, element]) => {
+				this.elementCache.set(key, element.id);
+			});
+			
+			Object.entries(this.config.buttons).forEach(([key, button]) => {
+				this.elementCache.set(key, button.id);
+			});
+			
+			// Upload IDs
+			this.elementCache.set('uploadContainer', this.config.upload.container_id);
+			this.elementCache.set('uploadDropZone', this.config.upload.drop_zone_id);
+			this.elementCache.set('fileInput', this.config.upload.file_input_id);
+		}
+		console.log('[UIEngine] loadConfig complete');
+	}
   
   /**
    * Get HTML element by config key (not hardcoded ID)

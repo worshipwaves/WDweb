@@ -195,6 +195,9 @@ class SlotGenerationService:
         amplitudes: List[float]
     ) -> List[List[List[float]]]:
         """Generate radial slot coordinates."""
+        
+        # Extract shape for use in nested scope
+        frame_shape = state.frame_design.shape
         number_sections = state.frame_design.number_sections
         number_slots = state.pattern_settings.number_slots
         slots_per_section = number_slots // number_sections

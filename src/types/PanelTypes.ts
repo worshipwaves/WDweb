@@ -72,13 +72,11 @@ export interface PanelContentConfig {
  * Category definitions for left panel navigation
  */
 export const CATEGORIES: CategoryConfig[] = [
-  { id: 'audio', label: 'Audio', icon: '🎵', enabled: true },
-  { id: 'style', label: 'Style', icon: '🎨', enabled: true },
-  { id: 'layout', label: 'Layout', icon: '📏', enabled: true },
-  { id: 'wood', label: 'Wood', icon: '🪵', enabled: true },
-  { id: 'backing', label: 'Backing', icon: '🖼', enabled: true },
-  { id: 'share', label: 'Share', icon: '📤', enabled: false },
-  { id: 'order', label: 'Order', icon: '🛒', enabled: false }
+  { id: 'audio', label: 'AUDIO', icon: '🎵', enabled: true },
+  { id: 'wood', label: 'WOOD', icon: '🪵', enabled: true },
+  { id: 'print', label: 'PRINT', icon: '🖨', enabled: true },
+  { id: 'share', label: 'SHARE', icon: '📤', enabled: false },
+  { id: 'order', label: 'ORDER', icon: '🛒', enabled: false }
 ];
 
 /**

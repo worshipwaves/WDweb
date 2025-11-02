@@ -53,14 +53,14 @@ export class RightPanelContentRenderer {
     switch (category) {
       case 'audio':
         return this._renderAudioOptions();
-      case 'style':
-        return this._renderStyleOptions(state, config, onOptionSelected);
-      case 'layout':
-        return this._renderLayoutOptions(state, config, onOptionSelected);
       case 'wood':
         return this._renderWoodOptions(state, config, onOptionSelected);
-      case 'backing':
-        return this._renderBackingOptions();
+      case 'print':
+        return new SimplePanel('<div class="panel-placeholder"><p>Print options coming soon</p></div>');
+      case 'share':
+        return new SimplePanel('<div class="panel-placeholder"><p>Share and save your designs coming soon</p></div>');
+      case 'order':
+        return new SimplePanel('<div class="panel-placeholder"><p>Custom order processing coming soon</p></div>');
       default:
         return new SimplePanel('<div class="panel-placeholder">Coming soon...</div>');
     }

@@ -108,6 +108,7 @@ export class ApplicationController {
 	private _categoryFilterState: Map<string, Map<string, Set<string>>> = new Map();
   private _thumbnailConfig: ThumbnailConfig | null = null;
   private _categoriesConfig: CategoriesConfig | null = null;
+	private _archetypes: Map<string, any> = new Map();
   
   // Four-panel DOM references
   private _leftSecondaryPanel: HTMLElement | null = null;
@@ -149,13 +150,23 @@ export class ApplicationController {
       );
 			
 			// Load thumbnail and categories configuration
-      const defaultParams = await fetch('http://localhost:8000/api/config/default-parameters').then(r => r.json()) as {
-        thumbnail_config?: ThumbnailConfig;
-        categories?: CategoriesConfig;
-      };
-      
-      this._thumbnailConfig = defaultParams.thumbnail_config || null;
-      this._categoriesConfig = defaultParams.categories || null;
+      // Load all configs in parallel
+			const [archetypes, woodMaterials, uiConfig, compositionDefaults] = await Promise.all([
+				fetch('http://localhost:8000/api/config/archetypes').then(r => r.json()),
+				fetch('http://localhost:8000/api/config/wood-materials').then(r => r.json()),
+				fetch('http://localhost:8000/api/config/ui').then(r => r.json()),
+				fetch('http://localhost:8000/api/config/composition-defaults').then(r => r.json())
+			]);
+
+			// Store archetypes
+			Object.entries(archetypes).forEach(([id, data]: [string, any]) => {
+				this._archetypes.set(id, data);
+			});
+
+			// Store configs
+			this._woodMaterialsConfig = woodMaterials;
+			this._thumbnailConfig = (uiConfig as any).thumbnail_config;
+			this._categoriesConfig = (uiConfig as any).categories;
 			
     } catch (error: unknown) {
       console.error('[Controller] Failed to load configuration:', error);
@@ -681,11 +692,6 @@ export class ApplicationController {
       if (subcategories.length === 1) {
         // Correctly select the single subcategory for Layout, Wood, etc.
         this._activeSubcategory = subcategories[0].id;
-      } else if (this._activeCategory === 'style') {
-        // Preserve the original, specific logic only for the 'style' category.
-        this._activeSubcategory = currentComposition.frame_design.paired_composition
-          ? 'assembled'
-          : 'panel';
       } else {
         this._activeSubcategory = null;
       }
@@ -1174,10 +1180,14 @@ export class ApplicationController {
    * @private
    */
   private async _handleThumbnailSelected(thumbnailKey: string): Promise<void> {
-    if (!this._categoriesConfig?.style || !this._activeSubcategory || !this._state) return;
-    
-    const subcategory = this._categoriesConfig.style.subcategories[this._activeSubcategory];
-    const thumbnail = subcategory.options.number_sections?.thumbnails[thumbnailKey];
+    if (!this._categoriesConfig || !this._activeCategory || !this._activeSubcategory || !this._state) return;
+
+    const categoryConfig = this._categoriesConfig[this._activeCategory as keyof typeof this._categoriesConfig];
+    if (!categoryConfig) return;
+
+    const subcategory = categoryConfig.subcategories[this._activeSubcategory];
+    const optionKey = Object.keys(subcategory.options)[0];
+    const thumbnail = subcategory.options[optionKey]?.thumbnails?.[thumbnailKey];
     
     if (!thumbnail) return;
     

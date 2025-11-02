@@ -1,0 +1,56 @@
+{
+  "default_species": "walnut-black-american",
+  "default_grain_direction": "vertical",
+  "species_catalog": [
+    {"id": "walnut-black-american", "display": "Walnut", "wood_number": "109"},
+    {"id": "cherry-black", "display": "Cherry", "wood_number": "085"},
+    {"id": "maple", "display": "Maple", "wood_number": "098"},
+    {"id": "maple-birdseye", "display": "Maple (Birdseye)", "wood_number": "097"},
+    {"id": "oak-white-american", "display": "Oak (White)", "wood_number": "100"},
+    {"id": "oak-red-american", "display": "Oak (Red)", "wood_number": "099"},
+    {"id": "mahogany-american", "display": "Mahogany", "wood_number": "095"},
+    {"id": "alder-red", "display": "Alder", "wood_number": "079"},
+    {"id": "bloodwood", "display": "Bloodwood", "wood_number": "082"},
+    {"id": "bubinga", "display": "Bubinga", "wood_number": "054"},
+    {"id": "cedar-western-red", "display": "Cedar", "wood_number": "083"},
+    {"id": "padauk-african", "display": "Padauk", "wood_number": "069"},
+    {"id": "pine-north-carolina", "display": "Pine", "wood_number": "102"},
+    {"id": "wenge", "display": "Wenge", "wood_number": "077"},
+    {"id": "zebrano", "display": "Zebrawood", "wood_number": "078"}
+  ],
+  "texture_config": {
+    "size_thresholds_inches": {
+      "small": 18.0,
+      "medium": 30.0
+    },
+    "size_map": {
+      "small": {"folder": "Small_36cm", "dimensions": "300x036cm"},
+      "medium": {"folder": "Medium_99cm", "dimensions": "300x099cm"},
+      "large": {"folder": "Large_400cm", "dimensions": "300x400cm"}
+    },
+    "base_texture_path": "/assets/textures/wood"
+  },
+  "rendering_config": {
+    "grain_rotation_offset_degrees": 0.0,
+    "grain_direction_angles": {
+      "horizontal": 0,
+      "vertical": 90,
+      "radiant": "use_section_positioning",
+      "diamond": "use_section_positioning_4_diamond"
+    }
+  },
+  "geometry_constants": {
+    "section_positioning_angles": {
+      "1": [0],
+      "2": [0, 180],
+      "3": [90, 330, 210],
+      "4_radiant": [135, 45, 315, 225],
+      "4_diamond": [45, 315, 225, 135]
+    },
+    "section_rotation_offsets": {
+      "2": [0, 180],
+      "3": [60, 300, 180],
+      "4": [0, 270, 180, 90]
+    }
+  }
+}

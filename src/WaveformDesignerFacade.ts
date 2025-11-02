@@ -59,34 +59,10 @@ export class WaveformDesignerFacade {
    * Initialize facade by loading style presets from backend config
    */
   async initialize(): Promise<void> {
-    const response = await fetch(`${this.apiBase}/api/config/default-parameters`);
-    if (!response.ok) {
-      throw new Error('Failed to load default parameters');
-    }
-    
-    const data = await response.json() as unknown;
-    
-    // Validate structure
-    if (typeof data !== 'object' || data === null || !('style_presets' in data)) {
-      throw new Error('Invalid config structure: missing style_presets');
-    }
-    
-    const config = data as { style_presets: unknown };
-    
-    // Validate each preset
-    if (!Array.isArray(config.style_presets)) {
-      throw new Error('style_presets must be an array');
-    }
-    
-    this._stylePresets = config.style_presets.map((preset: unknown) => {
-      const result = StylePresetSchema.safeParse(preset);
-      if (!result.success) {
-        console.error('Invalid style preset:', result.error.format());
-        throw new Error('Style preset validation failed');
-      }
-      return result.data;
-    });
-  }
+  // Style presets deprecated - using archetypes instead
+  // Archetypes are loaded by ApplicationController
+  this._stylePresets = [];
+}
   
   /**
    * Process uploaded audio file through backend

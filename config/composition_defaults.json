@@ -1,0 +1,159 @@
+{
+  "frame_design": {
+    "shape": "circular",
+    "frame_orientation": "vertical",
+    "finish_x": 36.0,
+    "finish_y": 36.0,
+    "finish_z": 0.375,
+    "number_sections": 2,
+    "separation": 2.0,
+    "species": "maple",
+    "material_thickness": 0.375,
+    "section_materials": [
+      {"section_id": 0, "species": "walnut-black-american", "grain_direction": "vertical"},
+      {"section_id": 1, "species": "walnut-black-american", "grain_direction": "vertical"},
+      {"section_id": 2, "species": "walnut-black-american", "grain_direction": "vertical"},
+      {"section_id": 3, "species": "walnut-black-american", "grain_direction": "vertical"}
+    ]
+  },
+  "pattern_settings": {
+    "slot_style": "radial",
+    "pattern_diameter": 36.0,
+    "number_slots": 48,
+    "bit_diameter": 0.25,
+    "spacer": 0.5,
+    "x_offset": 0.75,
+    "y_offset": 1.5,
+    "side_margin": 1.0,
+    "scale_center_point": 1.0,
+    "amplitude_exponent": 1.0,
+    "orientation": "auto",
+    "grain_angle": 90.0,
+    "lead_overlap": 0.25,
+    "lead_radius": 0.25,
+    "dovetail_settings": {
+      "generate_dovetails": false,
+      "show_dovetails": false,
+      "dovetail_inset": 0.0625,
+      "dovetail_cut_direction": "climb",
+      "dovetail_edge_default": 0,
+      "dovetail_edge_overrides": "{}"
+    }
+  },
+  "audio_source": {
+    "source_file": null,
+    "start_time": 0.0,
+    "end_time": 0.0,
+    "use_stems": false,
+    "stem_choice": "vocals"
+  },
+  "audio_processing": {
+    "num_raw_samples": 200000,
+    "filter_amount": 0.05,
+    "apply_filter": false,
+    "binning_method": "mean",
+    "binning_mode": "mean_abs",
+    "remove_silence": false,
+    "silence_threshold": -20,
+    "silence_duration": 0.5
+  },
+  "peak_control": {
+    "method": "none",
+    "threshold": 0.8,
+    "roll_amount": 0,
+    "nudge_enabled": false,
+    "clip_enabled": false,
+    "compress_enabled": false,
+    "scale_enabled": false,
+    "scale_all_enabled": false,
+    "manual_enabled": false,
+    "clip_percentage": 0.8,
+    "compression_exponent": 0.75,
+    "threshold_percentage": 0.9,
+    "scale_all_percentage": 1.0,
+    "manual_slot": 0,
+    "manual_value": 1.0
+  },
+  "visual_correction": {
+    "apply_correction": true,
+    "correction_scale": 1.0,
+    "correction_mode": "nudge_adj"
+  },
+  "display_settings": {
+    "show_debug_circle": false,
+    "debug_circle_radius": 1.5,
+    "show_labels": false,
+    "show_offsets": false
+  },
+  "export_settings": {
+    "cnc_margin": 1.0,
+    "sections_in_sheet": 1
+  },
+  "artistic_rendering": {
+    "artistic_style": "watercolor",
+    "color_palette": "ocean",
+    "opacity": 1.0,
+    "artistic_intensity": 0.8,
+    "amplitude_effects": "color",
+    "amplitude_influence": 1.0,
+    "watercolor_settings": {
+      "wetness": 0.7,
+      "pigment_load": 0.8,
+      "paper_roughness": 0.5,
+      "bleed_amount": 0.6,
+      "granulation": 0.4
+    },
+    "oil_settings": {
+      "brush_size": 0.5,
+      "impasto": 0.4,
+      "brush_texture": 0.5,
+      "color_mixing": 0.6
+    },
+    "ink_settings": {
+      "ink_flow": 0.4,
+      "ink_density": 0.8,
+      "edge_darkening": 0.6,
+      "dryness": 0.3
+    },
+    "physical_simulation": {
+      "brush_pressure": 0.7,
+      "paint_thickness": 0.5,
+      "drying_time": 0.5,
+      "medium_viscosity": 0.5
+    },
+    "noise_settings": {
+      "noise_scale": 20.0,
+      "noise_octaves": 4.0,
+      "noise_seed": 0.0,
+      "flow_speed": 0.3,
+      "flow_direction": 0.0
+    },
+    "color_palettes": {
+      "ocean": {
+        "color_deep": [0.0, 0.2, 0.4, 0.9],
+        "color_mid": [0.0, 0.4, 0.6, 0.7],
+        "color_light": [0.2, 0.6, 0.8, 0.5],
+        "paper_color": [0.98, 0.97, 0.95, 1.0]
+      },
+      "sunset": {
+        "color_deep": [0.4, 0.1, 0.0, 0.9],
+        "color_mid": [0.7, 0.3, 0.1, 0.7],
+        "color_light": [1.0, 0.6, 0.2, 0.5],
+        "paper_color": [0.98, 0.95, 0.93, 1.0]
+      },
+      "forest": {
+        "color_deep": [0.0, 0.2, 0.1, 0.9],
+        "color_mid": [0.1, 0.4, 0.2, 0.7],
+        "color_light": [0.3, 0.6, 0.4, 0.5],
+        "paper_color": [0.97, 0.98, 0.95, 1.0]
+      },
+      "monochrome": {
+        "color_deep": [0.1, 0.1, 0.1, 0.9],
+        "color_mid": [0.4, 0.4, 0.4, 0.7],
+        "color_light": [0.7, 0.7, 0.7, 0.5],
+        "paper_color": [0.98, 0.98, 0.98, 1.0]
+      }
+    }
+  },
+	"processed_amplitudes": []
+}

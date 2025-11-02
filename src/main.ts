@@ -1311,35 +1311,39 @@ class SceneManager {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('[MAIN] DOMContentLoaded fired');
   void (async () => {
     try {
-      // Initialize UIEngine first - loads config from backend
+      console.log('[MAIN] Step 1: Creating UIEngine...');
       const uiEngine = new UIEngine();
+      console.log('[MAIN] Step 2: Loading UIEngine config...');
       await uiEngine.loadConfig();
+      console.log('[MAIN] Step 3: UIEngine loaded successfully');
 			
 			// Make UIEngine accessible for grain direction updates from controller
       window._uiEngineInstance = uiEngine;
-      window.uiEngine = uiEngine; // For debugging/diagnostics
+      window.uiEngine = uiEngine;
+      console.log('[MAIN] Step 4: UIEngine attached to window');
       
-      // Create the facade and controller
+      console.log('[MAIN] Step 5: Creating facade...');
       const facade = new WaveformDesignerFacade();
+      console.log('[MAIN] Step 6: Creating controller...');
       const controller = new ApplicationController(facade);
 			window.controller = controller;
       window.audioCache = controller.audioCache;
-      await controller.initialize();	
+      console.log('[MAIN] Step 7: Starting controller.initialize()...');
+      await controller.initialize();
+      console.log('[MAIN] Step 8: Controller initialized!');
 			
-			// DEBUG: Expose controller for diagnostics
 			(window as any).__controller__ = controller;
       
-      // Create the scene manager
+      console.log('[MAIN] Step 9: Creating scene manager...');
       const sceneManager = SceneManager.create('renderCanvas', facade);
       window.sceneManager = sceneManager;
+      console.log('[MAIN] Step 10: Scene manager created');
       
-      // Register scene manager with controller
       controller.registerSceneManager(sceneManager);
       
-      // Preload default textures (walnut, cherry, maple) on page load
-      // This ensures instant rendering when user uploads audio
       try {
         const woodConfig = controller.getWoodMaterialsConfig();
         sceneManager.preloadDefaultTextures(woodConfig);
@@ -1347,10 +1351,10 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('[main.ts] Could not preload textures - config not loaded yet:', error);
       }
       
-      // Generic UI initialization
+      console.log('[MAIN] Step 11: Starting initializeUI...');
       await initializeUI(uiEngine, controller, sceneManager);
+      console.log('[MAIN] Step 12: UI initialized!');
       
-      // Trigger initial render if composition has amplitudes
       const initialState = controller.getState();
       if (initialState.composition.processed_amplitudes.length > 0) {
         const response = await fetch('http://localhost:8000/geometry/csg-data', {
@@ -1371,7 +1375,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       
+      console.log('[MAIN] === INITIALIZATION COMPLETE ===');
+      
     } catch (error: unknown) {
+      console.error('[MAIN] === INITIALIZATION FAILED ===');
       console.error('Initialization error:', error);
     }
   })();
