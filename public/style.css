@@ -275,8 +275,7 @@ html, body {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   
   pointer-events: auto;
-  overflow-y: auto;
-  overflow-x: visible;
+  overflow: hidden; /* Prevent scrollbars on the panel itself */
   
   transition: transform 0.2s ease-out, opacity 0.2s ease-out;
 }
@@ -286,13 +285,16 @@ html, body {
   left: 8px;
   z-index: 10;
   width: 140px;
+	bottom: auto; /* Allow panel to shrink-wrap its content */
+  height: auto;
 }
 
 /* LEFT SECONDARY PANEL: Subcategories (appears when category selected) */
 .panel-left-secondary {
   left: 174px; /* 200px + 16px + 8px */
   z-index: 11;
-  width: 70px;
+  width: auto; /* Let content determine width */
+  min-width: 70px; /* Set a reasonable minimum width */
   transform: translateX(-100%);
   opacity: 0;
   transition: transform 0.2s ease-out, opacity 0.2s ease-out;

@@ -212,7 +212,7 @@
           "options": {}
         },
         "wood_species": {
-          "label": "Wood Species",
+          "label": "Species",
           "filters": {},
           "options": {
             "main": {
