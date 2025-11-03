@@ -32,7 +32,7 @@ export class SliderGroup implements PanelComponent {
 
     this._sliders.forEach(config => {
       const group = document.createElement('div');
-      group.className = 'slider-control';
+      group.className = 'slider-control control-group'; // Add back the expected generic class
 
       // Label row
       const labelRow = document.createElement('div');
