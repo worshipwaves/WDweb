@@ -710,6 +710,14 @@ export class ApplicationController {
    * Clears right panel stack and renders category-specific content
    */
   handleCategorySelected(categoryId: string): void {
+		
+		console.log('[NAV STATE]', {
+			category: categoryId,
+			stateCategory: this._state?.ui.activeCategory,
+			controllerCategory: this._activeCategory,
+			mismatch: categoryId !== this._state?.ui.activeCategory
+		});
+		
     if (!this._panelStack || !this._state) return;
     
     // Save current category's filter state before switching
