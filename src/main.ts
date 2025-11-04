@@ -32,6 +32,8 @@ import { UploadInterface } from './UploadInterface';
 import { WaveformDesignerFacade } from './WaveformDesignerFacade';
 import { WoodMaterial } from './WoodMaterial';
 import { DemoPlayer } from './demo/DemoPlayer';
+import { ConfirmModal } from './components/ConfirmModal';
+import { TourModal } from './components/TourModal';
 
 
 
@@ -1355,6 +1357,23 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('[MAIN] Step 11: Starting initializeUI...');
       await initializeUI(uiEngine, controller, sceneManager);
       console.log('[MAIN] Step 12: UI initialized!');
+			
+			// Initialize tour modal (first-visit onboarding)
+      if (TourModal.shouldShow()) {
+        const tourModal = new TourModal(
+          () => {
+            // Start tour callback
+            const demoPlayer = window.demoPlayer;
+            if (demoPlayer) {
+              demoPlayer.start();
+            }
+          },
+          () => {
+            // Dismiss callback (no action needed)
+          }
+        );
+        tourModal.show();
+      }
       
       const initialState = controller.getState();
       if (initialState.composition.processed_amplitudes.length > 0) {
@@ -1957,11 +1976,19 @@ function bindStartTourButton(
   window.demoPlayer = demoPlayer; // Expose for debugging
 
   startButton.addEventListener('click', () => {
-    // Simple confirmation before starting
-    const confirmed = confirm("Start the guided tour? This will reset the current design.");
-    if (confirmed) {
-      demoPlayer.start();
-    }
+    const confirmModal = new ConfirmModal({
+      title: 'Start guided tour?',
+      message: 'This will reset your current design.',
+      primaryAction: 'Start Tour',
+      secondaryAction: 'Cancel',
+      onConfirm: () => {
+        demoPlayer.start();
+      },
+      onCancel: () => {
+        // User cancelled, do nothing
+      }
+    });
+    confirmModal.show();
   });
 }
 

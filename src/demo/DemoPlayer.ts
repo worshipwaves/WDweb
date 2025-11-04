@@ -13,6 +13,8 @@ export class DemoPlayer {
   private currentStep: number = 0;
   private highlightElement: HTMLElement | null = null;
   private ctaButton: HTMLElement | null = null;
+  private skipOverlay: HTMLElement | null = null;
+  private readonly totalScenes: number = 6; // Update if demo changes
   
   constructor(controller: ApplicationController, sceneManager?: { startCinematicRotation: (callback: () => void) => void }) {
     this.controller = controller;
@@ -23,6 +25,7 @@ export class DemoPlayer {
     if (this.isRunning) return;
     this.isRunning = true;
     this.currentStep = 0;
+    this.showSkipOverlay();
     void this.executeNextStep();
   }
 
@@ -35,6 +38,10 @@ export class DemoPlayer {
     if (this.ctaButton) {
       this.ctaButton.remove();
       this.ctaButton = null;
+    }
+    if (this.skipOverlay) {
+      this.skipOverlay.remove();
+      this.skipOverlay = null;
     }
   }
 
@@ -55,10 +62,18 @@ export class DemoPlayer {
 				
       case 'narrate': {
         const audio = new Audio(`/assets/narration/${action.file}`);
+        
+        // Handle audio load errors
+        audio.onerror = (): void => {
+          console.warn(`[DemoPlayer] Narration file not found: ${action.file}, continuing silently`);
+          void this.executeNextStep();
+        };
+        
         void audio.play().catch((error: unknown) => {
-          console.error('[DemoPlayer] Narration failed:', error);
+          console.warn('[DemoPlayer] Narration playback failed:', error);
           void this.executeNextStep();
         });
+        
         audio.onended = () => {
           void this.executeNextStep();
         };
@@ -97,21 +112,20 @@ export class DemoPlayer {
         break;
 
       case 'simulate_upload': {
-        const response = await fetch(DEMO_AUDIO_PATH);
-        const blob = await response.blob();
-        const file = new File([blob], 'AmazingGrace.mp3', { type: 'audio/mpeg' });
-        const snapshot: CompositionStateDTO = this.controller.getState().composition;
-        // The file upload process itself will trigger the next step once rendering is complete
-        await this.controller.dispatch({ type: 'FILE_UPLOADED', payload: { file, uiSnapshot: snapshot }});
+        // Skip actual upload for demo - backend may not be running
+        console.log('[DemoPlayer] Simulating audio upload (backend not required)');
         
-        // Add a listener for the end of the render to continue the script
-        const renderEndListener = (): void => {
-          document.removeEventListener('demo:renderComplete', renderEndListener);
+        // Just wait for visual effect, then continue
+        setTimeout(() => {
           void this.executeNextStep();
-        };
-        document.addEventListener('demo:renderComplete', renderEndListener);
+        }, 2000);
         break;
       }
+			
+			case 'update_progress':
+        this.updateProgress(action.scene);
+        void this.executeNextStep();
+        break;
 
       case 'camera_animate':
         if (action.animation === 'slow_rotate' && this.sceneManager) {
@@ -138,6 +152,40 @@ export class DemoPlayer {
         // Don't call executeNextStep, this is the end.
         break;
       }
+    }
+  }
+  
+  /**
+   * Show skip overlay with progress indicator
+   * @private
+   */
+  private showSkipOverlay(): void {
+    if (this.skipOverlay) return; // Already showing
+    
+    this.skipOverlay = document.createElement('div');
+    this.skipOverlay.className = 'demo-skip-overlay';
+    this.skipOverlay.innerHTML = `
+      <button class="demo-skip-button" title="Exit tour">Skip Tour ×</button>
+      <div class="demo-progress">Scene <span id="demoCurrentScene">1</span> of ${this.totalScenes}</div>
+    `;
+    
+    document.body.appendChild(this.skipOverlay);
+    
+    const skipButton = this.skipOverlay.querySelector('.demo-skip-button');
+    skipButton?.addEventListener('click', () => {
+      this.stop();
+      window.location.reload();
+    });
+  }
+  
+  /**
+   * Update progress indicator
+   * @private
+   */
+  private updateProgress(sceneNumber: number): void {
+    const currentSceneEl = document.getElementById('demoCurrentScene');
+    if (currentSceneEl) {
+      currentSceneEl.textContent = String(sceneNumber);
     }
   }
 }

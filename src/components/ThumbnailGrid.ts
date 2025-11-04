@@ -97,6 +97,22 @@ export class ThumbnailGrid implements PanelComponent {
     });
     
     this._container = container;
+    
+    // Auto-scroll to selected item after render
+    if (this._currentSelection) {
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(() => {
+        const selectedCard = container.querySelector('.thumbnail-card.selected') as HTMLElement;
+        if (selectedCard) {
+          selectedCard.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          });
+        }
+      });
+    }
+    
     return container;
   }
   

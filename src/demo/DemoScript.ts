@@ -8,6 +8,7 @@ export type DemoAction =
   | { type: 'wait'; duration: number }
   | { type: 'simulate_upload' }
   | { type: 'camera_animate'; animation: 'slow_rotate' }
+  | { type: 'update_progress'; scene: number }
   | { type: 'show_cta' };
 
 export const DemoScript: DemoAction[] = [
@@ -15,6 +16,7 @@ export const DemoScript: DemoAction[] = [
   { type: 'reset' },
   { type: 'wait', duration: 500 }, // Brief pause after reset
   // Scene 1: Introduction and Audio Selection
+  { type: 'update_progress', scene: 1 },
   { type: 'narrate', file: 'narration_01.mp3', text: "Welcome to WaveDesigner. Let's turn a moment of worship into a piece of art. It all starts with a sound..." },
   { type: 'highlight', target: 'category_audio' },
   { type: 'wait', duration: 2000 },
@@ -33,10 +35,12 @@ export const DemoScript: DemoAction[] = [
   
   // Scene 2: The Big Reveal
   { type: 'wait', duration: 1000 }, // Wait for initial render to finish
+  { type: 'update_progress', scene: 2 },
   { type: 'narrate', file: 'narration_02.mp3', text: "And just like that, your sound becomes visible—a unique shape, captured in time." },
   { type: 'wait', duration: 4000 },
 
   // Scene 3: Customizing Style
+	{ type: 'update_progress', scene: 3 },
   { type: 'narrate', file: 'narration_03.mp3', text: "Now, let's make it yours. A split panel adds a beautiful, modern touch." },
   { type: 'highlight', target: 'category_style' },
   { type: 'wait', duration: 1500 },
@@ -50,6 +54,7 @@ export const DemoScript: DemoAction[] = [
   { type: 'wait', duration: 4000 },
 
   // Scene 4: Customizing Wood
+	{ type: 'update_progress', scene: 4 },
   { type: 'narrate', file: 'narration_04.mp3', text: "Every piece is crafted from natural wood. Let's choose a rich, dark walnut to bring out the depth of the sound." },
   { type: 'highlight', target: 'category_wood' },
   { type: 'wait', duration: 1500 },
@@ -63,10 +68,12 @@ export const DemoScript: DemoAction[] = [
   { type: 'wait', duration: 4000 },
 
   // Scene 5: Final Cinematic
+	{ type: 'update_progress', scene: 5 },
   { type: 'camera_animate', animation: 'slow_rotate' },
   { type: 'narrate', file: 'narration_05.mp3', text: "Simple, intuitive, and deeply personal. Your moment, your art... forever on display." },
   { type: 'wait', duration: 6000 },
   { type: 'narrate', file: 'narration_06.mp3', text: "Now, it's your turn to create." },
+	{ type: 'update_progress', scene: 6 },
   { type: 'show_cta' },
 ];
 // --- END OF NEW FILE ---

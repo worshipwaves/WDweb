@@ -1295,6 +1295,18 @@ export class ApplicationController {
     this._rightMainPanel.appendChild(panelContent);
     this._rightMainPanel.style.display = 'block';
     this._rightMainPanel.classList.add('visible');
+    
+    // Ensure scroll happens after panel is visible and has layout
+    setTimeout(() => {
+      const selectedCard = this._rightMainPanel?.querySelector('.thumbnail-card.selected') as HTMLElement;
+      if (selectedCard) {
+        selectedCard.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        });
+      }
+    }, 50);
   }
 	
 	/**
@@ -1365,6 +1377,9 @@ export class ApplicationController {
     }
     
     await this.handleCompositionUpdate(newComposition);
+    
+    // Re-render the panel to show updated selection
+    this._renderRightMainFiltered();
   }
 
   /**

@@ -133,19 +133,20 @@ export class WaveformDesignerFacade {
         previousMaxAmplitude: null,
         audioSessionId: null,
       },
-      ui: {
-        leftPanelVisible: false,
-        rightPanelVisible: false,
-        selectedCategory: null,
-        selectedOption: null,
-        currentStyleIndex: 0,
-        isAutoPlaying: false,
-        showHint: false,
-        renderQuality: 'high',
-        activeCategory: null,
-        activeSubcategory: null,
-        filterSelections: {}
-      },
+			ui: {
+				leftPanelVisible: true,
+				rightPanelVisible: true,
+				selectedCategory: null,
+				selectedOption: null,
+				currentStyleIndex: 0,
+				isAutoPlaying: false,
+				showHint: false,
+				renderQuality: 'medium',
+				activeCategory: null,
+				activeSubcategory: null,
+				subcategoryHistory: {},
+				filterSelections: {}
+			},
       processing: {
         stage: 'idle',
         progress: 0
