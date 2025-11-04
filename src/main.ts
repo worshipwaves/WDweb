@@ -1446,6 +1446,9 @@ async function initializeUI(
   );
   leftPanelRenderer.render();
   
+  // 9.6 Restore UI from persisted state (must happen after buttons rendered)
+  controller.restoreUIFromState();
+  
   // 10. Subscribe to state changes (only sync UI on phase transitions, not every change)
   controller.subscribe((state) => {
     handlePhaseTransition(uiEngine, state, controller);

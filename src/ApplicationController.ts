@@ -159,12 +159,7 @@ export class ApplicationController {
   private _selectedSectionIndices: Set<number> = new Set();
   private _idleTextureLoader: unknown = null; // IdleTextureLoader instance
 	
-	// Four-panel navigation state
-  private _activeCategory: string | null = null;
-  private _activeSubcategory: string | null = null;
-  private _activeFilters: Map<string, Set<string>> = new Map();
-	private _categoryFilterState: Map<string, Map<string, Set<string>>> = new Map();
-	private _categorySubcategoryState: Map<string, string> = new Map();
+	// Four-panel navigation configuration
   private _thumbnailConfig: ThumbnailConfig | null = null;
   private _categoriesConfig: CategoriesConfig | null = null;
 	private _archetypes: Map<string, Archetype> = new Map();
@@ -184,6 +179,46 @@ export class ApplicationController {
 	public get audioCache(): AudioCacheService {
     return this._audioCache;
   }
+	
+	/**
+   * Restore UI from persisted state after DOM is ready
+   * Called from main.ts after LeftPanelRenderer has rendered
+   */
+  restoreUIFromState(): void {
+    if (!this._state) return;
+    
+    const { activeCategory, activeSubcategory } = this._state.ui;
+    
+    if (!activeCategory) return;
+    
+    console.log('[Controller] Restoring UI from persisted state:', {
+      category: activeCategory,
+      subcategory: activeSubcategory
+    });
+    
+    // 1. Highlight category button
+    const categoryButtons = document.querySelectorAll('.category-button');
+    categoryButtons.forEach(btn => {
+      const btnId = btn.getAttribute('data-category');
+      if (btnId === activeCategory) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+    
+    // 2. Render Left Secondary Panel
+    this._renderLeftSecondaryPanel(activeCategory, activeSubcategory);
+    
+    // 3. If subcategory exists, render right panels
+    if (activeSubcategory) {
+      requestAnimationFrame(() => {
+        if (this._state?.ui.activeSubcategory) {
+          this._handleSubcategorySelected(this._state.ui.activeSubcategory);
+        }
+      });
+    }
+  }
   
   /**
    * Initialize the controller with default or restored state
@@ -191,7 +226,7 @@ export class ApplicationController {
   async initialize(): Promise<void> {
     try {
       // Initialize facade (loads style presets)
-      await this._facade.initialize();
+      this._facade.initialize();
 			
 			// Initialize panel references (DOM is ready at this point)
       this._leftSecondaryPanel = document.getElementById('left-secondary-panel');
@@ -710,43 +745,59 @@ export class ApplicationController {
    * Clears right panel stack and renders category-specific content
    */
   handleCategorySelected(categoryId: string): void {
-		
-		console.log('[NAV STATE]', {
-			category: categoryId,
-			stateCategory: this._state?.ui.activeCategory,
-			controllerCategory: this._activeCategory,
-			mismatch: categoryId !== this._state?.ui.activeCategory
-		});
-		
+    console.log('[NAV STATE]', { category: categoryId, stateCategory: this._state?.ui.activeCategory, controllerCategory: categoryId, mismatch: categoryId !== this._state?.ui.activeCategory });
+    
     if (!this._panelStack || !this._state) return;
     
-    // Save current category's filter state before switching
-    if (this._activeCategory && this._activeFilters.size > 0) {
-      this._categoryFilterState.set(this._activeCategory, new Map(this._activeFilters));
-    }
+    void this.dispatch({ type: 'CATEGORY_SELECTED', payload: categoryId });
     
-    // Save current category's subcategory state before switching
-    if (this._activeCategory && this._activeSubcategory) {
-      this._categorySubcategoryState.set(this._activeCategory, this._activeSubcategory);
-    }
-    
-    // Switch to new category
-    this._activeCategory = categoryId;
-    
-    // Restore saved subcategory for this category (if exists)
-    const savedSubcategory = this._categorySubcategoryState.get(categoryId);
-    this._activeSubcategory = savedSubcategory || null;
-    
-    // Restore saved filter state for this category, or start fresh
-    const savedFilters = this._categoryFilterState.get(categoryId);
-    if (savedFilters) {
-      this._activeFilters = new Map(savedFilters);
-    } else {
-      this._activeFilters.clear();
-    }
-    
-    // All categories now use the four-panel architecture
     this._handleStyleCategorySelected();
+  }
+	
+	/**
+   * Render Left Secondary Panel without dispatching actions
+   * Pure rendering method for state restoration
+   * @private
+   */
+  private _renderLeftSecondaryPanel(
+    categoryId: string,
+    selectedSubcategoryId: string | null
+  ): void {
+    if (!this._categoriesConfig || !this._leftSecondaryPanel) return;
+    
+    const categoryConfig = this._categoriesConfig[categoryId as keyof CategoriesConfig];
+    if (!categoryConfig) return;
+    
+    const subcategories = Object.entries(categoryConfig.subcategories)
+      .map(([id, config]) => ({ id, config }));
+    
+    if (subcategories.length === 0) {
+      this._leftSecondaryPanel.style.display = 'none';
+      return;
+    }
+    
+    void import('./components/LeftSecondaryPanel').then(({ LeftSecondaryPanel }) => {
+      const panel = new LeftSecondaryPanel(
+        subcategories,
+        selectedSubcategoryId,
+        (id: string) => this._handleSubcategorySelected(id)
+      );
+      
+      if (this._leftSecondaryPanel) {
+        this._leftSecondaryPanel.innerHTML = '';
+        this._leftSecondaryPanel.appendChild(panel.render());
+        this._leftSecondaryPanel.style.display = 'block';
+        this._leftSecondaryPanel.classList.add('visible');
+        
+        requestAnimationFrame(() => {
+          if (this._sceneManager && 'updateCameraOffset' in this._sceneManager) {
+            (this._sceneManager as { updateCameraOffset: () => void }).updateCameraOffset();
+          }
+        });
+      }
+    }).catch((error: unknown) => {
+      console.error('[Controller] Failed to render Left Secondary Panel:', error);
+    });
   }
   
   /**
@@ -754,29 +805,20 @@ export class ApplicationController {
    * @private
    */
 	private _handleStyleCategorySelected(): void {
-    if (!this._categoriesConfig || !this._activeCategory || !this._thumbnailConfig) return;
-    const categoryConfig = this._categoriesConfig[this._activeCategory as keyof CategoriesConfig];
+    if (!this._categoriesConfig || !this._state?.ui.activeCategory || !this._thumbnailConfig) return;
+    const categoryConfig = this._categoriesConfig[this._state.ui.activeCategory as keyof CategoriesConfig];
     if (!categoryConfig) return;
 		
 		const subcategories = Object.entries(categoryConfig.subcategories).map(([id, config]) => ({ id, config }));
     
-		// Auto-select subcategory and filters based on current state
+		// Auto-select subcategory based on current state
     // BUT: Don't override if we already restored a saved subcategory
     const currentComposition = this._state?.composition;
-    if (currentComposition && !this._activeSubcategory) {
+    if (currentComposition && !this._state.ui.activeSubcategory) {
       if (subcategories.length === 1) {
         // Correctly select the single subcategory for Layout, Wood, etc.
-        this._activeSubcategory = subcategories[0].id;
-      } else {
-        this._activeSubcategory = null;
-      }
-      
-      // Initialize filters only if not already set (first visit to category)
-      if (!this._activeFilters.has('shape')) {
-        this._activeFilters.set('shape', new Set<string>());
-      }
-      if (!this._activeFilters.has('slot_pattern')) {
-        this._activeFilters.set('slot_pattern', new Set<string>());
+        const subcategoryId = subcategories[0].id;
+        void this.dispatch({ type: 'SUBCATEGORY_SELECTED', payload: { category: this._state.ui.activeCategory, subcategory: subcategoryId } });
       }
     }
     
@@ -790,14 +832,15 @@ export class ApplicationController {
 		}
 		
 		// Auto-select the first subcategory if one isn't already active for this category
-      if (!this._activeSubcategory && subcategories.length > 0) {
-        this._activeSubcategory = subcategories[0].id;
+      if (!this._state.ui.activeSubcategory && subcategories.length > 0) {
+        const subcategoryId = subcategories[0].id;
+        void this.dispatch({ type: 'SUBCATEGORY_SELECTED', payload: { category: this._state.ui.activeCategory, subcategory: subcategoryId } });
       }
       
       // Defer rendering to the next tick to ensure all state is consistent
       requestAnimationFrame(() => {
-        if (this._activeSubcategory) {
-          this._handleSubcategorySelected(this._activeSubcategory);
+        if (this._state?.ui.activeSubcategory) {
+          this._handleSubcategorySelected(this._state.ui.activeSubcategory);
         }
       });
 
@@ -821,7 +864,7 @@ export class ApplicationController {
         this._rightMainPanel.style.display = 'block';
       }
       void import('./components/LeftSecondaryPanel').then(({ LeftSecondaryPanel }) => {
-        const panel = new LeftSecondaryPanel(subcategories, this._activeSubcategory, (id: string) => this._handleSubcategorySelected(id));
+        const panel = new LeftSecondaryPanel(subcategories, this._state?.ui.activeSubcategory || null, (id: string) => this._handleSubcategorySelected(id));
         if (this._leftSecondaryPanel) {
           this._leftSecondaryPanel.innerHTML = '';
           this._leftSecondaryPanel.appendChild(panel.render());
@@ -854,18 +897,19 @@ export class ApplicationController {
    * @private
    */
   private _handleSubcategorySelected(subcategoryId: string): void {
-    if (!this._categoriesConfig || !this._activeCategory) return;
-    const categoryConfig = this._categoriesConfig[this._activeCategory as keyof CategoriesConfig];
+    if (!this._categoriesConfig || !this._state?.ui.activeCategory) return;
+    const categoryConfig = this._categoriesConfig[this._state.ui.activeCategory as keyof CategoriesConfig];
     if (!categoryConfig) return;
 
-    this._activeSubcategory = subcategoryId;
+    // Dispatch state update
+    void this.dispatch({ type: 'SUBCATEGORY_SELECTED', payload: { category: this._state.ui.activeCategory, subcategory: subcategoryId } });
 
     // Re-render the LeftSecondaryPanel immediately to show the new selection
     const subcategories = Object.entries(categoryConfig.subcategories).map(([id, config]) => ({ id, config }));
     void import('./components/LeftSecondaryPanel').then(({ LeftSecondaryPanel }) => {
       const panel = new LeftSecondaryPanel(
         subcategories,
-        this._activeSubcategory, // Pass the newly updated selection
+        this._state?.ui.activeSubcategory || null, // Pass the updated selection from state
         (id: string) => this._handleSubcategorySelected(id)
       );
       if (this._leftSecondaryPanel) {
@@ -876,13 +920,6 @@ export class ApplicationController {
 
     const subcategory = categoryConfig.subcategories[subcategoryId];
     if (!subcategory) return;
-    
-    // Initialize filters to empty Set (no filter = show ALL)
-    Object.entries(subcategory.filters).forEach(([filterId, _filterConfig]) => {
-			if (!this._activeFilters.has(filterId)) {
-				this._activeFilters.set(filterId, new Set());
-			}
-		});
 		
 		// Update camera offset after right secondary visibility changes
     requestAnimationFrame(() => {
@@ -901,15 +938,21 @@ export class ApplicationController {
    * @private
    */
   private _handleFilterSelected(filterId: string, selections: Set<string>): void {
-    if (!this._activeSubcategory) return;
+    if (!this._state?.ui.activeSubcategory || !this._state.ui.activeCategory) return;
     
-    // Update filter selection (transient display state)
-    this._activeFilters.set(filterId, selections);
+    // Dispatch filter change
+    void this.dispatch({ 
+      type: 'FILTER_CHANGED', 
+      payload: { 
+        category: this._state.ui.activeCategory,
+        subcategory: this._state.ui.activeSubcategory,
+        filterId,
+        selections: Array.from(selections)
+      }
+    });
     
     // Re-render Right Main with new filter combination
     this._renderRightMainFiltered();
-    
-    // NO dispatch() call - filters don't update composition state
   }
 	
 	/**
@@ -965,10 +1008,10 @@ export class ApplicationController {
    * @private
    */
   private _renderRightMainFiltered(): void {
-		if (!this._categoriesConfig || !this._activeCategory || !this._activeSubcategory || !this._rightMainPanel) return;
+		if (!this._categoriesConfig || !this._state?.ui.activeCategory || !this._state.ui.activeSubcategory || !this._rightMainPanel) return;
 
-		const categoryConfig = this._categoriesConfig[this._activeCategory as keyof CategoriesConfig];
-		const subcategory = categoryConfig?.subcategories[this._activeSubcategory];
+		const categoryConfig = this._categoriesConfig[this._state.ui.activeCategory as keyof CategoriesConfig];
+		const subcategory = categoryConfig?.subcategories[this._state.ui.activeSubcategory];
 		if (!subcategory) return;
 
 		this._rightMainPanel.innerHTML = '';
@@ -977,9 +1020,17 @@ export class ApplicationController {
 		if (subcategory.filters && Object.keys(subcategory.filters).length > 0) {
 			const filterGroups = this._buildFilterIconGroups(subcategory.filters);
 			if (filterGroups.length > 0) {
+				// Convert state filter selections to Map<string, Set<string>> for FilterIconStrip
+				const filterKey = `${this._state.ui.activeCategory}_${this._state.ui.activeSubcategory}`;
+				const stateFilters = this._state.ui.filterSelections[filterKey] || {};
+				const activeFiltersMap = new Map<string, Set<string>>();
+				Object.entries(stateFilters).forEach(([filterId, selections]) => {
+					activeFiltersMap.set(filterId, new Set(selections));
+				});
+				
 				this._filterIconStrip = new FilterIconStrip(
 					filterGroups,
-					this._activeFilters,
+					activeFiltersMap,
 					(groupId, iconId) => this._handleIconFilterChange(groupId, iconId)
 				);
 				this._rightMainPanel.appendChild(this._filterIconStrip.render());
@@ -1053,7 +1104,7 @@ export class ApplicationController {
             (id, value) => {
               void this._updateStateValue(id, value);
             },
-            this._state!.composition.frame_design.number_sections
+            this._state.composition.frame_design.number_sections
           );
           panelContent.appendChild(sliderGroup.render());
           break;
@@ -1202,15 +1253,18 @@ export class ApplicationController {
         }				
 
         case 'archetype_grid': {
+          const filterKey = `${this._state.ui.activeCategory}_${this._state.ui.activeSubcategory}`;
+          const stateFilters = this._state.ui.filterSelections[filterKey] || {};
+          
           const matchingArchetypes = Array.from(this._archetypes.values())
             .filter(archetype => {
-              // Apply active filters
-              const activeShapes = this._activeFilters.get('shape') || new Set();
+              // Apply active filters from state
+              const activeShapes = stateFilters.shape ? new Set(stateFilters.shape) : new Set();
               if (activeShapes.size > 0 && !activeShapes.has(archetype.shape)) {
                 return false;
               }
               
-              const activePatterns = this._activeFilters.get('slot_pattern') || new Set();
+              const activePatterns = stateFilters.slot_pattern ? new Set(stateFilters.slot_pattern) : new Set();
               if (activePatterns.size > 0 && !activePatterns.has(archetype.slot_style)) {
                 return false;
               }

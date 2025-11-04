@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod';'FILE_UPLOADED'
 
 export const SectionMaterialSchema = z.object({
   section_id: z.number().int().min(0).max(3),
@@ -304,6 +304,11 @@ export const UIStateSchema = z.object({
   isAutoPlaying: z.boolean(),
   showHint: z.boolean(),
   renderQuality: z.enum(['low', 'medium', 'high']),
+  // Navigation state
+  activeCategory: z.string().nullable(),
+  activeSubcategory: z.string().nullable(),
+  subcategoryHistory: z.record(z.string(), z.string()), // category -> last subcategory
+  filterSelections: z.record(z.string(), z.record(z.string(), z.array(z.string()))),
 });
 
 export type UIState = z.infer<typeof UIStateSchema>;

@@ -89,7 +89,8 @@ export class TextureCacheService {
     const idleLoader = new IdleTextureLoader(this, config);
     
 		// DIAGNOSTIC: Start background loading from index 3 (skip first 3 already loaded)
-		idleLoader.startBackgroundLoading(3);
+		// TEMPORARILY DISABLED: Uncomment when deploying to S3 with cache headers
+		// idleLoader.startBackgroundLoading(3);
     
     return idleLoader;
   }

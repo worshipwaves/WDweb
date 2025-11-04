@@ -1,28 +1,29 @@
 // --- START OF NEW FILE src/demo/DemoPlayer.ts ---
 import { ApplicationController } from '../ApplicationController';
-import { DemoScript, DemoAction } from './DemoScript';
-import { CompositionStateDTO } from '../types/schemas';
+import type { CompositionStateDTO } from '../types/schemas';
+
+import { DemoScript } from './DemoScript';
 
 const DEMO_AUDIO_PATH = '/assets/audio/AmazingGrace.mp3';
 
 export class DemoPlayer {
   private controller: ApplicationController;
-	private sceneManager: any; // Using 'any' to avoid circular dependency issues
+	private sceneManager: { startCinematicRotation: (callback: () => void) => void } | null = null;
   private isRunning: boolean = false;
   private currentStep: number = 0;
   private highlightElement: HTMLElement | null = null;
   private ctaButton: HTMLElement | null = null;
   
-  constructor(controller: ApplicationController) {
+  constructor(controller: ApplicationController, sceneManager?: { startCinematicRotation: (callback: () => void) => void }) {
     this.controller = controller;
-		this.sceneManager = sceneManager;
+		this.sceneManager = sceneManager || null;
   }
 
   public start(): void {
     if (this.isRunning) return;
     this.isRunning = true;
     this.currentStep = 0;
-    this.executeNextStep();
+    void this.executeNextStep();
   }
 
   public stop(): void {
@@ -46,19 +47,20 @@ export class DemoPlayer {
     const action = DemoScript[this.currentStep];
     this.currentStep++;
 
-    console.log(`[DemoPlayer] Executing: ${action.type}`, action);
-
     switch (action.type) {
 			case 'reset':
         await this.controller.resetToDefaultState();
-        this.executeNextStep();
+        void this.executeNextStep();
         break;
 				
       case 'narrate': {
         const audio = new Audio(`/assets/narration/${action.file}`);
-        audio.play();
+        void audio.play().catch((error: unknown) => {
+          console.error('[DemoPlayer] Narration failed:', error);
+          void this.executeNextStep();
+        });
         audio.onended = () => {
-          this.executeNextStep();
+          void this.executeNextStep();
         };
         break;
       }
@@ -69,7 +71,7 @@ export class DemoPlayer {
           this.highlightElement = element;
           element.classList.add('demo-highlight');
         }
-        this.executeNextStep();
+        void this.executeNextStep();
         break;
       }
 
@@ -79,19 +81,19 @@ export class DemoPlayer {
         if (this.highlightElement === element) {
           this.highlightElement = null;
         }
-        this.executeNextStep();
+        void this.executeNextStep();
         break;
       }
       
       case 'click': {
         const element = document.querySelector(`[data-demo-id="${action.target}"]`) as HTMLElement;
         element?.click();
-        this.executeNextStep();
+        void this.executeNextStep();
         break;
       }
 
       case 'wait':
-        setTimeout(() => this.executeNextStep(), action.duration);
+        setTimeout(() => void this.executeNextStep(), action.duration);
         break;
 
       case 'simulate_upload': {
@@ -103,9 +105,9 @@ export class DemoPlayer {
         await this.controller.dispatch({ type: 'FILE_UPLOADED', payload: { file, uiSnapshot: snapshot }});
         
         // Add a listener for the end of the render to continue the script
-        const renderEndListener = () => {
-          this.executeNextStep();
+        const renderEndListener = (): void => {
           document.removeEventListener('demo:renderComplete', renderEndListener);
+          void this.executeNextStep();
         };
         document.addEventListener('demo:renderComplete', renderEndListener);
         break;
@@ -115,11 +117,11 @@ export class DemoPlayer {
         if (action.animation === 'slow_rotate' && this.sceneManager) {
           // Pass a callback to continue the script ONLY after the animation finishes.
           this.sceneManager.startCinematicRotation(() => {
-            this.executeNextStep();
+            void this.executeNextStep();
           });
         } else {
           // If animation can't run, continue immediately.
-          this.executeNextStep();
+          void this.executeNextStep();
         }
         break;
 
@@ -127,7 +129,7 @@ export class DemoPlayer {
         const button = document.createElement('button');
         button.innerText = 'Start Designing Now';
         button.className = 'demo-cta-button';
-        button.onclick = () => {
+        button.onclick = (): void => {
           this.stop();
           window.location.reload(); // Simple way to reset
         };

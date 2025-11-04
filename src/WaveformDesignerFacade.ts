@@ -47,7 +47,10 @@ export type Action =
         audioSessionId?: string 
       };
     }
-  | { type: 'SHOW_HINT' };
+  | { type: 'SHOW_HINT' }
+  | { type: 'CATEGORY_SELECTED'; payload: string }
+  | { type: 'SUBCATEGORY_SELECTED'; payload: { category: string; subcategory: string } }
+  | { type: 'FILTER_CHANGED'; payload: { category: string; subcategory: string; filterId: string; selections: string[] } };
 	
 
 export class WaveformDesignerFacade {
@@ -138,7 +141,10 @@ export class WaveformDesignerFacade {
         currentStyleIndex: 0,
         isAutoPlaying: false,
         showHint: false,
-        renderQuality: 'high'
+        renderQuality: 'high',
+        activeCategory: null,
+        activeSubcategory: null,
+        filterSelections: {}
       },
       processing: {
         stage: 'idle',
@@ -248,6 +254,51 @@ export class WaveformDesignerFacade {
           ...state,
           composition: action.payload
         };
+        
+      case 'CATEGORY_SELECTED': {
+        const categoryId = action.payload;
+        const lastSubcategory = state.ui.subcategoryHistory[categoryId] || null;
+        return {
+          ...state,
+          ui: {
+            ...state.ui,
+            activeCategory: categoryId,
+            activeSubcategory: lastSubcategory,
+            filterSelections: {}
+          }
+        };
+      }
+        
+      case 'SUBCATEGORY_SELECTED':
+        return {
+          ...state,
+          ui: {
+            ...state.ui,
+            activeCategory: action.payload.category,
+            activeSubcategory: action.payload.subcategory,
+            subcategoryHistory: {
+              ...state.ui.subcategoryHistory,
+              [action.payload.category]: action.payload.subcategory
+            }
+          }
+        };
+        
+      case 'FILTER_CHANGED': {
+        const key = `${action.payload.category}_${action.payload.subcategory}`;
+        return {
+          ...state,
+          ui: {
+            ...state.ui,
+            filterSelections: {
+              ...state.ui.filterSelections,
+              [key]: {
+                ...state.ui.filterSelections[key],
+                [action.payload.filterId]: action.payload.selections
+              }
+            }
+          }
+        };
+      }
         
       default:
         return state;
