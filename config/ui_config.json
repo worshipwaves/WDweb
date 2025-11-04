@@ -13,16 +13,19 @@
     },
     "size": {
       "id": "size",
-      "type": "select",
+      "type": "range",
       "label": "Size",
       "state_path": "frame_design.finish_x",
       "show_when": {"shape": ["circular"]},
-      "options": [
-        {"value": 24, "label": "24\""},
-        {"value": 36, "label": "36\""},
-        {"value": 48, "label": "48\""},
-        {"value": 64, "label": "64\""}
-      ],
+      "min": 24,
+      "max": 60,
+      "step": 1,
+      "dynamic_max_by_sections": {
+        "1": 30,
+        "2": 42,
+        "3": 54,
+        "4": 60
+      },
       "on_change_triggers": [
         {
           "action": "apply_size_defaults",
@@ -56,6 +59,7 @@
       "id": "width",
       "type": "range",
       "label": "Width",
+			"show_when": {"shape": ["rectangular", "diamond"]},
       "state_path": "frame_design.finish_x",
       "min": 12,
       "max": 84,
@@ -66,6 +70,7 @@
       "id": "height",
       "type": "range",
       "label": "Height",
+			"show_when": {"shape": ["rectangular", "diamond"]},
       "state_path": "frame_design.finish_y",
       "min": 12,
       "max": 84,
@@ -99,6 +104,10 @@
       "id": "side_margin",
       "type": "range",
       "label": "Side Margin",
+			"show_when": {
+        "shape": ["circular", "diamond"],
+        "slot_style": ["linear"]
+      },
       "state_path": "pattern_settings.side_margin",
       "min": 1.0,
       "max": 6.0,
@@ -226,7 +235,7 @@
           "options": {
             "main": {
               "type": "slider_group",
-              "element_keys": ["width", "height", "separation", "slots", "side_margin"]
+              "element_keys": ["size", "width", "height", "separation", "slots", "side_margin"]
             }
           }
         },

@@ -940,19 +940,49 @@ export class ApplicationController {
     if (optionConfig) {
       switch (optionConfig.type) {
         case 'slider_group': {
-          const sliderConfigs = (optionConfig.element_keys || []).map(key => {
-            const elConfig = window.uiEngine?.getElementConfig(key);
-            const value = window.uiEngine?.getStateValue(this._state!.composition, elConfig!.state_path) as number;
-            return {
-              id: key,
-              label: elConfig!.label,
-              min: elConfig!.min!,
-              max: elConfig!.max!,
-              step: elConfig!.step!,
-              value: value ?? elConfig!.min!,
-              unit: key === 'slots' ? '' : '"',
-            };
-          });
+          const sliderConfigs = (optionConfig.element_keys || [])
+            .filter(key => {
+              const elConfig = window.uiEngine?.getElementConfig(key);
+              if (!elConfig) return false;
+              
+              // Check show_when condition
+              if (elConfig.show_when) {
+                const currentShape = this._state!.composition.frame_design.shape;
+                const currentSlotStyle = this._state!.composition.pattern_settings.slot_style;
+                
+                // Check shape constraint
+                if (elConfig.show_when.shape) {
+                  const allowedShapes = elConfig.show_when.shape as string[];
+                  if (!allowedShapes.includes(currentShape)) {
+                    return false; // Filter out this slider
+                  }
+                }
+                
+                // Check slot_style constraint
+                if (elConfig.show_when.slot_style) {
+                  const allowedStyles = elConfig.show_when.slot_style as string[];
+                  if (!allowedStyles.includes(currentSlotStyle)) {
+                    return false; // Filter out this slider
+                  }
+                }
+              }
+              
+              return true; // Include this slider
+            })
+            .map(key => {
+              const elConfig = window.uiEngine?.getElementConfig(key);
+              const value = window.uiEngine?.getStateValue(this._state!.composition, elConfig!.state_path) as number;
+              return {
+                id: key,
+                label: elConfig!.label,
+                min: elConfig!.min!,
+                max: elConfig!.max!,
+                step: elConfig!.step!,
+                value: value ?? elConfig!.min!,
+                unit: key === 'slots' ? '' : '"',
+                dynamic_max_by_sections: (elConfig as any).dynamic_max_by_sections,
+              };
+            });
           const sliderGroup = new SliderGroup(
             sliderConfigs,
             (id, value) => {
@@ -1258,6 +1288,11 @@ export class ApplicationController {
 
 		// Update the nested value using state_path from UIEngine
 		this._setNestedValue(newComposition, elementConfig.state_path, value);
+		
+		// CRITICAL: For circular panels, "size" controls diameter (both finish_x and finish_y)
+		if (option === 'size') {
+			newComposition.frame_design.finish_y = value as number;
+		}
 
 		// Trigger composition update
 		await this.handleCompositionUpdate(newComposition);

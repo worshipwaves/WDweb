@@ -24,6 +24,32 @@ export class SliderGroup implements PanelComponent {
     this._sliders = sliders;
     this._onChange = onChange;
     this._numberSections = numberSections;
+    
+    // Apply dynamic max values based on number of sections
+    this._updateDynamicMaxValues();
+  }
+  
+  /**
+   * Update max values for sliders with dynamic_max_by_sections
+   * @private
+   */
+  private _updateDynamicMaxValues(): void {
+    if (!this._numberSections) return;
+    
+    this._sliders.forEach(slider => {
+      const dynamicMax = (slider as any).dynamic_max_by_sections;
+      if (dynamicMax) {
+        const sectionKey = String(this._numberSections);
+        if (dynamicMax[sectionKey] !== undefined) {
+          slider.max = dynamicMax[sectionKey];
+          
+          // Clamp current value if it exceeds new max
+          if (slider.value > slider.max) {
+            slider.value = slider.max;
+          }
+        }
+      }
+    });
   }
 
   render(): HTMLElement {
