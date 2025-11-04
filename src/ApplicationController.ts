@@ -14,6 +14,7 @@ import { RightPanelContentRenderer } from './components/RightPanelContent';
 import { SliderGroup } from './components/SliderGroup';
 import { ThumbnailGrid } from './components/ThumbnailGrid';
 import { WoodMaterialInlineGrid } from './components/WoodMaterialInlineGrid';
+import { WoodMaterialSelector } from './components/WoodMaterialSelector';
 import { PerformanceMonitor } from './PerformanceMonitor';
 import {
   CompositionStateDTO,
@@ -106,6 +107,7 @@ export class ApplicationController {
   private _activeSubcategory: string | null = null;
   private _activeFilters: Map<string, Set<string>> = new Map();
 	private _categoryFilterState: Map<string, Map<string, Set<string>>> = new Map();
+	private _categorySubcategoryState: Map<string, string> = new Map();
   private _thumbnailConfig: ThumbnailConfig | null = null;
   private _categoriesConfig: CategoriesConfig | null = null;
 	private _archetypes: Map<string, any> = new Map();
@@ -307,6 +309,39 @@ export class ApplicationController {
     applySingleSectionMaterial?: (sectionId: number) => void;
   }): void {
     this._sceneManager = sceneManager;
+    
+    // Start texture loading immediately in background
+    if (this._woodMaterialsConfig) {
+      console.log('[Controller] Starting texture preload on scene manager registration');
+      const textureCache = (this._sceneManager as any)._textureCache;
+      if (textureCache && typeof textureCache.preloadAllTextures === 'function') {
+        textureCache.preloadAllTextures(this._woodMaterialsConfig).then((idleLoader: any) => {
+          this._idleTextureLoader = idleLoader;
+          console.log('[Controller] Texture loading started in background');
+          
+          const indicator = document.getElementById('textureLoadingIndicator');
+          const loadedEl = document.getElementById('texturesLoaded');
+          const totalEl = document.getElementById('texturesTotal');
+          
+          if (indicator && loadedEl && totalEl) {
+            idleLoader.onProgress((loaded: number, total: number) => {
+              loadedEl.textContent = String(loaded);
+              totalEl.textContent = String(total);
+              
+              if (loaded < total) {
+                indicator.classList.add('active');
+              } else {
+                setTimeout(() => {
+                  indicator.classList.remove('active');
+                }, 2000);
+              }
+            });
+          }
+        }).catch((error: unknown) => {
+          console.error('[Controller] Background texture loading failed:', error);
+        });
+      }
+    }
   }	
   
   /**
@@ -388,7 +423,15 @@ export class ApplicationController {
     });
 
     try {
+			
+			// Pause background texture loading during heavy operations
+      if (this._idleTextureLoader && typeof (this._idleTextureLoader as any).pause === 'function') {
+        (this._idleTextureLoader as any).pause();
+        console.log('[Controller] Paused texture loading during file processing');
+      }
+			
       PerformanceMonitor.start('backend_audio_processing');
+			
       // Force a complete state reset on new file upload
       const freshState = await this._facade.createInitialState();
       this._state = freshState;
@@ -426,45 +469,7 @@ export class ApplicationController {
       await this.dispatch({
         type: 'PROCESSING_UPDATE',
         payload: { stage: 'preparing_textures', progress: 0 },
-      });
-      
-      // TEMPORARILY DISABLED TO TEST IF IDLE TEXTURE LOADING BLOCKS SECTION CHANGES
-			/*
-			// Start texture preload in background (don't await - let render proceed)
-			if (this._sceneManager && this._woodMaterialsConfig) {
-				const textureCache = (this._sceneManager as any)._textureCache;
-				if (textureCache && typeof textureCache.preloadAllTextures === 'function') {
-					textureCache.preloadAllTextures(this._woodMaterialsConfig).then((idleLoader: any) => {
-						this._idleTextureLoader = idleLoader;
-						console.log('[Controller] Idle texture loader initialized');
-						
-						const indicator = document.getElementById('textureLoadingIndicator');
-						const loadedEl = document.getElementById('texturesLoaded');
-						const totalEl = document.getElementById('texturesTotal');
-						
-						if (indicator && loadedEl && totalEl) {
-							console.log('[Controller] Setting up progress callback');
-							idleLoader.onProgress((loaded: number, total: number) => {
-								console.log(`[Controller] Progress callback fired: ${loaded}/${total}`);
-								loadedEl.textContent = String(loaded);
-								totalEl.textContent = String(total);
-								
-								if (loaded < total) {
-									indicator.classList.add('active');
-								} else {
-									console.log('[Controller] All textures loaded, hiding indicator');
-									setTimeout(() => {
-										indicator.classList.remove('active');
-									}, 2000);
-								}
-							});
-						}
-					}).catch((error: unknown) => {
-						console.error('[Controller] Texture preload failed:', error);
-					});
-				}
-			}
-			*/
+      });			
 			
       PerformanceMonitor.start('csg_generation_and_render');
 			
@@ -492,10 +497,6 @@ export class ApplicationController {
       }
       
       PerformanceMonitor.end('csg_generation_and_render');
-      
-      // CRITICAL: Wait for walnut textures to be ready before removing overlay
-      // This prevents user seeing black meshes while textures load
-      await this.waitForWalnutTextures();
       
       PerformanceMonitor.end('total_upload_to_render');
       
@@ -659,9 +660,17 @@ export class ApplicationController {
       this._categoryFilterState.set(this._activeCategory, new Map(this._activeFilters));
     }
     
+    // Save current category's subcategory state before switching
+    if (this._activeCategory && this._activeSubcategory) {
+      this._categorySubcategoryState.set(this._activeCategory, this._activeSubcategory);
+    }
+    
     // Switch to new category
     this._activeCategory = categoryId;
-    this._activeSubcategory = null;
+    
+    // Restore saved subcategory for this category (if exists)
+    const savedSubcategory = this._categorySubcategoryState.get(categoryId);
+    this._activeSubcategory = savedSubcategory || null;
     
     // Restore saved filter state for this category, or start fresh
     const savedFilters = this._categoryFilterState.get(categoryId);
@@ -687,8 +696,9 @@ export class ApplicationController {
 		const subcategories = Object.entries(categoryConfig.subcategories).map(([id, config]) => ({ id, config }));
     
 		// Auto-select subcategory and filters based on current state
+    // BUT: Don't override if we already restored a saved subcategory
     const currentComposition = this._state?.composition;
-    if (currentComposition) {
+    if (currentComposition && !this._activeSubcategory) {
       if (subcategories.length === 1) {
         // Correctly select the single subcategory for Layout, Wood, etc.
         this._activeSubcategory = subcategories[0].id;
@@ -714,14 +724,17 @@ export class ApplicationController {
 			stackContainer.style.display = 'none';
 		}
 		
-		// If auto-selection succeeded, defer right panel rendering to next tick
-		// This ensures all state and async imports complete before rendering
-		if (currentComposition && this._activeSubcategory) {
-			const selectedSubcategory = this._activeSubcategory;
-			requestAnimationFrame(() => {
-				this._handleSubcategorySelected(selectedSubcategory);
-			});
-		}
+		// Auto-select the first subcategory if one isn't already active for this category
+      if (!this._activeSubcategory && subcategories.length > 0) {
+        this._activeSubcategory = subcategories[0].id;
+      }
+      
+      // Defer rendering to the next tick to ensure all state is consistent
+      requestAnimationFrame(() => {
+        if (this._activeSubcategory) {
+          this._handleSubcategorySelected(this._activeSubcategory);
+        }
+      });
 
     if (subcategories.length === 1) {
       // Auto-select single subcategory, hide secondary panel
@@ -781,6 +794,20 @@ export class ApplicationController {
     if (!categoryConfig) return;
 
     this._activeSubcategory = subcategoryId;
+
+    // Re-render the LeftSecondaryPanel immediately to show the new selection
+    const subcategories = Object.entries(categoryConfig.subcategories).map(([id, config]) => ({ id, config }));
+    import('./components/LeftSecondaryPanel').then(({ LeftSecondaryPanel }) => {
+      const panel = new LeftSecondaryPanel(
+        subcategories,
+        this._activeSubcategory, // Pass the newly updated selection
+        (id: string) => this._handleSubcategorySelected(id)
+      );
+      if (this._leftSecondaryPanel) {
+        this._leftSecondaryPanel.innerHTML = '';
+        this._leftSecondaryPanel.appendChild(panel.render());
+      }
+    });
 
     const subcategory = categoryConfig.subcategories[subcategoryId];
     if (!subcategory) return;
@@ -937,36 +964,46 @@ export class ApplicationController {
           break;
         }
 
-        case 'wood_material_inline_grid': {
-          if (this._woodMaterialsConfig) {
-            // Create header
-            const header = document.createElement('div');
-            header.className = 'panel-header';
-            header.innerHTML = '<h3>Wood Material</h3>';
-            panelContent.appendChild(header);
-            
-            // Create body
-            const body = document.createElement('div');
-            body.className = 'panel-body';
-            panelContent.appendChild(body);
-            
-            // Render grid into body
-            const { species, grain_direction } = this._state!.composition.frame_design.section_materials[0] || {};
-            const grid = new WoodMaterialInlineGrid(
-              this._woodMaterialsConfig.species_catalog,
-              this._state!.composition.frame_design.shape,
-              this._state!.composition.frame_design.number_sections,
-              species || this._woodMaterialsConfig.default_species,
-              grain_direction || this._woodMaterialsConfig.default_grain_direction,
-              (selectedSpecies, selectedGrain) => {
-                void this._updateWoodMaterial('species', selectedSpecies);
-                void this._updateWoodMaterial('grain_direction', selectedGrain);
-              }
-            );
-            body.appendChild(grid.render());
-          }
-          break;
-        }
+				case 'wood_species_image_grid': {
+					if (this._woodMaterialsConfig && this._state) {
+						const header = document.createElement('div');
+						header.className = 'panel-header';
+						header.innerHTML = '<h3>Wood & Grain</h3>';
+						panelContent.appendChild(header);
+						const body = document.createElement('div');
+						body.className = 'panel-body';
+						
+						const materials = this._state.composition.frame_design.section_materials || [];
+						const currentSpecies = materials[0]?.species || this._woodMaterialsConfig.default_species;
+						const currentGrain = materials[0]?.grain_direction || this._woodMaterialsConfig.default_grain_direction;
+						const grid = new WoodMaterialSelector(
+							this._woodMaterialsConfig.species_catalog,
+							this._state.composition.frame_design.number_sections,
+							currentSpecies,
+							currentGrain,
+							async (update) => {
+								// Capture scroll position from current .panel-body before re-render
+								const oldBody = document.querySelector('.panel-right-main .panel-body') as HTMLElement;
+								const scrollTop = oldBody?.scrollTop || 0;
+
+								await this._updateWoodMaterial('species', update.species);
+								await this._updateWoodMaterial('grain_direction', update.grain);
+								this._renderRightMainFiltered();
+
+								// Restore scroll position to new .panel-body after re-render
+								requestAnimationFrame(() => {
+									const newBody = document.querySelector('.panel-right-main .panel-body') as HTMLElement;
+									if (newBody) {
+										newBody.scrollTop = scrollTop;
+									}
+								});
+							}
+						);
+						body.appendChild(grid.render());
+						panelContent.appendChild(body);
+					}
+					break;
+				}
 				
         case 'upload_interface': {
           // Create header

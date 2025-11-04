@@ -52,24 +52,44 @@ export class TextureCacheService {
   async preloadAllTextures(config: WoodMaterialsConfig): Promise<IdleTextureLoader> {
     const textureConfig = config.texture_config;
     const basePath = textureConfig.base_texture_path;
+		
+		// DIAGNOSTIC: Track individual species load times
+		const loadTimes: { species: string; duration: number }[] = [];
     
     // ALWAYS use Large size for all panels (best quality, simpler caching)
     const sizeInfo = textureConfig.size_map.large;
     const folderName = sizeInfo.folder;
     
     // Load FIRST species in array immediately (blocks render)
-    const firstSpecies = config.species_catalog[0];
-    if (firstSpecies) {
-      PerformanceMonitor.start('first_species_texture_download');
-      await this._preloadSpeciesTexturesAsync(firstSpecies, basePath, folderName, sizeInfo.dimensions);
-      PerformanceMonitor.end('first_species_texture_download');
-    }
+    // DIAGNOSTIC: Load first 3 species and measure each
+		for (let i = 0; i < Math.min(3, config.species_catalog.length); i++) {
+			const species = config.species_catalog[i];
+			const perfKey = `texture_load_${species.id}`;
+			
+			PerformanceMonitor.start(perfKey);
+			await this._preloadSpeciesTexturesAsync(species, basePath, folderName, sizeInfo.dimensions);
+			const duration = PerformanceMonitor.end(perfKey);
+			
+			loadTimes.push({ species: species.id, duration: duration! });
+			console.log(`[TEXTURE DIAGNOSTIC] ${species.id}: ${duration!.toFixed(0)}ms`);
+		}
+		
+		// Calculate and log statistics
+		const totalTime = loadTimes.reduce((sum, entry) => sum + entry.duration, 0);
+		const avgTime = totalTime / loadTimes.length;
+		const estimatedAll = avgTime * config.species_catalog.length;
+		
+		console.log(`[TEXTURE DIAGNOSTIC] ═══════════════════════════════════`);
+		console.log(`[TEXTURE DIAGNOSTIC] Total for 3 species: ${totalTime.toFixed(0)}ms (${(totalTime / 1000).toFixed(2)}s)`);
+		console.log(`[TEXTURE DIAGNOSTIC] Average per species: ${avgTime.toFixed(0)}ms`);
+		console.log(`[TEXTURE DIAGNOSTIC] Estimated all ${config.species_catalog.length} species: ${estimatedAll.toFixed(0)}ms (${(estimatedAll / 1000).toFixed(1)}s)`);
+		console.log(`[TEXTURE DIAGNOSTIC] ═══════════════════════════════════`);
     
     // Create idle loader for remaining species (array order = priority)
     const idleLoader = new IdleTextureLoader(this, config);
     
-    // Start background loading from index 1 (skip first species already loaded)
-    idleLoader.startBackgroundLoading(1);
+		// DIAGNOSTIC: Start background loading from index 3 (skip first 3 already loaded)
+		idleLoader.startBackgroundLoading(3);
     
     return idleLoader;
   }

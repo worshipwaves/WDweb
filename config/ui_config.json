@@ -216,7 +216,7 @@
           "filters": {},
           "options": {
             "main": {
-              "type": "wood_material_inline_grid"
+              "type": "wood_species_image_grid"
             }
           }
         },

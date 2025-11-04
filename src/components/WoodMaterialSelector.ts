@@ -1,0 +1,151 @@
+// src/components/WoodMaterialSelector.ts
+import type { PanelComponent } from '../types/PanelTypes';
+import { Tooltip } from './Tooltip';
+
+interface SpeciesInfo {
+  id: string;
+  display: string;
+}
+
+export class WoodMaterialSelector implements PanelComponent {
+  private _container: HTMLElement | null = null;
+  private _speciesList: SpeciesInfo[];
+  private _numberSections: number;
+  private _currentSpecies: string;
+  private _currentGrain: string;
+  private _onSelect: (update: { species: string; grain: string }) => void;
+  private _tooltip: Tooltip = new Tooltip();
+
+  constructor(
+    speciesList: SpeciesInfo[],
+    numberSections: number,
+    currentSpecies: string,
+    currentGrain: string,
+    onSelect: (update: { species: string; grain: string }) => void
+  ) {
+    this._speciesList = speciesList;
+    this._numberSections = numberSections;
+    this._currentSpecies = currentSpecies;
+    this._currentGrain = currentGrain;
+    this._onSelect = onSelect;
+  }
+
+  render(): HTMLElement {
+    const container = document.createElement('div');
+    container.className = 'wood-species-image-grid';
+
+    this._speciesList.forEach(species => {
+      const card = this._createSpeciesCard(species);
+      container.appendChild(card);
+    });
+
+    this._container = container;
+    return container;
+  }
+
+  private _createSpeciesCard(species: SpeciesInfo): HTMLElement {
+    const card = document.createElement('div');
+    card.className = 'species-card';
+    if (species.id === this._currentSpecies) {
+      card.classList.add('active');
+    }
+
+    const label = document.createElement('div');
+    label.className = 'species-label';
+    label.textContent = species.display;
+    card.appendChild(label);
+
+    const thumbnailGrid = document.createElement('div');
+    thumbnailGrid.className = 'grain-thumbnail-grid';
+
+    const grainOptions = this._getAvailableGrains();
+    grainOptions.forEach(grain => {
+      if (grain.isAvailable) {
+        const thumb = this._createGrainThumbnail(species, grain.id, grain.label);
+        thumbnailGrid.appendChild(thumb);
+      }
+    });
+
+    card.appendChild(thumbnailGrid);
+    return card;
+  }
+
+  private _createGrainThumbnail(species: SpeciesInfo, grainId: string, grainLabel: string): HTMLElement {
+    const thumbContainer = document.createElement('button');
+    thumbContainer.className = 'grain-thumbnail';
+
+    // Translate the app state's grain direction to the thumbnail's ID format
+    const currentGrainAsId = this._mapGrainToId(this._currentGrain);
+
+    if (species.id === this._currentSpecies && grainId === currentGrainAsId) {
+      thumbContainer.classList.add('selected');
+    }
+
+    const img = document.createElement('img');
+    img.src = `/wood_thumbnails_small/${species.id}_${grainId}.png`;
+    img.alt = `${species.display} - ${grainLabel}`;
+    thumbContainer.appendChild(img);
+
+    thumbContainer.addEventListener('mouseenter', () => {
+      // Create a container for the tooltip content
+      const contentContainer = document.createElement('div');
+      contentContainer.className = 'tooltip-content-wrapper';
+
+      // Create an image element for the large thumbnail
+      const largeImage = document.createElement('img');
+      largeImage.src = `/wood_thumbnails_large/${species.id}_${grainId}.png`;
+      largeImage.alt = `${species.display} - ${grainLabel}`;
+      contentContainer.appendChild(largeImage);
+
+      // Create a text description element
+      const description = document.createElement('p');
+      description.className = 'tooltip-description';
+      description.textContent = `This is a beautiful ${species.display} with a ${grainLabel.toLowerCase()} grain pattern. More details about the wood's origin and characteristics can go here.`;
+      contentContainer.appendChild(description);
+      
+      // Pass the container element to the tooltip
+      this._tooltip.show(contentContainer, thumbContainer, 'left');
+    });
+    thumbContainer.addEventListener('mouseleave', () => this._tooltip.hide());
+
+    thumbContainer.addEventListener('click', () => {
+      // Immediately hide the tooltip before triggering the re-render.
+      this._tooltip.hide(); 
+
+      const simpleGrain = this._mapIdToGrain(grainId);
+      this._onSelect({ species: species.id, grain: simpleGrain });
+    });
+
+    return thumbContainer;
+  }
+  
+  // Helper to translate state grain ('vertical') to thumbnail ID ('n1_vertical')
+  private _mapGrainToId(grain: string): string {
+    if (grain === 'radiant') return 'n4_radiant';
+    if (grain === 'diamond') return 'n4_diamond';
+    if (grain === 'horizontal') return 'n1_horizontal';
+    return 'n1_vertical'; // Default
+  }
+
+  // Helper to translate thumbnail ID ('n1_vertical') back to state grain ('vertical')
+  private _mapIdToGrain(grainId: string): string {
+    if (grainId.includes('radiant')) return 'radiant';
+    if (grainId.includes('diamond')) return 'diamond';
+    if (grainId.includes('horizontal')) return 'horizontal';
+    return 'vertical';
+  }
+
+  private _getAvailableGrains(): { id: string; label: string; isAvailable: boolean }[] {
+    return [
+      { id: 'n1_vertical', label: 'Vertical', isAvailable: true },
+      { id: 'n1_horizontal', label: 'Horizontal', isAvailable: true },
+      { id: 'n4_radiant', label: 'Radiant', isAvailable: this._numberSections >= 2 },
+      { id: 'n4_diamond', label: 'Diamond', isAvailable: this._numberSections === 4 },
+    ];
+  }
+
+  destroy(): void {
+    this._tooltip.destroy();
+    if (this._container) this._container.remove();
+  }
+}
