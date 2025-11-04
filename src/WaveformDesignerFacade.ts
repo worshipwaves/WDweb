@@ -18,7 +18,6 @@ import {
   CompositionStateDTOSchema,
   AudioProcessResponseSchema,
   SmartCsgResponseSchema,
-  StylePresetSchema,
   ApplicationStateSchema,
   type CompositionStateDTO,
   type AudioProcessResponse,
@@ -58,7 +57,7 @@ export class WaveformDesignerFacade {
   /**
    * Initialize facade by loading style presets from backend config
    */
-  async initialize(): Promise<void> {
+  initialize(): void {
   // Style presets deprecated - using archetypes instead
   // Archetypes are loaded by ApplicationController
   this._stylePresets = [];

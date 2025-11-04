@@ -4,6 +4,7 @@
  */
 
 import type { PanelComponent } from '../types/PanelTypes';
+
 import { Tooltip } from './Tooltip';
 
 export interface FilterIconGroup {
@@ -160,21 +161,22 @@ export class FilterIconStrip implements PanelComponent {
   }
   
   private _loadSVG(svgPath: string, button: HTMLElement): void {
+    const element = button;
     fetch(svgPath)
       .then(response => {
         if (!response.ok) throw new Error(`Failed to load ${svgPath}`);
         return response.text();
       })
       .then(svgText => {
-        button.innerHTML = svgText;
+        element.innerHTML = svgText;
       })
       .catch(error => {
         console.error('[FilterIconStrip] SVG load failed:', error);
-        button.textContent = '?';
+        element.textContent = '?';
       });
   }
   
-  private _handleIconClick(groupId: string, iconId: string, button: HTMLElement): void {
+  private _handleIconClick(groupId: string, iconId: string, _button: HTMLElement): void {
     // Hide tooltip immediately on click
     this._tooltip.hide();
     
@@ -202,16 +204,16 @@ export class FilterIconStrip implements PanelComponent {
     const buttons = groupElement.querySelectorAll('.filter-icon');
     const activeSet = this._activeFilters.get(groupId) || new Set();
     
-    buttons.forEach(btn => {
-      const button = btn as HTMLElement;
-      const buttonIconId = button.dataset.iconId;
-      
-      if (buttonIconId && activeSet.has(buttonIconId)) {
-        button.classList.add('active');
-      } else {
-        button.classList.remove('active');
-      }
-    });
+		buttons.forEach(btn => {
+			const btnElement = btn as HTMLElement;
+			const buttonIconId = btnElement.dataset.iconId;
+			
+			if (buttonIconId && activeSet.has(buttonIconId)) {
+				btnElement.classList.add('active');
+			} else {
+				btnElement.classList.remove('active');
+			}
+		});
     
     // Update show all button state
     const allEmpty = Array.from(this._activeFilters.values()).every(set => set.size === 0);

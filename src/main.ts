@@ -101,6 +101,7 @@ declare global {
     _uiEngineInstance?: UIEngine;
     uiEngine?: UIEngine;
     demoPlayer?: DemoPlayer;
+    __controller__?: ApplicationController;
   }
 }
 
@@ -313,8 +314,8 @@ class SceneManager {
     
     // Desktop: calculate offset based on visible panel widths
     const leftMainPanel = document.getElementById('left-main-panel');
-    const leftSecondaryPanel = document.getElementById('left-secondary-panel');
-    const rightSecondaryPanel = document.getElementById('right-secondary-panel');
+    const _leftSecondaryPanel = document.getElementById('left-secondary-panel');
+    const _rightSecondaryPanel = document.getElementById('right-secondary-panel');
     const rightMainPanel = document.getElementById('right-main-panel');
     
     // Calculate left side width (main panel only)
@@ -1335,7 +1336,7 @@ document.addEventListener('DOMContentLoaded', () => {
       await controller.initialize();
       console.log('[MAIN] Step 8: Controller initialized!');
 			
-			(window as any).__controller__ = controller;
+			window.__controller__ = controller;
       
       console.log('[MAIN] Step 9: Creating scene manager...');
       const sceneManager = SceneManager.create('renderCanvas', facade);

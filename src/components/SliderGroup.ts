@@ -10,6 +10,11 @@
 
 import type { PanelComponent, SliderConfig } from '../types/PanelTypes';
 
+interface ExtendedSliderConfig extends SliderConfig {
+  dynamic_max_by_sections?: Record<string, number>;
+}
+
+
 export class SliderGroup implements PanelComponent {
   private _container: HTMLElement | null = null;
   private _sliders: SliderConfig[];
@@ -36,21 +41,22 @@ export class SliderGroup implements PanelComponent {
   private _updateDynamicMaxValues(): void {
     if (!this._numberSections) return;
     
-    this._sliders.forEach(slider => {
-      const dynamicMax = (slider as any).dynamic_max_by_sections;
+    this._sliders.forEach((slider, index) => {
+      const dynamicMax = (slider as ExtendedSliderConfig).dynamic_max_by_sections;
       if (dynamicMax) {
         const sectionKey = String(this._numberSections);
-        if (dynamicMax[sectionKey] !== undefined) {
-          slider.max = dynamicMax[sectionKey];
+        const newMax = dynamicMax[sectionKey];
+        if (newMax !== undefined) {
+          this._sliders[index] = { ...slider, max: newMax };
           
           // Clamp current value if it exceeds new max
-          if (slider.value > slider.max) {
-            slider.value = slider.max;
+          if (this._sliders[index].value > this._sliders[index].max) {
+            this._sliders[index] = { ...this._sliders[index], value: this._sliders[index].max };
           }
         }
       }
     });
-  }
+	}
 
   render(): HTMLElement {
     const container = document.createElement('div');

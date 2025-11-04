@@ -271,65 +271,6 @@ export class RightPanelContentRenderer {
   }
 
   private _renderBackingOptions(): PanelComponent {
-    const container = document.createElement('div');
-    container.className = 'panel-content';
-
-    // Header
-    const header = document.createElement('div');
-    header.className = 'panel-header';
-    header.innerHTML = '<h3>Wood Selection</h3>';
-    container.appendChild(header);
-
-    // Body with navigation cards
-    const body = document.createElement('div');
-    body.className = 'panel-body';
-
-    // Type-safe access to section materials
-    interface SectionMaterial {
-      section_id: number;
-      species: string;
-      grain_direction: string;
-    }
-
-    const materials = (state.section_materials as unknown as SectionMaterial[] | undefined) || [];
-    const firstMaterial = materials.length > 0 ? materials[0] : null;
-
-    if (!firstMaterial) {
-      body.innerHTML = '<div class="panel-placeholder">No materials configured</div>';
-    } else {
-      const species: string = firstMaterial.species;
-      const grainDirection: string = firstMaterial.grain_direction;
-
-      // Species card
-      const speciesCard = this._createNavigationCard(
-        '🪵',
-        'Species',
-        species,
-        () => onOptionSelected('navigate', 'species')
-      );
-      body.appendChild(speciesCard);
-
-      // Grain card
-      const grainCard = this._createNavigationCard(
-        '↕️',
-        'Grain Direction',
-        grainDirection,
-        () => onOptionSelected('navigate', 'grain')
-      );
-      body.appendChild(grainCard);
-    }
-
-    container.appendChild(body);
-
-    return {
-      render: () => container,
-      destroy: () => {
-        container.remove();
-      },
-    };
-  }
-
-  private _renderBackingOptions(): PanelComponent {
     const html = `
       <div class="panel-header">
         <h3>Backing</h3>
@@ -531,7 +472,7 @@ export class RightPanelContentRenderer {
 
         sliders.push({
           id: elementId,
-          label: element.label || elementId,
+          label: typedElement.label || elementId,
           min,
           max,
           step,

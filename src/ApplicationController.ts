@@ -7,27 +7,84 @@
  */
 
 import { AudioCacheService } from './AudioCacheService';
-import { PanelStackManager } from './components/PanelStackManager';
 import { FilterIconStrip } from './components/FilterIconStrip';
-import type { FilterIconGroup } from './types/PanelTypes';
+import { PanelStackManager } from './components/PanelStackManager';
 import { RightPanelContentRenderer } from './components/RightPanelContent';
 import { SliderGroup } from './components/SliderGroup';
 import { ThumbnailGrid } from './components/ThumbnailGrid';
-import { WoodMaterialInlineGrid } from './components/WoodMaterialInlineGrid';
 import { WoodMaterialSelector } from './components/WoodMaterialSelector';
+
 import { PerformanceMonitor } from './PerformanceMonitor';
+
+import type { CategoriesConfig, FilterIconGroup, ThumbnailConfig } from './types/PanelTypes';
 import {
-  CompositionStateDTO,
   ApplicationState,
+  CompositionStateDTO,
+  WoodMaterialsConfigSchema,
   type AudioProcessResponse,
   type CSGDataResponse,
-  type WoodMaterialsConfig,
-  WoodMaterialsConfigSchema,
   type SectionMaterial,
+  type WoodMaterialsConfig,
 } from './types/schemas';
 import { fetchAndValidate } from './utils/validation';
-import { WaveformDesignerFacade, Action } from './WaveformDesignerFacade';
-import type { ThumbnailConfig, CategoriesConfig } from './types/PanelTypes';
+import { Action, WaveformDesignerFacade } from './WaveformDesignerFacade';
+
+
+// Internal facade APIs that aren't exposed in the public interface
+interface TextureCache {
+  preloadAllTextures: (config: WoodMaterialsConfig) => Promise<IdleTextureLoader>;
+}
+
+interface IdleTextureLoader {
+  pause: () => void;
+  onProgress: (callback: (loaded: number, total: number) => void) => void;
+}
+
+interface SceneManagerInternal {
+  _textureCache?: TextureCache;
+}
+
+interface Archetype {
+  id: string;
+  shape: string;
+  slot_style: string;
+  label: string;
+  tooltip: string;
+  thumbnail: string;
+  number_sections: number;
+  number_slots: number;
+  separation: number;
+  side_margin?: number;
+}
+
+interface UIConfig {
+  thumbnail_config: ThumbnailConfig;
+  categories: CategoriesConfig;
+}
+
+interface ElementConfig {
+  label: string;
+  state_path: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  show_when?: {
+    shape?: string[];
+    slot_style?: string[];
+  };
+  dynamic_max_by_sections?: Record<string, number>;
+}
+
+interface UIEngine {
+  getElementConfig: (key: string) => ElementConfig | undefined;
+  getStateValue: (composition: CompositionStateDTO, path: string) => unknown;
+}
+
+declare global {
+  interface Window {
+    uiEngine?: UIEngine;
+  }
+}
 
 // Subscriber callback type
 type StateSubscriber = (state: ApplicationState) => void;
@@ -110,7 +167,7 @@ export class ApplicationController {
 	private _categorySubcategoryState: Map<string, string> = new Map();
   private _thumbnailConfig: ThumbnailConfig | null = null;
   private _categoriesConfig: CategoriesConfig | null = null;
-	private _archetypes: Map<string, any> = new Map();
+	private _archetypes: Map<string, Archetype> = new Map();
   
   // Four-panel DOM references
   private _leftSecondaryPanel: HTMLElement | null = null;
@@ -153,22 +210,22 @@ export class ApplicationController {
 			
 			// Load thumbnail and categories configuration
       // Load all configs in parallel
-			const [archetypes, woodMaterials, uiConfig, compositionDefaults] = await Promise.all([
+			const [archetypes, woodMaterials, uiConfig, _compositionDefaults] = await Promise.all([
 				fetch('http://localhost:8000/api/config/archetypes').then(r => r.json()),
 				fetch('http://localhost:8000/api/config/wood-materials').then(r => r.json()),
 				fetch('http://localhost:8000/api/config/ui').then(r => r.json()),
 				fetch('http://localhost:8000/api/config/composition-defaults').then(r => r.json())
-			]);
+			]) as [Record<string, Archetype>, WoodMaterialsConfig, UIConfig, unknown];
 
 			// Store archetypes
-			Object.entries(archetypes).forEach(([id, data]: [string, any]) => {
+			Object.entries(archetypes).forEach(([id, data]) => {
 				this._archetypes.set(id, data);
 			});
 
 			// Store configs
 			this._woodMaterialsConfig = woodMaterials;
-			this._thumbnailConfig = (uiConfig as any).thumbnail_config;
-			this._categoriesConfig = (uiConfig as any).categories;
+			this._thumbnailConfig = uiConfig.thumbnail_config;
+			this._categoriesConfig = uiConfig.categories;
 			
     } catch (error: unknown) {
       console.error('[Controller] Failed to load configuration:', error);
@@ -313,9 +370,9 @@ export class ApplicationController {
     // Start texture loading immediately in background
     if (this._woodMaterialsConfig) {
       console.log('[Controller] Starting texture preload on scene manager registration');
-      const textureCache = (this._sceneManager as any)._textureCache;
+      const textureCache = (this._sceneManager as unknown as SceneManagerInternal)._textureCache;
       if (textureCache && typeof textureCache.preloadAllTextures === 'function') {
-        textureCache.preloadAllTextures(this._woodMaterialsConfig).then((idleLoader: any) => {
+        void textureCache.preloadAllTextures(this._woodMaterialsConfig).then((idleLoader) => {
           this._idleTextureLoader = idleLoader;
           console.log('[Controller] Texture loading started in background');
           
@@ -324,7 +381,7 @@ export class ApplicationController {
           const totalEl = document.getElementById('texturesTotal');
           
           if (indicator && loadedEl && totalEl) {
-            idleLoader.onProgress((loaded: number, total: number) => {
+            idleLoader.onProgress((loaded, total) => {
               loadedEl.textContent = String(loaded);
               totalEl.textContent = String(total);
               
@@ -425,8 +482,8 @@ export class ApplicationController {
     try {
 			
 			// Pause background texture loading during heavy operations
-      if (this._idleTextureLoader && typeof (this._idleTextureLoader as any).pause === 'function') {
-        (this._idleTextureLoader as any).pause();
+      if (this._idleTextureLoader && typeof (this._idleTextureLoader as IdleTextureLoader).pause === 'function') {
+        (this._idleTextureLoader as IdleTextureLoader).pause();
         console.log('[Controller] Paused texture loading during file processing');
       }
 			
@@ -755,7 +812,7 @@ export class ApplicationController {
         this._rightMainPanel.innerHTML = '<div class="panel-content"><div style="padding: 40px 20px; text-align: center; color: rgba(255, 255, 255, 0.6);"><div style="font-size: 48px; margin-bottom: 16px;">←</div><div style="font-size: 16px; font-weight: 500;">Select a subcategory</div></div></div>';
         this._rightMainPanel.style.display = 'block';
       }
-      import('./components/LeftSecondaryPanel').then(({ LeftSecondaryPanel }) => {
+      void import('./components/LeftSecondaryPanel').then(({ LeftSecondaryPanel }) => {
         const panel = new LeftSecondaryPanel(subcategories, this._activeSubcategory, (id: string) => this._handleSubcategorySelected(id));
         if (this._leftSecondaryPanel) {
           this._leftSecondaryPanel.innerHTML = '';
@@ -797,7 +854,7 @@ export class ApplicationController {
 
     // Re-render the LeftSecondaryPanel immediately to show the new selection
     const subcategories = Object.entries(categoryConfig.subcategories).map(([id, config]) => ({ id, config }));
-    import('./components/LeftSecondaryPanel').then(({ LeftSecondaryPanel }) => {
+    void import('./components/LeftSecondaryPanel').then(({ LeftSecondaryPanel }) => {
       const panel = new LeftSecondaryPanel(
         subcategories,
         this._activeSubcategory, // Pass the newly updated selection
@@ -813,7 +870,7 @@ export class ApplicationController {
     if (!subcategory) return;
     
     // Initialize filters to empty Set (no filter = show ALL)
-    Object.entries(subcategory.filters).forEach(([filterId, filterConfig]) => {
+    Object.entries(subcategory.filters).forEach(([filterId, _filterConfig]) => {
 			if (!this._activeFilters.has(filterId)) {
 				this._activeFilters.set(filterId, new Set());
 			}
@@ -940,8 +997,8 @@ export class ApplicationController {
     if (optionConfig) {
       switch (optionConfig.type) {
         case 'slider_group': {
-          const sliderConfigs = (optionConfig.element_keys || [])
-            .filter(key => {
+          const sliderConfigs = ((optionConfig.element_keys as string[] | undefined) || [])
+            .filter((key: string) => {
               const elConfig = window.uiEngine?.getElementConfig(key);
               if (!elConfig) return false;
               
@@ -952,7 +1009,7 @@ export class ApplicationController {
                 
                 // Check shape constraint
                 if (elConfig.show_when.shape) {
-                  const allowedShapes = elConfig.show_when.shape as string[];
+                  const allowedShapes = elConfig.show_when.shape;
                   if (!allowedShapes.includes(currentShape)) {
                     return false; // Filter out this slider
                   }
@@ -960,7 +1017,7 @@ export class ApplicationController {
                 
                 // Check slot_style constraint
                 if (elConfig.show_when.slot_style) {
-                  const allowedStyles = elConfig.show_when.slot_style as string[];
+                  const allowedStyles = elConfig.show_when.slot_style;
                   if (!allowedStyles.includes(currentSlotStyle)) {
                     return false; // Filter out this slider
                   }
@@ -969,7 +1026,7 @@ export class ApplicationController {
               
               return true; // Include this slider
             })
-            .map(key => {
+            .map((key: string) => {
               const elConfig = window.uiEngine?.getElementConfig(key);
               const value = window.uiEngine?.getStateValue(this._state!.composition, elConfig!.state_path) as number;
               return {
@@ -980,7 +1037,7 @@ export class ApplicationController {
                 step: elConfig!.step!,
                 value: value ?? elConfig!.min!,
                 unit: key === 'slots' ? '' : '"',
-                dynamic_max_by_sections: (elConfig as any).dynamic_max_by_sections,
+                dynamic_max_by_sections: (elConfig as { dynamic_max_by_sections?: Record<string, number> }).dynamic_max_by_sections,
               };
             });
           const sliderGroup = new SliderGroup(
@@ -1011,8 +1068,9 @@ export class ApplicationController {
 							this._state.composition.frame_design.number_sections,
 							currentSpecies,
 							currentGrain,
-							async (update) => {
-								// Capture scroll position from current .panel-body before re-render
+							(update) => {
+								void (async () => {
+									// Capture scroll position from current .panel-body before re-render
 								const oldBody = document.querySelector('.panel-right-main .panel-body') as HTMLElement;
 								const scrollTop = oldBody?.scrollTop || 0;
 
@@ -1027,9 +1085,10 @@ export class ApplicationController {
 										newBody.scrollTop = scrollTop;
 									}
 								});
-							}
-						);
-						body.appendChild(grid.render());
+							})();
+						}
+					);
+					body.appendChild(grid.render());
 						panelContent.appendChild(body);
 					}
 					break;
@@ -1162,7 +1221,7 @@ export class ApplicationController {
           
           const thumbnailGrid = new ThumbnailGrid(
             matchingArchetypes,
-            (id) => this._handleArchetypeSelected(id),
+            (id) => { void this._handleArchetypeSelected(id); },
             activeSelection
           );
           panelContent.appendChild(thumbnailGrid.render());
@@ -1347,7 +1406,7 @@ export class ApplicationController {
 
     // Update only the target sections
     targetIndices.forEach(sectionId => {
-      let material = materials.find(m => m.section_id === sectionId);
+      const material = materials.find(m => m.section_id === sectionId);
       
       if (material) {
         // Update existing material entry
