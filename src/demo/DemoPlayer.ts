@@ -15,6 +15,8 @@ export class DemoPlayer {
   private ctaButton: HTMLElement | null = null;
   private skipOverlay: HTMLElement | null = null;
   private readonly totalScenes: number = 6; // Update if demo changes
+  private activeAudio: HTMLAudioElement | null = null;
+  private activeTimeout: number | null = null;
   
   constructor(controller: ApplicationController, sceneManager?: { startCinematicRotation: (callback: () => void) => void }) {
     this.controller = controller;
@@ -31,10 +33,26 @@ export class DemoPlayer {
 
   public stop(): void {
     this.isRunning = false;
+    
+    // Stop active audio
+    if (this.activeAudio) {
+      this.activeAudio.pause();
+      this.activeAudio = null;
+    }
+    
+    // Clear active timeout
+    if (this.activeTimeout !== null) {
+      clearTimeout(this.activeTimeout);
+      this.activeTimeout = null;
+    }
+    
+    // Remove highlights
     if (this.highlightElement) {
       this.highlightElement.classList.remove('demo-highlight');
       this.highlightElement = null;
     }
+    
+    // Remove UI elements
     if (this.ctaButton) {
       this.ctaButton.remove();
       this.ctaButton = null;
@@ -43,6 +61,13 @@ export class DemoPlayer {
       this.skipOverlay.remove();
       this.skipOverlay = null;
     }
+    
+    // CRITICAL FIX: Tour's reset action clears activeCategory
+    // Restore AUDIO category so user can navigate subcategories
+    void this.controller.dispatch({
+      type: 'CATEGORY_SELECTED',
+      payload: 'audio'
+    });
   }
 
   private async executeNextStep(): Promise<void> {
@@ -62,19 +87,23 @@ export class DemoPlayer {
 				
       case 'narrate': {
         const audio = new Audio(`/assets/narration/${action.file}`);
+        this.activeAudio = audio;
         
         // Handle audio load errors
         audio.onerror = (): void => {
           console.warn(`[DemoPlayer] Narration file not found: ${action.file}, continuing silently`);
+          this.activeAudio = null;
           void this.executeNextStep();
         };
         
         void audio.play().catch((error: unknown) => {
           console.warn('[DemoPlayer] Narration playback failed:', error);
+          this.activeAudio = null;
           void this.executeNextStep();
         });
         
         audio.onended = () => {
+          this.activeAudio = null;
           void this.executeNextStep();
         };
         break;
@@ -108,7 +137,10 @@ export class DemoPlayer {
       }
 
       case 'wait':
-        setTimeout(() => void this.executeNextStep(), action.duration);
+        this.activeTimeout = window.setTimeout(() => {
+          this.activeTimeout = null;
+          void this.executeNextStep();
+        }, action.duration);
         break;
 
       case 'simulate_upload': {        
@@ -171,7 +203,18 @@ export class DemoPlayer {
     const skipButton = this.skipOverlay.querySelector('.demo-skip-button');
     skipButton?.addEventListener('click', () => {
       this.stop();
-      window.location.reload();
+      
+      // Force UI refresh by re-selecting current subcategory
+      const currentState = this.controller.getState();
+      if (currentState.ui.activeCategory && currentState.ui.activeSubcategory) {
+        void this.controller.dispatch({
+          type: 'SUBCATEGORY_SELECTED',
+          payload: {
+            category: currentState.ui.activeCategory,
+            subcategory: currentState.ui.activeSubcategory
+          }
+        });
+      }
     });
   }
   

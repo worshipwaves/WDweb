@@ -41,7 +41,7 @@ export class LeftSecondaryPanel implements PanelComponent {
     this._subcategories.forEach(item => {
       const button = document.createElement('button');
       button.className = 'subcategory-button';
-      button.dataset.subcategoryId = item.id;
+      button.dataset.subcategory = item.id;
 			button.dataset.demoId = `subcategory_${item.id}`;
       
       if (item.id === this._currentSelection) {
@@ -75,7 +75,16 @@ export class LeftSecondaryPanel implements PanelComponent {
       // Event handler
       if (!isPlaceholder) {
         button.addEventListener('click', () => {
-          this._onSelect(item.id);
+          console.log('[LeftSecondaryPanel] Subcategory clicked:', item.id);
+          try {
+            console.log('[LeftSecondaryPanel] Calling _onSelect with:', item.id);
+            console.log('[LeftSecondaryPanel] _onSelect is:', typeof this._onSelect, this._onSelect);
+            this._onSelect(item.id);
+            console.log('[LeftSecondaryPanel] _onSelect completed successfully');
+          } catch (error) {
+            console.error('[LeftSecondaryPanel] ERROR in click handler:', error);
+            console.error('[LeftSecondaryPanel] Stack trace:', error instanceof Error ? error.stack : 'No stack');
+          }
         });
       }
       

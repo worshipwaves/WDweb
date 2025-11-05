@@ -91,17 +91,6 @@ def get_wood_materials_config():
     """
     return config_service.get_wood_materials_config()
 
-@app.get("/api/config/default-parameters")
-def get_default_parameters():
-    """
-    Get complete default parameters including UI configuration.
-    Returns the full default_parameters.json file.
-    """
-    import json
-    config_path = PROJECT_ROOT / "config" / "default_parameters.json"
-    with open(config_path, 'r') as f:
-        return json.load(f)
-
 @app.get("/composition/default", response_model=CompositionStateDTO)
 def get_default_composition():
     """

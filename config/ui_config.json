@@ -283,13 +283,17 @@
       "subcategories": {
         "tour": {
           "label": "Tour",
-          "note": "Experience Amazing Grace with instant preview",
+          "note": "",
           "filters": {},
-          "options": {}
+          "options": {
+            "start_tour": {
+              "type": "tour_launcher"
+            }
+          }
         },
         "collections": {
           "label": "Collections",
-          "note": "Browse curated hymns, prayers, scriptures, and blessings",
+          "note": "",
           "filters": {},
           "options": {}
         },

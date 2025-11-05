@@ -880,12 +880,28 @@ export class ApplicationController {
    * @private
    */
   private _handleSubcategorySelected(subcategoryId: string): void {
-    if (!this._categoriesConfig || !this._state?.ui.activeCategory) return;
+    console.log('[Controller] _handleSubcategorySelected called with:', subcategoryId);
+    console.log('[Controller] Current state:', {
+      hasConfig: !!this._categoriesConfig,
+      hasState: !!this._state,
+      activeCategory: this._state?.ui.activeCategory
+    });
+    
+    if (!this._categoriesConfig || !this._state?.ui.activeCategory) {
+      console.error('[Controller] Early return: missing config or state');
+      return;
+    }
+    
     const categoryConfig = this._categoriesConfig[this._state.ui.activeCategory as keyof CategoriesConfig];
-    if (!categoryConfig) return;
+    if (!categoryConfig) {
+      console.error('[Controller] Early return: no category config for', this._state.ui.activeCategory);
+      return;
+    }
 
+    console.log('[Controller] Dispatching SUBCATEGORY_SELECTED');
     // Dispatch state update
     void this.dispatch({ type: 'SUBCATEGORY_SELECTED', payload: { category: this._state.ui.activeCategory, subcategory: subcategoryId } });
+    console.log('[Controller] Dispatch completed');
 
     // Re-render the LeftSecondaryPanel immediately to show the new selection
     const subcategories = Object.entries(categoryConfig.subcategories).map(([id, config]) => ({ id, config }));
@@ -1232,6 +1248,19 @@ export class ApplicationController {
           });
           
           panelContent.appendChild(body);
+          break;
+        }
+        
+        case 'tour_launcher': {
+          void import('./components/TourLauncherPanel').then(({ TourLauncherPanel }) => {
+            const tourPanel = new TourLauncherPanel(
+              this,
+              this._sceneManager
+            );
+            panelContent.appendChild(tourPanel.render());
+          }).catch((error: unknown) => {
+            console.error('[Controller] Failed to load TourLauncherPanel:', error);
+          });
           break;
         }				
 

@@ -22,7 +22,6 @@ import '@babylonjs/loaders/glTF/2.0';
 
 import { ApplicationController } from './ApplicationController';
 import { AudioCacheService } from './AudioCacheService';
-import { ConfirmModal } from './components/ConfirmModal';
 import { TourModal } from './components/TourModal';
 import { DemoPlayer } from './demo/DemoPlayer';
 import { FrameGenerationService } from './FrameGenerationService';
@@ -1435,11 +1434,8 @@ async function initializeUI(
   
   // 6. Bind zoom toggle button
   bindZoomToggleButton(sceneManager);
-  
-  // 7. Bind new file upload button
-  bindNewFileButton(controller);
 	
-  // 8. Subscribe to state changes to keep UI elements in sync
+  // 7. Subscribe to state changes to keep UI elements in sync
   controller.subscribe((newState) => {
     syncUIFromState(uiEngine, newState.composition);
     
@@ -1447,19 +1443,16 @@ async function initializeUI(
     updateConditionalUI(uiEngine, newState.composition);
   });	
   
-  // 9. Bind select all checkbox
+  // 8. Bind select all checkbox
   bindSelectAllCheckbox(controller, sceneManager);
-	
-	// 10. Bind start tour button
-  bindStartTourButton(uiEngine, controller, sceneManager);
   
-  // 11. Setup upload interface
+  // 9. Setup upload interface
   setupUploadInterface(uiEngine, controller);
   
-  // 12. Initialize processing overlay
+  // 10. Initialize processing overlay
   new ProcessingOverlay('processingOverlay', controller);
 	
-	// 13 Initialize left panel renderer
+	// 11 Initialize left panel renderer
   const { LeftPanelRenderer } = await import('./components/LeftPanelRenderer');
   const leftPanelRenderer = new LeftPanelRenderer(
     'left-main-panel',
@@ -1467,23 +1460,23 @@ async function initializeUI(
   );
   leftPanelRenderer.render();
   
-  // 14 Restore UI from persisted state (must happen after buttons rendered)
+  // 12 Restore UI from persisted state (must happen after buttons rendered)
   controller.restoreUIFromState();
   
-  // 15. Subscribe to state changes (only sync UI on phase transitions, not every change)
+  // 13. Subscribe to state changes (only sync UI on phase transitions, not every change)
   controller.subscribe((state) => {
     handlePhaseTransition(uiEngine, state, controller);
   });
   
-  // 16. Initial phase transition (only if restoring non-upload phase)
+  // 14. Initial phase transition (only if restoring non-upload phase)
   if (initialState.phase !== 'upload') {
     handlePhaseTransition(uiEngine, initialState, controller);
   }
   
-  // 17. Initial conditional logic (like disabling n=3 for rectangular)
+  // 15. Initial conditional logic (like disabling n=3 for rectangular)
   updateConditionalUI(uiEngine, initialState.composition);
 	
-	// 18. Ensure all sections options are visible (fix n=3 regression)
+	// 16. Ensure all sections options are visible (fix n=3 regression)
   ensureSectionsOptionsVisible();
 }
 
@@ -1884,30 +1877,6 @@ function bindZoomToggleButton(
 }
 
 /**
- * Bind new file upload button
- */
-function bindNewFileButton(_controller: ApplicationController): void {
-  const newFileButton = document.getElementById('newFileButton');
-  if (!newFileButton) return;
-  
-  newFileButton.addEventListener('click', () => {
-    // Show confirmation dialog
-    const confirmed = confirm(
-      'Upload a new audio file?\n\n' +
-      'This will clear your current design and return to the upload screen.'
-    );
-    
-    if (confirmed) {
-      // Clear localStorage
-      localStorage.removeItem('wavedesigner_session');
-      
-      // Reload page to reset to initial state
-      window.location.reload();
-    }
-  });
-}
-
-/**
  * Setup upload interface
  */
 function setupUploadInterface(uiEngine: UIEngine, controller: ApplicationController): void {
@@ -1961,37 +1930,6 @@ function ensureSectionsOptionsVisible(): void {
   for (const option of sectionsEl.options) {
     option.style.display = '';
   }
-}
-
-/**
- * Bind the "Start Tour" button to initialize and run the demo.
- */
-function bindStartTourButton(
-  _uiEngine: UIEngine, 
-  controller: ApplicationController,
-  sceneManager: SceneManager
-): void {
-  const startButton = document.getElementById('startTourButton');
-  if (!startButton) return;
-
-  const demoPlayer = new DemoPlayer(controller, sceneManager);
-  window.demoPlayer = demoPlayer; // Expose for debugging
-
-  startButton.addEventListener('click', () => {
-    const confirmModal = new ConfirmModal({
-      title: 'Start guided tour?',
-      message: 'This will reset your current design.',
-      primaryAction: 'Start Tour',
-      secondaryAction: 'Cancel',
-      onConfirm: () => {
-        demoPlayer.start();
-      },
-      onCancel: () => {
-        // User cancelled, do nothing
-      }
-    });
-    confirmModal.show();
-  });
 }
 
 /**
