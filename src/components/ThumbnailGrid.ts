@@ -9,6 +9,7 @@
  */
 
 import type { PanelComponent, ThumbnailItem } from '../types/PanelTypes';
+
 import { Tooltip } from './Tooltip';
 
 export class ThumbnailGrid implements PanelComponent {

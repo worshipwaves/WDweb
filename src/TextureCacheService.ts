@@ -8,7 +8,6 @@
 import { Texture, Scene } from '@babylonjs/core';
 
 import { IdleTextureLoader } from './IdleTextureLoader';
-import { PerformanceMonitor } from './PerformanceMonitor';
 import type { WoodMaterialsConfig } from './types/schemas';
 
 export class TextureCacheService {
@@ -52,45 +51,20 @@ export class TextureCacheService {
   async preloadAllTextures(config: WoodMaterialsConfig): Promise<IdleTextureLoader> {
     const textureConfig = config.texture_config;
     const basePath = textureConfig.base_texture_path;
-		
-		// DIAGNOSTIC: Track individual species load times
-		const loadTimes: { species: string; duration: number }[] = [];
-    
-    // ALWAYS use Large size for all panels (best quality, simpler caching)
     const sizeInfo = textureConfig.size_map.large;
     const folderName = sizeInfo.folder;
     
-    // Load FIRST species in array immediately (blocks render)
-    // DIAGNOSTIC: Load first 3 species and measure each
-		for (let i = 0; i < Math.min(3, config.species_catalog.length); i++) {
-			const species = config.species_catalog[i];
-			const perfKey = `texture_load_${species.id}`;
-			
-			PerformanceMonitor.start(perfKey);
-			await this._preloadSpeciesTexturesAsync(species, basePath, folderName, sizeInfo.dimensions);
-			const duration = PerformanceMonitor.end(perfKey);
-			
-			loadTimes.push({ species: species.id, duration: duration! });
-			console.log(`[TEXTURE DIAGNOSTIC] ${species.id}: ${duration!.toFixed(0)}ms`);
-		}
-		
-		// Calculate and log statistics
-		const totalTime = loadTimes.reduce((sum, entry) => sum + entry.duration, 0);
-		const avgTime = totalTime / loadTimes.length;
-		const estimatedAll = avgTime * config.species_catalog.length;
-		
-		console.log(`[TEXTURE DIAGNOSTIC] ═══════════════════════════════════`);
-		console.log(`[TEXTURE DIAGNOSTIC] Total for 3 species: ${totalTime.toFixed(0)}ms (${(totalTime / 1000).toFixed(2)}s)`);
-		console.log(`[TEXTURE DIAGNOSTIC] Average per species: ${avgTime.toFixed(0)}ms`);
-		console.log(`[TEXTURE DIAGNOSTIC] Estimated all ${config.species_catalog.length} species: ${estimatedAll.toFixed(0)}ms (${(estimatedAll / 1000).toFixed(1)}s)`);
-		console.log(`[TEXTURE DIAGNOSTIC] ═══════════════════════════════════`);
+    // Load first 3 species immediately (walnut, cherry, maple)
+    for (let i = 0; i < Math.min(3, config.species_catalog.length); i++) {
+      const species = config.species_catalog[i];
+      await this._preloadSpeciesTexturesAsync(species, basePath, folderName, sizeInfo.dimensions);
+    }
     
     // Create idle loader for remaining species (array order = priority)
     const idleLoader = new IdleTextureLoader(this, config);
     
-		// DIAGNOSTIC: Start background loading from index 3 (skip first 3 already loaded)
-		// TEMPORARILY DISABLED: Uncomment when deploying to S3 with cache headers
-		// idleLoader.startBackgroundLoading(3);
+    // TEMPORARILY DISABLED: Uncomment when deploying to S3 with cache headers
+    // idleLoader.startBackgroundLoading(3);
     
     return idleLoader;
   }

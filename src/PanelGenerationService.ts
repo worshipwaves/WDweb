@@ -455,12 +455,6 @@ export class PanelGenerationService {
   }
   
   private cutSlots(panelMesh: Mesh, slots: SlotData[], config: PanelConfig): Mesh {
-		console.log(`[CSG-DEBUG] Cutting ${slots.length} slots from panel`);
-		console.log(`[CSG-DEBUG] Panel vertices before CSG:`, panelMesh.getTotalVertices());
-		if (slots.length > 0) {
-			console.log(`[CSG-DEBUG] First slot:`, slots[0]);
-		}
-		
 		let resultCSG = CSG.FromMesh(panelMesh);
     let _successfulCuts = 0;
     let _failedCuts = 0;
@@ -491,8 +485,6 @@ export class PanelGenerationService {
     
 		panelMesh.dispose();
 		const result = resultCSG.toMesh(`${panelMesh.name}_withSlots`, null, this.scene);
-		console.log(`[CSG-DEBUG] Result mesh vertices:`, result.getTotalVertices());
-		console.log(`[CSG-DEBUG] Result has positions:`, result.getVerticesData(VertexBuffer.PositionKind) !== null);
     
     const mat = new StandardMaterial('finalPanelMat', this.scene);
     mat.diffuseColor = new Color3(0.9, 0.7, 0.5);
@@ -515,9 +507,6 @@ export class PanelGenerationService {
   }
   
 	private createSlotBox(slot: SlotData, config: PanelConfig): Mesh {
-		console.log(`[SLOT-DEBUG] Creating slot box for slot at x=${slot.x}, z=${slot.z}`);
-		console.log(`[SLOT-DEBUG] Vertices:`, slot.vertices.map(v => `[${v[0].toFixed(2)}, ${v[1].toFixed(2)}]`).join(', '));
-		
 		if (!slot.vertices || slot.vertices.length !== 4) {
       throw new Error(`Slot missing required vertices data`);
     }

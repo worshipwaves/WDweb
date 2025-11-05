@@ -22,6 +22,9 @@ import '@babylonjs/loaders/glTF/2.0';
 
 import { ApplicationController } from './ApplicationController';
 import { AudioCacheService } from './AudioCacheService';
+import { ConfirmModal } from './components/ConfirmModal';
+import { TourModal } from './components/TourModal';
+import { DemoPlayer } from './demo/DemoPlayer';
 import { FrameGenerationService } from './FrameGenerationService';
 import { PerformanceMonitor } from './PerformanceMonitor';
 import { ProcessingOverlay } from './ProcessingOverlay';
@@ -31,9 +34,6 @@ import { UIEngine } from './UIEngine';
 import { UploadInterface } from './UploadInterface';
 import { WaveformDesignerFacade } from './WaveformDesignerFacade';
 import { WoodMaterial } from './WoodMaterial';
-import { DemoPlayer } from './demo/DemoPlayer';
-import { ConfirmModal } from './components/ConfirmModal';
-import { TourModal } from './components/TourModal';
 
 
 
@@ -387,12 +387,9 @@ class SceneManager {
   }
 
   public renderComposition(csgData: SmartCsgResponse): Promise<void> {
-    console.log('[TOUR-DIAGNOSTIC] renderComposition called (public wrapper)');
     void (this._renderQueue = this._renderQueue.then(
       () => {
-        console.log('[TOUR-DIAGNOSTIC] renderComposition: executing queued render');
         if (this._isRendering) {
-          console.warn('Render already in progress, skipping.');
           return;
         }
         
@@ -409,7 +406,6 @@ class SceneManager {
   }
 
   private _renderCompositionInternal(csgData: SmartCsgResponse): void {
-    console.log('[TOUR-DIAGNOSTIC] _renderCompositionInternal started');
     PerformanceMonitor.start('render_internal_total');
 		
     PerformanceMonitor.start('mesh_cleanup');
@@ -1335,36 +1331,25 @@ class SceneManager {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('[MAIN] DOMContentLoaded fired');
   void (async () => {
     try {
-      console.log('[MAIN] Step 1: Creating UIEngine...');
       const uiEngine = new UIEngine();
-      console.log('[MAIN] Step 2: Loading UIEngine config...');
       await uiEngine.loadConfig();
-      console.log('[MAIN] Step 3: UIEngine loaded successfully');
 			
 			// Make UIEngine accessible for grain direction updates from controller
       window._uiEngineInstance = uiEngine;
       window.uiEngine = uiEngine;
-      console.log('[MAIN] Step 4: UIEngine attached to window');
       
-      console.log('[MAIN] Step 5: Creating facade...');
       const facade = new WaveformDesignerFacade();
-      console.log('[MAIN] Step 6: Creating controller...');
       const controller = new ApplicationController(facade);
 			window.controller = controller;
       window.audioCache = controller.audioCache;
-      console.log('[MAIN] Step 7: Starting controller.initialize()...');
       await controller.initialize();
-      console.log('[MAIN] Step 8: Controller initialized!');
 			
 			window.__controller__ = controller;
       
-      console.log('[MAIN] Step 9: Creating scene manager...');
       const sceneManager = SceneManager.create('renderCanvas', facade);
       window.sceneManager = sceneManager;
-      console.log('[MAIN] Step 10: Scene manager created');
       
       controller.registerSceneManager(sceneManager);
       
@@ -1375,9 +1360,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('[main.ts] Could not preload textures - config not loaded yet:', error);
       }
       
-      console.log('[MAIN] Step 11: Starting initializeUI...');
       await initializeUI(uiEngine, controller, sceneManager);
-      console.log('[MAIN] Step 12: UI initialized!');
 			
 			// Initialize tour modal (first-visit onboarding)
       const shouldShowTourModal = TourModal.shouldShow();
@@ -1399,13 +1382,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Skip cached rendering if tour modal is showing (tour needs bare state)
       const initialState = controller.getState();
-      console.log('[TOUR-DIAGNOSTIC] Cached render check:', {
-        shouldShowTourModal,
-        hasAmplitudes: initialState.composition.processed_amplitudes.length > 0,
-        willRender: !shouldShowTourModal && initialState.composition.processed_amplitudes.length > 0
-      });
       if (!shouldShowTourModal && initialState.composition.processed_amplitudes.length > 0) {
-        console.log('[TOUR-DIAGNOSTIC] Rendering cached composition');
         const response = await fetch('http://localhost:8000/geometry/csg-data', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1423,8 +1400,6 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error('[main.ts] Failed to fetch CSG data:', response.status, await response.text());
         }
       }
-      
-      console.log('[MAIN] === INITIALIZATION COMPLETE ===');
       
     } catch (error: unknown) {
       console.error('[MAIN] === INITIALIZATION FAILED ===');
@@ -1458,35 +1433,33 @@ async function initializeUI(
   // 5. Bind camera reset button
   bindCameraResetButton(sceneManager);
   
-  // 5b. Bind zoom toggle button
+  // 6. Bind zoom toggle button
   bindZoomToggleButton(sceneManager);
   
-  // 6. Bind new file upload button
+  // 7. Bind new file upload button
   bindNewFileButton(controller);
 	
-  // 6a. Subscribe to state changes to keep UI elements in sync
+  // 8. Subscribe to state changes to keep UI elements in sync
   controller.subscribe((newState) => {
-    console.log('[main.ts] State updated, syncing all UI elements.');
-    // This function will now run every time the state changes.
     syncUIFromState(uiEngine, newState.composition);
     
     // It's also important to re-run conditional logic after a state sync.
     updateConditionalUI(uiEngine, newState.composition);
   });	
   
-  // 7. Bind select all checkbox
+  // 9. Bind select all checkbox
   bindSelectAllCheckbox(controller, sceneManager);
 	
-	// 7b. Bind start tour button
+	// 10. Bind start tour button
   bindStartTourButton(uiEngine, controller, sceneManager);
   
-  // 8. Setup upload interface
+  // 11. Setup upload interface
   setupUploadInterface(uiEngine, controller);
   
-  // 9. Initialize processing overlay
+  // 12. Initialize processing overlay
   new ProcessingOverlay('processingOverlay', controller);
 	
-	// 9.5 Initialize left panel renderer
+	// 13 Initialize left panel renderer
   const { LeftPanelRenderer } = await import('./components/LeftPanelRenderer');
   const leftPanelRenderer = new LeftPanelRenderer(
     'left-main-panel',
@@ -1494,23 +1467,23 @@ async function initializeUI(
   );
   leftPanelRenderer.render();
   
-  // 9.6 Restore UI from persisted state (must happen after buttons rendered)
+  // 14 Restore UI from persisted state (must happen after buttons rendered)
   controller.restoreUIFromState();
   
-  // 10. Subscribe to state changes (only sync UI on phase transitions, not every change)
+  // 15. Subscribe to state changes (only sync UI on phase transitions, not every change)
   controller.subscribe((state) => {
     handlePhaseTransition(uiEngine, state, controller);
   });
   
-  // 11. Initial phase transition (only if restoring non-upload phase)
+  // 16. Initial phase transition (only if restoring non-upload phase)
   if (initialState.phase !== 'upload') {
     handlePhaseTransition(uiEngine, initialState, controller);
   }
   
-  // 12. Initial conditional logic (like disabling n=3 for rectangular)
+  // 17. Initial conditional logic (like disabling n=3 for rectangular)
   updateConditionalUI(uiEngine, initialState.composition);
 	
-	// 13. Ensure all sections options are visible (fix n=3 regression)
+	// 18. Ensure all sections options are visible (fix n=3 regression)
   ensureSectionsOptionsVisible();
 }
 

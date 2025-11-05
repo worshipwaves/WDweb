@@ -1,5 +1,6 @@
 // src/components/WoodMaterialSelector.ts
 import type { PanelComponent } from '../types/PanelTypes';
+
 import { Tooltip } from './Tooltip';
 
 interface SpeciesInfo {

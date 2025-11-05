@@ -13,9 +13,7 @@ import { RightPanelContentRenderer } from './components/RightPanelContent';
 import { SliderGroup } from './components/SliderGroup';
 import { ThumbnailGrid } from './components/ThumbnailGrid';
 import { WoodMaterialSelector } from './components/WoodMaterialSelector';
-
 import { PerformanceMonitor } from './PerformanceMonitor';
-
 import type { CategoriesConfig, FilterIconGroup, ThumbnailConfig } from './types/PanelTypes';
 import {
   ApplicationState,
@@ -191,11 +189,6 @@ export class ApplicationController {
     
     if (!activeCategory) return;
     
-    console.log('[Controller] Restoring UI from persisted state:', {
-      category: activeCategory,
-      subcategory: activeSubcategory
-    });
-    
     // 1. Highlight category button
     const categoryButtons = document.querySelectorAll('.category-button');
     categoryButtons.forEach(btn => {
@@ -282,8 +275,6 @@ export class ApplicationController {
       if (amps && amps.length > 0) {
         const maxAmp = Math.max(...amps.map(Math.abs));
         if (maxAmp > 0 && maxAmp <= 1.5) {
-          console.log(`[Controller] Detected normalized amplitudes (max=${maxAmp.toFixed(4)}), scaling to physical space`);
-          
           // Call backend to get max_amplitude_local for current geometry
           const response = await fetch('http://localhost:8000/geometry/csg-data', {
             method: 'POST',
@@ -312,8 +303,6 @@ export class ApplicationController {
                 previousMaxAmplitude: maxAmplitudeLocal
               }
             };
-            
-            console.log(`[Controller] Scaled amplitudes: max=${Math.max(...scaledAmps).toFixed(4)}`);
           }
         }
       }
@@ -354,16 +343,12 @@ export class ApplicationController {
    * Used by the demo player to ensure a clean start.
    */
   public async resetToDefaultState(): Promise<void> {
-    console.log('[TOUR-DIAGNOSTIC] resetToDefaultState: creating initial state');
     this._state = await this._facade.createInitialState();
-    console.log('[TOUR-DIAGNOSTIC] resetToDefaultState: initial state created, amplitudes:', this._state.composition.processed_amplitudes.length);
     this.notifySubscribers();
     // Clear scene without rendering (tour needs blank canvas)
-    console.log('[TOUR-DIAGNOSTIC] resetToDefaultState: clearing scene without render');
     if (this._sceneManager && 'clearScene' in this._sceneManager) {
       (this._sceneManager as unknown as { clearScene: () => void }).clearScene();
     }
-    console.log('[TOUR-DIAGNOSTIC] resetToDefaultState: complete');
   }
   
   /**
@@ -407,12 +392,10 @@ export class ApplicationController {
     
     // Start texture loading immediately in background
     if (this._woodMaterialsConfig) {
-      console.log('[Controller] Starting texture preload on scene manager registration');
       const textureCache = (this._sceneManager as unknown as SceneManagerInternal)._textureCache;
       if (textureCache && typeof textureCache.preloadAllTextures === 'function') {
         void textureCache.preloadAllTextures(this._woodMaterialsConfig).then((idleLoader) => {
           this._idleTextureLoader = idleLoader;
-          console.log('[Controller] Texture loading started in background');
           
           const indicator = document.getElementById('textureLoadingIndicator');
           const loadedEl = document.getElementById('texturesLoaded');
@@ -522,7 +505,6 @@ export class ApplicationController {
 			// Pause background texture loading during heavy operations
       if (this._idleTextureLoader && typeof (this._idleTextureLoader as IdleTextureLoader).pause === 'function') {
         (this._idleTextureLoader as IdleTextureLoader).pause();
-        console.log('[Controller] Paused texture loading during file processing');
       }
 			
       PerformanceMonitor.start('backend_audio_processing');
@@ -748,8 +730,6 @@ export class ApplicationController {
    * Clears right panel stack and renders category-specific content
    */
   handleCategorySelected(categoryId: string): void {
-    console.log('[NAV STATE]', { category: categoryId, stateCategory: this._state?.ui.activeCategory, controllerCategory: categoryId, mismatch: categoryId !== this._state?.ui.activeCategory });
-    
     if (!this._panelStack || !this._state) return;
     
     void this.dispatch({ type: 'CATEGORY_SELECTED', payload: categoryId });

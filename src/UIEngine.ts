@@ -109,21 +109,14 @@ export class UIEngine {
    * Load UI configuration from backend
    */
 	async loadConfig(): Promise<void> {
-		console.log('[UIEngine] Starting loadConfig...');
-		console.log('[UIEngine] Fetching from /api/config/ui...');
 		const response = await fetch('http://localhost:8000/api/config/ui');
-		console.log('[UIEngine] Fetch response:', response.status);
 		
 		if (!response.ok) {
 			throw new Error('Failed to load UI configuration');
 		}
 		
-		console.log('[UIEngine] Parsing JSON...');
-		const raw = await response.json() as unknown;
-		console.log('[UIEngine] JSON parsed, validating...');
-		
+		const raw = await response.json() as unknown;		
 		const parsed = UIConfigSchema.safeParse(raw);
-		console.log('[UIEngine] Validation result:', parsed.success);
 		
 		if (!parsed.success) {
 			console.error('UIConfig validation failed:', parsed.error.format());
@@ -131,7 +124,6 @@ export class UIEngine {
 			throw new Error('UIConfig validation failed');
 		}
 		
-		console.log('[UIEngine] Config validated successfully');
 		this.config = parsed.data;
 		
 		// Build element ID cache
@@ -149,7 +141,6 @@ export class UIEngine {
 			this.elementCache.set('uploadDropZone', this.config.upload.drop_zone_id);
 			this.elementCache.set('fileInput', this.config.upload.file_input_id);
 		}
-		console.log('[UIEngine] loadConfig complete');
 	}
   
   /**

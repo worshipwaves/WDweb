@@ -68,7 +68,6 @@ export function parseStoredData<T>(
     }
 
     // Data is valid, return it normally
-    console.log('[Restore] Successfully validated stored state');
     return parsed.data;
     
   } catch (error: unknown) {

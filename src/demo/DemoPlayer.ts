@@ -1,10 +1,7 @@
 // --- START OF NEW FILE src/demo/DemoPlayer.ts ---
 import { ApplicationController } from '../ApplicationController';
-import type { CompositionStateDTO } from '../types/schemas';
 
 import { DemoScript } from './DemoScript';
-
-const DEMO_AUDIO_PATH = '/assets/audio/AmazingGrace.mp3';
 
 export class DemoPlayer {
   private controller: ApplicationController;
@@ -59,9 +56,7 @@ export class DemoPlayer {
 
     switch (action.type) {
 			case 'reset':
-        console.log('[TOUR-DIAGNOSTIC] DemoPlayer executing RESET action');
         await this.controller.resetToDefaultState();
-        console.log('[TOUR-DIAGNOSTIC] resetToDefaultState complete');
         void this.executeNextStep();
         break;
 				
@@ -116,10 +111,7 @@ export class DemoPlayer {
         setTimeout(() => void this.executeNextStep(), action.duration);
         break;
 
-      case 'simulate_upload': {
-        // Skip actual upload for demo - backend may not be running
-        console.log('[DemoPlayer] Simulating audio upload (backend not required)');
-        
+      case 'simulate_upload': {        
         // Just wait for visual effect, then continue
         setTimeout(() => {
           void this.executeNextStep();
