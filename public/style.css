@@ -1715,3 +1715,86 @@ html, body {
 .tour-launch-button:active {
   transform: translateY(0);
 }
+
+/* ============================================
+   SECTION SELECTOR PANEL (Right Secondary)
+   ============================================ */
+
+.section-selector-panel {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+}
+
+.section-icon-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 8px 12px 8px;
+  align-items: center;
+}
+
+.section-selector-panel .panel-body {
+  padding: 0;
+  overflow: visible;
+  flex: 0 0 auto !important;
+}
+
+/* Override Right Secondary panel height when section selector is active */
+#right-secondary-panel.visible:has(.section-selector-panel) {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.section-icon-button {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.section-icon-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.section-icon-button.selected {
+  background: rgba(217, 164, 100, 0.15);
+  border-color: #D9A464;
+  border-width: 2px;
+}
+
+.section-icon-svg {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.section-icon-svg svg {
+  width: 100%;
+  height: 100%;
+}
+
+.section-icon-label {
+  display: none; /* Hidden by default, can be shown for debugging */
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* Optional: Show labels on hover for clarity */
+.section-icon-button:hover .section-icon-label {
+  /* display: block; */
+}

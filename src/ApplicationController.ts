@@ -10,6 +10,7 @@ import { AudioCacheService } from './AudioCacheService';
 import { FilterIconStrip } from './components/FilterIconStrip';
 import { PanelStackManager } from './components/PanelStackManager';
 import { RightPanelContentRenderer } from './components/RightPanelContent';
+import { SectionSelectorPanel } from './components/SectionSelectorPanel';
 import { SliderGroup } from './components/SliderGroup';
 import { ThumbnailGrid } from './components/ThumbnailGrid';
 import { WoodMaterialSelector } from './components/WoodMaterialSelector';
@@ -167,6 +168,7 @@ export class ApplicationController {
   private _rightSecondaryPanel: HTMLElement | null = null;
   private _rightMainPanel: HTMLElement | null = null;
   private _filterIconStrip: FilterIconStrip | null = null;
+  private _sectionSelectorPanel: SectionSelectorPanel | null = null;
   
   constructor(facade: WaveformDesignerFacade) {
     this._facade = facade;
@@ -176,6 +178,17 @@ export class ApplicationController {
 	
 	public get audioCache(): AudioCacheService {
     return this._audioCache;
+  }
+	
+	/**
+   * Update section selection state (called from SceneManager or UI)
+   * Syncs state and updates section selector panel if visible
+   */
+  public selectSection(indices: Set<number>): void {
+    // Update section selector panel if it exists
+    if (this._sectionSelectorPanel) {
+      this._sectionSelectorPanel.updateSelection(indices);
+    }
   }
 	
 	/**
@@ -732,6 +745,12 @@ export class ApplicationController {
   handleCategorySelected(categoryId: string): void {
     if (!this._panelStack || !this._state) return;
     
+    // Clear section selector when leaving WOOD category
+    if (this._sectionSelectorPanel) {
+      this._sectionSelectorPanel.destroy();
+      this._sectionSelectorPanel = null;
+    }
+    
     void this.dispatch({ type: 'CATEGORY_SELECTED', payload: categoryId });
     
     this._handleStyleCategorySelected();
@@ -930,6 +949,86 @@ export class ApplicationController {
     // Always render the main panel after subcategory selection
     this._renderRightMainFiltered();
   }
+	
+	/**
+   * Render section selector in Right Secondary panel for wood species selection
+   * Only shown when WOOD > Species is active AND number_sections > 1
+   * @private
+   */
+  private _renderSectionSelector(): void {
+    if (!this._rightSecondaryPanel || !this._sceneManager) return;
+    
+    // Only show for WOOD > Species subcategory
+    if (this._state?.ui.activeCategory !== 'wood' || this._state?.ui.activeSubcategory !== 'wood_species') {
+      this._rightSecondaryPanel.style.display = 'none';
+      return;
+    }
+    
+    const state = this.getState();
+    const numberSections = state.composition.frame_design.number_sections;
+    const shape = state.composition.frame_design.shape;
+    
+    // Only show for n > 1
+    if (numberSections <= 1) {
+      this._rightSecondaryPanel.style.display = 'none';
+      return;
+    }
+    
+    // Get current selection from SceneManager
+    const selectedSections = this._sceneManager.getSelectedSections();
+    
+    // Clear and render new selector
+    this._rightSecondaryPanel.innerHTML = '';
+    
+    void import('./components/SectionSelectorPanel').then(({ SectionSelectorPanel }) => {
+      const selector = new SectionSelectorPanel(
+        this,
+        numberSections,
+        shape,
+        selectedSections,
+        (newSelection: Set<number>) => {
+          // Handle icon click → update SceneManager
+          this._handleSectionSelectionFromUI(newSelection);
+        }
+      );
+      
+      this._sectionSelectorPanel = selector;
+      this._rightSecondaryPanel!.appendChild(selector.render());
+      this._rightSecondaryPanel!.style.display = 'block';
+      this._rightSecondaryPanel!.classList.add('visible');
+			
+			// Force auto-height for section selector panel
+			this._rightSecondaryPanel!.style.height = 'auto';
+			this._rightSecondaryPanel!.style.minHeight = '0';	
+			this._rightSecondaryPanel!.style.bottom = 'auto';
+			
+    }).catch((error: unknown) => {
+      console.error('[Controller] Failed to load SectionSelectorPanel:', error);
+    });
+  }
+  
+  /**
+   * Handle section selection from UI icons
+   * Updates SceneManager which will sync overlays
+   * @private
+   */
+  private _handleSectionSelectionFromUI(newSelection: Set<number>): void {
+    if (!this._sceneManager) return;
+    
+    // Clear current selection
+    this._sceneManager.clearSelection();
+    
+    // Apply new selection
+    newSelection.forEach(index => {
+      this._sceneManager.toggleSection(index);
+    });
+    
+    // Sync controller state
+    this.selectSection(this._sceneManager.getSelectedSections());
+    
+    // Update white dot overlays
+    this._sceneManager.updateSectionUI(this._sceneManager.getSelectedSections());
+  }
   
   /**
    * Handle filter selection (Icon strip → updates Right Main display only)
@@ -1014,6 +1113,20 @@ export class ApplicationController {
 		if (!subcategory) return;
 
 		this._rightMainPanel.innerHTML = '';
+		
+		// Clear section selector panel when changing subcategories
+		if (this._rightSecondaryPanel) {
+			this._rightSecondaryPanel.innerHTML = '';
+			this._rightSecondaryPanel.style.display = 'none';
+			this._rightSecondaryPanel.classList.remove('visible');
+			this._rightSecondaryPanel.style.height = '';
+			this._rightSecondaryPanel.style.minHeight = '';
+			this._rightSecondaryPanel.style.bottom = '';
+		}
+		if (this._sectionSelectorPanel) {
+			this._sectionSelectorPanel.destroy();
+			this._sectionSelectorPanel = null;
+		}
 		
 		// Render filter icon strip if filters exist - OUTSIDE panel-content
 		if (subcategory.filters && Object.keys(subcategory.filters).length > 0) {
@@ -1147,107 +1260,21 @@ export class ApplicationController {
 						}
 					);
 					body.appendChild(grid.render());
-						panelContent.appendChild(body);
-					}
-					break;
+					panelContent.appendChild(body);
+					
+					// Render section selector in Right Secondary (for n > 1)
+					this._renderSectionSelector();
 				}
+				break;
+			}
 				
-        case 'upload_interface': {
-          // Create header
-          const header = document.createElement('div');
-          header.className = 'panel-header';
-          header.innerHTML = '<h3>Upload Audio</h3>';
-          panelContent.appendChild(header);
-          
-          // Create body with upload controls
-          const body = document.createElement('div');
-          body.className = 'panel-body';
-          body.style.display = 'flex';
-          body.style.flexDirection = 'column';
-          body.style.gap = '16px';
-          body.style.padding = '20px';
-          
-          // Create file input (hidden)
-          const fileInput = document.createElement('input');
-          fileInput.type = 'file';
-          fileInput.accept = 'audio/*';
-          fileInput.style.display = 'none';
-          body.appendChild(fileInput);
-          
-          // Create upload button
-          const uploadButton = document.createElement('button');
-          uploadButton.className = 'upload-button';
-					uploadButton.dataset.demoId = 'upload_button';
-          uploadButton.style.padding = '16px 24px';
-          uploadButton.style.fontSize = '16px';
-          uploadButton.style.fontWeight = '500';
-          uploadButton.style.backgroundColor = 'rgba(100, 150, 255, 0.2)';
-          uploadButton.style.border = '2px solid rgba(100, 150, 255, 0.5)';
-          uploadButton.style.borderRadius = '8px';
-          uploadButton.style.color = 'rgba(255, 255, 255, 0.9)';
-          uploadButton.style.cursor = 'pointer';
-          uploadButton.style.transition = 'all 0.2s ease';
-          uploadButton.innerHTML = '📁 Choose Audio File';
-          uploadButton.addEventListener('click', () => fileInput.click());
-          body.appendChild(uploadButton);
-          
-          // Create drop zone
-          const dropZone = document.createElement('div');
-          dropZone.style.padding = '40px 20px';
-          dropZone.style.border = '2px dashed rgba(255, 255, 255, 0.3)';
-          dropZone.style.borderRadius = '8px';
-          dropZone.style.textAlign = 'center';
-          dropZone.style.color = 'rgba(255, 255, 255, 0.6)';
-          dropZone.style.cursor = 'pointer';
-          dropZone.innerHTML = '<div style="font-size: 48px; margin-bottom: 16px;">⬆️</div><div>Or drag and drop your audio file here</div><div style="margin-top: 8px; font-size: 12px; opacity: 0.7;">Supported formats: MP3, WAV, FLAC, M4A</div>';
-          dropZone.addEventListener('click', () => fileInput.click());
-          body.appendChild(dropZone);
-          
-          // File input change handler
-          fileInput.addEventListener('change', (e) => {
-            const target = e.target as HTMLInputElement;
-            if (target.files && target.files.length > 0) {
-              const currentState = this.getState();
-              const uiComposition = currentState.composition;
-              void this.dispatch({ 
-                type: 'FILE_UPLOADED', 
-                payload: { file: target.files[0], uiSnapshot: uiComposition }
-              });
-            }
+				case 'upload_interface': {
+          void import('./components/UploadPanel').then(({ UploadPanel }) => {
+            const uploadPanel = new UploadPanel(this, this._audioCache);
+            panelContent.appendChild(uploadPanel.render());
+          }).catch((error: unknown) => {
+            console.error('[Controller] Failed to load UploadPanel:', error);
           });
-          
-          // Drag and drop handlers
-          dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropZone.style.borderColor = 'rgba(100, 150, 255, 0.8)';
-            dropZone.style.backgroundColor = 'rgba(100, 150, 255, 0.1)';
-          });
-          
-          dropZone.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropZone.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-            dropZone.style.backgroundColor = 'transparent';
-          });
-          
-          dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropZone.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-            dropZone.style.backgroundColor = 'transparent';
-            
-            if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
-              const currentState = this.getState();
-              const uiComposition = currentState.composition;
-              void this.dispatch({ 
-                type: 'FILE_UPLOADED', 
-                payload: { file: e.dataTransfer.files[0], uiSnapshot: uiComposition }
-              });
-            }
-          });
-          
-          panelContent.appendChild(body);
           break;
         }
         
@@ -1860,6 +1887,11 @@ export class ApplicationController {
    */
   selectSection(indices: Set<number>): void {
     this._selectedSectionIndices = new Set(indices);
+    
+    // Update section selector panel if it exists
+    if (this._sectionSelectorPanel) {
+      this._sectionSelectorPanel.updateSelection(indices);
+    }
   }
   
   /**
