@@ -354,13 +354,16 @@ export class ApplicationController {
    * Used by the demo player to ensure a clean start.
    */
   public async resetToDefaultState(): Promise<void> {
+    console.log('[TOUR-DIAGNOSTIC] resetToDefaultState: creating initial state');
     this._state = await this._facade.createInitialState();
+    console.log('[TOUR-DIAGNOSTIC] resetToDefaultState: initial state created, amplitudes:', this._state.composition.processed_amplitudes.length);
     this.notifySubscribers();
-    // Also clear any visual remnants from previous state
-    if (this._sceneManager) {
-      const csgData = await this._facade.getSmartCSGData(this._state.composition, [], null);
-      await this._sceneManager.renderComposition(csgData);
+    // Clear scene without rendering (tour needs blank canvas)
+    console.log('[TOUR-DIAGNOSTIC] resetToDefaultState: clearing scene without render');
+    if (this._sceneManager && 'clearScene' in this._sceneManager) {
+      (this._sceneManager as unknown as { clearScene: () => void }).clearScene();
     }
+    console.log('[TOUR-DIAGNOSTIC] resetToDefaultState: complete');
   }
   
   /**

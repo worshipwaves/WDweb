@@ -8,7 +8,10 @@ const DEMO_AUDIO_PATH = '/assets/audio/AmazingGrace.mp3';
 
 export class DemoPlayer {
   private controller: ApplicationController;
-	private sceneManager: { startCinematicRotation: (callback: () => void) => void } | null = null;
+	private sceneManager: { 
+    startCinematicRotation: (callback: () => void) => void;
+    clearScene: () => void;
+  } | null = null;
   private isRunning: boolean = false;
   private currentStep: number = 0;
   private highlightElement: HTMLElement | null = null;
@@ -56,7 +59,9 @@ export class DemoPlayer {
 
     switch (action.type) {
 			case 'reset':
+        console.log('[TOUR-DIAGNOSTIC] DemoPlayer executing RESET action');
         await this.controller.resetToDefaultState();
+        console.log('[TOUR-DIAGNOSTIC] resetToDefaultState complete');
         void this.executeNextStep();
         break;
 				

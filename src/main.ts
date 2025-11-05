@@ -387,8 +387,10 @@ class SceneManager {
   }
 
   public renderComposition(csgData: SmartCsgResponse): Promise<void> {
+    console.log('[TOUR-DIAGNOSTIC] renderComposition called (public wrapper)');
     void (this._renderQueue = this._renderQueue.then(
       () => {
+        console.log('[TOUR-DIAGNOSTIC] renderComposition: executing queued render');
         if (this._isRendering) {
           console.warn('Render already in progress, skipping.');
           return;
@@ -407,6 +409,7 @@ class SceneManager {
   }
 
   private _renderCompositionInternal(csgData: SmartCsgResponse): void {
+    console.log('[TOUR-DIAGNOSTIC] _renderCompositionInternal started');
     PerformanceMonitor.start('render_internal_total');
 		
     PerformanceMonitor.start('mesh_cleanup');
@@ -512,6 +515,24 @@ class SceneManager {
   }
 	
 	public clearSelection(): void {
+    this._overlayMeshes.forEach(overlay => this._fadeOutAndDispose(overlay));
+    this._overlayMeshes.clear();
+    this._selectedSectionIndices.clear();
+  }
+	
+	public clearScene(): void {
+    // Dispose root node and all children
+    if (this._rootNode) {
+      this._rootNode.dispose();
+      this._rootNode = null;
+    }
+    
+    // Clear all mesh/material references
+    this._sectionMeshes = [];
+    this._sectionMaterials.forEach(mat => mat.dispose());
+    this._sectionMaterials = [];
+    
+    // Clear overlays
     this._overlayMeshes.forEach(overlay => this._fadeOutAndDispose(overlay));
     this._overlayMeshes.clear();
     this._selectedSectionIndices.clear();
@@ -1359,7 +1380,8 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('[MAIN] Step 12: UI initialized!');
 			
 			// Initialize tour modal (first-visit onboarding)
-      if (TourModal.shouldShow()) {
+      const shouldShowTourModal = TourModal.shouldShow();
+      if (shouldShowTourModal) {
         const tourModal = new TourModal(
           () => {
             // Start tour callback
@@ -1375,8 +1397,15 @@ document.addEventListener('DOMContentLoaded', () => {
         tourModal.show();
       }
       
+      // Skip cached rendering if tour modal is showing (tour needs bare state)
       const initialState = controller.getState();
-      if (initialState.composition.processed_amplitudes.length > 0) {
+      console.log('[TOUR-DIAGNOSTIC] Cached render check:', {
+        shouldShowTourModal,
+        hasAmplitudes: initialState.composition.processed_amplitudes.length > 0,
+        willRender: !shouldShowTourModal && initialState.composition.processed_amplitudes.length > 0
+      });
+      if (!shouldShowTourModal && initialState.composition.processed_amplitudes.length > 0) {
+        console.log('[TOUR-DIAGNOSTIC] Rendering cached composition');
         const response = await fetch('http://localhost:8000/geometry/csg-data', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

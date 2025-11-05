@@ -97,6 +97,7 @@ export class TourModal {
   private handleStartTour(): void {
     this.savePreference();
     this.hide();
+    localStorage.removeItem('wavedesigner_session');
     this.onStartTour();
   }
   
