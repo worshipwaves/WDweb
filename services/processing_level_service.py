@@ -2,6 +2,7 @@
 from typing import List, Dict, Any, Optional
 from services.dtos import CompositionStateDTO, GeometryResultDTO
 from services.geometry_service import GeometryService
+from services.config_service import ConfigService
 
 
 class ProcessingLevelService:
@@ -48,10 +49,11 @@ class ProcessingLevelService:
 
     LEVEL_HIERARCHY = ["display", "post", "slots", "geometry", "audio"]
 
-    def __init__(self, audio_service, slot_service):
+    def __init__(self, audio_service, slot_service, config_service: ConfigService):
         self._audio_service = audio_service
         self._geometry_service = GeometryService()
         self._slot_service = slot_service
+        self._config_service = config_service
         self._cached_max_amplitude_local = {}  # Placeholder for future caching
 
     def get_processing_level(self, changed_params: List[str]) -> str:
@@ -86,11 +88,8 @@ class ProcessingLevelService:
         # Preserve valid section_materials and add defaults for new sections
         if state.frame_design:
             from services.dtos import SectionMaterialDTO
-            from services.config_service import ConfigService
-            from pathlib import Path
             
-            config = ConfigService(Path("config/default_parameters.json"))
-            wood_config = config.get_wood_materials_config()
+            wood_config = self._config_service.get_wood_materials_config()
             
             num_sections = state.frame_design.number_sections
             existing_materials = state.frame_design.section_materials or []
@@ -123,7 +122,19 @@ class ProcessingLevelService:
         print(f"[PROCESSING DIAGNOSTIC] Current max_amplitude: {current_max}")
 
         if level in ["display", "post", "slots"]:
-            print(f"[PROCESSING DIAGNOSTIC] Action: No server-side amplitude changes needed for '{level}' level.")
+            # CRITICAL: Check if we have normalized amplitudes that need physical scaling
+            # This happens on initial load when restored state contains 0-1 normalized values
+            if state.processed_amplitudes:
+                max_amp = max(abs(a) for a in state.processed_amplitudes)
+                if max_amp > 0 and max_amp <= 1.5:
+                    print(f"[PROCESSING DIAGNOSTIC] Detected normalized amplitudes (max={max_amp:.4f}), applying physical scaling")
+                    scaled_amplitudes = [amp * current_max for amp in state.processed_amplitudes]
+                    state = state.model_copy(update={"processed_amplitudes": scaled_amplitudes})
+                    print(f"[PROCESSING DIAGNOSTIC] Scaled to physical space: max={max(scaled_amplitudes):.4f}")
+                else:
+                    print(f"[PROCESSING DIAGNOSTIC] Action: No server-side amplitude changes needed for '{level}' level.")
+            else:
+                print(f"[PROCESSING DIAGNOSTIC] Action: No server-side amplitude changes needed for '{level}' level.")
             return state
 
         if level == "geometry":

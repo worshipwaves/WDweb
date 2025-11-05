@@ -8,7 +8,6 @@
 import { Texture, Scene } from '@babylonjs/core';
 
 import { IdleTextureLoader } from './IdleTextureLoader';
-import { PerformanceMonitor } from './PerformanceMonitor';
 import type { WoodMaterialsConfig } from './types/schemas';
 
 export class TextureCacheService {
@@ -52,24 +51,20 @@ export class TextureCacheService {
   async preloadAllTextures(config: WoodMaterialsConfig): Promise<IdleTextureLoader> {
     const textureConfig = config.texture_config;
     const basePath = textureConfig.base_texture_path;
-    
-    // ALWAYS use Large size for all panels (best quality, simpler caching)
     const sizeInfo = textureConfig.size_map.large;
     const folderName = sizeInfo.folder;
     
-    // Load FIRST species in array immediately (blocks render)
-    const firstSpecies = config.species_catalog[0];
-    if (firstSpecies) {
-      PerformanceMonitor.start('first_species_texture_download');
-      await this._preloadSpeciesTexturesAsync(firstSpecies, basePath, folderName, sizeInfo.dimensions);
-      PerformanceMonitor.end('first_species_texture_download');
+    // Load first 3 species immediately (walnut, cherry, maple)
+    for (let i = 0; i < Math.min(3, config.species_catalog.length); i++) {
+      const species = config.species_catalog[i];
+      await this._preloadSpeciesTexturesAsync(species, basePath, folderName, sizeInfo.dimensions);
     }
     
     // Create idle loader for remaining species (array order = priority)
     const idleLoader = new IdleTextureLoader(this, config);
     
-    // Start background loading from index 1 (skip first species already loaded)
-    idleLoader.startBackgroundLoading(1);
+    // TEMPORARILY DISABLED: Uncomment when deploying to S3 with cache headers
+    // idleLoader.startBackgroundLoading(3);
     
     return idleLoader;
   }

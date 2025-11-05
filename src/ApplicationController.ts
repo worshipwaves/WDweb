@@ -7,18 +7,82 @@
  */
 
 import { AudioCacheService } from './AudioCacheService';
+import { FilterIconStrip } from './components/FilterIconStrip';
+import { PanelStackManager } from './components/PanelStackManager';
+import { RightPanelContentRenderer } from './components/RightPanelContent';
+import { SliderGroup } from './components/SliderGroup';
+import { ThumbnailGrid } from './components/ThumbnailGrid';
+import { WoodMaterialSelector } from './components/WoodMaterialSelector';
 import { PerformanceMonitor } from './PerformanceMonitor';
+import type { CategoriesConfig, FilterIconGroup, ThumbnailConfig } from './types/PanelTypes';
 import {
-  CompositionStateDTO,
   ApplicationState,
+  CompositionStateDTO,
+  WoodMaterialsConfigSchema,
   type AudioProcessResponse,
   type CSGDataResponse,
-  type WoodMaterialsConfig,
-  WoodMaterialsConfigSchema,
   type SectionMaterial,
+  type WoodMaterialsConfig,
 } from './types/schemas';
 import { fetchAndValidate } from './utils/validation';
-import { WaveformDesignerFacade, Action } from './WaveformDesignerFacade';
+import { Action, WaveformDesignerFacade } from './WaveformDesignerFacade';
+
+
+// Internal facade APIs that aren't exposed in the public interface
+interface TextureCache {
+  preloadAllTextures: (config: WoodMaterialsConfig) => Promise<IdleTextureLoader>;
+}
+
+interface IdleTextureLoader {
+  pause: () => void;
+  onProgress: (callback: (loaded: number, total: number) => void) => void;
+}
+
+interface SceneManagerInternal {
+  _textureCache?: TextureCache;
+}
+
+interface Archetype {
+  id: string;
+  shape: string;
+  slot_style: string;
+  label: string;
+  tooltip: string;
+  thumbnail: string;
+  number_sections: number;
+  number_slots: number;
+  separation: number;
+  side_margin?: number;
+}
+
+interface UIConfig {
+  thumbnail_config: ThumbnailConfig;
+  categories: CategoriesConfig;
+}
+
+interface ElementConfig {
+  label: string;
+  state_path: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  show_when?: {
+    shape?: string[];
+    slot_style?: string[];
+  };
+  dynamic_max_by_sections?: Record<string, number>;
+}
+
+interface UIEngine {
+  getElementConfig: (key: string) => ElementConfig | undefined;
+  getStateValue: (composition: CompositionStateDTO, path: string) => unknown;
+}
+
+declare global {
+  interface Window {
+    uiEngine?: UIEngine;
+  }
+}
 
 // Subscriber callback type
 type StateSubscriber = (state: ApplicationState) => void;
@@ -82,6 +146,7 @@ export class ApplicationController {
   private _subscribers: Set<StateSubscriber> = new Set();
   private _autoplayTimer?: number;
   private _hintTimer?: number;
+  private _panelStack: PanelStackManager | null = null;
   private _sceneManager: { 
     renderComposition: (csgData: CSGDataResponse) => Promise<void>;
     applySectionMaterials: () => void;
@@ -91,14 +156,61 @@ export class ApplicationController {
   private _woodMaterialsConfig: WoodMaterialsConfig | null = null;
   private _selectedSectionIndices: Set<number> = new Set();
   private _idleTextureLoader: unknown = null; // IdleTextureLoader instance
+	
+	// Four-panel navigation configuration
+  private _thumbnailConfig: ThumbnailConfig | null = null;
+  private _categoriesConfig: CategoriesConfig | null = null;
+	private _archetypes: Map<string, Archetype> = new Map();
+  
+  // Four-panel DOM references
+  private _leftSecondaryPanel: HTMLElement | null = null;
+  private _rightSecondaryPanel: HTMLElement | null = null;
+  private _rightMainPanel: HTMLElement | null = null;
+  private _filterIconStrip: FilterIconStrip | null = null;
   
   constructor(facade: WaveformDesignerFacade) {
     this._facade = facade;
 		this._audioCache = new AudioCacheService();
+		this._panelStack = new PanelStackManager('right-panel-stack');
   }
 	
 	public get audioCache(): AudioCacheService {
     return this._audioCache;
+  }
+	
+	/**
+   * Restore UI from persisted state after DOM is ready
+   * Called from main.ts after LeftPanelRenderer has rendered
+   */
+  restoreUIFromState(): void {
+    if (!this._state) return;
+    
+    const { activeCategory, activeSubcategory } = this._state.ui;
+    
+    if (!activeCategory) return;
+    
+    // 1. Highlight category button
+    const categoryButtons = document.querySelectorAll('.category-button');
+    categoryButtons.forEach(btn => {
+      const btnId = btn.getAttribute('data-category');
+      if (btnId === activeCategory) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+    
+    // 2. Render Left Secondary Panel
+    this._renderLeftSecondaryPanel(activeCategory, activeSubcategory);
+    
+    // 3. If subcategory exists, render right panels
+    if (activeSubcategory) {
+      requestAnimationFrame(() => {
+        if (this._state?.ui.activeSubcategory) {
+          this._handleSubcategorySelected(this._state.ui.activeSubcategory);
+        }
+      });
+    }
   }
   
   /**
@@ -107,13 +219,42 @@ export class ApplicationController {
   async initialize(): Promise<void> {
     try {
       // Initialize facade (loads style presets)
-      await this._facade.initialize();
+      this._facade.initialize();
+			
+			// Initialize panel references (DOM is ready at this point)
+      this._leftSecondaryPanel = document.getElementById('left-secondary-panel');
+      this._rightSecondaryPanel = document.getElementById('right-secondary-panel');
+      this._rightMainPanel = document.getElementById('right-main-panel');
+      
+      if (!this._leftSecondaryPanel || !this._rightSecondaryPanel || !this._rightMainPanel) {
+        console.warn('[Controller] Four-panel DOM elements not found');
+      }
       
       // Load wood materials configuration
       this._woodMaterialsConfig = await fetchAndValidate<WoodMaterialsConfig>(
         'http://localhost:8000/api/config/wood-materials',
         WoodMaterialsConfigSchema
       );
+			
+			// Load thumbnail and categories configuration
+      // Load all configs in parallel
+			const [archetypes, woodMaterials, uiConfig, _compositionDefaults] = await Promise.all([
+				fetch('http://localhost:8000/api/config/archetypes').then(r => r.json()),
+				fetch('http://localhost:8000/api/config/wood-materials').then(r => r.json()),
+				fetch('http://localhost:8000/api/config/ui').then(r => r.json()),
+				fetch('http://localhost:8000/api/config/composition-defaults').then(r => r.json())
+			]) as [Record<string, Archetype>, WoodMaterialsConfig, UIConfig, unknown];
+
+			// Store archetypes
+			Object.entries(archetypes).forEach(([id, data]) => {
+				this._archetypes.set(id, data);
+			});
+
+			// Store configs
+			this._woodMaterialsConfig = woodMaterials;
+			this._thumbnailConfig = uiConfig.thumbnail_config;
+			this._categoriesConfig = uiConfig.categories;
+			
     } catch (error: unknown) {
       console.error('[Controller] Failed to load configuration:', error);
     }
@@ -127,6 +268,44 @@ export class ApplicationController {
     if (restored && restored.audio.rawSamples && restored.audio.rawSamples.length > 0) {
       // Deep merge: preserved user settings + new schema fields from defaults
       this._state = this._facade.mergeStates(freshDefaults, restored);
+      
+      // CRITICAL: Scale normalized amplitudes to physical space
+      // Persisted state may contain 0-1 normalized values that need scaling
+      const amps = this._state.composition.processed_amplitudes;
+      if (amps && amps.length > 0) {
+        const maxAmp = Math.max(...amps.map(Math.abs));
+        if (maxAmp > 0 && maxAmp <= 1.5) {
+          // Call backend to get max_amplitude_local for current geometry
+          const response = await fetch('http://localhost:8000/geometry/csg-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              state: this._state.composition,
+              changed_params: [],
+              previous_max_amplitude: null
+            })
+          });
+          
+          if (response.ok) {
+            const csgData = await response.json() as { max_amplitude_local: number };
+            const maxAmplitudeLocal = csgData.max_amplitude_local;
+            
+            // Scale amplitudes to physical dimensions
+            const scaledAmps = amps.map(a => a * maxAmplitudeLocal);
+            this._state = {
+              ...this._state,
+              composition: {
+                ...this._state.composition,
+                processed_amplitudes: scaledAmps
+              },
+              audio: {
+                ...this._state.audio,
+                previousMaxAmplitude: maxAmplitudeLocal
+              }
+            };
+          }
+        }
+      }
       
       // Re-cache the raw samples on load
       if (this._state.audio.audioSessionId) {
@@ -144,6 +323,9 @@ export class ApplicationController {
     }
     
     this.notifySubscribers();
+    
+    // Update panels based on new state
+    this.handlePanelUpdates(this._state);
   }
   
   /**
@@ -154,6 +336,19 @@ export class ApplicationController {
       throw new Error('Controller not initialized. Call initialize() first.');
     }
     return this._state;
+  }
+	
+	/**
+   * Forcibly resets the application to a fresh, default state.
+   * Used by the demo player to ensure a clean start.
+   */
+  public async resetToDefaultState(): Promise<void> {
+    this._state = await this._facade.createInitialState();
+    this.notifySubscribers();
+    // Clear scene without rendering (tour needs blank canvas)
+    if (this._sceneManager && 'clearScene' in this._sceneManager) {
+      (this._sceneManager as unknown as { clearScene: () => void }).clearScene();
+    }
   }
   
   /**
@@ -194,6 +389,37 @@ export class ApplicationController {
     applySingleSectionMaterial?: (sectionId: number) => void;
   }): void {
     this._sceneManager = sceneManager;
+    
+    // Start texture loading immediately in background
+    if (this._woodMaterialsConfig) {
+      const textureCache = (this._sceneManager as unknown as SceneManagerInternal)._textureCache;
+      if (textureCache && typeof textureCache.preloadAllTextures === 'function') {
+        void textureCache.preloadAllTextures(this._woodMaterialsConfig).then((idleLoader) => {
+          this._idleTextureLoader = idleLoader;
+          
+          const indicator = document.getElementById('textureLoadingIndicator');
+          const loadedEl = document.getElementById('texturesLoaded');
+          const totalEl = document.getElementById('texturesTotal');
+          
+          if (indicator && loadedEl && totalEl) {
+            idleLoader.onProgress((loaded, total) => {
+              loadedEl.textContent = String(loaded);
+              totalEl.textContent = String(total);
+              
+              if (loaded < total) {
+                indicator.classList.add('active');
+              } else {
+                setTimeout(() => {
+                  indicator.classList.remove('active');
+                }, 2000);
+              }
+            });
+          }
+        }).catch((error: unknown) => {
+          console.error('[Controller] Background texture loading failed:', error);
+        });
+      }
+    }
   }	
   
   /**
@@ -275,7 +501,14 @@ export class ApplicationController {
     });
 
     try {
+			
+			// Pause background texture loading during heavy operations
+      if (this._idleTextureLoader && typeof (this._idleTextureLoader as IdleTextureLoader).pause === 'function') {
+        (this._idleTextureLoader as IdleTextureLoader).pause();
+      }
+			
       PerformanceMonitor.start('backend_audio_processing');
+			
       // Force a complete state reset on new file upload
       const freshState = await this._facade.createInitialState();
       this._state = freshState;
@@ -313,45 +546,7 @@ export class ApplicationController {
       await this.dispatch({
         type: 'PROCESSING_UPDATE',
         payload: { stage: 'preparing_textures', progress: 0 },
-      });
-      
-      // TEMPORARILY DISABLED TO TEST IF IDLE TEXTURE LOADING BLOCKS SECTION CHANGES
-			/*
-			// Start texture preload in background (don't await - let render proceed)
-			if (this._sceneManager && this._woodMaterialsConfig) {
-				const textureCache = (this._sceneManager as any)._textureCache;
-				if (textureCache && typeof textureCache.preloadAllTextures === 'function') {
-					textureCache.preloadAllTextures(this._woodMaterialsConfig).then((idleLoader: any) => {
-						this._idleTextureLoader = idleLoader;
-						console.log('[Controller] Idle texture loader initialized');
-						
-						const indicator = document.getElementById('textureLoadingIndicator');
-						const loadedEl = document.getElementById('texturesLoaded');
-						const totalEl = document.getElementById('texturesTotal');
-						
-						if (indicator && loadedEl && totalEl) {
-							console.log('[Controller] Setting up progress callback');
-							idleLoader.onProgress((loaded: number, total: number) => {
-								console.log(`[Controller] Progress callback fired: ${loaded}/${total}`);
-								loadedEl.textContent = String(loaded);
-								totalEl.textContent = String(total);
-								
-								if (loaded < total) {
-									indicator.classList.add('active');
-								} else {
-									console.log('[Controller] All textures loaded, hiding indicator');
-									setTimeout(() => {
-										indicator.classList.remove('active');
-									}, 2000);
-								}
-							});
-						}
-					}).catch((error: unknown) => {
-						console.error('[Controller] Texture preload failed:', error);
-					});
-				}
-			}
-			*/
+      });			
 			
       PerformanceMonitor.start('csg_generation_and_render');
 			
@@ -379,10 +574,6 @@ export class ApplicationController {
       }
       
       PerformanceMonitor.end('csg_generation_and_render');
-      
-      // CRITICAL: Wait for walnut textures to be ready before removing overlay
-      // This prevents user seeing black meshes while textures load
-      await this.waitForWalnutTextures();
       
       PerformanceMonitor.end('total_upload_to_render');
       
@@ -519,6 +710,831 @@ export class ApplicationController {
     this._subscribers.forEach(callback => {
       callback(this._state!);
     });
+  }
+	
+	/**
+   * Handle panel updates based on state changes
+   * Called automatically when state changes affect UI
+   */
+  private handlePanelUpdates(state: ApplicationState): void {
+    if (!this._panelStack) return;
+    
+    // Clear panels on phase change
+    if (state.ui.phase === 'upload') {
+      this._panelStack.clearStack();
+    }
+  }
+	
+	/**
+   * Handle category selection from left panel
+   * Clears right panel stack and renders category-specific content
+   */
+  handleCategorySelected(categoryId: string): void {
+    if (!this._panelStack || !this._state) return;
+    
+    void this.dispatch({ type: 'CATEGORY_SELECTED', payload: categoryId });
+    
+    this._handleStyleCategorySelected();
+  }
+	
+	/**
+   * Render Left Secondary Panel without dispatching actions
+   * Pure rendering method for state restoration
+   * @private
+   */
+  private _renderLeftSecondaryPanel(
+    categoryId: string,
+    selectedSubcategoryId: string | null
+  ): void {
+    if (!this._categoriesConfig || !this._leftSecondaryPanel) return;
+    
+    const categoryConfig = this._categoriesConfig[categoryId as keyof CategoriesConfig];
+    if (!categoryConfig) return;
+    
+    const subcategories = Object.entries(categoryConfig.subcategories)
+      .map(([id, config]) => ({ id, config }));
+    
+    if (subcategories.length === 0) {
+      this._leftSecondaryPanel.style.display = 'none';
+      return;
+    }
+    
+    void import('./components/LeftSecondaryPanel').then(({ LeftSecondaryPanel }) => {
+      const panel = new LeftSecondaryPanel(
+        subcategories,
+        selectedSubcategoryId,
+        (id: string) => this._handleSubcategorySelected(id)
+      );
+      
+      if (this._leftSecondaryPanel) {
+        this._leftSecondaryPanel.innerHTML = '';
+        this._leftSecondaryPanel.appendChild(panel.render());
+        this._leftSecondaryPanel.style.display = 'block';
+        this._leftSecondaryPanel.classList.add('visible');
+        
+        requestAnimationFrame(() => {
+          if (this._sceneManager && 'updateCameraOffset' in this._sceneManager) {
+            (this._sceneManager as { updateCameraOffset: () => void }).updateCameraOffset();
+          }
+        });
+      }
+    }).catch((error: unknown) => {
+      console.error('[Controller] Failed to render Left Secondary Panel:', error);
+    });
+  }
+  
+  /**
+   * Handle STYLE category selection (four-panel architecture)
+   * @private
+   */
+	private _handleStyleCategorySelected(): void {
+    if (!this._categoriesConfig || !this._state?.ui.activeCategory || !this._thumbnailConfig) return;
+    const categoryConfig = this._categoriesConfig[this._state.ui.activeCategory as keyof CategoriesConfig];
+    if (!categoryConfig) return;
+		
+		const subcategories = Object.entries(categoryConfig.subcategories).map(([id, config]) => ({ id, config }));
+    
+		// Auto-select subcategory based on current state
+    // BUT: Don't override if we already restored a saved subcategory
+    const currentComposition = this._state?.composition;
+    if (currentComposition && !this._state.ui.activeSubcategory) {
+      if (subcategories.length === 1) {
+        // Correctly select the single subcategory for Layout, Wood, etc.
+        const subcategoryId = subcategories[0].id;
+        void this.dispatch({ type: 'SUBCATEGORY_SELECTED', payload: { category: this._state.ui.activeCategory, subcategory: subcategoryId } });
+      }
+    }
+    
+    // Hide legacy panel stack
+		if (this._panelStack) {
+			this._panelStack.clearStack();
+		}
+		const stackContainer = document.getElementById('right-panel-stack');
+		if (stackContainer) {
+			stackContainer.style.display = 'none';
+		}
+		
+		// Auto-select the first subcategory if one isn't already active for this category
+      if (!this._state.ui.activeSubcategory && subcategories.length > 0) {
+        const subcategoryId = subcategories[0].id;
+        void this.dispatch({ type: 'SUBCATEGORY_SELECTED', payload: { category: this._state.ui.activeCategory, subcategory: subcategoryId } });
+      }
+      
+      // Defer rendering to the next tick to ensure all state is consistent
+      requestAnimationFrame(() => {
+        if (this._state?.ui.activeSubcategory) {
+          this._handleSubcategorySelected(this._state.ui.activeSubcategory);
+        }
+      });
+
+    if (subcategories.length === 1) {
+      // Auto-select single subcategory, hide secondary panel
+      if (this._leftSecondaryPanel) {
+        this._leftSecondaryPanel.style.display = 'none';
+        this._leftSecondaryPanel.classList.remove('visible');
+      }			
+			// Update camera offset after panel hides
+      requestAnimationFrame(() => {
+        if (this._sceneManager && 'updateCameraOffset' in this._sceneManager) {
+          (this._sceneManager as { updateCameraOffset: () => void }).updateCameraOffset();
+        }
+      });
+      // Single-subcategory rendering handled by deferred requestAnimationFrame above
+    } else if (subcategories.length > 1) {
+      // Show placeholder and subcategory choices for multiple options
+      if (this._rightMainPanel) {
+        this._rightMainPanel.innerHTML = '<div class="panel-content"><div style="padding: 40px 20px; text-align: center; color: rgba(255, 255, 255, 0.6);"><div style="font-size: 48px; margin-bottom: 16px;">←</div><div style="font-size: 16px; font-weight: 500;">Select a subcategory</div></div></div>';
+        this._rightMainPanel.style.display = 'block';
+      }
+      void import('./components/LeftSecondaryPanel').then(({ LeftSecondaryPanel }) => {
+        const panel = new LeftSecondaryPanel(subcategories, this._state?.ui.activeSubcategory || null, (id: string) => this._handleSubcategorySelected(id));
+        if (this._leftSecondaryPanel) {
+          this._leftSecondaryPanel.innerHTML = '';
+          this._leftSecondaryPanel.appendChild(panel.render());
+          this._leftSecondaryPanel.style.display = 'block';
+          this._leftSecondaryPanel.classList.add('visible');
+        }
+				
+				// Update camera offset after panel visibility changes
+        requestAnimationFrame(() => {
+          if (this._sceneManager && 'updateCameraOffset' in this._sceneManager) {
+            (this._sceneManager as { updateCameraOffset: () => void }).updateCameraOffset();
+          }
+        });
+      }).catch((error: unknown) => console.error('[Controller] Failed to load LeftSecondaryPanel:', error));
+    } else {
+      // No subcategories found, show placeholder
+      if (this._leftSecondaryPanel) {
+        this._leftSecondaryPanel.style.display = 'none';
+        this._leftSecondaryPanel.classList.remove('visible');
+      }
+      if (this._rightMainPanel) {
+        this._rightMainPanel.innerHTML = '<div class="panel-content"><div class="panel-placeholder"><p>No options available for this category yet.</p></div></div>';
+        this._rightMainPanel.style.display = 'block';
+      }
+    }
+  }
+  
+  /**
+   * Handle subcategory selection (Left Secondary → Right Secondary + Right Main)
+   * @private
+   */
+  private _handleSubcategorySelected(subcategoryId: string): void {
+    if (!this._categoriesConfig || !this._state?.ui.activeCategory) return;
+    const categoryConfig = this._categoriesConfig[this._state.ui.activeCategory as keyof CategoriesConfig];
+    if (!categoryConfig) return;
+
+    // Dispatch state update
+    void this.dispatch({ type: 'SUBCATEGORY_SELECTED', payload: { category: this._state.ui.activeCategory, subcategory: subcategoryId } });
+
+    // Re-render the LeftSecondaryPanel immediately to show the new selection
+    const subcategories = Object.entries(categoryConfig.subcategories).map(([id, config]) => ({ id, config }));
+    void import('./components/LeftSecondaryPanel').then(({ LeftSecondaryPanel }) => {
+      const panel = new LeftSecondaryPanel(
+        subcategories,
+        this._state?.ui.activeSubcategory || null, // Pass the updated selection from state
+        (id: string) => this._handleSubcategorySelected(id)
+      );
+      if (this._leftSecondaryPanel) {
+        this._leftSecondaryPanel.innerHTML = '';
+        this._leftSecondaryPanel.appendChild(panel.render());
+      }
+    });
+
+    const subcategory = categoryConfig.subcategories[subcategoryId];
+    if (!subcategory) return;
+		
+		// Update camera offset after right secondary visibility changes
+    requestAnimationFrame(() => {
+      if (this._sceneManager && 'updateCameraOffset' in this._sceneManager) {
+        (this._sceneManager as { updateCameraOffset: () => void }).updateCameraOffset();
+      }
+    });
+
+    // Always render the main panel after subcategory selection
+    this._renderRightMainFiltered();
+  }
+  
+  /**
+   * Handle filter selection (Icon strip → updates Right Main display only)
+   * CRITICAL: Does NOT update composition state
+   * @private
+   */
+  private _handleFilterSelected(filterId: string, selections: Set<string>): void {
+    if (!this._state?.ui.activeSubcategory || !this._state.ui.activeCategory) return;
+    
+    // Dispatch filter change
+    void this.dispatch({ 
+      type: 'FILTER_CHANGED', 
+      payload: { 
+        category: this._state.ui.activeCategory,
+        subcategory: this._state.ui.activeSubcategory,
+        filterId,
+        selections: Array.from(selections)
+      }
+    });
+    
+    // Re-render Right Main with new filter combination
+    this._renderRightMainFiltered();
+  }
+	
+	/**
+   * Build filter icon groups from subcategory filter config
+   * @private
+   */
+  private _buildFilterIconGroups(filters: Record<string, import('./types/PanelTypes').FilterConfig>): FilterIconGroup[] {
+    const groups: FilterIconGroup[] = [];
+    
+    // Build shape filter group (Panel Shape)
+    if (filters.shape) {
+      groups.push({
+        id: 'shape',
+        type: 'shape',
+        label: 'Panel Shape',
+        icons: filters.shape.options.map(opt => ({
+        id: opt.id,
+        svgPath: `/assets/icons/${opt.id === 'circular' ? 'circle' : opt.id === 'rectangular' ? 'rectangle' : 'diamond'}.svg`,
+        tooltip: opt.tooltip || `${opt.label} Panel`,
+        stateValue: opt.id
+      }))
+      });
+    }
+    
+    // Build slot_pattern filter group (Waveform Pattern)
+    if (filters.slot_pattern) {
+      groups.push({
+        id: 'slot_pattern',
+        type: 'waveform',
+        label: 'Waveform Pattern',
+        icons: filters.slot_pattern.options.map(opt => ({
+					id: opt.id,
+					svgPath: `/assets/icons/${opt.id}.svg`,
+					tooltip: opt.tooltip || `${opt.label} Waveform`,
+					stateValue: opt.id
+				}))
+      });
+    }
+    
+    return groups;
+  }
+  
+  /**
+   * Handle icon filter change from FilterIconStrip
+   * @private
+   */
+  private _handleIconFilterChange(groupId: string, selections: Set<string>): void {
+    this._handleFilterSelected(groupId, selections);
+  }
+  
+  /**
+   * Render Right Main panel with current filter combination
+   * @private
+   */
+  private _renderRightMainFiltered(): void {
+		if (!this._categoriesConfig || !this._state?.ui.activeCategory || !this._state.ui.activeSubcategory || !this._rightMainPanel) return;
+
+		const categoryConfig = this._categoriesConfig[this._state.ui.activeCategory as keyof CategoriesConfig];
+		const subcategory = categoryConfig?.subcategories[this._state.ui.activeSubcategory];
+		if (!subcategory) return;
+
+		this._rightMainPanel.innerHTML = '';
+		
+		// Render filter icon strip if filters exist - OUTSIDE panel-content
+		if (subcategory.filters && Object.keys(subcategory.filters).length > 0) {
+			const filterGroups = this._buildFilterIconGroups(subcategory.filters);
+			if (filterGroups.length > 0) {
+				// Convert state filter selections to Map<string, Set<string>> for FilterIconStrip
+				const filterKey = `${this._state.ui.activeCategory}_${this._state.ui.activeSubcategory}`;
+				const stateFilters = this._state.ui.filterSelections[filterKey] || {};
+				const activeFiltersMap = new Map<string, Set<string>>();
+				Object.entries(stateFilters).forEach(([filterId, selections]) => {
+					activeFiltersMap.set(filterId, new Set(selections));
+				});
+				
+				this._filterIconStrip = new FilterIconStrip(
+					filterGroups,
+					activeFiltersMap,
+					(groupId, iconId) => this._handleIconFilterChange(groupId, iconId)
+				);
+				this._rightMainPanel.appendChild(this._filterIconStrip.render());
+			}
+		}
+		
+		const panelContent = document.createElement('div');
+		panelContent.className = 'panel-content panel-content-scrollable';
+
+		// Check for a placeholder note
+		if (subcategory.note) {
+			panelContent.innerHTML = `<div class="panel-placeholder"><p>${subcategory.note}</p></div>`;
+			this._rightMainPanel.appendChild(panelContent);
+			this._rightMainPanel.style.display = 'block';
+			this._rightMainPanel.classList.add('visible');
+			return;
+		}
+
+    // Generic content rendering
+    const optionKey = Object.keys(subcategory.options)[0];
+    const optionConfig = subcategory.options[optionKey];
+
+    if (optionConfig) {
+      switch (optionConfig.type) {
+        case 'slider_group': {
+          const sliderConfigs = ((optionConfig.element_keys as string[] | undefined) || [])
+            .filter((key: string) => {
+              const elConfig = window.uiEngine?.getElementConfig(key);
+              if (!elConfig) return false;
+              
+              // Check show_when condition
+              if (elConfig.show_when) {
+                const currentShape = this._state!.composition.frame_design.shape;
+                const currentSlotStyle = this._state!.composition.pattern_settings.slot_style;
+                
+                // Check shape constraint
+                if (elConfig.show_when.shape) {
+                  const allowedShapes = elConfig.show_when.shape;
+                  if (!allowedShapes.includes(currentShape)) {
+                    return false; // Filter out this slider
+                  }
+                }
+                
+                // Check slot_style constraint
+                if (elConfig.show_when.slot_style) {
+                  const allowedStyles = elConfig.show_when.slot_style;
+                  if (!allowedStyles.includes(currentSlotStyle)) {
+                    return false; // Filter out this slider
+                  }
+                }
+              }
+              
+              return true; // Include this slider
+            })
+            .map((key: string) => {
+              const elConfig = window.uiEngine?.getElementConfig(key);
+              const value = window.uiEngine?.getStateValue(this._state!.composition, elConfig!.state_path) as number;
+              return {
+                id: key,
+                label: elConfig!.label,
+                min: elConfig!.min!,
+                max: elConfig!.max!,
+                step: elConfig!.step!,
+                value: value ?? elConfig!.min!,
+                unit: key === 'slots' ? '' : '"',
+                dynamic_max_by_sections: (elConfig as { dynamic_max_by_sections?: Record<string, number> }).dynamic_max_by_sections,
+              };
+            });
+          const sliderGroup = new SliderGroup(
+            sliderConfigs,
+            (id, value) => {
+              void this._updateStateValue(id, value);
+            },
+            this._state.composition.frame_design.number_sections
+          );
+          panelContent.appendChild(sliderGroup.render());
+          break;
+        }
+
+				case 'wood_species_image_grid': {
+					if (this._woodMaterialsConfig && this._state) {
+						const header = document.createElement('div');
+						header.className = 'panel-header';
+						header.innerHTML = '<h3>Wood & Grain</h3>';
+						panelContent.appendChild(header);
+						const body = document.createElement('div');
+						body.className = 'panel-body';
+						
+						const materials = this._state.composition.frame_design.section_materials || [];
+						const currentSpecies = materials[0]?.species || this._woodMaterialsConfig.default_species;
+						const currentGrain = materials[0]?.grain_direction || this._woodMaterialsConfig.default_grain_direction;
+						const grid = new WoodMaterialSelector(
+							this._woodMaterialsConfig.species_catalog,
+							this._state.composition.frame_design.number_sections,
+							currentSpecies,
+							currentGrain,
+							(update) => {
+								void (async () => {
+									// Capture scroll position from current .panel-body before re-render
+								const oldBody = document.querySelector('.panel-right-main .panel-body') as HTMLElement;
+								const scrollTop = oldBody?.scrollTop || 0;
+
+								await this._updateWoodMaterial('species', update.species);
+								await this._updateWoodMaterial('grain_direction', update.grain);
+								this._renderRightMainFiltered();
+
+								// Restore scroll position to new .panel-body after re-render
+								requestAnimationFrame(() => {
+									const newBody = document.querySelector('.panel-right-main .panel-body') as HTMLElement;
+									if (newBody) {
+										newBody.scrollTop = scrollTop;
+									}
+								});
+							})();
+						}
+					);
+					body.appendChild(grid.render());
+						panelContent.appendChild(body);
+					}
+					break;
+				}
+				
+        case 'upload_interface': {
+          // Create header
+          const header = document.createElement('div');
+          header.className = 'panel-header';
+          header.innerHTML = '<h3>Upload Audio</h3>';
+          panelContent.appendChild(header);
+          
+          // Create body with upload controls
+          const body = document.createElement('div');
+          body.className = 'panel-body';
+          body.style.display = 'flex';
+          body.style.flexDirection = 'column';
+          body.style.gap = '16px';
+          body.style.padding = '20px';
+          
+          // Create file input (hidden)
+          const fileInput = document.createElement('input');
+          fileInput.type = 'file';
+          fileInput.accept = 'audio/*';
+          fileInput.style.display = 'none';
+          body.appendChild(fileInput);
+          
+          // Create upload button
+          const uploadButton = document.createElement('button');
+          uploadButton.className = 'upload-button';
+					uploadButton.dataset.demoId = 'upload_button';
+          uploadButton.style.padding = '16px 24px';
+          uploadButton.style.fontSize = '16px';
+          uploadButton.style.fontWeight = '500';
+          uploadButton.style.backgroundColor = 'rgba(100, 150, 255, 0.2)';
+          uploadButton.style.border = '2px solid rgba(100, 150, 255, 0.5)';
+          uploadButton.style.borderRadius = '8px';
+          uploadButton.style.color = 'rgba(255, 255, 255, 0.9)';
+          uploadButton.style.cursor = 'pointer';
+          uploadButton.style.transition = 'all 0.2s ease';
+          uploadButton.innerHTML = '📁 Choose Audio File';
+          uploadButton.addEventListener('click', () => fileInput.click());
+          body.appendChild(uploadButton);
+          
+          // Create drop zone
+          const dropZone = document.createElement('div');
+          dropZone.style.padding = '40px 20px';
+          dropZone.style.border = '2px dashed rgba(255, 255, 255, 0.3)';
+          dropZone.style.borderRadius = '8px';
+          dropZone.style.textAlign = 'center';
+          dropZone.style.color = 'rgba(255, 255, 255, 0.6)';
+          dropZone.style.cursor = 'pointer';
+          dropZone.innerHTML = '<div style="font-size: 48px; margin-bottom: 16px;">⬆️</div><div>Or drag and drop your audio file here</div><div style="margin-top: 8px; font-size: 12px; opacity: 0.7;">Supported formats: MP3, WAV, FLAC, M4A</div>';
+          dropZone.addEventListener('click', () => fileInput.click());
+          body.appendChild(dropZone);
+          
+          // File input change handler
+          fileInput.addEventListener('change', (e) => {
+            const target = e.target as HTMLInputElement;
+            if (target.files && target.files.length > 0) {
+              const currentState = this.getState();
+              const uiComposition = currentState.composition;
+              void this.dispatch({ 
+                type: 'FILE_UPLOADED', 
+                payload: { file: target.files[0], uiSnapshot: uiComposition }
+              });
+            }
+          });
+          
+          // Drag and drop handlers
+          dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.style.borderColor = 'rgba(100, 150, 255, 0.8)';
+            dropZone.style.backgroundColor = 'rgba(100, 150, 255, 0.1)';
+          });
+          
+          dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+            dropZone.style.backgroundColor = 'transparent';
+          });
+          
+          dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+            dropZone.style.backgroundColor = 'transparent';
+            
+            if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+              const currentState = this.getState();
+              const uiComposition = currentState.composition;
+              void this.dispatch({ 
+                type: 'FILE_UPLOADED', 
+                payload: { file: e.dataTransfer.files[0], uiSnapshot: uiComposition }
+              });
+            }
+          });
+          
+          panelContent.appendChild(body);
+          break;
+        }				
+
+        case 'archetype_grid': {
+          const filterKey = `${this._state.ui.activeCategory}_${this._state.ui.activeSubcategory}`;
+          const stateFilters = this._state.ui.filterSelections[filterKey] || {};
+          
+          const matchingArchetypes = Array.from(this._archetypes.values())
+            .filter(archetype => {
+              // Apply active filters from state
+              const activeShapes = stateFilters.shape ? new Set(stateFilters.shape) : new Set();
+              if (activeShapes.size > 0 && !activeShapes.has(archetype.shape)) {
+                return false;
+              }
+              
+              const activePatterns = stateFilters.slot_pattern ? new Set(stateFilters.slot_pattern) : new Set();
+              if (activePatterns.size > 0 && !activePatterns.has(archetype.slot_style)) {
+                return false;
+              }
+              
+              return true;
+            })
+            .map(archetype => ({
+              id: archetype.id,
+              label: archetype.label,
+              thumbnailUrl: archetype.thumbnail,
+              disabled: false, // Future validation logic here
+              tooltip: archetype.tooltip
+            }));
+            
+          const activeSelection = this._getActiveArchetypeId();
+          
+          const thumbnailGrid = new ThumbnailGrid(
+            matchingArchetypes,
+            (id) => { void this._handleArchetypeSelected(id); },
+            activeSelection
+          );
+          panelContent.appendChild(thumbnailGrid.render());
+          break;
+        }
+      }
+    }
+
+    this._rightMainPanel.appendChild(panelContent);
+    this._rightMainPanel.style.display = 'block';
+    this._rightMainPanel.classList.add('visible');
+    
+    // Ensure scroll happens after panel is visible and has layout
+    setTimeout(() => {
+      const selectedCard = this._rightMainPanel?.querySelector('.thumbnail-card.selected') as HTMLElement;
+      if (selectedCard) {
+        selectedCard.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        });
+      }
+    }, 50);
+  }
+	
+	/**
+   * Get active thumbnail ID by matching current state to thumbnail state_updates
+   * @private
+   */
+  private _getActiveArchetypeId(): string | null {
+    if (!this._state) return null;
+    
+    for (const archetype of this._archetypes.values()) {
+      const comp = this._state.composition;
+      const matches = 
+        comp.frame_design.shape === archetype.shape &&
+        comp.frame_design.number_sections === archetype.number_sections &&
+        comp.pattern_settings.slot_style === archetype.slot_style;
+      
+      if (matches) {
+        return archetype.id;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Get nested value from composition state using dot notation
+   * @private
+   */
+  private _getNestedValue(state: CompositionStateDTO, path: string): unknown {
+    const parts = path.split('.');
+    let current: unknown = state;
+    
+    for (const part of parts) {
+      if (typeof current === 'object' && current !== null && part in current) {
+        current = (current as Record<string, unknown>)[part];
+      } else {
+        return undefined;
+      }
+    }
+    
+    return current;
+  }
+  
+  /**
+   * Handle thumbnail selection (Right Main → updates composition state)
+   * Applies state_updates from config
+   * @private
+   */
+  private async _handleArchetypeSelected(archetypeId: string): Promise<void> {
+    if (!this._state) return;
+    
+    const archetype = this._archetypes.get(archetypeId);
+    if (!archetype) {
+      console.warn(`[Controller] Archetype not found: ${archetypeId}`);
+      return;
+    }
+    
+    const newComposition = structuredClone(this._state.composition);
+    
+    // Apply all properties from the archetype to the composition state
+    newComposition.frame_design.shape = archetype.shape;
+    newComposition.frame_design.number_sections = archetype.number_sections;
+    newComposition.frame_design.separation = archetype.separation;
+    newComposition.pattern_settings.slot_style = archetype.slot_style;
+    newComposition.pattern_settings.number_slots = archetype.number_slots;
+    if (archetype.side_margin !== undefined) {
+      newComposition.pattern_settings.side_margin = archetype.side_margin;
+    }
+    
+    await this.handleCompositionUpdate(newComposition);
+    
+    // Re-render the panel to show updated selection
+    this._renderRightMainFiltered();
+  }
+
+  /**
+   * Handle option selection from right panel
+   * @private
+   */
+  private _handleOptionSelected(
+    option: string,
+    value: unknown,
+    contentRenderer: RightPanelContentRenderer,
+    uiConfig: { elements: Record<string, unknown> }
+  ): void {
+    if (!this._panelStack || !this._state) return;
+
+    // Handle navigation to cascading panels
+    if (option === 'navigate') {
+      this._handleNavigation(value as string, contentRenderer, uiConfig);
+      return;
+    }
+
+    // Handle direct state updates
+    void this._updateStateValue(option, value);
+  }
+	
+	/**
+ * Update state value and trigger re-render
+ * Uses UI config as single source of truth for state paths
+ * @private
+ */
+	private async _updateStateValue(option: string, value: unknown): Promise<void> {
+		if (!this._state) return;
+
+		const newComposition = structuredClone(this._state.composition);
+
+		// UIEngine is the authoritative source for element configs
+		const elementConfig = window.uiEngine?.getElementConfig(option);
+		
+		if (!elementConfig?.state_path) {
+			console.warn(`[Controller] No state_path found for option: ${option}`);
+			return;
+		}
+
+		// Update the nested value using state_path from UIEngine
+		this._setNestedValue(newComposition, elementConfig.state_path, value);
+		
+		// CRITICAL: For circular panels, "size" controls diameter (both finish_x and finish_y)
+		if (option === 'size') {
+			newComposition.frame_design.finish_y = value as number;
+		}
+
+		// Trigger composition update
+		await this.handleCompositionUpdate(newComposition);
+	}
+	
+	/**
+   * Set nested object value using dot notation path
+   * @private
+   */
+  private _setNestedValue(
+    obj: Record<string, unknown>,
+    path: string,
+    value: unknown
+  ): void {
+    const parts = path.split('.');
+    let current: Record<string, unknown> = obj;
+    
+    for (let i = 0; i < parts.length - 1; i++) {
+      const part = parts[i];
+      if (!(part in current) || typeof current[part] !== 'object' || current[part] === null) {
+        current[part] = {};
+      }
+      current = current[part] as Record<string, unknown>;
+    }
+    
+    const lastPart = parts[parts.length - 1];
+    current[lastPart] = value;
+  }
+	
+	/**
+   * Update wood material properties (species or grain_direction)
+   * Applies to all sections or selected sections
+   * @private
+   */
+  private async _updateWoodMaterial(
+    property: 'species' | 'grain_direction',
+    value: string
+  ): Promise<void> {
+    if (!this._state) return;
+
+    // Create a new composition state immutably
+    const newComposition = structuredClone(this._state.composition);
+    
+    // Ensure the materials array exists
+    const materials = newComposition.frame_design.section_materials || [];
+    const numSections = newComposition.frame_design.number_sections;
+    
+    // Determine which section indices to update
+    const targetIndices = this._selectedSectionIndices.size > 0
+      ? Array.from(this._selectedSectionIndices)
+      : Array.from({ length: numSections }, (_, i) => i); // If none selected, target all
+
+    // Update only the target sections
+    targetIndices.forEach(sectionId => {
+      const material = materials.find(m => m.section_id === sectionId);
+      
+      if (material) {
+        // Update existing material entry
+        material[property] = value;
+      } else {
+        // Create a new material entry if it doesn't exist
+        const newMaterial: SectionMaterial = {
+          section_id: sectionId,
+          species: property === 'species' ? value : this._woodMaterialsConfig?.default_species || 'walnut-black-american',
+          grain_direction: property === 'grain_direction' ? value as 'horizontal' | 'vertical' | 'radiant' | 'diamond' : this._woodMaterialsConfig?.default_grain_direction || 'vertical'
+        };
+        materials.push(newMaterial);
+      }
+    });
+
+    // Ensure the materials array is sorted by section_id for consistency
+    newComposition.frame_design.section_materials = materials.sort((a, b) => a.section_id - b.section_id);
+
+    // Trigger the rendering pipeline with the updated composition
+    await this.handleCompositionUpdate(newComposition);
+  }
+
+  /**
+   * Handle navigation to cascading panels
+   * @private
+   */
+  private _handleNavigation(
+    target: string,
+    contentRenderer: RightPanelContentRenderer,
+    uiConfig: { elements: Record<string, unknown> }
+  ): void {
+    if (!this._panelStack || !this._state) return;
+
+    switch (target) {
+      case 'species': {
+        const panel = contentRenderer.renderWoodSpeciesPanel(
+          this._state.composition,
+          uiConfig,
+          (species: string) => {
+            void this._updateWoodMaterial('species', species);
+            this._panelStack?.popPanel();
+          },
+          () => {
+            this._panelStack?.popPanel();
+          }
+        );
+        this._panelStack.pushPanel(panel);
+        break;
+      }
+
+      case 'grain': {
+        const panel = contentRenderer.renderGrainDirectionPanel(
+          this._state.composition,
+          (grain: string) => {
+            void this._updateWoodMaterial('grain_direction', grain);
+            this._panelStack?.popPanel();
+          },
+          () => {
+            this._panelStack?.popPanel();
+          }
+        );
+        this._panelStack.pushPanel(panel);
+        break;
+      }
+
+      default:
+        console.warn('Unknown navigation target:', target);
+    }
   }
 	
 	private _detectChangedParams(

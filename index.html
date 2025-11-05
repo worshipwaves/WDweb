@@ -1,4 +1,7 @@
-<!DOCTYPE html>
+<!DOCTYPE html><div id="textureLoadingIndicator" class="texture-loading-indicator">
+        <div class="loading-spinner-small"></div>
+        <span class="loading-text">Loading exotic wood species... (<span id="texturesLoaded">0</span> of <span id="texturesTotal">15</span>)</span>
+      </div>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -7,12 +10,19 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <title>WaveDesigner</title>
-  <link rel="stylesheet" href="/public/style.css">
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <div id="app">
-    <!-- Processing Overlay (fullscreen, always on top) -->
-    <div id="processingOverlay" class="processing-overlay">
+  <div id="root">
+    <!-- ========================================
+         LAYER 1: CANVAS (Behind Everything)
+         z-index: 0
+         ======================================== -->
+    <div class="canvas-container">
+      <canvas id="renderCanvas"></canvas>
+      
+      <!-- Processing overlay stays in canvas layer (z-index: 5) -->
+      <div id="processingOverlay" class="processing-overlay">
       <div class="processing-content">
         <div class="processing-spinner"></div>
         <div class="processing-message">Processing...</div>
@@ -22,34 +32,59 @@
       </div>
     </div>
     
-    <!-- Texture Loading Indicator (bottom-right corner) -->
-    <div id="textureLoadingIndicator" class="texture-loading-indicator">
-      <div class="loading-spinner-small"></div>
-      <span class="loading-text">Loading exotic wood species... (<span id="texturesLoaded">0</span> of <span id="texturesTotal">15</span>)</span>
-    </div>
+    <!-- Upload interface (fullscreen when active) -->
+      <div id="uploadContainer" class="upload-container"></div>
     
-    <!-- Upload Phase Container -->
-    <div id="uploadContainer" class="phase-container active"></div>
-    
-    <!-- Visualization Phase Container -->
-    <div id="visualizationContainer" class="phase-container">
-      <canvas id="renderCanvas"></canvas>
-      
-      <!-- Waveform Canvas Overlay -->
+    <!-- Waveform Canvas Overlay -->
       <canvas id="waveformCanvas" class="waveform-overlay" style="display: none;"></canvas>
       
-      <!-- Carousel Container -->
-      <div id="carouselContainer" class="carousel-container">
-        <div class="carousel-dots"></div>
+      <!-- Texture Loading Indicator -->
+      <div id="textureLoadingIndicator" class="texture-loading-indicator">
+        <div class="loading-spinner-small"></div>
+        <span class="loading-text">Loading exotic wood species... (<span id="texturesLoaded">0</span> of <span id="texturesTotal">15</span>)</span>
       </div>
-    </div>
-    
-    <div id="ui-overlay">
-      <div class="ui-controls-top">
+			
+			<div class="ui-controls-bottom-center">
         <button id="resetCameraButton" title="Reset Camera View">↺</button>
         <button id="zoomToggleButton" title="Toggle Zoom">⊕</button>
       </div>
-			<div class="ui-controls-top-left">
+			
+    </div>
+
+    <!-- ========================================
+         LAYER 2: UI OVERLAYS (On Top)
+         z-index: 10+
+         ======================================== -->
+    <div class="ui-overlay-container">
+      <!-- LEFT MAIN PANEL: Categories -->
+      <aside id="left-main-panel" class="panel panel-left-main">
+        <!-- Populated by JavaScript -->
+      </aside>
+
+      <!-- LEFT SECONDARY PANEL: Subcategories -->
+      <aside id="left-secondary-panel" class="panel panel-left-secondary" style="display: none;">
+        <!-- Populated by JavaScript -->
+      </aside>
+
+      <!-- RIGHT SECONDARY PANEL: Filter Strip -->
+      <aside id="right-secondary-panel" class="panel panel-right-secondary" style="display: none;">
+        <!-- Populated by JavaScript -->
+      </aside>
+
+      <!-- RIGHT MAIN PANEL: Options Grid -->
+      <aside id="right-main-panel" class="panel panel-right-main" style="display: none;">
+        <!-- Populated by JavaScript -->
+      </aside>
+
+      <!-- RIGHT PANEL STACK: Cascading Panels (WOOD category) -->
+      <div id="right-panel-stack" class="panel-stack-right">
+        <aside id="right-panel-primary" class="panel panel-right" style="z-index: 11; display: none;">
+          <!-- Populated dynamically -->
+        </aside>
+      </div>
+      
+      <!-- TOP LEFT CONTROLS: New File -->
+      <div class="ui-controls-top-left">
 				<button id="newFileButton" title="Upload New File">
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -57,134 +92,23 @@
 						<line x1="12" y1="3" x2="12" y2="15"></line>
 					</svg>
 				</button>
-			</div>			
+				<button id="startTourButton" title="Start Guided Tour">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<circle cx="12" cy="12" r="10"></circle>
+						<polygon points="10 8 16 12 10 16 10 8"></polygon>
+					</svg>
+				</button>
+			</div>	
       
-      <!-- New Parameter Controls -->
-      <div id="controls" class="ui-controls-panel">
-        <h3>Design Parameters</h3>
-        
-        <div class="control-group">
-          <label for="shape">Shape:</label>
-          <select id="shape" class="control-input">
-            <option value="circular">Circular</option>
-            <option value="rectangular">Rectangular</option>
-          </select>
+      <!-- MOBILE: Bottom Sheet (Phase 6 implementation) -->
+      <div id="bottom-sheet" class="bottom-sheet" style="display: none;">
+        <div class="bottom-sheet-handle"></div>
+        <div class="bottom-sheet-content">
+          <!-- Mobile navigation content -->
         </div>
-        
-        <div class="control-group">
-          <label for="size">Size:</label>
-          <select id="size" class="control-input">
-            <!-- Options loaded from config -->
-          </select>
-        </div>
-
-        <div class="control-group">
-          <label for="width">Width:</label>
-          <select id="width" class="control-input">
-            <!-- Options loaded from config -->
-          </select>
-        </div>
-
-        <div class="control-group">
-          <label for="height">Height:</label>
-          <select id="height" class="control-input">
-            <!-- Options loaded from config -->
-          </select>
-        </div>
-        
-        <div class="control-group">
-          <label for="slots">Slots: <span id="slotsValue"></span></label>></span></label>
-          <input type="range" id="slots" class="control-input" min="24" max="120" step="12">
-        </div>
-
-        <hr class="control-separator">
-
-        <div class="control-group">
-          <label for="sections">Total Sections:</label>
-          <select id="sections" class="control-input">
-            <!-- Options loaded from config -->
-          </select>
-        </div>
-
-        <div class="control-group">
-          <label for="separation">Gap: <span id="separationValue"></span>"</label>
-          <input type="range" id="separation" class="control-input" min="0.5" max="4.0" step="0.5">
-        </div>
-        
-				<div class="control-group">
-          <label for="woodSpecies">Wood Species:</label>
-          <select id="woodSpecies" class="control-input">
-            <!-- Options loaded dynamically from /api/config/wood-materials -->
-          </select>
-        </div>
-        
-        <div class="control-group">
-          <label for="grainDirection">Grain Direction:</label>
-          <select id="grainDirection" class="control-input">
-            <!-- Options loaded from config -->
-          </select>
-        </div>
-        
-        <div id="sectionIndicator" class="control-group">
-          <label>Selected Sections:</label>
-          <div id="sectionChipContainer" class="section-chip-container">
-            <!-- Chips will be dynamically inserted here -->
-          </div>
-        </div>
-        
-        <div class="control-group">
-          <label for="selectAllCheckbox" style="flex: unset;">All / None:</label>
-          <input type="checkbox" id="selectAllCheckbox" class="control-checkbox">
-        </div>
-        
-        <button id="updateButton" class="update-button">Update Design</button>
       </div>
     </div>
   </div>
-  <script>
-    // Handle shape change to disable n=3 for rectangular
-    document.addEventListener('DOMContentLoaded', () => {
-      const shapeEl = document.getElementById('shape');
-      const sectionsEl = document.getElementById('sections');
-      
-      function updateSectionsForShape() {
-        if (!shapeEl || !sectionsEl) return;
-        
-        const shape = shapeEl.value;
-        const option3 = sectionsEl.querySelector('option[value="3"]');
-        
-        if (!option3) return;
-        
-        if (shape === 'rectangular' || shape === 'diamond') {
-          // Hide n=3 option entirely for rectangular and diamond
-          option3.style.display = 'none';
-          option3.disabled = true;
-          
-          // If n=3 was selected, change to n=2
-          if (sectionsEl.value === '3') {
-            sectionsEl.value = '2';
-          }
-        } else {
-          // Show n=3 for circular
-          option3.style.display = '';
-          option3.disabled = false;
-        }
-      }
-      
-      // Run on shape change
-      if (shapeEl) {
-        shapeEl.addEventListener('change', updateSectionsForShape);
-      }
-      
-      // Run immediately
-      updateSectionsForShape();
-      
-      // Also run after a short delay in case main.ts modifies the DOM
-      setTimeout(updateSectionsForShape, 100);
-      setTimeout(updateSectionsForShape, 500);
-    });
-  </script>
-  </script>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

@@ -1,0 +1,320 @@
+{
+  "elements": {
+    "shape": {
+      "id": "shape",
+      "type": "select",
+      "label": "Shape",
+      "state_path": "frame_design.shape",
+      "options": [
+        {"value": "circular", "label": "Circular"},
+        {"value": "rectangular", "label": "Rectangular"},
+        {"value": "diamond", "label": "Diamond"}
+      ]
+    },
+    "size": {
+      "id": "size",
+      "type": "range",
+      "label": "Size",
+      "state_path": "frame_design.finish_x",
+      "show_when": {"shape": ["circular"]},
+      "min": 24,
+      "max": 60,
+      "step": 1,
+      "dynamic_max_by_sections": {
+        "1": 30,
+        "2": 42,
+        "3": 54,
+        "4": 60
+      },
+      "on_change_triggers": [
+        {
+          "action": "apply_size_defaults",
+          "source_path": "size_defaults"
+        }
+      ]
+    },
+    "sections": {
+      "id": "sections",
+      "type": "select",
+      "label": "Sections",
+      "state_path": "frame_design.number_sections",
+      "options": [
+        {"value": 1, "label": "1"},
+        {"value": 2, "label": "2"},
+        {"value": 3, "label": "3", "disabled_when": {"shape": ["rectangular", "diamond"]}},
+        {"value": 4, "label": "4"}
+      ]
+    },
+    "slots": {
+      "id": "slots",
+      "type": "range",
+      "label": "Slots",
+      "state_path": "pattern_settings.number_slots",
+      "min": 24,
+      "max": 120,
+      "step": 1,
+      "display_value_id": "slotsValue"
+    },
+    "width": {
+      "id": "width",
+      "type": "range",
+      "label": "Width",
+			"show_when": {"shape": ["rectangular", "diamond"]},
+      "state_path": "frame_design.finish_x",
+      "min": 12,
+      "max": 84,
+      "step": 1.0,
+      "display_value_id": "widthValue"
+    },
+    "height": {
+      "id": "height",
+      "type": "range",
+      "label": "Height",
+			"show_when": {"shape": ["rectangular", "diamond"]},
+      "state_path": "frame_design.finish_y",
+      "min": 12,
+      "max": 84,
+      "step": 1.0,
+      "display_value_id": "heightValue"
+    },
+    "patternDiameter": {
+      "id": "patternDiameter",
+      "type": "select",
+      "label": "Pattern Dia.",
+      "state_path": "pattern_settings.pattern_diameter",
+      "show_when": {"shape": ["rectangular", "diamond"]},
+      "options": [
+        {"value": 24, "label": "24\""},
+        {"value": 36, "label": "36\""},
+        {"value": 48, "label": "48\""},
+        {"value": 60, "label": "60\""}
+      ]
+    },
+    "separation": {
+      "id": "separation",
+      "type": "range",
+      "label": "Gap",
+      "state_path": "frame_design.separation",
+      "min": 0.5,
+      "max": 4.0,
+      "step": 0.5,
+      "display_value_id": "separationValue"
+    },
+    "side_margin": {
+      "id": "side_margin",
+      "type": "range",
+      "label": "Side Margin",
+			"show_when": {
+        "shape": ["circular", "diamond"],
+        "slot_style": ["linear"]
+      },
+      "state_path": "pattern_settings.side_margin",
+      "min": 1.0,
+      "max": 6.0,
+      "step": 0.5,
+      "display_value_id": "sideMarginValue",
+      "show_when": {
+        "slot_style": ["linear"]
+      }
+    },
+    "woodSpecies": {
+      "id": "woodSpecies",
+      "type": "select",
+      "label": "Wood Species",
+      "state_path": "frame_design.section_materials[].species",
+      "options_from_endpoint": "/api/config/wood-materials",
+      "options_path": "species_catalog",
+      "default_value_from_endpoint": "/api/config/wood-materials",
+      "default_value_path": "default_species"
+    },
+    "grainDirection": {
+      "id": "grainDirection",
+      "type": "select",
+      "label": "Grain Direction",
+      "state_path": "frame_design.section_materials[].grain_direction",
+      "options": [
+        { "value": "horizontal", "label": "Horizontal" },
+        { "value": "vertical", "label": "Vertical" },
+        { "value": "radiant", "label": "Radiant", "show_when": { "number_sections": [2, 3, 4] } },
+        { "value": "diamond", "label": "Diamond", "show_when": { "number_sections": [4] } }
+      ],
+      "default_value_from_endpoint": "/api/config/wood-materials",
+      "default_value_path": "default_grain_direction"
+    }
+  },
+  "buttons": {
+    "updateDesign": {
+      "id": "updateButton",
+      "label": "Update Design",
+      "action": "submit_composition_update"
+    },
+    "resetCamera": {
+      "id": "resetCameraButton",
+      "label": "↻",
+      "title": "Reset Camera View",
+      "action": "reset_camera"
+    }
+  },
+  "upload": {
+    "container_id": "uploadContainer",
+    "drop_zone_id": "uploadDropZone",
+    "file_input_id": "fileInput",
+    "accepted_mime_types": ["audio/mpeg", "audio/wav", "audio/flac", "audio/mp3", "audio/x-wav", "audio/x-m4a"],
+    "accepted_extensions": ["mp3", "wav", "flac", "m4a", "aac", "ogg"],
+    "max_file_size_mb": 100,
+    "hint_delay_ms": 3000,
+    "messages": {
+      "invalid_type": "Please upload an audio file (MP3, WAV, or FLAC)",
+      "file_too_large": "File size must be less than {max_size}MB",
+      "drop_hint": "Drop your audio file here"
+    }
+  },
+  "thumbnail_config": {
+    "base_path": "/assets/style/thumbnails",
+    "filter_base_path": "/assets/style/filters",
+    "extension": ".png"
+  },
+  "categories": {
+    "wood": {
+      "label": "WOOD",
+      "order": 2,
+      "subcategories": {
+        "panel": {
+          "label": "Panel",
+          "filters": {
+            "shape": {
+              "type": "single",
+              "label": "Shape",
+              "ui_state_path": "ui.active_filters.shape",
+              "options": [
+                { "id": "circular", "label": "Circular", "thumbnail": "shape_circular", "tooltip": "Circular Panel" },
+                { "id": "rectangular", "label": "Rectangular", "thumbnail": "shape_rectangular", "tooltip": "Rectangular Panel" },
+                { "id": "diamond", "label": "Diamond", "thumbnail": "shape_diamond", "tooltip": "Diamond Panel" }
+              ],
+              "default": "circular"
+            },
+            "slot_pattern": {
+              "type": "single",
+              "label": "Slot Pattern",
+              "ui_state_path": "ui.active_filters.slot_pattern",
+              "options": [
+                { "id": "radial", "label": "Radial", "thumbnail": "pattern_radial", "tooltip": "Radial Waveform" },
+                { "id": "linear", "label": "Linear", "thumbnail": "pattern_linear", "tooltip": "Linear Waveform" }
+              ],
+              "default": "radial"
+            }
+          },
+          "options": {
+            "number_sections": {
+              "label": "Number of Sections",
+              "type": "archetype_grid",
+              "archetype_source": "archetypes",
+              "display_field": "label",
+              "sort_by": "number_sections"
+            }
+          }
+        },
+        "assembled": {
+          "label": "Assembled",
+          "note": "",
+          "filters": {},
+          "options": {}
+        },
+        "wood_species": {
+          "label": "Species",
+          "filters": {},
+          "options": {
+            "main": {
+              "type": "wood_species_image_grid"
+            }
+          }
+        },
+        "layout": {
+          "label": "Layout",
+          "filters": {},
+          "options": {
+            "main": {
+              "type": "slider_group",
+              "element_keys": ["size", "width", "height", "separation", "slots", "side_margin"]
+            }
+          }
+        },
+        "backing": {
+          "label": "Backing",
+          "note": "",
+          "filters": {},
+          "options": {}
+        },
+        "frames": {
+          "label": "Frames",
+          "note": "",
+          "filters": {},
+          "options": {}
+        }
+      }
+    },
+    "print": {
+      "label": "PRINT",
+      "order": 3,
+      "subcategories": {
+        "canvas": {
+          "label": "Canvas",
+          "note": "Canvas print options coming soon",
+          "filters": {},
+          "options": {}
+        },
+        "fine_art_paper": {
+          "label": "Fine Art Paper",
+          "note": "Fine art paper prints coming soon",
+          "filters": {},
+          "options": {}
+        },
+        "metal": {
+          "label": "Metal",
+          "note": "Metal print options coming soon",
+          "filters": {},
+          "options": {}
+        }
+      }
+    },
+    "audio": {
+      "label": "AUDIO",
+      "order": 1,
+      "subcategories": {
+        "tour": {
+          "label": "Tour",
+          "note": "Experience Amazing Grace with instant preview",
+          "filters": {},
+          "options": {}
+        },
+        "collections": {
+          "label": "Collections",
+          "note": "Browse curated hymns, prayers, scriptures, and blessings",
+          "filters": {},
+          "options": {}
+        },
+        "custom": {
+          "label": "Custom",
+          "filters": {},
+          "options": {
+            "file_upload": {
+              "type": "upload_interface"
+            }
+          }
+        }
+      }
+    },
+    "share": {
+      "label": "SHARE",
+      "order": 4,
+      "note": "Share and save your designs coming soon",
+      "subcategories": {}
+    },
+    "order": {
+      "label": "ORDER",
+      "order": 5,
+      "note": "Custom order processing coming soon",
+      "subcategories": {}
+    }
+  }
+}

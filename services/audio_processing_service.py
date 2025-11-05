@@ -14,6 +14,7 @@ import os
 import subprocess
 import shutil
 from services.dtos import CompositionStateDTO
+from dev_utils.performance_monitor import performance_monitor
 
 
 class BinningMode(Enum):
@@ -193,6 +194,8 @@ class AudioProcessingService:
         Returns:
             Dictionary containing scaled amplitudes and raw samples for client caching
         """
+        performance_monitor.start('total_audio_processing')
+        
         try:
             import librosa
             import soundfile as sf
@@ -204,6 +207,8 @@ class AudioProcessingService:
         end_time = state.audio_source.end_time if state.audio_source else 0.0
         use_stems = state.audio_source.use_stems if state.audio_source else False
         stem_choice = state.audio_source.stem_choice if state.audio_source else "vocals"
+        
+        performance_monitor.start('audio_slicing_and_loading')
         
         # Step 1: Time slicing
         working_path = audio_path
@@ -234,11 +239,18 @@ class AudioProcessingService:
                 audio_data, sample_rate = librosa.load(working_path, sr=None, mono=True)
             except Exception as e:
                 raise ValueError(f"Failed to load audio file: {e}")
+                
+        performance_monitor.end('audio_slicing_and_loading')
         
         # Step 2: Demucs stem separation (optional)
         if use_stems:
             print(f"Step 2: Extracting {stem_choice} with demucs...")
+            
+            performance_monitor.start('demucs_execution')
+            
             stem_path = AudioProcessingService._run_demucs_local(working_path, stem_choice)
+            
+            performance_monitor.end('demucs_execution')
             
             if stem_path:
                 # Load the stem
@@ -260,6 +272,7 @@ class AudioProcessingService:
         
         # Step 3: Remove silence (optional)
         if state.audio_processing and state.audio_processing.remove_silence:
+            performance_monitor.start('silence_removal')
             print(f"Step 3: Removing silence...")
             original_length = len(audio_data) / sample_rate
             audio_data = AudioProcessingService._remove_silence(
@@ -268,6 +281,7 @@ class AudioProcessingService:
                 state.audio_processing.silence_threshold,
                 state.audio_processing.silence_duration
             )
+            performance_monitor.end('silence_removal')
             new_length = len(audio_data) / sample_rate
             print(f"  Reduced from {original_length:.1f}s to {new_length:.1f}s")
         
@@ -277,6 +291,8 @@ class AudioProcessingService:
                 os.unlink(working_path)
             except:
                 pass
+        
+        performance_monitor.start('amplitude_extraction_and_binning')
         
         # Extract 200k samples (matching PyQt behavior)
         samples = AudioProcessingService.extract_amplitudes(audio_data, 200000)
@@ -319,10 +335,14 @@ class AudioProcessingService:
         else:
             min_normalized = min_binned
             max_normalized = max_binned
+            
+        performance_monitor.end('amplitude_extraction_and_binning')   
         
         # NOTE: max_amplitude_local is now calculated in the facade.
         # This service now returns the NORMALIZED amplitudes.
         # The facade is responsible for the final scaling.
+        
+        performance_monitor.end('total_audio_processing')
         
         return {
             "min_amplitudes": min_normalized.tolist(),  # Normalized min array

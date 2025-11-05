@@ -10,6 +10,138 @@ from services.dtos import CompositionStateDTO, GeometryResultDTO
 # Panel thickness constant - matches frontend
 PANEL_THICKNESS = 0.375  # inches
 
+def get_vertical_space_at_x(x_pos: float, shape: str, y_offset: float, 
+                            finish_x: float, finish_y: float) -> float:
+    """
+    Calculate available vertical space at a given X position.
+    
+    Args:
+        x_pos: X position in CNC coordinates (relative to global center)
+        shape: Panel shape ('circular' or 'diamond')
+        y_offset: Y offset from boundaries
+        finish_x: Panel width
+        finish_y: Panel height
+        
+    Returns:
+        Available vertical space at this X position
+    """
+    if shape == 'circular':
+        radius = finish_x / 2.0
+        # Chord height at X position: 2 * sqrt(r² - x²)
+        x_squared = x_pos * x_pos
+        r_squared = radius * radius
+        if x_squared > r_squared:
+            return 0.0
+        chord_height = 2.0 * math.sqrt(r_squared - x_squared)
+        return max(0.0, chord_height - 2.0 * y_offset)
+        
+    elif shape == 'diamond':
+        # Diamond edge: linear from peak to corner
+        # Height varies linearly from center (finish_y) to edge (0)
+        half_width = finish_x / 2.0
+        if abs(x_pos) > half_width:
+            return 0.0
+        # Linear interpolation: height = finish_y * (1 - |x|/half_width)
+        edge_height = finish_y * (1.0 - abs(x_pos) / half_width)
+        return max(0.0, edge_height - 2.0 * y_offset)
+    
+    return 0.0
+
+
+def find_max_amplitude_linear_constrained(
+    number_sections: int,
+    number_slots: int,
+    finish_x: float,
+    finish_y: float,
+    separation: float,
+    y_offset: float,
+    side_margin: float,
+    x_offset: float,
+    bit_diameter: float,
+    shape: str
+) -> float:
+    """
+    Binary search to find maximum amplitude where all linear slots fit within boundaries.
+    
+    For circular/diamond shapes with linear slots, vertical space varies by X position.
+    This function finds the largest uniform amplitude where no slot violates its local boundary.
+    
+    Args:
+        number_sections: Number of panel sections
+        number_slots: Total number of slots
+        finish_x: Panel width
+        finish_y: Panel height
+        separation: Gap between sections
+        y_offset: Y offset from boundaries
+        side_margin: Horizontal inset from left/right edges
+        bit_diameter: Bit diameter for minimum constraint
+        shape: Panel shape ('circular' or 'diamond')
+        
+    Returns:
+        Maximum safe amplitude for all slots
+    """
+    slots_per_section = number_slots // number_sections if number_sections > 0 else number_slots
+    
+    # Calculate base panel width (margins are constraints within panels, not layout additions)
+    panel_width = (finish_x - separation * (number_sections - 1)) / number_sections
+    
+    # Generate X positions for all slots immutably (CNC coordinates, centered at origin)
+    gc_x = finish_x / 2.0
+    
+    def generate_slot_x_position(section_id: int, local_slot_index: int) -> float:
+        # Determine margins for this section
+        if number_sections == 1:
+            # Single section: side_margin on both edges (both are exterior)
+            left_margin = side_margin
+            right_margin = side_margin
+        elif section_id == 0:
+            left_margin = side_margin
+            right_margin = x_offset
+        elif section_id == number_sections - 1:
+            left_margin = x_offset
+            right_margin = side_margin
+        else:
+            left_margin = x_offset
+            right_margin = x_offset
+        
+        # Calculate usable width and slot width for this section
+        section_usable_width = panel_width - left_margin - right_margin
+        slot_width = section_usable_width / slots_per_section if slots_per_section > 0 else section_usable_width
+        
+        panel_x_start = section_id * (panel_width + separation)
+        slot_x_cnc = panel_x_start + left_margin + (local_slot_index + 0.5) * slot_width
+        return slot_x_cnc - gc_x  # Relative to center
+    
+    slot_x_positions = [
+        generate_slot_x_position(section_id, local_slot_index)
+        for section_id in range(number_sections)
+        for local_slot_index in range(slots_per_section)
+    ]
+    
+    # Binary search bounds
+    lower = bit_diameter * 2.0  # Minimum machinable
+    upper = finish_y - 2.0 * y_offset  # Theoretical max (rectangular case)
+    tolerance = 0.001  # 1/1000 inch precision
+    
+    # Binary search for maximum amplitude
+    while upper - lower > tolerance:
+        test_amplitude = (upper + lower) / 2.0
+        
+        # Check if all slots fit at this amplitude
+        all_fit = True
+        for x_pos in slot_x_positions:
+            available_space = get_vertical_space_at_x(x_pos, shape, y_offset, finish_x, finish_y)
+            if test_amplitude > available_space:
+                all_fit = False
+                break
+        
+        if all_fit:
+            lower = test_amplitude  # Can go higher
+        else:
+            upper = test_amplitude  # Hit boundary, must go lower
+    
+    return lower  # Conservative result
+
 def find_min_radius_newton_raphson(bit_diameter: float, spacer: float, 
                                    num_slots: int) -> float:
     """
@@ -198,13 +330,22 @@ def calculate_geometries_core(state: 'CompositionStateDTO') -> GeometryResultDTO
             for angle_deg in [90, 330, 210]  # Top, bottom-right, bottom-left
         ]
     elif number_sections == 4:
-        effective_side_len = separation + (2 * x_offset)
-        lc_distance_from_gc = effective_side_len / math.sqrt(2) if math.sqrt(2) > 1e-9 else effective_side_len
-        section_local_centers = [
-            (gc_x + lc_distance_from_gc * math.cos(math.radians(angle_deg)),
-             gc_y + lc_distance_from_gc * math.sin(math.radians(angle_deg)))
-            for angle_deg in [45, 315, 225, 135]  # TR, BR, BL, TL
-        ]
+        if pattern.slot_style == "linear":
+            # Linear: 4 sections side-by-side horizontally
+            section_width = (finish_x - 3 * separation) / 4
+            section_local_centers = [
+                (gc_x + (-finish_x/2 + section_width/2 + i * (section_width + separation)), gc_y)
+                for i in range(4)
+            ]
+        else:
+            # Radial: 2x2 grid at diagonal positions
+            effective_side_len = separation + (2 * x_offset)
+            lc_distance_from_gc = effective_side_len / math.sqrt(2) if math.sqrt(2) > 1e-9 else effective_side_len
+            section_local_centers = [
+                (gc_x + lc_distance_from_gc * math.cos(math.radians(angle_deg)),
+                 gc_y + lc_distance_from_gc * math.sin(math.radians(angle_deg)))
+                for angle_deg in [45, 315, 225, 135]  # TR, BR, BL, TL
+            ]
     else:
         section_local_centers = []
     
@@ -332,6 +473,31 @@ def calculate_geometries_core(state: 'CompositionStateDTO') -> GeometryResultDTO
         if max_amplitude_from_V < 0:
             max_amplitude_from_V = 0.0
     
+    # Override max_amplitude for linear slots (different geometry)
+    slot_style = pattern.slot_style
+    if slot_style == "linear":
+        if shape == "rectangular":
+            # Linear slots: simple vertical constraint
+            max_amplitude_from_V = finish_y - 2.0 * y_offset
+            center_point_from_V = finish_y / 2.0
+        elif shape in ["circular", "diamond"]:
+            # Linear slots on circular/diamond: constrained by varying boundary
+            # Use binary search to find max amplitude where all slots fit
+            side_margin = pattern.side_margin
+            max_amplitude_from_V = find_max_amplitude_linear_constrained(
+                number_sections,
+                num_slots,
+                finish_x,
+                finish_y,
+                separation,
+                y_offset,
+                side_margin,
+                pattern.x_offset,
+                bit_diameter,
+                shape
+            )
+            center_point_from_V = max_amplitude_from_V / 2.0
+    
     # Return properly typed DTO
     return GeometryResultDTO(
         shape=shape,
@@ -401,7 +567,8 @@ class GeometryService:
             "thickness": PANEL_THICKNESS,
             "separation": frame.separation,
             "number_sections": frame.number_sections,
-            "shape": frame.shape
+            "shape": frame.shape,
+            "slot_style": state.pattern_settings.slot_style
         }
         print(f"[DEBUG] get_panel_parameters returning: {result}")
         return result

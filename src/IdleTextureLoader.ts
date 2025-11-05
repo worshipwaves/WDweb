@@ -133,11 +133,18 @@ export class IdleTextureLoader {
       this.scheduleNextLoad();
     }
   }
+	
+  /**
+   * Public method to pause loading (called by controller during heavy operations)
+   */
+  pause(): void {
+    this.pauseInternal();
+  }	
   
   /**
-   * Pause loading (user is active)
+   * Internal pause implementation
    */
-  private pause(): void {
+  private pauseInternal(): void {
     if (this.isPaused) return;
     
     this.isPaused = true;
@@ -175,7 +182,7 @@ export class IdleTextureLoader {
     const handleUserActivity = () => {
       // User is active - pause loading (but only if not currently loading a texture)
       if (!this.isLoading) {
-        this.pause();
+        this.pauseInternal();
       }
       
       // Clear existing timeout
@@ -183,12 +190,12 @@ export class IdleTextureLoader {
         clearTimeout(this.userActiveTimeout);
       }
       
-      // Resume after 1 second of inactivity (longer delay)
+      // Resume after 3 seconds of inactivity (conservative)
       this.userActiveTimeout = window.setTimeout(() => {
         if (this.isPaused) {
           this.resume();
         }
-      }, 1000);
+      }, 3000);
     };
     
     // Attach listeners (removed mousemove and scroll - too aggressive)

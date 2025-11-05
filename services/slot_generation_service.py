@@ -94,8 +94,99 @@ class SlotGenerationService:
         # Generate slots based on style
         if slot_style == "radial":
             return self._generate_radial_slots(state, geometry, amplitudes)
+        elif slot_style == "linear":
+            return self._generate_linear_slots(state, geometry, amplitudes)
         else:
             raise NotImplementedError(f"Slot style '{slot_style}' not yet implemented")
+            
+    def _generate_linear_slots(
+        self,
+        state: 'CompositionStateDTO',
+        geometry: GeometryResultDTO,
+        amplitudes: List[float]
+    ) -> List[List[List[float]]]:
+        """Generate linear slot coordinates for rectangular frames."""
+        
+        # Extract parameters
+        frame = state.frame_design
+        pattern = state.pattern_settings
+        number_sections = frame.number_sections
+        number_slots = pattern.number_slots
+        slots_per_section = number_slots // number_sections
+        
+        finish_x = frame.finish_x
+        finish_y = frame.finish_y
+        y_offset = pattern.y_offset
+        side_margin = pattern.side_margin
+        spacer = pattern.spacer
+        separation = frame.separation
+        bit_diameter = pattern.bit_diameter
+        
+        # Calculate base panel width (margins are constraints within panels, not layout additions)
+        x_offset = pattern.x_offset
+        panel_width = (finish_x - separation * (number_sections - 1)) / number_sections
+        
+        # Y position limits
+        center_y = finish_y / 2.0
+        max_amplitude_limit = finish_y - y_offset * 2
+        safety_minimum = bit_diameter * 2.0
+        
+        # Generate all slots immutably
+        def generate_slot_coords(slot_index: int) -> List[List[float]]:
+            section_id = slot_index // slots_per_section
+            local_slot_index = slot_index % slots_per_section
+            
+            # Determine margins for this section
+            if number_sections == 1:
+                # Single section: side_margin on both edges (both are exterior)
+                left_margin = side_margin
+                right_margin = side_margin
+            elif section_id == 0:
+                # First section: side_margin on left (outer), x_offset on right (interior)
+                left_margin = side_margin
+                right_margin = x_offset
+            elif section_id == number_sections - 1:
+                # Last section: x_offset on left (interior), side_margin on right (outer)
+                left_margin = x_offset
+                right_margin = side_margin
+            else:
+                # Internal sections: x_offset on both sides
+                left_margin = x_offset
+                right_margin = x_offset
+            
+            # Calculate usable width for this specific section
+            section_usable_width = panel_width - left_margin - right_margin
+            slot_width = (section_usable_width - spacer * (slots_per_section - 1)) / slots_per_section
+            
+            # Amplitude is already in physical space (scaled by max_amplitude_local)
+            amplitude = amplitudes[slot_index]
+            
+            # Enforce minimum and maximum
+            amplitude = max(amplitude, safety_minimum)
+            amplitude = min(amplitude, max_amplitude_limit)
+            
+            # Calculate X positions
+            panel_x_start = section_id * (panel_width + separation)
+            slot_x_start = panel_x_start + left_margin + local_slot_index * (slot_width + spacer)
+            slot_x_end = slot_x_start + slot_width
+            
+            # Calculate Y positions (symmetric about center)
+            half_amp = amplitude / 2.0
+            y_bottom = center_y - half_amp
+            y_top = center_y + half_amp
+            
+            # Create slot coordinates (closed rectangle)
+            slot_coords = [
+                [slot_x_start, y_bottom],
+                [slot_x_start, y_top],
+                [slot_x_end, y_top],
+                [slot_x_end, y_bottom],
+                [slot_x_start, y_bottom]
+            ]
+            
+            return slot_coords
+        
+        return [generate_slot_coords(i) for i in range(number_slots)]       
     
     def _generate_radial_slots(
         self, 
@@ -104,6 +195,9 @@ class SlotGenerationService:
         amplitudes: List[float]
     ) -> List[List[List[float]]]:
         """Generate radial slot coordinates."""
+        
+        # Extract shape for use in nested scope
+        frame_shape = state.frame_design.shape
         number_sections = state.frame_design.number_sections
         number_slots = state.pattern_settings.number_slots
         slots_per_section = number_slots // number_sections

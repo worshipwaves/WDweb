@@ -12,7 +12,8 @@ import {
   TransformNode,
   Animation,
   CubicEase,
-  EasingFunction
+  EasingFunction,
+  Layer
 } from '@babylonjs/core';
 import * as BABYLON from '@babylonjs/core';
 import { GLTFFileLoader } from '@babylonjs/loaders/glTF';
@@ -21,6 +22,9 @@ import '@babylonjs/loaders/glTF/2.0';
 
 import { ApplicationController } from './ApplicationController';
 import { AudioCacheService } from './AudioCacheService';
+import { ConfirmModal } from './components/ConfirmModal';
+import { TourModal } from './components/TourModal';
+import { DemoPlayer } from './demo/DemoPlayer';
 import { FrameGenerationService } from './FrameGenerationService';
 import { PerformanceMonitor } from './PerformanceMonitor';
 import { ProcessingOverlay } from './ProcessingOverlay';
@@ -98,6 +102,8 @@ declare global {
     updateGrainDirectionOptionsFromController?: (newN: number) => void;
     _uiEngineInstance?: UIEngine;
     uiEngine?: UIEngine;
+    demoPlayer?: DemoPlayer;
+    __controller__?: ApplicationController;
   }
 }
 
@@ -133,6 +139,9 @@ class SceneManager {
   private _rootNode: TransformNode | null = null;
 	private _currentCSGData: SmartCsgResponse | null = null;  // Store CSG data for overlay positioning
 	private _overlayMeshes: Map<number, Mesh> = new Map();
+	private _backgroundLayer: Layer | null = null;
+	private _cameraOffset: number = 0;
+  private _isDesktopLayout: boolean = true;
   private _hasPlayedPulseAnimation: boolean = false;
   private _renderQueue: Promise<void> = Promise.resolve();
   private _isRendering = false;
@@ -167,14 +176,23 @@ class SceneManager {
     // Setup lighting
     this.setupLighting();
 
+    // Setup background
+    this.setupBackground(); // COMMENT OUT TO NOT USE IMAGE BACKGROUND
+
+    // Initial layout check
+    this.checkLayoutMode();
+    this.updateCameraOffset();
+
     // Register GLTF loader
     if (!GLTFFileLoader) {
       console.error('GLTF loader not available');
     }
-
-    // Handle window resize
+		
+		// Handle window resize
     window.addEventListener('resize', () => {
       this._engine.resize();
+      this.checkLayoutMode();
+      this.updateCameraOffset();
     });
 
     // Start render loop
@@ -202,7 +220,7 @@ class SceneManager {
     manager._rootNode.rotation.x = Math.PI / 2;
     
     // Set initial camera position
-    manager._camera.setTarget(Vector3.Zero());
+    manager._camera.setTarget(new Vector3(manager._cameraOffset, 0, 0));
     manager._camera.radius = 47;
     
     return manager;
@@ -266,11 +284,76 @@ class SceneManager {
     this._scene.environmentIntensity = 0.6;
     
     // Create a greige background (off-white with grey tint)
-    this._scene.clearColor = new Color3(0.86, 0.84, 0.82).toColor4();
+    this._scene.clearColor = new Color3(0.90, 0.88, 0.86).toColor4();
     
     // Create a neutral environment color for PBR reflections
     this._scene.ambientColor = new Color3(0.2, 0.2, 0.2);
     this._scene.environmentColor = new Color3(0.8, 0.8, 0.8);
+  }
+	
+	private setupBackground(): void {
+    // Use Layer for 2D background image (standard Babylon.js approach)
+    this._backgroundLayer = new Layer(
+      'backgroundLayer',
+      '/assets/backgrounds/stucco.jpg',
+      this._scene,
+      true
+    );
+  }
+	
+	private checkLayoutMode(): void {
+    const DESKTOP_BREAKPOINT = 768;
+    this._isDesktopLayout = window.innerWidth >= DESKTOP_BREAKPOINT;
+  }
+	
+	public updateCameraOffset(): void {
+    if (!this._isDesktopLayout) {
+      // Mobile: no horizontal offset
+      this._cameraOffset = 0;
+      this._camera.target.x = 0;
+      return;
+    }
+    
+    // Desktop: calculate offset based on visible panel widths
+    const leftMainPanel = document.getElementById('left-main-panel');
+    const _leftSecondaryPanel = document.getElementById('left-secondary-panel');
+    const _rightSecondaryPanel = document.getElementById('right-secondary-panel');
+    const rightMainPanel = document.getElementById('right-main-panel');
+    
+    // Calculate left side width (main panel only)
+    let leftWidth = 0;
+    if (leftMainPanel && window.getComputedStyle(leftMainPanel).display !== 'none') {
+      leftWidth += leftMainPanel.offsetWidth + 16; // Include gap
+    }
+    
+    // Calculate right side width (main panel only)
+    let rightWidth = 0;
+    if (rightMainPanel && window.getComputedStyle(rightMainPanel).display !== 'none') {
+      rightWidth += rightMainPanel.offsetWidth + 16;
+    }
+    
+    // Calculate offset in pixels (positive = shift right, negative = shift left)
+    const offsetPixels = (leftWidth - rightWidth) / 1;
+    
+    // Convert pixels to scene units
+    // Camera FOV affects visible width at a given distance
+    const distance = this._camera.radius;
+    const fov = this._camera.fov || 0.8;
+    const canvasWidth = this._canvas.width;
+    const visibleWidth = 2 * distance * Math.tan(fov / 2);
+    const pixelsPerUnit = canvasWidth / visibleWidth;
+    const offsetUnits = offsetPixels / pixelsPerUnit;
+    
+    // Apply offset to camera target
+    this._cameraOffset = offsetUnits;
+    this._camera.target.x = this._cameraOffset;
+		
+		// ALSO apply the pixel offset to the bottom controls container
+    const controlsContainer = document.querySelector('.ui-controls-bottom-center') as HTMLElement;
+    if (controlsContainer) {
+      // We use the pixel offset directly for CSS transforms
+      controlsContainer.style.transform = `translateX(calc(-50% + ${offsetPixels / 2}px))`;
+    }
   }
 
   /**
@@ -307,7 +390,6 @@ class SceneManager {
     void (this._renderQueue = this._renderQueue.then(
       () => {
         if (this._isRendering) {
-          console.warn('Render already in progress, skipping.');
           return;
         }
         
@@ -375,6 +457,9 @@ class SceneManager {
       // Play pulse animation once after initial render
       this.pulseAllSections();
 			
+			// Notify the demo player that the render is complete
+      document.dispatchEvent(new CustomEvent('demo:renderComplete'));
+			
 			// Auto-fit camera to new geometry
       const idealRadius = this.calculateIdealRadius();
       this._camera.radius = idealRadius;
@@ -426,6 +511,24 @@ class SceneManager {
   }
 	
 	public clearSelection(): void {
+    this._overlayMeshes.forEach(overlay => this._fadeOutAndDispose(overlay));
+    this._overlayMeshes.clear();
+    this._selectedSectionIndices.clear();
+  }
+	
+	public clearScene(): void {
+    // Dispose root node and all children
+    if (this._rootNode) {
+      this._rootNode.dispose();
+      this._rootNode = null;
+    }
+    
+    // Clear all mesh/material references
+    this._sectionMeshes = [];
+    this._sectionMaterials.forEach(mat => mat.dispose());
+    this._sectionMaterials = [];
+    
+    // Clear overlays
     this._overlayMeshes.forEach(overlay => this._fadeOutAndDispose(overlay));
     this._overlayMeshes.clear();
     this._selectedSectionIndices.clear();
@@ -1111,13 +1214,42 @@ class SceneManager {
     // Return radius with comfortable margin (1.5x diagonal)
     return diagonal * 1.5;
   }
+	
+	public startCinematicRotation(onAnimationEnd?: () => void): void {
+    const duration = 10000; // 10 seconds for a slow, cinematic feel
+    const fps = 60;
+    const totalFrames = (duration / 1000) * fps;
+
+    const animAlpha = new Animation(
+      'cinematicAlpha', 'alpha', fps,
+      Animation.ANIMATIONTYPE_FLOAT,
+      Animation.ANIMATIONLOOPMODE_CONSTANT // Don't loop
+    );
+
+    animAlpha.setKeys([
+      { frame: 0, value: this._camera.alpha },
+      { frame: totalFrames, value: this._camera.alpha + (2 * Math.PI) }
+    ]);
+    
+    // Apply easing for a smoother start and end
+    const easingFunction = new CubicEase();
+    easingFunction.setEasingMode(EasingFunction.EASINGMODE_EASEINOUT);
+    animAlpha.setEasingFunction(easingFunction);
+
+    this._camera.animations = [animAlpha];
+    const animatable = this._scene.beginAnimation(this._camera, 0, totalFrames, false); // `false` to not loop
+
+    if (onAnimationEnd) {
+      animatable.onAnimationEnd = onAnimationEnd;
+    }
+  }
   
   public resetCamera(): void {
     // Target values
     const targetAlpha = Math.PI / 2;
     const targetBeta = Math.PI / 2;
     const targetRadius = this.calculateIdealRadius();
-    const targetPosition = Vector3.Zero();
+    const targetPosition = new Vector3(this._cameraOffset, 0, 0);
     
     // Animation duration
     const duration = 1000;
@@ -1172,8 +1304,8 @@ class SceneManager {
       0, totalFrames, false
     );
   }
-
-  public updateComposition(_newState: CompositionStateDTO): void {
+	
+	public updateComposition(_newState: CompositionStateDTO): void {
     // Dispose of any previous meshes
     if (this._finalMesh) {
       this._finalMesh.dispose();
@@ -1201,30 +1333,26 @@ class SceneManager {
 document.addEventListener('DOMContentLoaded', () => {
   void (async () => {
     try {
-      // Initialize UIEngine first - loads config from backend
       const uiEngine = new UIEngine();
       await uiEngine.loadConfig();
 			
 			// Make UIEngine accessible for grain direction updates from controller
       window._uiEngineInstance = uiEngine;
-      window.uiEngine = uiEngine; // For debugging/diagnostics
+      window.uiEngine = uiEngine;
       
-      // Create the facade and controller
       const facade = new WaveformDesignerFacade();
       const controller = new ApplicationController(facade);
 			window.controller = controller;
       window.audioCache = controller.audioCache;
-      await controller.initialize();	
+      await controller.initialize();
+			
+			window.__controller__ = controller;
       
-      // Create the scene manager
       const sceneManager = SceneManager.create('renderCanvas', facade);
       window.sceneManager = sceneManager;
       
-      // Register scene manager with controller
       controller.registerSceneManager(sceneManager);
       
-      // Preload default textures (walnut, cherry, maple) on page load
-      // This ensures instant rendering when user uploads audio
       try {
         const woodConfig = controller.getWoodMaterialsConfig();
         sceneManager.preloadDefaultTextures(woodConfig);
@@ -1232,12 +1360,29 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('[main.ts] Could not preload textures - config not loaded yet:', error);
       }
       
-      // Generic UI initialization
       await initializeUI(uiEngine, controller, sceneManager);
+			
+			// Initialize tour modal (first-visit onboarding)
+      const shouldShowTourModal = TourModal.shouldShow();
+      if (shouldShowTourModal) {
+        const tourModal = new TourModal(
+          () => {
+            // Start tour callback
+            const demoPlayer = window.demoPlayer;
+            if (demoPlayer) {
+              demoPlayer.start();
+            }
+          },
+          () => {
+            // Dismiss callback (no action needed)
+          }
+        );
+        tourModal.show();
+      }
       
-      // Trigger initial render if composition has amplitudes
+      // Skip cached rendering if tour modal is showing (tour needs bare state)
       const initialState = controller.getState();
-      if (initialState.composition.processed_amplitudes.length > 0) {
+      if (!shouldShowTourModal && initialState.composition.processed_amplitudes.length > 0) {
         const response = await fetch('http://localhost:8000/geometry/csg-data', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1257,6 +1402,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
     } catch (error: unknown) {
+      console.error('[MAIN] === INITIALIZATION FAILED ===');
       console.error('Initialization error:', error);
     }
   })();
@@ -1287,35 +1433,57 @@ async function initializeUI(
   // 5. Bind camera reset button
   bindCameraResetButton(sceneManager);
   
-  // 5b. Bind zoom toggle button
+  // 6. Bind zoom toggle button
   bindZoomToggleButton(sceneManager);
   
-  // 6. Bind new file upload button
+  // 7. Bind new file upload button
   bindNewFileButton(controller);
+	
+  // 8. Subscribe to state changes to keep UI elements in sync
+  controller.subscribe((newState) => {
+    syncUIFromState(uiEngine, newState.composition);
+    
+    // It's also important to re-run conditional logic after a state sync.
+    updateConditionalUI(uiEngine, newState.composition);
+  });	
   
-  // 7. Bind select all checkbox
+  // 9. Bind select all checkbox
   bindSelectAllCheckbox(controller, sceneManager);
+	
+	// 10. Bind start tour button
+  bindStartTourButton(uiEngine, controller, sceneManager);
   
-  // 8. Setup upload interface
+  // 11. Setup upload interface
   setupUploadInterface(uiEngine, controller);
   
-  // 9. Initialize processing overlay
+  // 12. Initialize processing overlay
   new ProcessingOverlay('processingOverlay', controller);
+	
+	// 13 Initialize left panel renderer
+  const { LeftPanelRenderer } = await import('./components/LeftPanelRenderer');
+  const leftPanelRenderer = new LeftPanelRenderer(
+    'left-main-panel',
+    (categoryId) => controller.handleCategorySelected(categoryId)
+  );
+  leftPanelRenderer.render();
   
-  // 10. Subscribe to state changes (only sync UI on phase transitions, not every change)
+  // 14 Restore UI from persisted state (must happen after buttons rendered)
+  controller.restoreUIFromState();
+  
+  // 15. Subscribe to state changes (only sync UI on phase transitions, not every change)
   controller.subscribe((state) => {
     handlePhaseTransition(uiEngine, state, controller);
   });
   
-  // 11. Initial phase transition (only if restoring non-upload phase)
+  // 16. Initial phase transition (only if restoring non-upload phase)
   if (initialState.phase !== 'upload') {
     handlePhaseTransition(uiEngine, initialState, controller);
   }
   
-  // 12. Initial conditional logic (like disabling n=3 for rectangular)
+  // 17. Initial conditional logic (like disabling n=3 for rectangular)
   updateConditionalUI(uiEngine, initialState.composition);
 	
-	// 13. Ensure all sections options are visible (fix n=3 regression)
+	// 18. Ensure all sections options are visible (fix n=3 regression)
   ensureSectionsOptionsVisible();
 }
 
@@ -1774,6 +1942,7 @@ function updateConditionalUI(uiEngine: UIEngine, compositionOrSnapshot: Partial<
     shape: compositionOrSnapshot.frame_design?.shape ?? (compositionOrSnapshot as Record<string, unknown>).shape,
     number_sections: compositionOrSnapshot.frame_design?.number_sections ?? (compositionOrSnapshot as Record<string, unknown>).number_sections,
     finish_x: compositionOrSnapshot.frame_design?.finish_x ?? (compositionOrSnapshot as Record<string, unknown>).finish_x,
+    slot_style: compositionOrSnapshot.pattern_settings?.slot_style ?? (compositionOrSnapshot as Record<string, unknown>).slot_style,
   };
 
   uiEngine.updateConditionalOptions(currentState);
@@ -1792,6 +1961,37 @@ function ensureSectionsOptionsVisible(): void {
   for (const option of sectionsEl.options) {
     option.style.display = '';
   }
+}
+
+/**
+ * Bind the "Start Tour" button to initialize and run the demo.
+ */
+function bindStartTourButton(
+  _uiEngine: UIEngine, 
+  controller: ApplicationController,
+  sceneManager: SceneManager
+): void {
+  const startButton = document.getElementById('startTourButton');
+  if (!startButton) return;
+
+  const demoPlayer = new DemoPlayer(controller, sceneManager);
+  window.demoPlayer = demoPlayer; // Expose for debugging
+
+  startButton.addEventListener('click', () => {
+    const confirmModal = new ConfirmModal({
+      title: 'Start guided tour?',
+      message: 'This will reset your current design.',
+      primaryAction: 'Start Tour',
+      secondaryAction: 'Cancel',
+      onConfirm: () => {
+        demoPlayer.start();
+      },
+      onCancel: () => {
+        // User cancelled, do nothing
+      }
+    });
+    confirmModal.show();
+  });
 }
 
 /**

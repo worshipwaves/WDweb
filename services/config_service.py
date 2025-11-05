@@ -1,26 +1,31 @@
 """Configuration service for loading default application state."""
-
 import json
 from pathlib import Path
-
 from services.dtos import CompositionStateDTO
-
 
 class ConfigService:
     """Service for managing application configuration and default state."""
     
-    def __init__(self, config_path: Path) -> None:
+    def __init__(self, config_dir: Path) -> None:
         """Initialize the configuration service.
         
         Args:
-            config_path: Path to the JSON configuration file.
+            config_dir: Path to the configuration directory.
         """
-        with open(config_path, 'r') as f:
-            config_data = json.load(f)
+        # Load composition defaults for DTO
+        with open(config_dir / 'composition_defaults.json', 'r') as f:
+            composition_data = json.load(f)
+        self._default_state = CompositionStateDTO(**composition_data)
         
-        # Store raw config data for accessing non-DTO fields like wood_materials
-        self._config_data = config_data
-        self._default_state = CompositionStateDTO(**config_data)
+        # Load other configs
+        with open(config_dir / 'wood_materials.json', 'r') as f:
+            self._wood_materials = json.load(f)
+        
+        with open(config_dir / 'archetypes.json', 'r') as f:
+            self._archetypes = json.load(f)
+        
+        with open(config_dir / 'ui_config.json', 'r') as f:
+            self._ui_config = json.load(f)
     
     def get_default_state(self) -> CompositionStateDTO:
         """Return the default application state.
@@ -36,4 +41,28 @@ class ConfigService:
         Returns:
             Dictionary with wood materials configuration.
         """
-        return self._config_data.get('wood_materials', {})    
+        return self._wood_materials
+    
+    def get_archetypes(self) -> dict:
+        """Return archetype definitions.
+        
+        Returns:
+            Dictionary with archetype definitions.
+        """
+        return self._archetypes
+    
+    def get_ui_config(self) -> dict:
+        """Return UI configuration.
+        
+        Returns:
+            Dictionary with UI configuration.
+        """
+        return self._ui_config
+    
+    def get_composition_defaults(self) -> dict:
+        """Return composition defaults as dict.
+        
+        Returns:
+            Dictionary with composition default values.
+        """
+        return self._default_state.model_dump()

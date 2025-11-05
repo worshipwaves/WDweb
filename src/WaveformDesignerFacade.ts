@@ -18,7 +18,6 @@ import {
   CompositionStateDTOSchema,
   AudioProcessResponseSchema,
   SmartCsgResponseSchema,
-  StylePresetSchema,
   ApplicationStateSchema,
   type CompositionStateDTO,
   type AudioProcessResponse,
@@ -48,7 +47,10 @@ export type Action =
         audioSessionId?: string 
       };
     }
-  | { type: 'SHOW_HINT' };
+  | { type: 'SHOW_HINT' }
+  | { type: 'CATEGORY_SELECTED'; payload: string }
+  | { type: 'SUBCATEGORY_SELECTED'; payload: { category: string; subcategory: string } }
+  | { type: 'FILTER_CHANGED'; payload: { category: string; subcategory: string; filterId: string; selections: string[] } };
 	
 
 export class WaveformDesignerFacade {
@@ -58,35 +60,11 @@ export class WaveformDesignerFacade {
   /**
    * Initialize facade by loading style presets from backend config
    */
-  async initialize(): Promise<void> {
-    const response = await fetch(`${this.apiBase}/api/config/default-parameters`);
-    if (!response.ok) {
-      throw new Error('Failed to load default parameters');
-    }
-    
-    const data = await response.json() as unknown;
-    
-    // Validate structure
-    if (typeof data !== 'object' || data === null || !('style_presets' in data)) {
-      throw new Error('Invalid config structure: missing style_presets');
-    }
-    
-    const config = data as { style_presets: unknown };
-    
-    // Validate each preset
-    if (!Array.isArray(config.style_presets)) {
-      throw new Error('style_presets must be an array');
-    }
-    
-    this._stylePresets = config.style_presets.map((preset: unknown) => {
-      const result = StylePresetSchema.safeParse(preset);
-      if (!result.success) {
-        console.error('Invalid style preset:', result.error.format());
-        throw new Error('Style preset validation failed');
-      }
-      return result.data;
-    });
-  }
+  initialize(): void {
+  // Style presets deprecated - using archetypes instead
+  // Archetypes are loaded by ApplicationController
+  this._stylePresets = [];
+}
   
   /**
    * Process uploaded audio file through backend
@@ -155,16 +133,20 @@ export class WaveformDesignerFacade {
         previousMaxAmplitude: null,
         audioSessionId: null,
       },
-      ui: {
-        leftPanelVisible: false,
-        rightPanelVisible: false,
-        selectedCategory: null,
-        selectedOption: null,
-        currentStyleIndex: 0,
-        isAutoPlaying: false,
-        showHint: false,
-        renderQuality: 'high'
-      },
+			ui: {
+				leftPanelVisible: true,
+				rightPanelVisible: true,
+				selectedCategory: null,
+				selectedOption: null,
+				currentStyleIndex: 0,
+				isAutoPlaying: false,
+				showHint: false,
+				renderQuality: 'medium',
+				activeCategory: null,
+				activeSubcategory: null,
+				subcategoryHistory: {},
+				filterSelections: {}
+			},
       processing: {
         stage: 'idle',
         progress: 0
@@ -273,6 +255,51 @@ export class WaveformDesignerFacade {
           ...state,
           composition: action.payload
         };
+        
+      case 'CATEGORY_SELECTED': {
+        const categoryId = action.payload;
+        const lastSubcategory = state.ui.subcategoryHistory[categoryId] || null;
+        return {
+          ...state,
+          ui: {
+            ...state.ui,
+            activeCategory: categoryId,
+            activeSubcategory: lastSubcategory,
+            filterSelections: {}
+          }
+        };
+      }
+        
+      case 'SUBCATEGORY_SELECTED':
+        return {
+          ...state,
+          ui: {
+            ...state.ui,
+            activeCategory: action.payload.category,
+            activeSubcategory: action.payload.subcategory,
+            subcategoryHistory: {
+              ...state.ui.subcategoryHistory,
+              [action.payload.category]: action.payload.subcategory
+            }
+          }
+        };
+        
+      case 'FILTER_CHANGED': {
+        const key = `${action.payload.category}_${action.payload.subcategory}`;
+        return {
+          ...state,
+          ui: {
+            ...state.ui,
+            filterSelections: {
+              ...state.ui.filterSelections,
+              [key]: {
+                ...state.ui.filterSelections[key],
+                [action.payload.filterId]: action.payload.selections
+              }
+            }
+          }
+        };
+      }
         
       default:
         return state;
