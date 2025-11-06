@@ -18,9 +18,11 @@ import { PerformanceMonitor } from './PerformanceMonitor';
 import type { CategoriesConfig, FilterIconGroup, ThumbnailConfig } from './types/PanelTypes';
 import {
   ApplicationState,
+  BackgroundsConfigSchema,
   CompositionStateDTO,
   WoodMaterialsConfigSchema,
   type AudioProcessResponse,
+  type BackgroundsConfig,
   type CSGDataResponse,
   type SectionMaterial,
   type WoodMaterialsConfig,
@@ -156,6 +158,7 @@ export class ApplicationController {
 	private _audioCache: AudioCacheService;
   private _woodMaterialsConfig: WoodMaterialsConfig | null = null;
   private _selectedSectionIndices: Set<number> = new Set();
+	private _backgroundsConfig: BackgroundsConfig | null = null;
   private _idleTextureLoader: unknown = null; // IdleTextureLoader instance
 	
 	// Four-panel navigation configuration
@@ -247,6 +250,12 @@ export class ApplicationController {
       this._woodMaterialsConfig = await fetchAndValidate<WoodMaterialsConfig>(
         'http://localhost:8000/api/config/wood-materials',
         WoodMaterialsConfigSchema
+      );
+			
+			// Load backgrounds configuration
+      this._backgroundsConfig = await fetchAndValidate<BackgroundsConfig>(
+        'http://localhost:8000/api/config/backgrounds',
+        BackgroundsConfigSchema
       );
 			
 			// Load thumbnail and categories configuration
@@ -431,6 +440,18 @@ export class ApplicationController {
         }).catch((error: unknown) => {
           console.error('[Controller] Background texture loading failed:', error);
         });
+      }
+    }
+    
+    // Apply current background from state
+    if (this._state && this._backgroundsConfig && 'changeBackground' in sceneManager) {
+      const bgState = this._state.ui.currentBackground;
+      const category = this._backgroundsConfig.categories[bgState.type];
+      const background = category.find(bg => bg.id === bgState.id);
+      
+      if (background) {
+        (sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string) => void })
+          .changeBackground(bgState.type, bgState.id, background.rgb, background.path);
       }
     }
   }	
@@ -757,6 +778,40 @@ export class ApplicationController {
   }
 	
 	/**
+   * Handle background selection from UI
+   */
+  handleBackgroundSelected(backgroundId: string, type: 'paint' | 'accent' | 'rooms'): void {
+    if (!this._backgroundsConfig || !this._sceneManager) return;
+    
+    const category = this._backgroundsConfig.categories[type];
+    const background = category.find(bg => bg.id === backgroundId);
+    
+    if (!background) {
+      console.error(`[Controller] Background not found: ${backgroundId}`);
+      return;
+    }
+    
+    // Update state
+    if (this._state) {
+      this._state = {
+        ...this._state,
+        ui: {
+          ...this._state.ui,
+          currentBackground: { type, id: backgroundId }
+        }
+      };
+      this._facade.persistState(this._state);
+      this.notifySubscribers();
+    }
+    
+    // Apply to scene
+    if ('changeBackground' in this._sceneManager) {
+      (this._sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string) => void })
+        .changeBackground(type, backgroundId, background.rgb, background.path);
+    }
+  }
+	
+	/**
    * Render Left Secondary Panel without dispatching actions
    * Pure rendering method for state restoration
    * @private
@@ -789,6 +844,15 @@ export class ApplicationController {
         this._leftSecondaryPanel.innerHTML = '';
         this._leftSecondaryPanel.appendChild(panel.render());
         this._leftSecondaryPanel.style.display = 'block';
+        
+        // Position left-secondary based on left-main's actual width
+        const leftMainPanel = document.getElementById('left-main-panel');
+        if (leftMainPanel) {
+          const gap = 16; // Gap between panels
+          const leftPosition = leftMainPanel.offsetLeft + leftMainPanel.offsetWidth + gap;
+          this._leftSecondaryPanel.style.left = `${leftPosition}px`;
+        }
+        
         this._leftSecondaryPanel.classList.add('visible');
         
         requestAnimationFrame(() => {
@@ -1277,6 +1341,47 @@ export class ApplicationController {
           });
           break;
         }
+				
+				case 'thumbnail_grid': {
+					// Handle backgrounds category grids
+					if (this._state?.ui.activeCategory === 'backgrounds' && this._backgroundsConfig) {
+						const subcategoryId = this._state.ui.activeSubcategory;
+						const type = subcategoryId as 'paint' | 'accent' | 'rooms';
+						const items = this._backgroundsConfig.categories[type];
+						
+						const thumbnailItems: ThumbnailItem[] = items.map(item => {
+							if (item.rgb) {
+								// Paint color - render as color swatch
+								return {
+									id: item.id,
+									label: item.name,
+									thumbnailUrl: '',
+									disabled: false,
+									tooltip: item.description,
+									rgb: item.rgb
+								};
+							} else {
+								// Image background
+								return {
+									id: item.id,
+									label: item.name,
+									thumbnailUrl: item.path || '',
+									disabled: false,
+									tooltip: item.description
+								};
+							}
+						});
+						
+						const grid = new ThumbnailGrid(
+							thumbnailItems,
+							(id: string) => this.handleBackgroundSelected(id, type),
+							this._state.ui.currentBackground.id
+						);
+						
+						panelContent.appendChild(grid.render());
+					}
+					break;
+				}
         
         case 'tour_launcher': {
           void import('./components/TourLauncherPanel').then(({ TourLauncherPanel }) => {

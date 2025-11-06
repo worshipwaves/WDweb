@@ -28,7 +28,7 @@ export class LeftPanelRenderer {
   
   render(): void {
     this._container.innerHTML = `
-      <div class="panel-content">
+      <div class="panel-body">
         <div class="category-list">
           ${CATEGORIES.map(cat => this._renderCategory(cat)).join('')}
         </div>

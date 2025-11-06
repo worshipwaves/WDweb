@@ -1,0 +1,134 @@
+{
+  "default_background": {
+    "type": "paint",
+    "id": "agreeable-gray"
+  },
+  "categories": {
+    "paint": [
+      {
+        "id": "agreeable-gray",
+        "name": "Agreeable Gray",
+        "rgb": [208, 205, 200],
+        "description": "Warm, versatile greige"
+      },
+      {
+        "id": "repose-gray",
+        "name": "Repose Gray",
+        "rgb": [203, 201, 196],
+        "description": "Cool, light gray"
+      },
+      {
+        "id": "alabaster",
+        "name": "Alabaster",
+        "rgb": [237, 234, 224],
+        "description": "Soft, warm white"
+      },
+      {
+        "id": "pure-white",
+        "name": "Pure White",
+        "rgb": [247, 246, 243],
+        "description": "Clean, bright white"
+      },
+      {
+        "id": "tricorn-black",
+        "name": "Tricorn Black",
+        "rgb": [58, 59, 60],
+        "description": "Deep, rich black"
+      },
+      {
+        "id": "requisite-gray",
+        "name": "Requisite Gray",
+        "rgb": [189, 186, 179],
+        "description": "Classic medium gray"
+      },
+      {
+        "id": "sea-salt",
+        "name": "Sea Salt",
+        "rgb": [213, 221, 217],
+        "description": "Soft green-gray"
+      },
+      {
+        "id": "accessible-beige",
+        "name": "Accessible Beige",
+        "rgb": [217, 209, 196],
+        "description": "Warm, neutral beige"
+      },
+      {
+        "id": "mindful-gray",
+        "name": "Mindful Gray",
+        "rgb": [188, 185, 178],
+        "description": "Warm taupe-gray"
+      },
+      {
+        "id": "colonnade-gray",
+        "name": "Colonnade Gray",
+        "rgb": [190, 189, 183],
+        "description": "Soft, neutral gray"
+      }
+    ],
+    "accent": [
+      {
+        "id": "brick-wall",
+        "name": "Brick Wall",
+        "path": "/assets/backgrounds/accent/brick.jpg",
+        "description": "Rustic exposed brick"
+      },
+      {
+        "id": "wood-planks",
+        "name": "Wood Planks",
+        "path": "/assets/backgrounds/accent/wood_planks.jpg",
+        "description": "Warm wooden accent"
+      },
+      {
+        "id": "concrete",
+        "name": "Concrete",
+        "path": "/assets/backgrounds/accent/concrete.jpg",
+        "description": "Modern industrial look"
+      },
+      {
+        "id": "stucco",
+        "name": "Stucco",
+        "path": "/assets/backgrounds/accent/stucco.png",
+        "description": "Textured plaster finish"
+      }
+    ],
+    "rooms": [
+      {
+        "id": "living-room-modern",
+        "name": "Modern Living Room",
+        "path": "/assets/backgrounds/rooms/living_modern.png",
+        "description": "Contemporary living space"
+      },
+      {
+        "id": "living-room-classic",
+        "name": "Classic Living Room",
+        "path": "/assets/backgrounds/rooms/living_classic.jpg",
+        "description": "Traditional living area"
+      },
+      {
+        "id": "dining-room",
+        "name": "Dining Room",
+        "path": "/assets/backgrounds/rooms/dining.jpg",
+        "description": "Elegant dining space"
+      },
+      {
+        "id": "bedroom",
+        "name": "Bedroom",
+        "path": "/assets/backgrounds/rooms/bedroom.jpg",
+        "description": "Serene bedroom setting"
+      },
+      {
+        "id": "hallway",
+        "name": "Hallway",
+        "path": "/assets/backgrounds/rooms/hallway.jpg",
+        "description": "Gallery-style hallway"
+      },
+      {
+        "id": "stairway",
+        "name": "Stairway",
+        "path": "/assets/backgrounds/rooms/stairway.jpg",
+        "description": "Architectural staircase"
+      }
+    ]
+  }
+}

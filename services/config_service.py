@@ -26,6 +26,9 @@ class ConfigService:
         
         with open(config_dir / 'ui_config.json', 'r') as f:
             self._ui_config = json.load(f)
+            
+        with open(config_dir / 'backgrounds_config.json', 'r') as f:
+            self._backgrounds = json.load(f)    
     
     def get_default_state(self) -> CompositionStateDTO:
         """Return the default application state.
@@ -66,3 +69,11 @@ class ConfigService:
             Dictionary with composition default values.
         """
         return self._default_state.model_dump()
+        
+    def get_backgrounds_config(self) -> dict:
+        """Return backgrounds configuration.
+        
+        Returns:
+            Dictionary with backgrounds configuration.
+        """
+        return self._backgrounds    

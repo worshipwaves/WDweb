@@ -90,6 +90,13 @@ def get_wood_materials_config():
     Get wood materials configuration including species catalog and texture settings.
     """
     return config_service.get_wood_materials_config()
+    
+@app.get("/api/config/backgrounds")
+def get_backgrounds_config():
+    """
+    Get backgrounds configuration including paint colors, accent walls, and room settings.
+    """
+    return config_service.get_backgrounds_config()    
 
 @app.get("/composition/default", response_model=CompositionStateDTO)
 def get_default_composition():

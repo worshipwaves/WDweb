@@ -143,9 +143,13 @@ export class WaveformDesignerFacade {
 				showHint: false,
 				renderQuality: 'medium',
 				activeCategory: null,
-				activeSubcategory: null,
-				subcategoryHistory: {},
-				filterSelections: {}
+        activeSubcategory: null,
+        subcategoryHistory: {},
+        filterSelections: {},
+        currentBackground: {
+          type: 'paint',
+          id: 'agreeable-gray'
+        }
 			},
       processing: {
         stage: 'idle',

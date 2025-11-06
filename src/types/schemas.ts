@@ -39,6 +39,29 @@ export const WoodMaterialsConfigSchema = z.object({
 
 export type WoodMaterialsConfig = z.infer<typeof WoodMaterialsConfigSchema>;
 
+export const BackgroundItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  rgb: z.array(z.number()).optional(),
+  path: z.string().optional(),
+  description: z.string()
+}).strict();
+
+export const BackgroundsConfigSchema = z.object({
+  default_background: z.object({
+    type: z.enum(['paint', 'accent', 'rooms']),
+    id: z.string()
+  }),
+  categories: z.object({
+    paint: z.array(BackgroundItemSchema),
+    accent: z.array(BackgroundItemSchema),
+    rooms: z.array(BackgroundItemSchema)
+  })
+}).strict();
+
+export type BackgroundItem = z.infer<typeof BackgroundItemSchema>;
+export type BackgroundsConfig = z.infer<typeof BackgroundsConfigSchema>;
+
 export const StylePresetSchema = z.object({
   id: z.string(),
   sections: z.number().int().min(1).max(4),
@@ -309,6 +332,10 @@ export const UIStateSchema = z.object({
   activeSubcategory: z.string().nullable(),
   subcategoryHistory: z.record(z.string(), z.string()), // category -> last subcategory
   filterSelections: z.record(z.string(), z.record(z.string(), z.array(z.string()))),
+  currentBackground: z.object({
+    type: z.enum(['paint', 'accent', 'rooms']),
+    id: z.string()
+  })
 });
 
 export type UIState = z.infer<typeof UIStateSchema>;

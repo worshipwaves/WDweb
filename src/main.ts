@@ -6,6 +6,8 @@ import {
   DirectionalLight,
   Vector3, 
   Color3,
+  Color4,
+  Tools,
   Mesh,
   MeshBuilder,
   StandardMaterial,
@@ -238,7 +240,7 @@ class SceneManager {
 
     // Set camera limits for good mobile UX
     camera.lowerRadiusLimit = 20;
-    camera.upperRadiusLimit = 100;
+    camera.upperRadiusLimit = 300;
     camera.lowerBetaLimit = 0.1;
     camera.upperBetaLimit = Math.PI - 0.1;
 
@@ -294,11 +296,47 @@ class SceneManager {
     // Use Layer for 2D background image (standard Babylon.js approach)
     this._backgroundLayer = new Layer(
       'backgroundLayer',
-      '/assets/backgrounds/stucco.jpg',
+      '/assets/backgrounds/concrete_wall5.png',
       this._scene,
       true
     );
   }
+	
+	/**
+	 * Change scene background to paint color or image
+	 * @param type - 'paint', 'accent', or 'rooms'
+	 * @param id - Background identifier
+	 * @param rgb - RGB values for paint colors (optional)
+	 * @param path - Image path for accent/room backgrounds (optional)
+	 */
+	public changeBackground(type: string, id: string, rgb?: number[], path?: string): void {
+		if (type === 'paint' && rgb) {
+			// Dispose existing layer if present
+			if (this._backgroundLayer) {
+				this._backgroundLayer.dispose();
+				this._backgroundLayer = null;
+			}
+			
+			// Set solid color background
+			this._scene.clearColor = new Color3(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255).toColor4();
+		} else if ((type === 'accent' || type === 'rooms') && path) {
+			// Dispose existing layer if present
+			if (this._backgroundLayer) {
+				this._backgroundLayer.dispose();
+			}
+			
+			// Reset clear color to neutral
+			this._scene.clearColor = new Color3(0.9, 0.88, 0.86).toColor4();
+			
+			// Create new image layer
+			this._backgroundLayer = new Layer(
+				'backgroundLayer',
+				path,
+				this._scene,
+				true
+			);
+		}
+	}
 	
 	private checkLayoutMode(): void {
     const DESKTOP_BREAKPOINT = 768;
@@ -535,6 +573,90 @@ class SceneManager {
   
   public getCurrentCSGData(): SmartCsgResponse | null {
     return this._currentCSGData ?? null;
+  }
+	
+	public async captureArchetypeThumbnail(size: number = 1024): Promise<void> {
+    // Save original canvas state
+    const originalWidth = this._canvas.width;
+    const originalHeight = this._canvas.height;
+    const originalStyleWidth = this._canvas.style.width;
+    const originalStyleHeight = this._canvas.style.height;
+    
+    // Force square canvas dimensions (both internal resolution and display size)
+    this._canvas.width = size;
+    this._canvas.height = size;
+    this._canvas.style.width = `${size}px`;
+    this._canvas.style.height = `${size}px`;
+    this._engine.resize();
+    
+    // Hide background layer
+    if (this._backgroundLayer) {
+      this._backgroundLayer.isEnabled = false;
+    }
+    
+    // Set transparent background
+    const originalColor = this._scene.clearColor;
+    this._scene.clearColor = new Color4(0, 0, 0, 0);
+    
+    // Save camera state
+    const originalAlpha = this._camera.alpha;
+    const originalBeta = this._camera.beta;
+    const originalRadius = this._camera.radius;
+    const originalTargetX = this._camera.target.x;
+    const originalTargetY = this._camera.target.y;
+    
+    // Center camera on panel
+    this._camera.alpha = Math.PI / 2;
+    this._camera.beta = Math.PI / 2;
+    this._camera.radius = 62;
+    this._camera.target.x = 0;
+    this._camera.target.y = 0;
+    
+    // Force multiple renders to stabilize
+    this._scene.render();
+    await new Promise(resolve => setTimeout(resolve, 100));
+    this._scene.render();
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Capture from canvas
+    this._canvas.toBlob((blob) => {
+      if (!blob) return;
+      
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const state = window.controller?.getState();
+      
+      if (state) {
+        const archetype = `${state.composition.frame_design.shape}_${state.composition.pattern_settings.slot_style}_n${state.composition.frame_design.number_sections}`;
+        link.download = `${archetype}.png`;
+      } else {
+        link.download = 'archetype.png';
+      }
+      
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+      
+      // Restore everything after download initiated
+      this._scene.clearColor = originalColor;
+      this._camera.alpha = originalAlpha;
+      this._camera.beta = originalBeta;
+      this._camera.radius = originalRadius;
+      this._camera.target.x = originalTargetX;
+      this._camera.target.y = originalTargetY;
+      
+      if (this._backgroundLayer) {
+        this._backgroundLayer.isEnabled = true;
+      }
+      
+      // Restore canvas dimensions
+      this._canvas.width = originalWidth;
+      this._canvas.height = originalHeight;
+      this._canvas.style.width = originalStyleWidth;
+      this._canvas.style.height = originalStyleHeight;
+      this._engine.resize();
+      this._scene.render();
+    }, 'image/png');
   }
   
   private setupSectionInteraction(): void {
@@ -1360,6 +1482,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       await initializeUI(uiEngine, controller, sceneManager);
+      
+      // Initialize bottom control bar
+      initializeBottomControls(sceneManager);
 			
 			// Initialize tour modal (first-visit onboarding)
       const shouldShowTourModal = TourModal.shouldShow();
@@ -1408,6 +1533,54 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
+ * Initialize bottom control bar buttons
+ */
+function initializeBottomControls(sceneManager: ReturnType<typeof SceneManager.create>): void {
+  document.getElementById('resetViewBtn')?.addEventListener('click', () => {
+    if ('resetCamera' in sceneManager && typeof sceneManager.resetCamera === 'function') {
+      sceneManager.resetCamera();
+    }
+  });
+
+  document.getElementById('zoomInBtn')?.addEventListener('click', () => {
+    if ('_camera' in sceneManager) {
+      const camera = sceneManager._camera as { radius: number; lowerRadiusLimit?: number };
+      if (camera && typeof camera.radius === 'number') {
+        const minRadius = camera.lowerRadiusLimit || 1;
+        camera.radius = Math.max(camera.radius * 0.8, minRadius);
+      }
+    }
+  });
+  document.getElementById('zoomOutBtn')?.addEventListener('click', () => {
+    if ('_camera' in sceneManager) {
+      const camera = sceneManager._camera as { radius: number; upperRadiusLimit?: number };
+      if (camera && typeof camera.radius === 'number') {
+        const maxRadius = camera.upperRadiusLimit || 1000;
+        camera.radius = Math.min(camera.radius * 1.2, maxRadius);
+      }
+    }
+  });
+
+  document.getElementById('fullscreenBtn')?.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  });
+
+  let menusHidden = false;
+  document.getElementById('toggleMenusBtn')?.addEventListener('click', () => {
+    menusHidden = !menusHidden;
+    document.body.classList.toggle('menus-hidden', menusHidden);
+    const btn = document.getElementById('toggleMenusBtn');
+    if (btn) {
+      btn.title = menusHidden ? 'Show Menus' : 'Hide Menus';
+    }
+  });
+}
+
+/**
  * Generic UI initialization - no hardcoded element references
  */
 async function initializeUI(
@@ -1417,25 +1590,19 @@ async function initializeUI(
 ): Promise<void> {
   const initialState = controller.getState();
   
-  // 1. Set up dynamic options first (wood species from endpoint)
+  // Set up dynamic options first (wood species from endpoint)
   await setupDynamicOptions(uiEngine);
   
-  // 2. Then populate all UI elements from composition state
+  // Then populate all UI elements from composition state
   syncUIFromState(uiEngine, initialState.composition);
   
-  // 3. Bind all element change listeners generically
+  // Bind all element change listeners generically
   bindElementListeners(uiEngine, controller, sceneManager);
   
-  // 4. Bind update button
+  // Bind update button
   bindUpdateButton(uiEngine, controller, sceneManager);
-  
-  // 5. Bind camera reset button
-  bindCameraResetButton(sceneManager);
-  
-  // 6. Bind zoom toggle button
-  bindZoomToggleButton(sceneManager);
 	
-  // 7. Subscribe to state changes to keep UI elements in sync
+  // Subscribe to state changes to keep UI elements in sync
   controller.subscribe((newState) => {
     syncUIFromState(uiEngine, newState.composition);
     
@@ -1443,16 +1610,16 @@ async function initializeUI(
     updateConditionalUI(uiEngine, newState.composition);
   });	
   
-  // 8. Bind select all checkbox
+  // Bind select all checkbox
   bindSelectAllCheckbox(controller, sceneManager);
   
-  // 9. Setup upload interface
+  // Setup upload interface
   setupUploadInterface(uiEngine, controller);
   
-  // 10. Initialize processing overlay
+  // Initialize processing overlay
   new ProcessingOverlay('processingOverlay', controller);
 	
-	// 11 Initialize left panel renderer
+	// Initialize left panel renderer
   const { LeftPanelRenderer } = await import('./components/LeftPanelRenderer');
   const leftPanelRenderer = new LeftPanelRenderer(
     'left-main-panel',
@@ -1460,23 +1627,23 @@ async function initializeUI(
   );
   leftPanelRenderer.render();
   
-  // 12 Restore UI from persisted state (must happen after buttons rendered)
+  // Restore UI from persisted state (must happen after buttons rendered)
   controller.restoreUIFromState();
   
-  // 13. Subscribe to state changes (only sync UI on phase transitions, not every change)
+  // Subscribe to state changes (only sync UI on phase transitions, not every change)
   controller.subscribe((state) => {
     handlePhaseTransition(uiEngine, state, controller);
   });
   
-  // 14. Initial phase transition (only if restoring non-upload phase)
+  // Initial phase transition (only if restoring non-upload phase)
   if (initialState.phase !== 'upload') {
     handlePhaseTransition(uiEngine, initialState, controller);
   }
   
-  // 15. Initial conditional logic (like disabling n=3 for rectangular)
+  // Initial conditional logic (like disabling n=3 for rectangular)
   updateConditionalUI(uiEngine, initialState.composition);
 	
-	// 16. Ensure all sections options are visible (fix n=3 regression)
+	// Ensure all sections options are visible (fix n=3 regression)
   ensureSectionsOptionsVisible();
 }
 

@@ -58,12 +58,18 @@ export class ThumbnailGrid implements PanelComponent {
         card.disabled = true;
       }
       
-      // Thumbnail image or placeholder
+      // Thumbnail image, color swatch, or placeholder
       if (item.thumbnailUrl) {
         const img = document.createElement('img');
         img.src = item.thumbnailUrl;
         img.alt = item.label;
         card.appendChild(img);
+      } else if (item.rgb) {
+        // Paint color swatch
+        const swatch = document.createElement('div');
+        swatch.className = 'thumbnail-color-swatch';
+        swatch.style.backgroundColor = `rgb(${item.rgb[0]}, ${item.rgb[1]}, ${item.rgb[2]})`;
+        card.appendChild(swatch);
       } else {
         const placeholder = document.createElement('div');
         placeholder.className = 'thumbnail-placeholder';
