@@ -80,6 +80,7 @@ export class ThumbnailGrid implements PanelComponent {
       // Event handler
       if (!item.disabled) {
         card.addEventListener('click', () => {
+          this._tooltip.hide();
           this._onSelect(item.id);
         });
       }
@@ -87,7 +88,25 @@ export class ThumbnailGrid implements PanelComponent {
 			// Tooltip handlers
       if (item.tooltip) {
         card.addEventListener('mouseenter', () => {
-          this._tooltip.show(item.tooltip!, card);
+          // Create structured tooltip with image + text (matching species tooltip style)
+          const contentContainer = document.createElement('div');
+          contentContainer.className = 'tooltip-content-wrapper';
+          
+          // Large version of the thumbnail image
+          if (item.thumbnailUrl) {
+            const largeImage = document.createElement('img');
+            largeImage.src = item.thumbnailUrl;
+            largeImage.alt = item.label;
+            contentContainer.appendChild(largeImage);
+          }
+          
+          // Text description with dark background
+          const description = document.createElement('p');
+          description.className = 'tooltip-description';
+          description.textContent = item.tooltip;
+          contentContainer.appendChild(description);
+          
+          this._tooltip.show(contentContainer, card, 'left', 'tooltip-grid', -10, 0, true);
         });
         card.addEventListener('mouseleave', () => {
           this._tooltip.hide();

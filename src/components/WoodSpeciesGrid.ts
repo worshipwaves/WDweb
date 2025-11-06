@@ -69,6 +69,7 @@ export class WoodSpeciesGrid implements PanelComponent {
       label: spec.display,
       thumbnailUrl: `/public/assets/wood/${spec.wood_number}_thumb.png`,
       disabled: false,
+      tooltip: spec.display,
     }));
     
     this._thumbnailGrid = new ThumbnailGrid(

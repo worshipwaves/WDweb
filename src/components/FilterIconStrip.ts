@@ -85,7 +85,7 @@ export class FilterIconStrip implements PanelComponent {
     
     // Add tooltip handlers
     button.addEventListener('mouseenter', () => {
-      this._tooltip.show('Clear All Filters', button, 'above');
+      this._tooltip.show('Clear all filters', button, 'above', 'tooltip-filter');
     });
     button.addEventListener('mouseleave', () => {
       this._tooltip.hide();
@@ -140,7 +140,7 @@ export class FilterIconStrip implements PanelComponent {
     
     // Add tooltip handlers
     button.addEventListener('mouseenter', () => {
-      this._tooltip.show(icon.tooltip, button, 'above');
+      this._tooltip.show(icon.tooltip, button, 'above', 'tooltip-filter');
     });
     button.addEventListener('mouseleave', () => {
       this._tooltip.hide();

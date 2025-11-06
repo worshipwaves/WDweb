@@ -118,7 +118,7 @@ export class WoodMaterialSelector implements PanelComponent {
       contentContainer.appendChild(description);
       
       // Pass the container element to the tooltip
-      this._tooltip.show(contentContainer, thumbContainer, 'left');
+      this._tooltip.show(contentContainer, thumbContainer, 'left', 'tooltip-species', 0, 0, true);
     });
     thumbContainer.addEventListener('mouseleave', () => this._tooltip.hide());
 

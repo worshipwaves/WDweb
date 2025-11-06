@@ -12,6 +12,7 @@
 
 import type { PanelComponent } from '../types/PanelTypes';
 import type { ApplicationController } from '../ApplicationController';
+import { Tooltip } from './Tooltip';
 
 interface SectionIcon {
   id: string; // 'all' or 'section_0', 'section_1', etc.
@@ -27,6 +28,7 @@ export class SectionSelectorPanel implements PanelComponent {
   private _selectedSections: Set<number>;
   private _onSelectionChange: (selectedIndices: Set<number>) => void;
   private _icons: SectionIcon[] = [];
+	private _tooltip: Tooltip;
   
   constructor(
     controller: ApplicationController,
@@ -40,6 +42,7 @@ export class SectionSelectorPanel implements PanelComponent {
     this._shape = shape;
     this._selectedSections = new Set(selectedSections); // Clone to avoid mutation
     this._onSelectionChange = onSelectionChange;
+		this._tooltip = new Tooltip();
     this._buildIconList();
   }
   
@@ -86,7 +89,7 @@ export class SectionSelectorPanel implements PanelComponent {
     return container;
   }
   
-  private _createIconButton(iconDef: SectionIcon): HTMLElement {
+	private _createIconButton(iconDef: SectionIcon): HTMLElement {
     const button = document.createElement('button');
     button.className = 'section-icon-button';
     button.dataset.iconId = iconDef.id;
@@ -113,6 +116,14 @@ export class SectionSelectorPanel implements PanelComponent {
     label.className = 'section-icon-label';
     label.textContent = iconDef.label;
     button.appendChild(label);
+    
+    // Tooltip handlers
+    button.addEventListener('mouseenter', () => {
+      this._tooltip.show(iconDef.label, button, 'left', 'tooltip-section');
+    });
+    button.addEventListener('mouseleave', () => {
+      this._tooltip.hide();
+    });
     
     // Click handler
     button.addEventListener('click', () => {
@@ -318,6 +329,7 @@ export class SectionSelectorPanel implements PanelComponent {
   }
   
   destroy(): void {
+    this._tooltip.hide();
     if (this._container) {
       this._container.remove();
       this._container = null;
