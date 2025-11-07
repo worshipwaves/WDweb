@@ -95,9 +95,15 @@ type StateSubscriber = (state: ApplicationState) => void;
  * Check if a grain direction is available for a given number of sections.
  */
 function isGrainAvailableForN(grain: string, n: number): boolean {
+  // Defer to the UIEngine, which reads from the configuration file.
+  if (window.uiEngine) {
+    return window.uiEngine.isGrainDirectionAvailable(grain, n);
+  }
+
+  // Fallback for safety, though UIEngine should always be available.
   if (grain === 'diamond') return n === 4;
-  if (grain === 'radiant') return n >= 2;
-  return true; // horizontal/vertical always available
+  if (grain === 'radiant') return n >= 3;
+  return true;
 }
 
 /**
