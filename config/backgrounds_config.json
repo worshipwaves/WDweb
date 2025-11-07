@@ -99,6 +99,12 @@
         "path": "/assets/backgrounds/rooms/living_modern.png",
         "description": "Contemporary living space"
       },
+			{
+        "id": "living-room-fireplace",
+        "name": "Modern Living Room Fireplace",
+        "path": "/assets/backgrounds/rooms/living_modern_fireplace.png",
+        "description": "Contemporary living space with fireplace"
+      },
       {
         "id": "living-room-classic",
         "name": "Classic Living Room",

@@ -164,11 +164,6 @@ export class SceneManager {
         const offsetUnits = offsetPixels / pixelsPerUnit;
         this._cameraOffset = offsetUnits;
         this._camera.target.x = this._cameraOffset;
-        
-        const controlsContainer = document.querySelector('.bottom-controls') as HTMLElement;
-        if (controlsContainer) {
-            controlsContainer.style.transform = `translateX(${offsetPixels}px)`;
-        }
     }
 
     public preloadDefaultTextures(config: WoodMaterialsConfig): void {

@@ -135,7 +135,7 @@
       "options": [
         { "value": "horizontal", "label": "Horizontal" },
         { "value": "vertical", "label": "Vertical" },
-        { "value": "radiant", "label": "Radiant", "show_when": { "number_sections": [2, 3, 4] } },
+        { "value": "radiant", "label": "Radiant", "show_when": { "number_sections": [3, 4] } },
         { "value": "diamond", "label": "Diamond", "show_when": { "number_sections": [4] } }
       ],
       "default_value_from_endpoint": "/api/config/wood-materials",
