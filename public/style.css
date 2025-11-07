@@ -1386,18 +1386,18 @@ html, body {
 .filter-icon-strip {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 4px;
-  padding: 0px 0px;
+  padding: 4px 8px;
   background: rgba(255, 255, 255, 0.03);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   margin-bottom: 0px;
+  /* No flex-wrap or justify-content here */
 }
 
 .filter-group {
-  display: flex;
+  display: flex; /* This is still needed to align the icons inside */
   gap: 4px;
-  padding: 6px 8px;
+  padding: 6px 4px; 
   border-radius: 6px;
   transition: all 0.2s ease;
 }
@@ -1417,17 +1417,23 @@ html, body {
 
 .filter-icon {
   position: relative;
-  width: 40px;
-  height: 40px;
-  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  /* Flexbox properties for uniform shrinking */
+  flex: 1 1 0; /* Grow a bit, shrink a lot, start from 0 width */
+  min-width: 28px; /* Set a minimum size to prevent them from becoming too small */
+  max-width: 40px; /* Set a maximum ideal size */
+
+  aspect-ratio: 1 / 1; /* Maintain a square shape */
+  padding: 6px;
+  
   background: transparent;
   border: 2px solid transparent;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .filter-icon:hover {
@@ -1441,10 +1447,10 @@ html, body {
 }
 
 .filter-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 100%;       /* SVG will now scale to fill the button */
+  height: 100%;      /* SVG will now scale to fill the button */
   fill: rgba(255, 255, 255, 0.9);
-	filter: invert(1);
+  filter: invert(1);
   transition: fill 0.15s ease;
 }
 
@@ -1473,25 +1479,6 @@ html, body {
 /* Thumbnail grid container (below filter strip) */
 .thumbnail-grid-container {
   padding: 0 20px 20px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .filter-icon-strip {
-    gap: 16px;
-    padding: 12px 16px;
-  }
-  
-  .filter-icon {
-    width: 36px;
-    height: 36px;
-    padding: 6px;
-  }
-  
-  .filter-icon svg {
-    width: 20px;
-    height: 20px;
-  }
 }
 
 /* ============================================
