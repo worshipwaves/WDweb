@@ -1880,8 +1880,8 @@ html, body {
    ============================================ */
 .bottom-controls {
   position: fixed;
-  bottom: 8px;
-  left: 8px;
+  bottom: 32px;
+  left: 16px;
   z-index: 100;
   
   display: flex;
