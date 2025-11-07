@@ -1525,6 +1525,31 @@ export class ApplicationController {
     if (archetype.side_margin !== undefined) {
       newComposition.pattern_settings.side_margin = archetype.side_margin;
     }
+		
+    // If the new shape is circular, intelligently adjust and clamp the size.
+    if (archetype.shape === 'circular') {
+      // 1. Get the current dimensions from the state-in-progress.
+      const currentX = newComposition.frame_design.finish_x;
+      const currentY = newComposition.frame_design.finish_y;
+      const smallerCurrentDim = Math.min(currentX, currentY);
+
+      // 2. Determine the maximum allowed size for this archetype from the UI config.
+      let maxAllowedSize = 60; // Default fallback from the config's "max" property
+      const sizeConfig = window.uiEngine?.getElementConfig('size');
+      if (sizeConfig?.dynamic_max_by_sections) {
+        const nKey = String(archetype.number_sections);
+        maxAllowedSize = sizeConfig.dynamic_max_by_sections[nKey] ?? sizeConfig.max ?? maxAllowedSize;
+      } else if (sizeConfig?.max) {
+        maxAllowedSize = sizeConfig.max;
+      }
+      
+      // 3. The new size is the smaller of the current dimensions, but clamped to the max allowed size.
+      const newSize = Math.min(smallerCurrentDim, maxAllowedSize);
+
+      // 4. Apply the new, equalized, and validated size.
+      newComposition.frame_design.finish_x = newSize;
+      newComposition.frame_design.finish_y = newSize;
+    }		
     
     await this.handleCompositionUpdate(newComposition);
     
@@ -1575,10 +1600,12 @@ export class ApplicationController {
 		// Update the nested value using state_path from UIEngine
 		this._setNestedValue(newComposition, elementConfig.state_path, value);
 		
-		// CRITICAL: For circular panels, "size" controls diameter (both finish_x and finish_y)
-		if (option === 'size') {
-			newComposition.frame_design.finish_y = value as number;
-		}
+		// CRITICAL: For circular panels, "size", "width", and "height" all control diameter
+		// and must update both finish_x and finish_y to maintain a perfect circle.
+		if (newComposition.frame_design.shape === 'circular' && ['size', 'width', 'height'].includes(option)) {
+      newComposition.frame_design.finish_x = value as number;
+      newComposition.frame_design.finish_y = value as number;
+    }
 
 		// Trigger composition update
 		await this.handleCompositionUpdate(newComposition);

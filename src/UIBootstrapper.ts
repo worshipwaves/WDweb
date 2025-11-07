@@ -188,6 +188,27 @@ export class UIBootstrapper {
                 });
             }
         });
+				
+			// Add real-time synchronization for width and height sliders when shape is circular
+			const widthSlider = this.uiEngine.getElement('width') as HTMLInputElement;
+			const heightSlider = this.uiEngine.getElement('height') as HTMLInputElement;
+			const widthValueDisplay = document.getElementById('widthValue');
+			const heightValueDisplay = document.getElementById('heightValue');
+
+			if (widthSlider && heightSlider) {
+				const syncSliders = (source: HTMLInputElement, target: HTMLInputElement, targetDisplay: HTMLElement | null) => {
+					const shape = (this.uiEngine.getElement('shape') as HTMLSelectElement)?.value;
+					if (shape === 'circular') {
+						target.value = source.value;
+						if (targetDisplay) {
+							targetDisplay.textContent = source.value;
+						}
+					}
+				};
+
+				widthSlider.addEventListener('input', () => syncSliders(widthSlider, heightSlider, heightValueDisplay));
+				heightSlider.addEventListener('input', () => syncSliders(heightSlider, widthSlider, widthValueDisplay));
+			}
     }
 
     private _bindUpdateButton(): void {
