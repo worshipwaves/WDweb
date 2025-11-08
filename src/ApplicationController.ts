@@ -1378,10 +1378,15 @@ export class ApplicationController {
 							}
 						});
 						
+						const tooltipContext = {
+							category: 'backgrounds',
+							subcategory: type
+						};
 						const grid = new ThumbnailGrid(
 							thumbnailItems,
 							(id: string) => this.handleBackgroundSelected(id, type),
-							this._state.ui.currentBackground.id
+							this._state.ui.currentBackground.id,
+							tooltipContext
 						);
 						
 						panelContent.appendChild(grid.render());
@@ -1434,7 +1439,8 @@ export class ApplicationController {
           const thumbnailGrid = new ThumbnailGrid(
             matchingArchetypes,
             (id) => { void this._handleArchetypeSelected(id); },
-            activeSelection
+            activeSelection,
+            { type: 'archetype' }
           );
           panelContent.appendChild(thumbnailGrid.render());
           break;

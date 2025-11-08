@@ -11,6 +11,7 @@
 import type { PanelComponent, ThumbnailItem } from '../types/PanelTypes';
 
 import { Tooltip } from './Tooltip';
+import { TooltipClassNameFactory } from '../utils/TooltipClassNameFactory';
 
 export class ThumbnailGrid implements PanelComponent {
   private _container: HTMLElement | null = null;
@@ -18,15 +19,20 @@ export class ThumbnailGrid implements PanelComponent {
   private _currentSelection: string | null;
   private _onSelect: (id: string) => void;
   private _tooltip: Tooltip = new Tooltip();
+	private _tooltipClassName: string;
   
   constructor(
     items: ThumbnailItem[],
     onSelect: (id: string) => void,
-    currentSelection: string | null = null
+    currentSelection: string | null = null,
+    tooltipContext?: { category?: string; subcategory?: string; type?: 'archetype' | 'species' }
   ) {
     this._items = items;
     this._onSelect = onSelect;
     this._currentSelection = currentSelection;
+		this._tooltipClassName = tooltipContext 
+      ? TooltipClassNameFactory.generate(tooltipContext)
+      : 'tooltip-grid';
   }
   
   render(): HTMLElement {
@@ -112,7 +118,7 @@ export class ThumbnailGrid implements PanelComponent {
           description.textContent = item.tooltip;
           contentContainer.appendChild(description);
           
-          this._tooltip.show(contentContainer, card, 'left', 'tooltip-grid', -10, 0, true);
+          this._tooltip.show(contentContainer, card, 'left', this._tooltipClassName, -10, 0, true);
         });
         card.addEventListener('mouseleave', () => {
           this._tooltip.hide();

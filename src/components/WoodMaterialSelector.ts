@@ -2,6 +2,7 @@
 import type { PanelComponent } from '../types/PanelTypes';
 
 import { Tooltip } from './Tooltip';
+import { TooltipClassNameFactory } from '../utils/TooltipClassNameFactory';
 
 interface SpeciesInfo {
   id: string;
@@ -16,6 +17,7 @@ export class WoodMaterialSelector implements PanelComponent {
   private _currentGrain: string;
   private _onSelect: (update: { species: string; grain: string }) => void;
   private _tooltip: Tooltip = new Tooltip();
+	private _tooltipClassName: string;
 
   constructor(
     speciesList: SpeciesInfo[],
@@ -29,6 +31,7 @@ export class WoodMaterialSelector implements PanelComponent {
     this._currentSpecies = currentSpecies;
     this._currentGrain = currentGrain;
     this._onSelect = onSelect;
+    this._tooltipClassName = TooltipClassNameFactory.generate({ type: 'species' });
   }
 
   render(): HTMLElement {
@@ -118,7 +121,7 @@ export class WoodMaterialSelector implements PanelComponent {
       contentContainer.appendChild(description);
       
       // Pass the container element to the tooltip
-      this._tooltip.show(contentContainer, thumbContainer, 'left', 'tooltip-species', 0, 0, true);
+      this._tooltip.show(contentContainer, thumbContainer, 'left', this._tooltipClassName, 0, 0, true);
     });
     thumbContainer.addEventListener('mouseleave', () => this._tooltip.hide());
 

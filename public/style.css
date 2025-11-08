@@ -1232,9 +1232,13 @@ html, body {
   color: #1a1a1a;
 }
 
-/* Thumbnail grid and species tooltips (with image + text) */
-.tooltip-grid,
-.tooltip-species {
+/* Convention-based tooltip classes */
+.tooltip-archetype,
+.tooltip-paint,
+.tooltip-accent,
+.tooltip-rooms,
+.tooltip-species,
+.tooltip-grid {
   position: fixed;
   background: transparent;
   border: none;
@@ -1243,8 +1247,15 @@ html, body {
   z-index: 10000;
   pointer-events: none;
   box-shadow: none;
-  max-width: 256px;
 }
+
+/* Size variations by type */
+.tooltip-archetype { max-width: 360px; }
+.tooltip-paint     { max-width: 220px; }
+.tooltip-accent    { max-width: 320px; }
+.tooltip-rooms     { max-width: 400px; }
+.tooltip-species   { max-width: 280px; }
+.tooltip-grid      { max-width: 320px; }
 
 /* Container for image + text */
 .tooltip-content-wrapper {
