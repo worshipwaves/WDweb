@@ -53,7 +53,7 @@ export class SceneManager {
         this._textureCache = new TextureCacheService(this._scene);
         this._camera = this.setupCamera();
         this.setupLighting();
-        this.setupBackground();
+        //this.setupBackground();
         this.checkLayoutMode();
         this.updateCameraOffset();
 
@@ -112,9 +112,14 @@ export class SceneManager {
         this._scene.environmentColor = new Color3(0.8, 0.8, 0.8);
     }
 	
-    private setupBackground(): void {
-        this._backgroundLayer = new Layer('backgroundLayer', '/assets/backgrounds/concrete_wall5.png', this._scene, true);
-    }
+    // src/SceneManager.ts
+
+		private setupBackground(): void {
+				// Create a simple, non-textured background layer that is always ready.
+				this._backgroundLayer = new Layer('backgroundLayer', null, this._scene, true);
+				// Make it transparent so the scene's clearColor shows through.
+				this._backgroundLayer.color = new Color4(0, 0, 0, 0);
+		}
 	
     public changeBackground(type: string, id: string, rgb?: number[], path?: string): void {
         if (this._backgroundLayer) {
@@ -621,7 +626,7 @@ export class SceneManager {
     }
 	
     public toggleZoom(zoomIn: boolean): void {
-        let targetRadius = zoomIn ? this._camera.radius / 1.5 : this._camera.radius * 1.5;
+        let targetRadius = zoomIn ? this._camera.radius / 1.1 : this._camera.radius * 1.1;
         targetRadius = Math.max(this._camera.lowerRadiusLimit ?? 1, Math.min(targetRadius, this._camera.upperRadiusLimit ?? 1000));
         const anim = new Animation('camRadius', 'radius', 30, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_CONSTANT);
         anim.setKeys([{ frame: 0, value: this._camera.radius }, { frame: 20, value: targetRadius }]);

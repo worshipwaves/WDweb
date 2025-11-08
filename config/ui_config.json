@@ -256,19 +256,19 @@
       "subcategories": {
         "canvas": {
           "label": "Canvas",
-          "note": "Canvas print options coming soon",
+          "note": "",
           "filters": {},
           "options": {}
         },
         "fine_art_paper": {
           "label": "Fine Art Paper",
-          "note": "Fine art paper prints coming soon",
+          "note": "",
           "filters": {},
           "options": {}
         },
         "metal": {
           "label": "Metal",
-          "note": "Metal print options coming soon",
+          "note": "",
           "filters": {},
           "options": {}
         }
