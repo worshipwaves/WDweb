@@ -1800,6 +1800,13 @@ export class ApplicationController {
       if (response.ok) {
         const backingParams = await response.json();
         console.log('[Controller] Backing params:', backingParams);
+        
+        // Add backing parameters to state
+        this._state = {
+          ...this._state,
+          backingParameters: backingParams
+        };
+        
         await this._sceneManager.generateBackingIfEnabled(this._state);
       } else {
         console.error('[Controller] Failed to fetch backing parameters:', response.status, await response.text());

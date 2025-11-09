@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Optional
 import numpy as np
 
 from services.config_service import ConfigService
-from services.geometry_service import GeometryService, calculate_backing_outline
+from services.geometry_service import GeometryService, calculate_section_dimensions
 from services.slot_generation_service import SlotGenerationService
 from services.composition_service import CompositionService
 from services.processing_level_service import ProcessingLevelService
@@ -104,7 +104,7 @@ class WaveformDesignerFacade:
     
     def get_backing_parameters(self, state: CompositionStateDTO) -> Dict[str, Any]:
         """
-        Get backing mesh parameters if enabled.
+        Get backing mesh parameters. Returns list of parameters (one per section) when enabled.
         
         Args:
             state: Composition state with backing configuration
@@ -120,29 +120,106 @@ class WaveformDesignerFacade:
         material_config = self._config_service.get_backing_materials_config()
         type_config = material_config["material_catalog"][backing.type]
         
-        # Calculate outline with panel material thickness
-        outline = calculate_backing_outline(
+        # Get section dimensions from geometry service
+        section_dims = calculate_section_dimensions(
             shape=state.frame_design.shape,
             finish_x=state.frame_design.finish_x,
             finish_y=state.frame_design.finish_y,
-            inset=type_config["inset_inches"],
-            thickness=type_config["thickness_inches"],
-            panel_material_thickness=state.frame_design.material_thickness
+            number_sections=state.frame_design.number_sections,
+            separation=state.frame_design.separation,
+            slot_style=state.pattern_settings.slot_style
         )
         
-        # Add material information
+        # Get material properties
         material_info = next(
             (m for m in type_config["materials"] if m["id"] == backing.material),
             type_config["materials"][0]
         )
         
-        return {
+        # Calculate Y position below panel
+        panel_thickness = state.frame_design.material_thickness
+        backing_thickness = type_config["thickness_inches"]
+        position_y = -(panel_thickness / 2.0) - (backing_thickness / 2.0) - 0.001
+        
+        # Build backing parameters for each section
+        inset = type_config["inset_inches"]
+        backing_sections = []
+        for section in section_dims:
+            backing_sections.append({
+                "shape": state.frame_design.shape,
+                "width": section['width'] - (2.0 * inset),
+                "height": section['height'] - (2.0 * inset),
+                "thickness": backing_thickness,
+                "position_x": section['offset_x'],
+                "position_y": position_y,
+                "position_z": section['offset_y'],
+                "inset": inset
+            })
+        
+        # For acrylic/cloth, each section needs 0.5" reveal on all sides
+        # For foam, CSG uses full dimensions (flush)
+        csg_finish_x = state.frame_design.finish_x
+        csg_finish_y = state.frame_design.finish_y
+        csg_separation = state.frame_design.separation
+        
+        if backing.type in ['acrylic', 'cloth']:
+            # Reduce outer dimensions by 2x inset (0.5" reveal at edges)
+            csg_finish_x -= (2.0 * inset)
+            csg_finish_y -= (2.0 * inset)
+            # Increase separation by 2x inset (0.5" reveal per section side)
+            csg_separation += (2.0 * inset)
+        
+        # For circular n=3, calculate section edges with modified dimensions
+        section_edges = None
+        if state.frame_design.shape == 'circular' and state.frame_design.number_sections == 3:
+            # Reuse wood panel geometry calculation with backing dimensions
+            modified_state = state.model_copy(update={
+                "frame_design": state.frame_design.model_copy(update={
+                    "finish_x": csg_finish_x,
+                    "finish_y": csg_finish_y,
+                    "separation": csg_separation
+                })
+            })
+            
+            # Get frame geometry with backing dimensions
+            frame_segments = self._geometry_service.create_frame_geometry(modified_state)
+            
+            # Extract section edges (same logic as get_csg_data)
+            section_edges = []
+            for section_idx in range(3):
+                section_segments = [seg for seg in frame_segments if seg.get('section_index') == section_idx]
+                lines = [seg for seg in section_segments if seg['type'] == 'line']
+                
+                if len(lines) == 2:
+                    edge1 = next((l for l in lines if l.get('edge_type') == 'inner_to_start'), None)
+                    edge2 = next((l for l in lines if l.get('edge_type') == 'end_to_inner'), None)
+                    
+                    if edge1 and edge2:
+                        section_edges.append({
+                            "section_index": section_idx,
+                            "edge1_start": edge1["start"],
+                            "edge1_end": edge1["end"],
+                            "edge2_start": edge2["start"],
+                            "edge2_end": edge2["end"]
+                        })
+        
+        result = {
             "enabled": True,
             "type": backing.type,
             "material": backing.material,
-            "outline": outline,
-            "material_properties": material_info
+            "sections": backing_sections,
+            "material_properties": material_info,
+            "csg_config": {
+                "finish_x": csg_finish_x,
+                "finish_y": csg_finish_y,
+                "separation": csg_separation
+            }
         }
+        
+        if section_edges:
+            result["section_edges"] = section_edges
+        
+        return result
     
     def get_slot_data(self, state: CompositionStateDTO) -> List[Dict[str, Any]]:
         """

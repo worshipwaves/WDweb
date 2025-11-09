@@ -31,6 +31,7 @@ export class SceneManager {
     private _sectionMeshes: Mesh[] = [];
     private _sectionMaterials: WoodMaterial[] = [];
     private _backingMesh: Mesh | null = null;
+		private _backingMeshes: Mesh[] = [];
     private _selectedSectionIndices: Set<number> = new Set();
     private _rootNode: TransformNode | null = null;
     private _currentCSGData: SmartCsgResponse | null = null;
@@ -688,55 +689,109 @@ export class SceneManager {
     }
 
     public async generateBackingIfEnabled(state: ApplicationState): Promise<void> {
-        const backing = state.composition.frame_design.backing;
+        console.log('[SceneManager] generateBackingIfEnabled called');
+        console.log('[SceneManager] state:', state ? 'exists' : 'null');
         
-        if (!backing || !backing.enabled) {
-            this.disposeBacking();
+        if (!state) {
+            console.log('[SceneManager] Early return: no state');
             return;
         }
-
-        try {
-            const response = await fetch('http://localhost:8000/geometry/backing-parameters', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(state.composition)
-            });
-
-            if (!response.ok) {
-                console.error('[SceneManager] Failed to fetch backing parameters');
-                return;
-            }
-
-            const backingParams = await response.json() as BackingParameters;
-
-            if (!backingParams.enabled || !backingParams.outline) {
-                this.disposeBacking();
-                return;
-            }
-
-            const panelGenService = new PanelGenerationService(this._scene);
-            const backingMesh = panelGenService.generateBackingMesh(
-                backingParams.outline.shape,
-                backingParams.outline.width,
-                backingParams.outline.height,
-                backingParams.outline.thickness,
-                backingParams.outline.position_y
-            );
-
-            backingMesh.parent = this._rootNode;
-
-            const backingMaterial = new BackingMaterial(this._scene, backingParams);
-            backingMesh.material = backingMaterial.getMaterial();
-
-            this.disposeBacking();
-            this._backingMesh = backingMesh;
-
-            console.log('[SceneManager] Backing mesh generated');
-        } catch (error) {
-            console.error('[SceneManager] Error generating backing:', error);
+        
+        const backingParams = state.backingParameters;
+        console.log('[SceneManager] backingParams:', backingParams);
+        
+        if (!backingParams?.enabled || !backingParams.sections) {
+            console.log('[SceneManager] Early return: backing not enabled or no sections');
+            this.disposeBackingMeshes();
+            return;
         }
+        
+        console.log('[SceneManager] Creating backing meshes for', backingParams.sections.length, 'sections');
+        
+        this.disposeBackingMeshes();
+        this._backingMeshes = [];
+        
+        // Create all backing panels at once (reuses panel CSG logic)
+        const composition = state.composition;
+        const panelService = new PanelGenerationService(this._scene);
+        
+        const backingConfig = {
+            finishX: backingParams.csg_config?.finish_x ?? composition.frame_design.finish_x,
+            finishY: backingParams.csg_config?.finish_y ?? composition.frame_design.finish_y,
+            thickness: backingParams.sections[0].thickness,
+            separation: backingParams.csg_config?.separation ?? composition.frame_design.separation,
+            numberSections: composition.frame_design.number_sections,
+            shape: composition.frame_design.shape,
+            slotStyle: composition.pattern_settings.slot_style
+        };
+        
+        // Create all backing panels without slots
+        // Pass section_edges for circular n=3 CSG cutting
+        const backingPanels = panelService.createPanelsWithCSG(
+            backingConfig, 
+            [],  // No slots for backing
+            backingParams.section_edges  // Edge data for n=3 cutting
+        );
+        
+        // Apply materials and positioning to each backing mesh
+        for (let i = 0; i < backingParams.sections.length; i++) {
+            const section = backingParams.sections[i];
+            const mesh = backingPanels[i];
+            
+            mesh.name = `backing_section_${i}`;
+            mesh.position.y = section.position_y;
+            mesh.parent = this._rootNode;
+            
+            const backingMaterial = new BackingMaterial(this._scene, backingParams);
+            mesh.material = backingMaterial.getMaterial();
+            
+            this._backingMeshes.push(mesh);
+        }
+        
+        console.log(`[SceneManager] Generated ${this._backingMeshes.length} backing meshes`);
     }
-
+		
+		private createBackingMesh(
+        section: BackingParameters['sections'][0],
+        params: BackingParameters,
+        sectionIndex: number,
+        state: ApplicationState
+    ): Mesh {
+        const composition = state.composition;
+        
+        // Use PanelGenerationService to create backing with same cuts as wood panels
+        const panelService = new PanelGenerationService(this._scene);
+        
+        const backingConfig = {
+            finishX: composition.frame_design.finish_x,
+            finishY: composition.frame_design.finish_y,
+            thickness: section.thickness,
+            separation: composition.frame_design.separation,
+            numberSections: composition.frame_design.number_sections,
+            shape: composition.frame_design.shape,
+            slotStyle: composition.pattern_settings.slot_style
+        };
+        
+        // Create panels without slots (pass empty array)
+        const backingPanels = panelService.createPanelsWithCSG(backingConfig, []);
+        
+        // Get the backing mesh for this section
+        const mesh = backingPanels[sectionIndex];
+        mesh.name = `backing_section_${sectionIndex}`;
+        
+        // Position below wood panel
+        mesh.position.y = section.position_y;
+        
+        // Apply backing material
+        const backingMaterial = new BackingMaterial(this._scene, params);
+        mesh.material = backingMaterial.getMaterial();
+        
+        mesh.parent = this._rootNode;
+        
+        return mesh;
+    }
+		
+		
     public updateBackingMaterial(backingParams: BackingParameters): void {
         if (!this._backingMesh || !backingParams.enabled) {
             return;
@@ -752,5 +807,49 @@ export class SceneManager {
             this._backingMesh.dispose();
             this._backingMesh = null;
         }
+    }
+
+    private disposeBackingMeshes(): void {
+        if (this._backingMeshes && this._backingMeshes.length > 0) {
+            for (const mesh of this._backingMeshes) {
+                mesh.dispose();
+            }
+            this._backingMeshes = [];
+        }
+    }
+		
+		public diagnoseBackingState(): void {
+        console.log('=== BACKING DIAGNOSTIC ===');
+        console.log('Backing meshes count:', this._backingMeshes?.length ?? 0);
+        
+        if (this._backingMeshes && this._backingMeshes.length > 0) {
+            this._backingMeshes.forEach((mesh, index) => {
+                console.log(`\nBacking Mesh ${index}:`);
+                console.log('  - Name:', mesh.name);
+                console.log('  - Enabled:', mesh.isEnabled());
+                console.log('  - Visible:', mesh.isVisible);
+                console.log('  - Position:', mesh.position.asArray());
+                console.log('  - Scaling:', mesh.scaling.asArray());
+                console.log('  - Parent:', mesh.parent?.name ?? 'none');
+                console.log('  - Material:', mesh.material?.name ?? 'none');
+                console.log('  - Total vertices:', mesh.getTotalVertices());
+                console.log('  - Bounding info:', mesh.getBoundingInfo().boundingBox.extendSize.asArray());
+                console.log('  - In frustum:', mesh.isInFrustum(this._scene.activeCamera!));
+            });
+        } else {
+            console.log('No backing meshes present');
+        }
+        
+        console.log('\nRoot node children:', this._rootNode?.getChildren().length ?? 0);
+        this._rootNode?.getChildren().forEach((child, i) => {
+            console.log(`  ${i}: ${child.name}`);
+        });
+        
+        console.log('\nAll scene meshes:', this._scene.meshes.length);
+        const backingMeshesInScene = this._scene.meshes.filter(m => m.name.includes('backing'));
+        console.log('Backing meshes in scene:', backingMeshesInScene.length);
+        backingMeshesInScene.forEach(m => console.log(`  - ${m.name}`));
+        
+        console.log('=== END DIAGNOSTIC ===');
     }
 }

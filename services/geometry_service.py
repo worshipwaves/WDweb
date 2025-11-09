@@ -46,7 +46,113 @@ def get_vertical_space_at_x(x_pos: float, shape: str, y_offset: float,
         return max(0.0, edge_height - 2.0 * y_offset)
     
     return 0.0
+    
 
+def calculate_section_dimensions(
+    shape: str,
+    finish_x: float,
+    finish_y: float,
+    number_sections: int,
+    separation: float,
+    slot_style: str = 'radial'
+) -> List[Dict[str, float]]:
+    """
+    Calculate dimensions and offsets for each section.
+    Returns list of {width, height, offset_x, offset_y} for each section.
+    """
+    if shape == 'circular':
+        radius = min(finish_x, finish_y) / 2.0
+        diameter = radius * 2.0
+        
+        if number_sections == 1:
+            return [{'width': diameter, 'height': diameter, 'offset_x': 0, 'offset_y': 0}]
+        elif number_sections == 2:
+            offset = (diameter + separation) / 2.0
+            return [
+                {'width': diameter, 'height': diameter, 'offset_x': offset, 'offset_y': 0},
+                {'width': diameter, 'height': diameter, 'offset_x': -offset, 'offset_y': 0}
+            ]
+        elif number_sections == 3:
+            gap_dist = separation / math.sqrt(3)
+            return [
+                {'width': diameter, 'height': diameter, 'offset_x': 0, 'offset_y': gap_dist},
+                {'width': diameter, 'height': diameter, 'offset_x': gap_dist, 'offset_y': -gap_dist},
+                {'width': diameter, 'height': diameter, 'offset_x': -gap_dist, 'offset_y': -gap_dist}
+            ]
+        elif number_sections == 4:
+            offset = (diameter + separation) / 2.0
+            return [
+                {'width': diameter, 'height': diameter, 'offset_x': offset, 'offset_y': offset},
+                {'width': diameter, 'height': diameter, 'offset_x': offset, 'offset_y': -offset},
+                {'width': diameter, 'height': diameter, 'offset_x': -offset, 'offset_y': -offset},
+                {'width': diameter, 'height': diameter, 'offset_x': -offset, 'offset_y': offset}
+            ]
+    
+    elif shape == 'rectangular':
+        if number_sections == 1:
+            return [{'width': finish_x, 'height': finish_y, 'offset_x': 0, 'offset_y': 0}]
+        elif number_sections == 2:
+            section_width = (finish_x - separation) / 2.0
+            offset = (section_width + separation) / 2.0
+            return [
+                {'width': section_width, 'height': finish_y, 'offset_x': offset, 'offset_y': 0},
+                {'width': section_width, 'height': finish_y, 'offset_x': -offset, 'offset_y': 0}
+            ]
+        elif number_sections == 3:
+            section_width = (finish_x - 2 * separation) / 3.0
+            spacing = section_width + separation
+            return [
+                {'width': section_width, 'height': finish_y, 'offset_x': spacing, 'offset_y': 0},
+                {'width': section_width, 'height': finish_y, 'offset_x': 0, 'offset_y': 0},
+                {'width': section_width, 'height': finish_y, 'offset_x': -spacing, 'offset_y': 0}
+            ]
+        elif number_sections == 4:
+            if slot_style == 'linear':
+                section_width = (finish_x - 3 * separation) / 4.0
+                spacing = section_width + separation
+                start_offset = -finish_x / 2.0 + section_width / 2.0
+                return [
+                    {'width': section_width, 'height': finish_y, 'offset_x': start_offset + spacing * i, 'offset_y': 0}
+                    for i in range(4)
+                ]
+            else:  # radial
+                section_width = (finish_x - separation) / 2.0
+                section_height = (finish_y - separation) / 2.0
+                offset_x = (section_width + separation) / 2.0
+                offset_y = (section_height + separation) / 2.0
+                return [
+                    {'width': section_width, 'height': section_height, 'offset_x': offset_x, 'offset_y': offset_y},
+                    {'width': section_width, 'height': section_height, 'offset_x': offset_x, 'offset_y': -offset_y},
+                    {'width': section_width, 'height': section_height, 'offset_x': -offset_x, 'offset_y': -offset_y},
+                    {'width': section_width, 'height': section_height, 'offset_x': -offset_x, 'offset_y': offset_y}
+                ]
+    
+    elif shape == 'diamond':
+        if number_sections == 1:
+            return [{'width': finish_x, 'height': finish_y, 'offset_x': 0, 'offset_y': 0}]
+        elif number_sections == 2:
+            # Two diamonds side by side (horizontally split)
+            section_width = (finish_x - separation) / 2.0
+            offset_x = (section_width + separation) / 2.0
+            return [
+                {'width': section_width, 'height': finish_y, 'offset_x': offset_x, 'offset_y': 0},
+                {'width': section_width, 'height': finish_y, 'offset_x': -offset_x, 'offset_y': 0}
+            ]
+        elif number_sections == 4:
+            section_width = (finish_x - separation) / 2.0
+            section_height = (finish_y - separation) / 2.0
+            offset_x = (section_width + separation) / 2.0
+            offset_y = (section_height + separation) / 2.0
+            return [
+                {'width': section_width, 'height': section_height, 'offset_x': offset_x, 'offset_y': offset_y},
+                {'width': section_width, 'height': section_height, 'offset_x': offset_x, 'offset_y': -offset_y},
+                {'width': section_width, 'height': section_height, 'offset_x': -offset_x, 'offset_y': -offset_y},
+                {'width': section_width, 'height': section_height, 'offset_x': -offset_x, 'offset_y': offset_y}
+            ]
+        
+        raise ValueError(f"Diamond shape only supports n=1, 2, or 4, got {number_sections}")
+    
+    raise ValueError(f"Unsupported shape: {shape}")
 
 def find_max_amplitude_linear_constrained(
     number_sections: int,

@@ -39,14 +39,16 @@ export interface BackingParameters {
     enabled: boolean;
     type?: string;
     material?: string;
-    outline?: {
+    sections?: Array<{
         shape: string;
         width: number;
         height: number;
         thickness: number;
+        position_x: number;
         position_y: number;
+        position_z: number;
         inset: number;
-    };
+    }>;
     material_properties?: {
         id: string;
         display: string;
@@ -63,6 +65,18 @@ export interface BackingParameters {
             normal: string;
         };
     };
+		csg_config?: {
+        finish_x: number;
+        finish_y: number;
+        separation: number;
+    };
+		section_edges?: Array<{
+        section_index: number;
+        edge1_start: number[];
+        edge1_end: number[];
+        edge2_start: number[];
+        edge2_end: number[];
+    }>;
 }
 
 /**

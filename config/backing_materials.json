@@ -1,7 +1,7 @@
 {
   "default_enabled": false,
   "default_type": "acrylic",
-  "default_material": "clear",
+  "default_material": "black",
   
   "material_catalog": {
     "acrylic": {
@@ -12,14 +12,27 @@
       "description": "Glossy colored acrylic backing with professional finish",
       "materials": [
         {
-          "id": "clear",
-          "display": "Clear",
-          "description": "Crystal clear acrylic",
-          "color_rgb": [0.95, 0.95, 0.95],
-          "alpha": 0.15,
+          "id": "white",
+          "display": "White",
+          "description": "Opaque white acrylic",
+          "color_rgb": [1.0, 1.0, 1.0],
+          "alpha": 1.0,
           "pbr_properties": {
             "metallic": 0.0,
-            "roughness": 0.1,
+            "roughness": 0.2,
+            "clearcoat_intensity": 1.0,
+            "clearcoat_roughness": 0.05
+          }
+        },
+        {
+          "id": "black",
+          "display": "Black",
+          "description": "Opaque black acrylic",
+          "color_rgb": [0.0, 0.0, 0.0],
+          "alpha": 1.0,
+          "pbr_properties": {
+            "metallic": 0.0,
+            "roughness": 0.2,
             "clearcoat_intensity": 1.0,
             "clearcoat_roughness": 0.05
           }
@@ -29,7 +42,7 @@
           "display": "Blue",
           "description": "Sapphire blue translucent acrylic",
           "color_rgb": [0.2, 0.5, 0.9],
-          "alpha": 0.85,
+          "alpha": 1.0,
           "pbr_properties": {
             "metallic": 0.0,
             "roughness": 0.15,
@@ -42,7 +55,7 @@
           "display": "Red",
           "description": "Ruby red translucent acrylic",
           "color_rgb": [0.9, 0.2, 0.2],
-          "alpha": 0.85,
+          "alpha": 1.0,
           "pbr_properties": {
             "metallic": 0.0,
             "roughness": 0.15,
@@ -55,7 +68,7 @@
           "display": "Green",
           "description": "Emerald green translucent acrylic",
           "color_rgb": [0.2, 0.8, 0.3],
-          "alpha": 0.85,
+          "alpha": 1.0,
           "pbr_properties": {
             "metallic": 0.0,
             "roughness": 0.15,
@@ -68,7 +81,7 @@
           "display": "Amber",
           "description": "Warm amber translucent acrylic",
           "color_rgb": [1.0, 0.6, 0.2],
-          "alpha": 0.85,
+          "alpha": 1.0,
           "pbr_properties": {
             "metallic": 0.0,
             "roughness": 0.15,
