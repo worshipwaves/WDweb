@@ -169,10 +169,10 @@ class WaveformDesignerFacade:
             # Increase separation by 2x inset (0.5" reveal per section side)
             csg_separation += (2.0 * inset)
         
-        # For circular n=3, calculate section edges with modified dimensions
+        # For circular n=3, get section edges using same geometry as wood panels
         section_edges = None
         if state.frame_design.shape == 'circular' and state.frame_design.number_sections == 3:
-            # Reuse wood panel geometry calculation with backing dimensions
+            # Use wood panel geometry calculation with backing dimensions
             modified_state = state.model_copy(update={
                 "frame_design": state.frame_design.model_copy(update={
                     "finish_x": csg_finish_x,
@@ -180,8 +180,6 @@ class WaveformDesignerFacade:
                     "separation": csg_separation
                 })
             })
-            
-            # Get frame geometry with backing dimensions
             frame_segments = self._geometry_service.create_frame_geometry(modified_state)
             
             # Extract section edges (same logic as get_csg_data)

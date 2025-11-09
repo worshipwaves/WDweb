@@ -740,6 +740,13 @@ export class SceneManager {
             
             mesh.name = `backing_section_${i}`;
             mesh.position.y = section.position_y;
+            
+            // CRITICAL: Apply n=3 rotation for backing (matches wood panel rotation from cutSlots)
+            if (composition.frame_design.number_sections === 3 && composition.frame_design.shape === 'circular') {
+                mesh.rotation.y = Math.PI;
+                mesh.bakeCurrentTransformIntoVertices();
+            }
+            
             mesh.parent = this._rootNode;
             
             const backingMaterial = new BackingMaterial(this._scene, backingParams);
