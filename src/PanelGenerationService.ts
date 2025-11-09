@@ -787,4 +787,44 @@ export class PanelGenerationService {
     }
     return degenerateCount === 0;
   }
+
+  /**
+   * Generate backing mesh based on panel shape
+   */
+  generateBackingMesh(
+    shape: string,
+    width: number,
+    height: number,
+    thickness: number,
+    positionY: number
+  ): Mesh {
+    let backingMesh: Mesh;
+
+    if (shape === 'circular') {
+      backingMesh = MeshBuilder.CreateCylinder('backing', {
+        diameter: width,
+        height: thickness,
+        tessellation: 64
+      }, this.scene);
+    } else if (shape === 'rectangular') {
+      backingMesh = MeshBuilder.CreateBox('backing', {
+        width: width,
+        height: thickness,
+        depth: height
+      }, this.scene);
+    } else if (shape === 'diamond') {
+      backingMesh = MeshBuilder.CreateCylinder('backing', {
+        diameter: 1,
+        height: thickness,
+        tessellation: 4
+      }, this.scene);
+      backingMesh.scaling = new Vector3(width, 1, height);
+      backingMesh.bakeCurrentTransformIntoVertices();
+    } else {
+      throw new Error(`Unsupported backing shape: ${shape}`);
+    }
+
+    backingMesh.position.y = positionY;
+    return backingMesh;
+  }
 }

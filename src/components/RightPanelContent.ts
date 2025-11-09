@@ -12,6 +12,7 @@
 import type { PanelComponent } from '../types/PanelTypes';
 import type { CompositionStateDTO } from '../types/schemas';
 
+import { BackingPanel } from './BackingPanel';
 import { GrainDirectionGrid } from './GrainDirectionGrid';
 import { SimplePanel } from './SimplePanel';
 import { SliderGroup } from './SliderGroup';
@@ -61,6 +62,27 @@ export class RightPanelContentRenderer {
         return new SimplePanel('<div class="panel-placeholder"><p>Share and save your designs coming soon</p></div>');
       case 'order':
         return new SimplePanel('<div class="panel-placeholder"><p>Custom order processing coming soon</p></div>');
+      default:
+        return new SimplePanel('<div class="panel-placeholder">Coming soon...</div>');
+    }
+  }
+	
+	/**
+   * Render wood subcategory content
+   */
+  renderWoodSubcategory(
+    subcategory: string,
+    state: CompositionStateDTO,
+    config: UIConfig,
+    onOptionSelected: (option: string, value: unknown) => void
+  ): PanelComponent {
+    switch (subcategory) {
+      case 'panel':
+        return this._renderStyleOptions(state, config, onOptionSelected);
+      case 'layout':
+        return this._renderLayoutOptions(state, config, onOptionSelected);
+      case 'backing':
+        return this._renderBackingOptions(state, onOptionSelected);
       default:
         return new SimplePanel('<div class="panel-placeholder">Coming soon...</div>');
     }
@@ -270,18 +292,23 @@ export class RightPanelContentRenderer {
     };
   }
 
-  private _renderBackingOptions(): PanelComponent {
-    const html = `
-      <div class="panel-header">
-        <h3>Backing</h3>
-      </div>
-      <div class="panel-body">
-        <div class="panel-placeholder">
-          <p>Backing material options coming soon</p>
-        </div>
-      </div>
-    `;
-    return new SimplePanel(html);
+  private _renderBackingOptions(
+    state: CompositionStateDTO,
+    onOptionSelected: (option: string, value: unknown) => void
+  ): PanelComponent {
+    const backing = state.frame_design.backing || {
+      enabled: false,
+      type: 'acrylic',
+      material: 'clear',
+      inset: 0.5
+    };
+
+    return new BackingPanel(
+      backing.enabled,
+      backing.type,
+      backing.material,
+      onOptionSelected
+    );
   }
 	
 	/**

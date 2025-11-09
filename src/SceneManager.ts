@@ -14,6 +14,9 @@ import { IdleTextureLoader } from './IdleTextureLoader';
 import { SmartCsgResponse, WoodMaterialsConfig, ApplicationState, CompositionStateDTO } from './types/schemas';
 import { WaveformDesignerFacade } from './WaveformDesignerFacade';
 import { WoodMaterial } from './WoodMaterial';
+import { BackingMaterial } from './BackingMaterial';
+import { PanelGenerationService } from './PanelGenerationService';
+import type { BackingParameters } from './types/PanelTypes';
 import { calculateGrainAngle } from './utils/materialUtils';
 
 export class SceneManager {
@@ -27,6 +30,7 @@ export class SceneManager {
 
     private _sectionMeshes: Mesh[] = [];
     private _sectionMaterials: WoodMaterial[] = [];
+    private _backingMesh: Mesh | null = null;
     private _selectedSectionIndices: Set<number> = new Set();
     private _rootNode: TransformNode | null = null;
     private _currentCSGData: SmartCsgResponse | null = null;
@@ -286,6 +290,7 @@ export class SceneManager {
         this._overlayMeshes.forEach(overlay => this._fadeOutAndDispose(overlay));
         this._overlayMeshes.clear();
         this._selectedSectionIndices.clear();
+        this.disposeBacking();
     }
   
     public getCurrentCSGData(): SmartCsgResponse | null {
@@ -680,5 +685,72 @@ export class SceneManager {
 	
     public updateComposition(_newState: CompositionStateDTO): void {
         throw new Error('Method updateComposition() is not fully implemented and should be reviewed.');
+    }
+
+    public async generateBackingIfEnabled(state: ApplicationState): Promise<void> {
+        const backing = state.composition.frame_design.backing;
+        
+        if (!backing || !backing.enabled) {
+            this.disposeBacking();
+            return;
+        }
+
+        try {
+            const response = await fetch('http://localhost:8000/geometry/backing-parameters', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(state.composition)
+            });
+
+            if (!response.ok) {
+                console.error('[SceneManager] Failed to fetch backing parameters');
+                return;
+            }
+
+            const backingParams = await response.json() as BackingParameters;
+
+            if (!backingParams.enabled || !backingParams.outline) {
+                this.disposeBacking();
+                return;
+            }
+
+            const panelGenService = new PanelGenerationService(this._scene);
+            const backingMesh = panelGenService.generateBackingMesh(
+                backingParams.outline.shape,
+                backingParams.outline.width,
+                backingParams.outline.height,
+                backingParams.outline.thickness,
+                backingParams.outline.position_y
+            );
+
+            backingMesh.parent = this._rootNode;
+
+            const backingMaterial = new BackingMaterial(this._scene, backingParams);
+            backingMesh.material = backingMaterial.getMaterial();
+
+            this.disposeBacking();
+            this._backingMesh = backingMesh;
+
+            console.log('[SceneManager] Backing mesh generated');
+        } catch (error) {
+            console.error('[SceneManager] Error generating backing:', error);
+        }
+    }
+
+    public updateBackingMaterial(backingParams: BackingParameters): void {
+        if (!this._backingMesh || !backingParams.enabled) {
+            return;
+        }
+
+        const backingMaterial = new BackingMaterial(this._scene, backingParams);
+        this._backingMesh.material = backingMaterial.getMaterial();
+        console.log('[SceneManager] Backing material updated');
+    }
+
+    public disposeBacking(): void {
+        if (this._backingMesh) {
+            this._backingMesh.dispose();
+            this._backingMesh = null;
+        }
     }
 }

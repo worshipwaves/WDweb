@@ -1445,6 +1445,37 @@ export class ApplicationController {
           panelContent.appendChild(thumbnailGrid.render());
           break;
         }
+				case 'backing_selector': {
+          if (this._state) {
+            void import('./components/BackingPanel').then(({ BackingPanel }) => {
+              const backing = this._state!.composition.frame_design.backing || {
+                enabled: false,
+                type: 'acrylic',
+                material: 'clear',
+                inset: 0.5
+              };
+
+              const backingPanel = new BackingPanel(
+                backing.type,
+                backing.material,
+                (option: string, value: unknown) => {
+                  if (option === 'backing_enabled') {
+                    void this._updateBackingEnabled(value as boolean);
+                  } else if (option === 'backing_material') {
+                    const { type, material } = value as { type: string; material: string };
+                    void this._updateBackingMaterial(type, material);
+                  }
+                }
+              );
+              
+              panelContent.appendChild(backingPanel.render());
+            }).catch((error: unknown) => {
+              console.error('[Controller] Failed to load BackingPanel:', error);
+              panelContent.innerHTML = '<div class="panel-placeholder">Failed to load backing options</div>';
+            });
+          }
+          break;
+        }
       }
     }
 
@@ -1581,6 +1612,19 @@ export class ApplicationController {
       return;
     }
 
+    // Handle backing enabled toggle
+    if (option === 'backing_enabled') {
+      void this._updateBackingEnabled(value as boolean);
+      return;
+    }
+
+    // Handle backing material change
+    if (option === 'backing_material') {
+      const { type, material } = value as { type: string; material: string };
+      void this._updateBackingMaterial(type, material);
+      return;
+    }
+
     // Handle direct state updates
     void this._updateStateValue(option, value);
   }
@@ -1687,6 +1731,82 @@ export class ApplicationController {
 
     // Trigger the rendering pipeline with the updated composition
     await this.handleCompositionUpdate(newComposition);
+  }
+	
+	/**
+   * Update backing enabled state
+   * @private
+   */
+  private async _updateBackingEnabled(enabled: boolean): Promise<void> {
+    if (!this._state) return;
+
+    const newComposition = structuredClone(this._state.composition);
+
+    if (!newComposition.frame_design.backing) {
+      newComposition.frame_design.backing = {
+        enabled: false,
+        type: 'acrylic',
+        material: 'clear',
+        inset: 0.5
+      };
+    }
+
+    newComposition.frame_design.backing.enabled = enabled;
+
+    await this.handleCompositionUpdate(newComposition);
+
+    // Trigger backing generation/disposal
+    if (this._sceneManager) {
+      await this._sceneManager.generateBackingIfEnabled(this._state);
+    }
+  }
+
+  /**
+   * Update backing material
+   * @private
+   */
+  private async _updateBackingMaterial(type: string, material: string): Promise<void> {
+    if (!this._state) return;
+
+    const newComposition = structuredClone(this._state.composition);
+
+    if (!newComposition.frame_design.backing) {
+      newComposition.frame_design.backing = {
+        enabled: true,
+        type: 'acrylic',
+        material: 'clear',
+        inset: 0.5
+      };
+    }
+
+    newComposition.frame_design.backing.enabled = true;
+    newComposition.frame_design.backing.type = type as 'acrylic' | 'cloth' | 'foam';
+    newComposition.frame_design.backing.material = material;
+
+    console.log('[Controller] Updating backing:', newComposition.frame_design.backing);
+
+    await this.handleCompositionUpdate(newComposition);
+
+    // Update backing without full regeneration
+    if (this._sceneManager && this._state) {
+      console.log('[Controller] Fetching backing parameters...');
+      const response = await fetch('http://localhost:8000/geometry/backing-parameters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this._state.composition)
+      });
+
+      console.log('[Controller] Backing parameters response:', response.status);
+      if (response.ok) {
+        const backingParams = await response.json();
+        console.log('[Controller] Backing params:', backingParams);
+        await this._sceneManager.generateBackingIfEnabled(this._state);
+      } else {
+        console.error('[Controller] Failed to fetch backing parameters:', response.status, await response.text());
+      }
+    } else {
+      console.warn('[Controller] Cannot update backing - sceneManager or state missing');
+    }
   }
 
   /**

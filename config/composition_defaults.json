@@ -14,7 +14,13 @@
       {"section_id": 1, "species": "walnut-black-american", "grain_direction": "vertical"},
       {"section_id": 2, "species": "walnut-black-american", "grain_direction": "vertical"},
       {"section_id": 3, "species": "walnut-black-american", "grain_direction": "vertical"}
-    ]
+    ],
+    "backing": {
+      "enabled": false,
+      "type": "acrylic",
+      "material": "clear",
+      "inset": 0.5
+    }
   },
   "pattern_settings": {
     "slot_style": "radial",

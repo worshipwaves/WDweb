@@ -240,7 +240,11 @@
           "label": "Backing",
           "note": "",
           "filters": {},
-          "options": {}
+          "options": {
+            "backing_panel": {
+              "type": "backing_selector"
+            }
+          }
         },
         "frames": {
           "label": "Frames",

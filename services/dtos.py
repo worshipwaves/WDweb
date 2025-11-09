@@ -37,6 +37,14 @@ class SectionMaterialDTO(BaseModel):
     species: str
     grain_direction: Literal["horizontal", "vertical", "radiant", "diamond"]
     
+class BackingConfig(BaseModel):
+    """Backing material configuration."""
+    model_config = ConfigDict(frozen=True, populate_by_name=True)
+    
+    enabled: bool
+    type: Literal["acrylic", "cloth", "foam"]
+    material: str
+    inset: float = Field(ge=0.0, le=2.0)  
     
 # Frame and Physical Design DTOs
 class FrameDesignDTO(BaseModel):
@@ -53,6 +61,7 @@ class FrameDesignDTO(BaseModel):
     species: str
     material_thickness: float = Field(ge=0.1, le=2.0)
     section_materials: List[SectionMaterialDTO] = Field(default_factory=list)
+    backing: Optional[BackingConfig] = None
     
     @model_validator(mode='after')
     def validate_circular_dimensions(self) -> 'FrameDesignDTO':

@@ -8,6 +8,15 @@ export const SectionMaterialSchema = z.object({
 
 export type SectionMaterial = z.infer<typeof SectionMaterialSchema>;
 
+export const BackingConfigSchema = z.object({
+  enabled: z.boolean(),
+  type: z.enum(['acrylic', 'cloth', 'foam']),
+  material: z.string(),
+  inset: z.number()
+}).strict();
+
+export type BackingConfig = z.infer<typeof BackingConfigSchema>;
+
 export const WoodMaterialsConfigSchema = z.object({
   default_species: z.string(),
   default_grain_direction: z.enum(['horizontal', 'vertical', 'radiant']),
@@ -97,6 +106,7 @@ export const FrameDesignSchema = z.object({
   species: z.string(),
   material_thickness: z.number(),
 	section_materials: z.array(SectionMaterialSchema).optional().default([]),
+  backing: BackingConfigSchema.optional(),
 });
 
 export const DovetailSettingsSchema = z.object({

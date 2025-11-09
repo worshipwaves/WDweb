@@ -96,7 +96,14 @@ def get_backgrounds_config():
     """
     Get backgrounds configuration including paint colors, accent walls, and room settings.
     """
-    return config_service.get_backgrounds_config()    
+    return config_service.get_backgrounds_config()
+
+@app.get("/api/config/backing-materials")
+def get_backing_materials_config():
+    """
+    Get backing materials configuration including material types and properties.
+    """
+    return config_service.get_backing_materials_config()
 
 @app.get("/composition/default", response_model=CompositionStateDTO)
 def get_default_composition():
@@ -176,6 +183,23 @@ def get_slot_data(state: CompositionStateDTO):
         return {"slots": facade.get_slot_data(state)}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+@app.post("/geometry/backing-parameters")
+def get_backing_parameters(state: CompositionStateDTO) -> Dict[str, Any]:
+    """
+    Get backing mesh parameters if enabled.
+    
+    Args:
+        state: Composition state with backing configuration
+        
+    Returns:
+        Backing parameters dictionary or {"enabled": False}
+    """
+    try:
+        return facade.get_backing_parameters(state)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
         

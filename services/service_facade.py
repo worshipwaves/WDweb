@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Optional
 import numpy as np
 
 from services.config_service import ConfigService
-from services.geometry_service import GeometryService
+from services.geometry_service import GeometryService, calculate_backing_outline
 from services.slot_generation_service import SlotGenerationService
 from services.composition_service import CompositionService
 from services.processing_level_service import ProcessingLevelService
@@ -101,6 +101,48 @@ class WaveformDesignerFacade:
                 - number_sections: Number of sections (1-4)
         """
         return self._geometry_service.get_panel_parameters(state)
+    
+    def get_backing_parameters(self, state: CompositionStateDTO) -> Dict[str, Any]:
+        """
+        Get backing mesh parameters if enabled.
+        
+        Args:
+            state: Composition state with backing configuration
+            
+        Returns:
+            Dictionary with backing parameters or {"enabled": False}
+        """
+        backing = state.frame_design.backing
+        if not backing or not backing.enabled:
+            return {"enabled": False}
+        
+        # Get backing material config
+        material_config = self._config_service.get_backing_materials_config()
+        type_config = material_config["material_catalog"][backing.type]
+        
+        # Calculate outline with panel material thickness
+        outline = calculate_backing_outline(
+            shape=state.frame_design.shape,
+            finish_x=state.frame_design.finish_x,
+            finish_y=state.frame_design.finish_y,
+            inset=type_config["inset_inches"],
+            thickness=type_config["thickness_inches"],
+            panel_material_thickness=state.frame_design.material_thickness
+        )
+        
+        # Add material information
+        material_info = next(
+            (m for m in type_config["materials"] if m["id"] == backing.material),
+            type_config["materials"][0]
+        )
+        
+        return {
+            "enabled": True,
+            "type": backing.type,
+            "material": backing.material,
+            "outline": outline,
+            "material_properties": material_info
+        }
     
     def get_slot_data(self, state: CompositionStateDTO) -> List[Dict[str, Any]]:
         """

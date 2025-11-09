@@ -684,4 +684,43 @@ class GeometryService:
             return all_segments
             
         # Return empty list for other section counts
-        return []    
+        return []
+        
+def calculate_backing_outline(
+    shape: str,
+    finish_x: float,
+    finish_y: float,
+    inset: float,
+    thickness: float,
+    panel_material_thickness: float
+) -> Dict[str, Any]:
+    """
+    Calculate backing mesh outline parameters.
+    
+    Args:
+        shape: Panel shape ('circular', 'rectangular', 'diamond')
+        finish_x: Panel width
+        finish_y: Panel height
+        inset: Backing inset from panel edges
+        thickness: Backing material thickness
+        panel_material_thickness: Panel material thickness for Y positioning
+        
+    Returns:
+        Dictionary with backing outline parameters
+    """
+    # Calculate dimensions with inset
+    backing_width = finish_x - (2.0 * inset)
+    backing_height = finish_y - (2.0 * inset)
+    
+    # Position below panel (panel bottom is at Y=0 in coordinate space)
+    # Add small offset to prevent z-fighting
+    position_y = -(panel_material_thickness / 2.0) - (thickness / 2.0) - 0.001
+    
+    return {
+        "shape": shape,
+        "width": backing_width,
+        "height": backing_height,
+        "thickness": thickness,
+        "position_y": position_y,
+        "inset": inset
+    }    

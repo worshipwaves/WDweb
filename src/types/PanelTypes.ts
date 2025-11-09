@@ -23,6 +23,49 @@ export interface SectionDimensions {
 }
 
 /**
+ * Backing material configuration
+ */
+export interface BackingConfig {
+    enabled: boolean;
+    type: 'acrylic' | 'cloth' | 'foam';
+    material: string;
+    inset: number;
+}
+
+/**
+ * Backing mesh parameters from backend
+ */
+export interface BackingParameters {
+    enabled: boolean;
+    type?: string;
+    material?: string;
+    outline?: {
+        shape: string;
+        width: number;
+        height: number;
+        thickness: number;
+        position_y: number;
+        inset: number;
+    };
+    material_properties?: {
+        id: string;
+        display: string;
+        color_rgb: number[];
+        alpha?: number;
+        pbr_properties: {
+            metallic: number;
+            roughness: number;
+            clearcoat_intensity?: number;
+            clearcoat_roughness?: number;
+        };
+        texture_files?: {
+            diffuse: string;
+            normal: string;
+        };
+    };
+}
+
+/**
  * Data for a single slot to be cut via CSG
  */
 export interface SlotData {
