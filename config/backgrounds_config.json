@@ -120,8 +120,13 @@
       {
         "id": "bedroom",
         "name": "Bedroom",
-        "path": "/assets/backgrounds/rooms/bedroom.jpg",
-        "description": "Serene bedroom setting"
+        "path": "/assets/backgrounds/rooms/bedroom.png",
+        "description": "Serene bedroom setting",
+        "art_placement": {
+          "position": [-3, -3, -20],
+          "scale_factor": 1.0,
+          "rotation": [0, 0, 0]
+        }
       },
       {
         "id": "hallway",

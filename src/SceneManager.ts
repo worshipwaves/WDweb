@@ -11,7 +11,7 @@ import { FrameGenerationService } from './FrameGenerationService';
 import { PerformanceMonitor } from './PerformanceMonitor';
 import { TextureCacheService } from './TextureCacheService';
 import { IdleTextureLoader } from './IdleTextureLoader';
-import { SmartCsgResponse, WoodMaterialsConfig, ApplicationState, CompositionStateDTO } from './types/schemas';
+import { SmartCsgResponse, WoodMaterialsConfig, BackgroundsConfig, ApplicationState, CompositionStateDTO } from './types/schemas';
 import { WaveformDesignerFacade } from './WaveformDesignerFacade';
 import { WoodMaterial } from './WoodMaterial';
 import { BackingMaterial } from './BackingMaterial';
@@ -44,6 +44,7 @@ export class SceneManager {
     private _isRendering = false;
     private _isInteractionSetup: boolean = false;
     private _isFirstRender: boolean = true;
+		private _referenceAspectRatio: number = 0;
 
     private constructor(canvasId: string, facade: WaveformDesignerFacade, controller: ApplicationController) {
         const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
@@ -68,6 +69,7 @@ export class SceneManager {
             this._engine.resize();
             this.checkLayoutMode();
             this.updateCameraOffset();
+            this.adjustCameraForAspectRatio();
         });
 
         this._engine.runRenderLoop(() => this._scene.render());
@@ -79,6 +81,13 @@ export class SceneManager {
         manager._rootNode.rotation.x = Math.PI / 2;
         manager._camera.setTarget(new Vector3(manager._cameraOffset, 0, 0));
         manager._camera.radius = 47;
+        
+        // Store initial aspect ratio as reference
+        const canvas = manager._engine.getRenderingCanvas();
+        if (canvas) {
+            manager._referenceAspectRatio = canvas.width / canvas.height;
+        }
+        
         return manager;
     }
 
@@ -137,6 +146,14 @@ export class SceneManager {
             this._scene.clearColor = new Color3(0.9, 0.88, 0.86).toColor4();
             this._backgroundLayer = new Layer('backgroundLayer', path, this._scene, true);
         }
+        
+        // Apply art placement for room backgrounds
+        if (type === 'rooms') {
+            this.applyArtPlacement(id);
+        } else {
+            // Reset to default position for paint/accent backgrounds
+            this.resetArtPlacement();
+        }
     }
 	
     private checkLayoutMode(): void {
@@ -174,6 +191,20 @@ export class SceneManager {
         const offsetUnits = offsetPixels / pixelsPerUnit;
         this._cameraOffset = offsetUnits;
         this._camera.target.x = this._cameraOffset;
+    }
+		
+		private adjustCameraForAspectRatio(): void {
+        if (this._referenceAspectRatio === 0) return;
+        
+        const canvas = this._engine.getRenderingCanvas();
+        if (!canvas) return;
+        
+        const currentAspect = canvas.width / canvas.height;
+        const aspectRatio = this._referenceAspectRatio / currentAspect;
+        
+        // Adjust radius to maintain horizontal FOV
+        const baseRadius = this.calculateIdealRadius();
+        this._camera.radius = baseRadius * aspectRatio;
     }
 
     public preloadDefaultTextures(config: WoodMaterialsConfig): void {
@@ -225,11 +256,25 @@ export class SceneManager {
             const frameService = new FrameGenerationService(this._scene);
             const meshes = frameService.createFrameMeshes(csgData.csg_data);
             if (meshes.length === 0) return;
-            if (!this._rootNode) {
-                this._rootNode = new TransformNode("root", this._scene);
-                this._rootNode.rotation.x = Math.PI / 2;
-            }
-            this._sectionMeshes = meshes;
+						if (!this._rootNode) {
+								this._rootNode = new TransformNode("root", this._scene);
+								this._rootNode.rotation.x = Math.PI / 2;
+								
+								// Reapply art placement if room background is active
+								if (this._controller) {
+										const state = this._controller.getState();
+										if (state?.ui?.currentBackground?.type === 'rooms') {
+												this.applyArtPlacement(state.ui.currentBackground.id);
+										}
+								}
+						}
+						this._sectionMeshes = meshes;
+
+						// Reapply art placement AFTER meshes are parented (meshes must exist for bounding box)
+						const state = this._controller.getState();
+						if (state?.ui?.currentBackground?.type === 'rooms') {
+								this.applyArtPlacement(state.ui.currentBackground.id);
+						}
             PerformanceMonitor.end('csg_mesh_generation');
             PerformanceMonitor.start('apply_materials');
             this.applySectionMaterials();
@@ -489,7 +534,7 @@ export class SceneManager {
           zPos = -zPos;
         }
         const center = boundingInfo.boundingBox.center;
-        overlay.position = new Vector3(xPos, center.y + 2, zPos);
+        overlay.position = new Vector3(xPos, center.y + 0.01, zPos);
         overlay.renderingGroupId = 1;
         overlay.rotation.x = Math.PI / 2;
         const overlayMat = new StandardMaterial(`overlayMat_${index}`, this._scene);
@@ -821,38 +866,104 @@ export class SceneManager {
         }
     }
 		
-		public diagnoseBackingState(): void {
-        console.log('=== BACKING DIAGNOSTIC ===');
-        console.log('Backing meshes count:', this._backingMeshes?.length ?? 0);
+		private applyArtPlacement(backgroundId: string): void {
+				if (!this._controller) {
+						console.warn('[SceneManager] Controller not available yet');
+						return;
+				}
+				
+				const config = this._controller.getBackgroundsConfig();
+				if (!config) {
+						console.warn('[SceneManager] No backgrounds config available');
+						return;
+				}
+				
+				const background = config.categories.rooms.find(bg => bg.id === backgroundId);
+				if (!background || !background.art_placement) {
+						console.warn(`[SceneManager] No art placement data for background: ${backgroundId}`);
+						this.resetArtPlacement();
+						return;
+				}
+				
+				if (!this._rootNode) {
+						console.warn('[SceneManager] Root node not available');
+						return;
+				}
+				
+				const placement = background.art_placement;
+    
+				// Calculate expected bounds from composition parameters (no mesh dependency)
+				const state = this._controller.getState();
+				if (!state?.composition?.frame_design) {
+						console.warn('[SceneManager] Cannot calculate bounds - state not ready');
+						// Fallback to direct positioning without offset
+						this._rootNode.position = new Vector3(
+								placement.position[0],
+								placement.position[1],
+								placement.position[2]
+						);
+						return;
+				}
+				
+				const frameDesign = state.composition.frame_design;
+				
+				// Calculate vertical extent based on shape
+				let minY: number;
+				if (frameDesign.shape === 'rectangular') {
+						// Rectangles: vertical extent is finish_y (height dimension)
+						minY = -frameDesign.finish_y / 2;
+				} else {
+						// Circular/diamond: use radius (minimum of both dimensions)
+						const radius = Math.min(frameDesign.finish_x, frameDesign.finish_y) / 2;
+						minY = -radius;
+				}
+				
+				// Position Y represents bottom edge - offset by composition height
+				const yOffset = -minY; // Shift up so bottom is at specified Y
+				
+				// Apply position (Y coordinate now references bottom-center)
+				this._rootNode.position = new Vector3(
+						placement.position[0],
+						placement.position[1] + yOffset,
+						placement.position[2]
+				);
         
-        if (this._backingMeshes && this._backingMeshes.length > 0) {
-            this._backingMeshes.forEach((mesh, index) => {
-                console.log(`\nBacking Mesh ${index}:`);
-                console.log('  - Name:', mesh.name);
-                console.log('  - Enabled:', mesh.isEnabled());
-                console.log('  - Visible:', mesh.isVisible);
-                console.log('  - Position:', mesh.position.asArray());
-                console.log('  - Scaling:', mesh.scaling.asArray());
-                console.log('  - Parent:', mesh.parent?.name ?? 'none');
-                console.log('  - Material:', mesh.material?.name ?? 'none');
-                console.log('  - Total vertices:', mesh.getTotalVertices());
-                console.log('  - Bounding info:', mesh.getBoundingInfo().boundingBox.extendSize.asArray());
-                console.log('  - In frustum:', mesh.isInFrustum(this._scene.activeCamera!));
-            });
-        } else {
-            console.log('No backing meshes present');
+        // Apply scale factor
+        const currentScale = this._rootNode.scaling.x;
+        const targetScale = placement.scale_factor;
+        if (Math.abs(currentScale - targetScale) > 0.01) {
+            this._rootNode.scaling = new Vector3(targetScale, targetScale, targetScale);
         }
         
-        console.log('\nRoot node children:', this._rootNode?.getChildren().length ?? 0);
-        this._rootNode?.getChildren().forEach((child, i) => {
-            console.log(`  ${i}: ${child.name}`);
-        });
+        // Apply rotation if specified
+        if (placement.rotation) {
+            const rotX = placement.rotation[0] * Math.PI / 180;
+            const rotY = placement.rotation[1] * Math.PI / 180;
+            const rotZ = placement.rotation[2] * Math.PI / 180;
+            
+            // Preserve the existing X rotation (Math.PI / 2) and add placement rotation
+            this._rootNode.rotation = new Vector3(
+                Math.PI / 2 + rotX,
+                rotY,
+                rotZ
+            );
+        }
         
-        console.log('\nAll scene meshes:', this._scene.meshes.length);
-        const backingMeshesInScene = this._scene.meshes.filter(m => m.name.includes('backing'));
-        console.log('Backing meshes in scene:', backingMeshesInScene.length);
-        backingMeshesInScene.forEach(m => console.log(`  - ${m.name}`));
+        console.log(`[SceneManager] Applied art placement for ${backgroundId}:`, placement);
+    }
+    
+    private resetArtPlacement(): void {
+        if (!this._rootNode) return;
         
-        console.log('=== END DIAGNOSTIC ===');
+        // Reset to default position (centered, no offset)
+        this._rootNode.position = new Vector3(0, 0, 0);
+        
+        // Reset scale to 1.0
+        this._rootNode.scaling = new Vector3(1, 1, 1);
+        
+        // Reset rotation to default (preserve coordinate transform rotation)
+        this._rootNode.rotation = new Vector3(Math.PI / 2, 0, 0);
+        
+        console.log('[SceneManager] Reset art placement to defaults');
     }
 }

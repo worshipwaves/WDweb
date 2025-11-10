@@ -2118,6 +2118,10 @@ export class ApplicationController {
     }
     return this._woodMaterialsConfig;
   }
+	
+	public getBackgroundsConfig(): BackgroundsConfig | null {
+    return this._backgroundsConfig;
+  }
   
   /**
    * Select a section for material editing

@@ -996,8 +996,8 @@ html, body {
   align-items: center;
   gap: 10px;
   padding: 1px 1px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1010,13 +1010,14 @@ html, body {
 }
 
 .thumbnail-card:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.6);
 }
 
 .thumbnail-card.selected {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(217, 164, 100, 0.15);
+  border-color: #D9A464;
+  box-shadow: 0 0 8px rgba(217, 164, 100, 0.3);
 }
 
 .thumbnail-card img {
@@ -1032,10 +1033,6 @@ html, body {
   height: 120px;
   border-radius: 6px;
   transition: all 0.2s ease;
-}
-
-.thumbnail-card:hover .thumbnail-color-swatch {
-  transform: scale(1.02);
 }
 
 .thumbnail-card.selected .thumbnail-color-swatch {
@@ -2019,7 +2016,7 @@ input:checked + .toggle-slider:before {
 
 .backing-panel-body .thumbnail-card {
   gap: 8px;
-  padding: 8px;
+  padding: 0px;
 }
 
 .backing-panel-body .thumbnail-label {

@@ -48,12 +48,22 @@ export const WoodMaterialsConfigSchema = z.object({
 
 export type WoodMaterialsConfig = z.infer<typeof WoodMaterialsConfigSchema>;
 
+// Art placement metadata schema
+export const ArtPlacementSchema = z.object({
+  position: z.tuple([z.number(), z.number(), z.number()]),
+  scale_factor: z.number().default(1.0),
+  rotation: z.tuple([z.number(), z.number(), z.number()]).optional()
+}).strict();
+
+export type ArtPlacement = z.infer<typeof ArtPlacementSchema>;
+
 export const BackgroundItemSchema = z.object({
   id: z.string(),
   name: z.string(),
-  rgb: z.array(z.number()).optional(),
   path: z.string().optional(),
-  description: z.string()
+  rgb: z.array(z.number()).optional(),
+  description: z.string(),
+  art_placement: ArtPlacementSchema.optional()
 }).strict();
 
 export const BackgroundsConfigSchema = z.object({
