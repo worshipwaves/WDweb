@@ -74,7 +74,11 @@ export class ThumbnailGrid implements PanelComponent {
         // Paint color swatch
         const swatch = document.createElement('div');
         swatch.className = 'thumbnail-color-swatch';
-        swatch.style.backgroundColor = `rgb(${item.rgb[0]}, ${item.rgb[1]}, ${item.rgb[2]})`;
+        // Convert normalized RGB (0-1) to CSS RGB (0-255)
+        const r = Math.round(item.rgb[0] * 255);
+        const g = Math.round(item.rgb[1] * 255);
+        const b = Math.round(item.rgb[2] * 255);
+        swatch.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
         card.appendChild(swatch);
       } else {
         const placeholder = document.createElement('div');

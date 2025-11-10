@@ -10,7 +10,7 @@ export type SectionMaterial = z.infer<typeof SectionMaterialSchema>;
 
 export const BackingConfigSchema = z.object({
   enabled: z.boolean(),
-  type: z.enum(['acrylic', 'cloth', 'foam']),
+  type: z.enum(['acrylic', 'cloth', 'leather', 'foam']),
   material: z.string(),
   inset: z.number()
 }).strict();

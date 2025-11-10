@@ -688,17 +688,14 @@ export class SceneManager {
         throw new Error('Method updateComposition() is not fully implemented and should be reviewed.');
     }
 
-    public async generateBackingIfEnabled(state: ApplicationState): Promise<void> {
+    public async generateBackingIfEnabled(backingParams: BackingParameters | null, composition: CompositionStateDTO): Promise<void> {
         console.log('[SceneManager] generateBackingIfEnabled called');
-        console.log('[SceneManager] state:', state ? 'exists' : 'null');
+        console.log('[SceneManager] composition:', composition ? 'exists' : 'null');
         
-        if (!state) {
-            console.log('[SceneManager] Early return: no state');
+        if (!composition) {
+            console.log('[SceneManager] Early return: no composition');
             return;
         }
-        
-        const backingParams = state.backingParameters;
-        console.log('[SceneManager] backingParams:', backingParams);
         
         if (!backingParams?.enabled || !backingParams.sections) {
             console.log('[SceneManager] Early return: backing not enabled or no sections');
@@ -712,7 +709,6 @@ export class SceneManager {
         this._backingMeshes = [];
         
         // Create all backing panels at once (reuses panel CSG logic)
-        const composition = state.composition;
         const panelService = new PanelGenerationService(this._scene);
         
         const backingConfig = {

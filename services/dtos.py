@@ -42,7 +42,7 @@ class BackingConfig(BaseModel):
     model_config = ConfigDict(frozen=True, populate_by_name=True)
     
     enabled: bool
-    type: Literal["acrylic", "cloth", "foam"]
+    type: Literal["acrylic", "cloth", "leather", "foam"]
     material: str
     inset: float = Field(ge=0.0, le=2.0)  
     

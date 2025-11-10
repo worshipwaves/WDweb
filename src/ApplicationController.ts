@@ -1456,6 +1456,7 @@ export class ApplicationController {
               };
 
               const backingPanel = new BackingPanel(
+                backing.enabled,
                 backing.type,
                 backing.material,
                 (option: string, value: unknown) => {
@@ -1737,82 +1738,47 @@ export class ApplicationController {
    * Update backing enabled state
    * @private
    */
-  private async _updateBackingEnabled(enabled: boolean): Promise<void> {
-    if (!this._state) return;
-
-    const newComposition = structuredClone(this._state.composition);
-
-    if (!newComposition.frame_design.backing) {
-      newComposition.frame_design.backing = {
-        enabled: false,
-        type: 'acrylic',
-        material: 'clear',
-        inset: 0.5
-      };
-    }
-
-    newComposition.frame_design.backing.enabled = enabled;
-
-    await this.handleCompositionUpdate(newComposition);
-
-    // Trigger backing generation/disposal
-    if (this._sceneManager) {
-      await this._sceneManager.generateBackingIfEnabled(this._state);
-    }
-  }
-
-  /**
+  
+	/**
    * Update backing material
    * @private
    */
   private async _updateBackingMaterial(type: string, material: string): Promise<void> {
     if (!this._state) return;
+		
+		const backingType = type as 'acrylic' | 'cloth' | 'leather' | 'foam';
 
-    const newComposition = structuredClone(this._state.composition);
-
-    if (!newComposition.frame_design.backing) {
-      newComposition.frame_design.backing = {
-        enabled: true,
-        type: 'acrylic',
-        material: 'clear',
-        inset: 0.5
-      };
-    }
-
-    newComposition.frame_design.backing.enabled = true;
-    newComposition.frame_design.backing.type = type as 'acrylic' | 'cloth' | 'foam';
-    newComposition.frame_design.backing.material = material;
-
-    console.log('[Controller] Updating backing:', newComposition.frame_design.backing);
-
-    await this.handleCompositionUpdate(newComposition);
-
-    // Update backing without full regeneration
-    if (this._sceneManager && this._state) {
-      console.log('[Controller] Fetching backing parameters...');
-      const response = await fetch('http://localhost:8000/geometry/backing-parameters', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(this._state.composition)
-      });
-
-      console.log('[Controller] Backing parameters response:', response.status);
-      if (response.ok) {
-        const backingParams = await response.json();
-        console.log('[Controller] Backing params:', backingParams);
-        
-        // Add backing parameters to state
-        this._state = {
-          ...this._state,
-          backingParameters: backingParams
-        };
-        
-        await this._sceneManager.generateBackingIfEnabled(this._state);
-      } else {
-        console.error('[Controller] Failed to fetch backing parameters:', response.status, await response.text());
+    // Define the backing object first to avoid parser ambiguity
+    const currentBacking = this._state.composition.frame_design.backing || { enabled: true, inset: 0.5 };
+    const newComposition: CompositionStateDTO = {
+      ...this._state.composition,
+      frame_design: {
+        ...this._state.composition.frame_design,
+        backing: {
+          ...currentBacking,
+          enabled: true,
+          type: backingType,
+          material: material,
+        }
       }
-    } else {
-      console.warn('[Controller] Cannot update backing - sceneManager or state missing');
+    };
+    
+    const response = await fetch('http://localhost:8000/geometry/backing-parameters', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newComposition)
+    });
+
+    if (!response.ok) {
+      console.error('[Controller] Failed to fetch backing parameters after material change.');
+      return;
+    }
+    const backingParams = await response.json();
+    
+    await this.dispatch({ type: 'COMPOSITION_UPDATED', payload: newComposition });
+
+    if (this._sceneManager) {
+      await this._sceneManager.generateBackingIfEnabled(backingParams, newComposition);
     }
   }
 

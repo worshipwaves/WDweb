@@ -299,7 +299,7 @@ export class RightPanelContentRenderer {
     const backing = state.frame_design.backing || {
       enabled: false,
       type: 'acrylic',
-      material: 'clear',
+      material: 'black',
       inset: 0.5
     };
 

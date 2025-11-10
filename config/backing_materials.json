@@ -6,7 +6,7 @@
   "material_catalog": {
     "acrylic": {
       "type": "acrylic",
-      "display_name": "Acrylic",
+      "display_name": "Acrylic",			
       "thickness_inches": 0.125,
       "inset_inches": 0.5,
       "description": "Glossy colored acrylic backing with professional finish",
@@ -14,7 +14,7 @@
         {
           "id": "white",
           "display": "White",
-          "description": "Opaque white acrylic",
+          "description": "White acrylic",
           "color_rgb": [1.0, 1.0, 1.0],
           "alpha": 1.0,
           "pbr_properties": {
@@ -27,7 +27,7 @@
         {
           "id": "black",
           "display": "Black",
-          "description": "Opaque black acrylic",
+          "description": "Black acrylic",
           "color_rgb": [0.0, 0.0, 0.0],
           "alpha": 1.0,
           "pbr_properties": {
@@ -37,103 +37,180 @@
             "clearcoat_roughness": 0.05
           }
         },
-        {
-          "id": "blue",
-          "display": "Blue",
-          "description": "Sapphire blue translucent acrylic",
-          "color_rgb": [0.2, 0.5, 0.9],
-          "alpha": 1.0,
-          "pbr_properties": {
-            "metallic": 0.0,
-            "roughness": 0.15,
-            "clearcoat_intensity": 1.0,
-            "clearcoat_roughness": 0.05
-          }
-        },
-        {
-          "id": "red",
-          "display": "Red",
-          "description": "Ruby red translucent acrylic",
-          "color_rgb": [0.9, 0.2, 0.2],
-          "alpha": 1.0,
-          "pbr_properties": {
-            "metallic": 0.0,
-            "roughness": 0.15,
-            "clearcoat_intensity": 1.0,
-            "clearcoat_roughness": 0.05
-          }
-        },
-        {
-          "id": "green",
-          "display": "Green",
-          "description": "Emerald green translucent acrylic",
-          "color_rgb": [0.2, 0.8, 0.3],
-          "alpha": 1.0,
-          "pbr_properties": {
-            "metallic": 0.0,
-            "roughness": 0.15,
-            "clearcoat_intensity": 1.0,
-            "clearcoat_roughness": 0.05
-          }
-        },
-        {
-          "id": "amber",
-          "display": "Amber",
-          "description": "Warm amber translucent acrylic",
-          "color_rgb": [1.0, 0.6, 0.2],
-          "alpha": 1.0,
-          "pbr_properties": {
-            "metallic": 0.0,
-            "roughness": 0.15,
-            "clearcoat_intensity": 1.0,
-            "clearcoat_roughness": 0.05
-          }
-        }
-      ]
-    },
+				{
+					"id": "blue",
+					"display": "Blue",
+					"description": "Sapphire blue translucent acrylic",
+					"color_rgb": [0.0, 0.15, 0.5],
+					"alpha": 1.0,
+					"pbr_properties": {
+						"metallic": 0.0,
+						"roughness": 0.15,
+						"clearcoat_intensity": 1.0,
+						"clearcoat_roughness": 0.05
+					}
+				},
+				{
+					"id": "red",
+					"display": "Red",
+					"description": "Ruby red translucent acrylic",
+					"color_rgb": [0.25, 0.0, 0.0],
+					"alpha": 0.85,
+					"pbr_properties": {
+						"metallic": 0.0,
+						"roughness": 0.15,
+						"clearcoat_intensity": 1.0,
+						"clearcoat_roughness": 0.05
+					}
+				},
+				{
+					"id": "green",
+					"display": "Green",
+					"description": "Emerald green translucent acrylic",
+					"color_rgb": [0.05, 0.55, 0.35],
+					"alpha": 1.0,
+					"pbr_properties": {
+						"metallic": 0.0,
+						"roughness": 0.15,
+						"clearcoat_intensity": 1.0,
+						"clearcoat_roughness": 0.05
+					}
+				},
+				{
+					"id": "amber",
+					"display": "Amber",
+					"description": "Warm amber translucent acrylic",
+					"color_rgb": [0.82, 0.49, 0.09],
+					"alpha": 1.0,
+					"pbr_properties": {
+						"metallic": 0.0,
+						"roughness": 0.15,
+						"clearcoat_intensity": 1.0,
+						"clearcoat_roughness": 0.05
+					}
+				}
+			]
+		},
     "cloth": {
-      "type": "cloth",
-      "display_name": "Cloth",
-      "thickness_inches": 0.0625,
-      "inset_inches": 0.5,
-      "description": "Textured fabric backing with natural weave",
-      "materials": [
-        {
-          "id": "natural",
-          "display": "Natural",
-          "description": "Natural beige linen weave",
-          "color_rgb": [0.85, 0.8, 0.7],
-          "pbr_properties": {
-            "metallic": 0.0,
-            "roughness": 0.85
-          },
-          "texture_files": {
-            "diffuse": "/assets/textures/fabric/fabric-001_basket-weave-100x100cm-mortar_d.jpg",
-            "normal": "/assets/textures/fabric/fabric-001_basket-weave-100x100cm_n.png"
-          }
-        },
-        {
-          "id": "black",
-          "display": "Black",
-          "description": "Deep black fabric",
-          "color_rgb": [0.1, 0.1, 0.1],
-          "pbr_properties": {
-            "metallic": 0.0,
-            "roughness": 0.85
-          }
-        },
-        {
-          "id": "navy",
-          "display": "Navy",
-          "description": "Dark navy blue fabric",
-          "color_rgb": [0.1, 0.15, 0.3],
-          "pbr_properties": {
-            "metallic": 0.0,
-            "roughness": 0.85
-          }
-        }
-      ]
-    },
+			"type": "cloth",
+			"display_name": "Cloth",
+			"thickness_inches": 0.0625,
+			"inset_inches": 0.5,
+			"description": "Textured fabric backing with natural weave",
+			"materials": [
+				{
+					"id": "natural",
+					"display": "Natural",
+					"description": "Natural beige linen weave",
+					"color_rgb": [0.85, 0.8, 0.7],
+					"pbr_properties": {
+						"metallic": 0.0,
+						"roughness": 0.85
+					},
+					"texture_files": {
+						"diffuse": "/assets/textures/fabric/fabric-019_color.png",
+						"normal": "/assets/textures/fabric/fabric-019_normal.png"
+					}	
+				},
+				{
+					"id": "black",
+					"display": "Black",
+					"description": "Deep black fabric",
+					"color_rgb": [0.1, 0.1, 0.1],
+					"pbr_properties": {
+						"metallic": 0.0,
+						"roughness": 0.85
+					},
+					"texture_files": {
+						"diffuse": "/assets/textures/fabric/fabric-016_color.png",
+						"normal": "/assets/textures/fabric/fabric-016_normal.png"
+					}
+				},
+				{
+					"id": "navy",
+					"display": "Navy",
+					"description": "Dark navy blue fabric",
+					"color_rgb": [0.1, 0.15, 0.3],
+					"pbr_properties": {
+						"metallic": 0.0,
+						"roughness": 0.85
+					},
+					"texture_files": {
+						"diffuse": "/assets/textures/fabric/fabric-017_color.png",
+						"normal": "/assets/textures/fabric/fabric-017_normal.png"
+					}
+				}
+			]
+		},
+		"leather": {
+			"type": "leather",
+			"display_name": "Leather",
+			"thickness_inches": 0.0625,
+			"inset_inches": 0.5,
+			"description": "Premium leather backing with natural texture",
+			"materials": [
+				{
+					"id": "bison",
+					"display": "Bison Hide",
+					"description": "Rich brown bison leather",
+					"color_rgb": [0.45, 0.35, 0.25],
+					"pbr_properties": {
+						"metallic": 0.0,
+						"roughness": 0.7
+					},
+					"texture_files": {
+						"diffuse": "/assets/textures/leather/leather-003-bison-hide_d.jpg",
+						"normal": "/assets/textures/leather/leather-003_n.png",
+						"roughness": "/assets/textures/leather/leather-003_r.png"
+					}
+				},
+				{
+					"id": "falu-red",
+					"display": "Falu Red",
+					"description": "Deep red leather with warm tones",
+					"color_rgb": [0.6, 0.25, 0.2],
+					"pbr_properties": {
+						"metallic": 0.0,
+						"roughness": 0.7
+					},
+					"texture_files": {
+						"diffuse": "/assets/textures/leather/leather-003-falu-red_d.jpg",
+						"normal": "/assets/textures/leather/leather-003_n.png",
+						"roughness": "/assets/textures/leather/leather-003_r.png"
+					}
+				},
+				{
+					"id": "tussock",
+					"display": "Tussock",
+					"description": "Natural tan leather with golden hues",
+					"color_rgb": [0.7, 0.6, 0.4],
+					"pbr_properties": {
+						"metallic": 0.0,
+						"roughness": 0.7
+					},
+					"texture_files": {
+						"diffuse": "/assets/textures/leather/leather-003-tussock_d.jpg",
+						"normal": "/assets/textures/leather/leather-003_n.png",
+						"roughness": "/assets/textures/leather/leather-003_r.png"
+					}
+				},
+				{
+					"id": "microfiber",
+					"display": "Microfiber",
+					"description": "Synthetic microfiber leather texture",
+					"color_rgb": [0.5, 0.45, 0.4],
+					"pbr_properties": {
+						"metallic": 0.0,
+						"roughness": 0.65
+					},
+					"texture_files": {
+						"diffuse": "/assets/textures/leather/leather-003-tussock_d.jpg",
+						"normal": "/assets/textures/leather/leather-003_n_microfiber.png",
+						"roughness": "/assets/textures/leather/leather-003_r.png"
+					}
+				}
+			]
+		},		
     "foam": {
       "type": "foam",
       "display_name": "Acoustic Foam",
@@ -145,7 +222,7 @@
           "id": "charcoal",
           "display": "Charcoal",
           "description": "Professional charcoal acoustic foam",
-          "color_rgb": [0.2, 0.2, 0.2],
+          "color_rgb": [0.01, 0.01, 0.01],
           "pbr_properties": {
             "metallic": 0.0,
             "roughness": 0.95

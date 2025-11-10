@@ -1,11 +1,17 @@
 // src/components/BackingPanel.ts
 
-import type { PanelComponent } from '../types/PanelTypes';
+import type { PanelComponent, ThumbnailItem } from '../types/PanelTypes';
+import { ThumbnailGrid } from './ThumbnailGrid';
+import { Tooltip } from './Tooltip';
+import { TooltipClassNameFactory } from '../utils/TooltipClassNameFactory';
 
+// Interfaces matching the structure from config/backing_materials.json
 interface BackingMaterial {
   id: string;
   display: string;
   description: string;
+  color_rgb?: number[];
+  texture_files?: { diffuse?: string };
 }
 
 interface BackingType {
@@ -15,161 +21,157 @@ interface BackingType {
 }
 
 interface BackingConfig {
+  default_enabled: boolean;
   material_catalog: Record<string, BackingType>;
 }
 
 export class BackingPanel implements PanelComponent {
   private container: HTMLElement;
   private backingConfig: BackingConfig | null = null;
+  private onOptionSelected: (option: string, value: unknown) => void;
+  private tooltip: Tooltip = new Tooltip();
+
+  // Internal state for rendering
+  private isEnabled: boolean;
   private currentType: string;
   private currentMaterial: string;
-  private onOptionSelected: (option: string, value: unknown) => void;
 
   constructor(
+    isEnabled: boolean,
     type: string,
     material: string,
     onOptionSelected: (option: string, value: unknown) => void
   ) {
-    console.log('[BackingPanel] Constructor called');
-    console.log('[BackingPanel] type:', type);
-    console.log('[BackingPanel] material:', material);
-    console.log('[BackingPanel] onOptionSelected:', typeof onOptionSelected, onOptionSelected);
+    this.isEnabled = isEnabled; // Use the passed-in state
     this.currentType = type;
     this.currentMaterial = material;
     this.onOptionSelected = onOptionSelected;
-    console.log('[BackingPanel] this.onOptionSelected:', typeof this.onOptionSelected, this.onOptionSelected);
     this.container = document.createElement('div');
     this.container.className = 'panel-content';
-    
-    void this.loadBackingConfig();
+
+    // Fetch config and then render
+    void this.loadBackingConfig().then(() => {
+      this.renderContent(); // No longer reads default from config
+    });
   }
 
-  private async loadBackingConfig(): Promise<void> {
+  private async loadBackingConfig(): Promise<BackingConfig | null> {
+    if (this.backingConfig) return this.backingConfig;
     try {
       const response = await fetch('http://localhost:8000/api/config/backing-materials');
-      if (!response.ok) {
-        throw new Error('Failed to load backing config');
-      }
+      if (!response.ok) throw new Error('Failed to load backing config');
       this.backingConfig = await response.json() as BackingConfig;
-      this.renderContent();
+      return this.backingConfig;
     } catch (error) {
-      console.error('[BackingPanel] Failed to load backing config:', error);
-      this.container.innerHTML = '<div class="panel-placeholder">Failed to load backing options</div>';
+      this.container.innerHTML = '<div class="panel-placeholder">Failed to load options</div>';
+      return null;
     }
   }
 
   private renderContent(): void {
     if (!this.backingConfig) return;
 
-    this.container.innerHTML = '';
+    this.container.innerHTML = ''; // Clear previous content
 
-    // Header
-    const header = document.createElement('div');
-    header.className = 'panel-header';
-    header.innerHTML = '<h3>Backing Material</h3>';
-    this.container.appendChild(header);
-
-    // Body
     const body = document.createElement('div');
-    body.className = 'panel-body';
+    body.className = 'backing-panel-body';
 
-    // Material Type Selection (Acrylic, Cloth, Foam)
-    const typeGroup = document.createElement('div');
-    typeGroup.className = 'option-group';
-    
-    const typeLabel = document.createElement('label');
-    typeLabel.className = 'option-label';
-    typeLabel.textContent = 'Material Type';
-    typeGroup.appendChild(typeLabel);
+    // 1. Enable Toggle
+    body.appendChild(this.createEnableToggle());
 
-    const typeButtons = document.createElement('div');
-    typeButtons.className = 'button-group';
+    const contentWrapper = document.createElement('div');
+    contentWrapper.style.opacity = this.isEnabled ? '1' : '0.4';
+    contentWrapper.style.pointerEvents = this.isEnabled ? 'auto' : 'none';
+    contentWrapper.style.display = 'flex';
+    contentWrapper.style.flexDirection = 'column';
+    contentWrapper.style.gap = '24px';
 
-    const callback = this.onOptionSelected;
-    Object.entries(this.backingConfig.material_catalog).forEach(([typeId, typeData]) => {
-      const btn = document.createElement('button');
-      btn.className = `section-button ${this.currentType === typeId ? 'active' : ''}`;
-      btn.textContent = typeData.display_name;
-      btn.addEventListener('click', () => {
-        this.currentType = typeId;
-        const firstMaterial = typeData.materials[0].id;
-        this.currentMaterial = firstMaterial;
-        callback('backing_material', { type: typeId, material: firstMaterial });
-        this.renderContent();
-      });
-      typeButtons.appendChild(btn);
-    });
+    // 2. Material Type Grid
+    contentWrapper.appendChild(this.createTypeGrid());
 
-    typeGroup.appendChild(typeButtons);
-    body.appendChild(typeGroup);
-
-    // Color/Finish Selection
-    const currentTypeData = this.backingConfig.material_catalog[this.currentType];
-    console.log('[BackingPanel] currentType:', this.currentType);
-    console.log('[BackingPanel] currentTypeData:', currentTypeData);
-    console.log('[BackingPanel] materials:', currentTypeData?.materials);
-    if (currentTypeData && currentTypeData.materials.length > 0) {
-      const materialGroup = document.createElement('div');
-      materialGroup.className = 'option-group';
-      
-      const materialLabel = document.createElement('label');
-      materialLabel.className = 'option-label';
-      materialLabel.textContent = 'Color/Finish';
-      materialGroup.appendChild(materialLabel);
-
-      const materialGrid = document.createElement('div');
-      materialGrid.className = 'thumbnail-grid';
-
-      currentTypeData.materials.forEach((mat) => {
-        console.log('[BackingPanel] Creating tile for:', mat.id, mat.display);
-        const tile = document.createElement('button');
-        tile.className = `thumbnail-tile ${this.currentMaterial === mat.id ? 'active' : ''}`;
-        tile.title = mat.description;
-        
-        // Add color swatch
-        const swatch = document.createElement('div');
-        swatch.className = 'color-swatch';
-        const rgb = (mat as { color_rgb: number[] }).color_rgb;
-        swatch.style.backgroundColor = `rgb(${Math.round(rgb[0] * 255)}, ${Math.round(rgb[1] * 255)}, ${Math.round(rgb[2] * 255)})`;
-        swatch.style.width = '100%';
-        swatch.style.height = '80px';
-        swatch.style.borderRadius = '4px';
-        swatch.style.marginBottom = '8px';
-        tile.appendChild(swatch);
-        
-        const label = document.createElement('div');
-        label.className = 'thumbnail-label';
-        label.textContent = mat.display;
-        tile.appendChild(label);
-        console.log('[BackingPanel] Tile created:', tile);
-
-        tile.addEventListener('click', () => {
-          this.currentMaterial = mat.id;
-          callback('backing_material', { type: this.currentType, material: mat.id });
-          this.renderContent();
-        });
-
-        materialGrid.appendChild(tile);
-        console.log('[BackingPanel] Tile appended to grid');
-      });
-
-      console.log('[BackingPanel] materialGrid children:', materialGrid.children.length);
-      materialGroup.appendChild(materialGrid);
-      console.log('[BackingPanel] materialGroup children:', materialGroup.children.length);
-      body.appendChild(materialGroup);
-      console.log('[BackingPanel] body children:', body.children.length);
+    // 3. Finish Grid
+    const selectedTypeData = this.backingConfig.material_catalog[this.currentType];
+    if (selectedTypeData) {
+      contentWrapper.appendChild(this.createFinishGrid(selectedTypeData));
     }
 
+    body.appendChild(contentWrapper);
     this.container.appendChild(body);
-    console.log('[BackingPanel] renderContent complete, container:', this.container);
-    console.log('[BackingPanel] container.outerHTML:', this.container.outerHTML.substring(0, 500));
   }
 
-  public render(): HTMLElement {
-    return this.container;
+  private createEnableToggle(): HTMLElement {
+    const group = document.createElement('div');
+    group.className = 'backing-enable-toggle';
+    group.innerHTML = `
+      <label for="backing-enabled-checkbox">Enable Backing</label>
+      <label class="toggle-switch">
+        <input type="checkbox" id="backing-enabled-checkbox" ${this.isEnabled ? 'checked' : ''}>
+        <span class="toggle-slider"></span>
+      </label>
+    `;
+    const checkbox = group.querySelector('input')!;
+    checkbox.addEventListener('change', () => {
+      this.isEnabled = checkbox.checked;
+      this.onOptionSelected('backing_enabled', this.isEnabled);
+      this.renderContent();
+    });
+    return group;
   }
 
-  public destroy(): void {
-    this.container.remove();
+  private createTypeGrid(): HTMLElement {
+    const group = document.createElement('div');
+    const label = document.createElement('label');
+    label.className = 'option-label';
+    label.textContent = 'Material Type';
+    group.appendChild(label);
+
+    const typeItems: ThumbnailItem[] = Object.values(this.backingConfig!.material_catalog).map(type => {
+      const firstMaterial = type.materials[0];
+      return {
+        id: type.type,
+        label: type.display_name,
+        thumbnailUrl: firstMaterial.texture_files?.diffuse, // Use diffuse from first item as preview
+        rgb: firstMaterial.color_rgb, // Fallback to color
+        tooltip: type.display_name,
+      };
+    });
+
+    const typeGrid = new ThumbnailGrid(typeItems, (typeId) => {
+      this.currentType = typeId;
+      this.currentMaterial = this.backingConfig!.material_catalog[typeId].materials[0].id;
+      this.renderContent(); 
+      this.onOptionSelected('backing_material', { type: this.currentType, material: this.currentMaterial });
+    }, this.currentType);
+    
+    group.appendChild(typeGrid.render());
+    return group;
   }
+
+  private createFinishGrid(typeData: BackingType): HTMLElement {
+    const group = document.createElement('div');
+    const label = document.createElement('label');
+    label.className = 'option-label';
+    label.textContent = 'Finish';
+    group.appendChild(label);
+    
+    const finishItems: ThumbnailItem[] = typeData.materials.map(mat => ({
+        id: mat.id,
+        label: mat.display,
+        thumbnailUrl: mat.texture_files?.diffuse,
+        rgb: mat.color_rgb,
+        tooltip: mat.description,
+    }));
+
+    const finishGrid = new ThumbnailGrid(finishItems, (materialId) => {
+        this.currentMaterial = materialId;
+        this.renderContent();
+        this.onOptionSelected('backing_material', { type: this.currentType, material: this.currentMaterial });
+    }, this.currentMaterial, { subcategory: 'backing_finish' });
+
+    group.appendChild(finishGrid.render());
+    return group;
+  }
+
+  public render(): HTMLElement { return this.container; }
+  public destroy(): void { this.container.remove(); }
 }

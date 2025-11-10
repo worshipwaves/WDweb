@@ -27,7 +27,7 @@ export interface SectionDimensions {
  */
 export interface BackingConfig {
     enabled: boolean;
-    type: 'acrylic' | 'cloth' | 'foam';
+    type: 'acrylic' | 'cloth' | 'leather' | 'foam';
     material: string;
     inset: number;
 }

@@ -137,7 +137,13 @@ class SlotGenerationService:
             local_slot_index = slot_index % slots_per_section
             
             # Determine margins for this section
-            if number_sections == 1:
+            # For rectangular: use x_offset only (no side_margin)
+            # For circular/diamond: use side_margin on exterior edges
+            if frame.shape == "rectangular":
+                # Rectangular: x_offset for all edges
+                left_margin = x_offset
+                right_margin = x_offset
+            elif number_sections == 1:
                 # Single section: side_margin on both edges (both are exterior)
                 left_margin = side_margin
                 right_margin = side_margin
