@@ -141,7 +141,7 @@ export class SceneManager {
             this._backgroundLayer = null;
         }
         if (type === 'paint' && rgb) {
-            this._scene.clearColor = new Color3(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255).toColor4();
+            this._scene.clearColor = new Color3(rgb[0], rgb[1], rgb[2]).toColor4();
         } else if ((type === 'accent' || type === 'rooms') && path) {
             this._scene.clearColor = new Color3(0.9, 0.88, 0.86).toColor4();
             this._backgroundLayer = new Layer('backgroundLayer', path, this._scene, true);
@@ -689,18 +689,21 @@ export class SceneManager {
     }
 	
     private calculateIdealRadius(): number {
-        if (!this._rootNode) return 47;
-        const childMeshes = this._rootNode.getChildMeshes();
-        if (childMeshes.length === 0) return 47;
-        let min = new Vector3(Infinity, Infinity, Infinity);
-        let max = new Vector3(-Infinity, -Infinity, -Infinity);
-        childMeshes.forEach(mesh => {
-            const boundingInfo = mesh.getBoundingInfo();
-            min = Vector3.Minimize(min, boundingInfo.boundingBox.minimumWorld);
-            max = Vector3.Maximize(max, boundingInfo.boundingBox.maximumWorld);
-        });
-        const diagonal = max.subtract(min).length();
-        return Math.max(diagonal * 1.5, this._camera.lowerRadiusLimit ?? 20);
+        const state = this._controller?.getState();
+        const frameDesign = state?.composition?.frame_design;
+
+        // If we don't have the design info yet, return a safe default.
+        if (!frameDesign) {
+            return 47;
+        }
+
+        // Calculate the art's TRUE, UNSCALED vertical size from the design parameters.
+        const verticalSize = frameDesign.shape === 'rectangular' 
+            ? frameDesign.finish_y 
+            : Math.min(frameDesign.finish_x, frameDesign.finish_y);
+            
+        // Set the camera radius based on this true size, ignoring the in-scene scale.
+        return Math.max(verticalSize * 2.0, this._camera.lowerRadiusLimit ?? 20);
     }
 	
     public startCinematicRotation(onAnimationEnd?: () => void): void {
@@ -867,74 +870,46 @@ export class SceneManager {
     }
 		
 		private applyArtPlacement(backgroundId: string): void {
-				if (!this._controller) {
-						console.warn('[SceneManager] Controller not available yet');
-						return;
-				}
-				
-				const config = this._controller.getBackgroundsConfig();
-				if (!config) {
-						console.warn('[SceneManager] No backgrounds config available');
-						return;
-				}
-				
-				const background = config.categories.rooms.find(bg => bg.id === backgroundId);
-				if (!background || !background.art_placement) {
-						console.warn(`[SceneManager] No art placement data for background: ${backgroundId}`);
-						this.resetArtPlacement();
-						return;
-				}
-				
-				if (!this._rootNode) {
-						console.warn('[SceneManager] Root node not available');
-						return;
-				}
-				
-				const placement = background.art_placement;
-    
-				// Calculate expected bounds from composition parameters (no mesh dependency)
-				const state = this._controller.getState();
-				if (!state?.composition?.frame_design) {
-						console.warn('[SceneManager] Cannot calculate bounds - state not ready');
-						// Fallback to direct positioning without offset
-						this._rootNode.position = new Vector3(
-								placement.position[0],
-								placement.position[1],
-								placement.position[2]
-						);
-						return;
-				}
-				
-				const frameDesign = state.composition.frame_design;
-				
-				// Calculate vertical extent based on shape
-				let minY: number;
-				if (frameDesign.shape === 'rectangular') {
-						// Rectangles: vertical extent is finish_y (height dimension)
-						minY = -frameDesign.finish_y / 2;
-				} else {
-						// Circular/diamond: use radius (minimum of both dimensions)
-						const radius = Math.min(frameDesign.finish_x, frameDesign.finish_y) / 2;
-						minY = -radius;
-				}
-				
-				// Position Y represents bottom edge - offset by composition height
-				const yOffset = -minY; // Shift up so bottom is at specified Y
-				
-				// Apply position (Y coordinate now references bottom-center)
-				this._rootNode.position = new Vector3(
-						placement.position[0],
-						placement.position[1] + yOffset,
-						placement.position[2]
-				);
-        
-        // Apply scale factor
-        const currentScale = this._rootNode.scaling.x;
-        const targetScale = placement.scale_factor;
-        if (Math.abs(currentScale - targetScale) > 0.01) {
-            this._rootNode.scaling = new Vector3(targetScale, targetScale, targetScale);
+        if (!this._controller) {
+            console.warn('[SceneManager] Controller not available yet');
+            return;
         }
+
+        const config = this._controller.getBackgroundsConfig();
+        if (!config) {
+            console.warn('[SceneManager] No backgrounds config available');
+            return;
+        }
+
+        const background = config.categories.rooms.find(bg => bg.id === backgroundId);
+        if (!background || !background.art_placement) {
+            this.resetArtPlacement();
+            return;
+        }
+
+        if (!this._rootNode) {
+            console.warn('[SceneManager] Root node not available for art placement');
+            return;
+        }
+
+        const placement = background.art_placement;
+        const state = this._controller.getState();
+        const frameDesign = state?.composition?.frame_design;
+
+        // This offset calculation is the key. It finds the SCALED half-height of the artwork.
+        const yOffset = (frameDesign ? (frameDesign.shape === 'rectangular' ? frameDesign.finish_y / 2 : Math.min(frameDesign.finish_x, frameDesign.finish_y) / 2) : 0) * placement.scale_factor;
         
+        // The final Y position is the anchor point from your config PLUS half the art's height.
+        this._rootNode.position = new Vector3(
+            placement.position[0],
+            placement.position[1] + yOffset,
+            placement.position[2]
+        );
+
+        // Apply scale factor
+        const targetScale = placement.scale_factor;
+        this._rootNode.scaling = new Vector3(targetScale, targetScale, targetScale);
+
         // Apply rotation if specified
         if (placement.rotation) {
             const rotX = placement.rotation[0] * Math.PI / 180;

@@ -454,37 +454,32 @@ export class PanelGenerationService {
     return sectionMeshes;
   }
   
-  private cutSlots(panelMesh: Mesh, slots: SlotData[], config: PanelConfig): Mesh {
-		let resultCSG = CSG.FromMesh(panelMesh);
-    let _successfulCuts = 0;
-    let _failedCuts = 0;
-    
-    for (let i = 0; i < slots.length; i++) {
-      const slot = slots[i];
-      const slotBox = this.createSlotBox(slot, config);
-      
-      try {
-        const slotCSG = CSG.FromMesh(slotBox);
-        resultCSG = resultCSG.subtract(slotCSG);
-        _successfulCuts++;
-      } catch (error) {
-        console.error(`[CSG] Failed at slot ${i}:`, error);
-        _failedCuts++;
-      }
-      
-      if (this.debugMode) {
-        const debugMat = new StandardMaterial(`debugSlot${i}`, this.scene);
-        debugMat.diffuseColor = new Color3(1, 0, 0);
-        debugMat.alpha = 0.3;
-        slotBox.material = debugMat;
-        slotBox.name = `debugSlotCutter_${i}`;
-      } else {
-        slotBox.dispose();
-      }
+	private cutSlots(panelMesh: Mesh, slots: SlotData[], config: PanelConfig): Mesh {
+    // If there are no slots, return the original panel mesh immediately.
+    if (!slots || slots.length === 0) {
+      return panelMesh;
+    }
+
+    const panelCSG = CSG.FromMesh(panelMesh);
+    panelMesh.dispose(); // The original mesh is no longer needed.
+
+    // 1. Create all cutter meshes first.
+    const slotCutters = slots.map(slot => this.createSlotBox(slot, config));
+
+    // 2. Union all cutters into a single CSG object.
+    const allSlotsCSG = CSG.FromMesh(slotCutters[0]);
+    for (let i = 1; i < slotCutters.length; i++) {
+      const slotCSG = CSG.FromMesh(slotCutters[i]);
+      allSlotsCSG.unionInPlace(slotCSG);
     }
     
-		panelMesh.dispose();
-		const result = resultCSG.toMesh(`${panelMesh.name}_withSlots`, null, this.scene);
+    // 3. Perform a single, highly optimized subtraction.
+    const resultCSG = panelCSG.subtract(allSlotsCSG);
+    
+    // 4. Clean up all the temporary cutter meshes.
+    slotCutters.forEach(cutter => cutter.dispose());
+    
+    const result = resultCSG.toMesh(`${panelMesh.name}_withSlots`, null, this.scene);
     
     const mat = new StandardMaterial('finalPanelMat', this.scene);
     mat.diffuseColor = new Color3(0.9, 0.7, 0.5);
