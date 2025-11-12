@@ -4,18 +4,18 @@
     "shape": "circular",
     "slot_style": "radial",
     "label": "Circular Radial - 1 Section",
-    "tooltip": "This is a tooltip",
+    "tooltip": "Circular Design - Radial Waveform\nOne Panel\n\nAvailable size:\n24 to 30 inch diameter.",
     "thumbnail": "/assets/style/thumbnails/circular_radial_n1.png",
     "number_sections": 1,
     "number_slots": 48,
-    "separation": 2
+    "separation": 0
   },
   "circular_radial_n2": {
     "id": "circular_radial_n2",
     "shape": "circular",
     "slot_style": "radial",
     "label": "Circular Radial - 2 Sections",
-    "tooltip": "This is a tooltip",
+    "tooltip": "Circular Design - Radial Waveform\nTwo Panels\n\nAvailable size:\n24 to 42 inch diameter",
     "thumbnail": "/assets/style/thumbnails/circular_radial_n2.png",
     "number_sections": 2,
     "number_slots": 48,
@@ -26,29 +26,29 @@
     "shape": "circular",
     "slot_style": "radial",
     "label": "Circular Radial - 3 Sections",
-    "tooltip": "This is a tooltip",
+    "tooltip": "Circular Design - Radial Waveform\nThree Panels\n\nAvailable size:\n24 to 54 inch diameter",
     "thumbnail": "/assets/style/thumbnails/circular_radial_n3.png",
     "number_sections": 3,
     "number_slots": 48,
-    "separation": 2
+    "separation": 1.5
   },
   "circular_radial_n4": {
     "id": "circular_radial_n4",
     "shape": "circular",
     "slot_style": "radial",
     "label": "Circular Radial - 4 Sections",
-    "tooltip": "This is a tooltip",
+    "tooltip": "Circular Design - Radial Waveform\nFour Panels\n\nAvailable size:\n24 to 60 inch diameter",
     "thumbnail": "/assets/style/thumbnails/circular_radial_n4.png",
     "number_sections": 4,
     "number_slots": 48,
-    "separation": 2
+    "separation": 1
   },
   "circular_linear_n1": {
     "id": "circular_linear_n1",
     "shape": "circular",
     "slot_style": "linear",
     "label": "Circular Linear - 1 Section",
-    "tooltip": "This is a tooltip",
+    "tooltip": "Circular Design - Linear Waveform\nOne Panel\n\nAvailable size:\n24 to 30 inch diameter",
     "thumbnail": "/assets/style/thumbnails/circular_linear_n1.png",
     "number_sections": 1,
     "number_slots": 24,
@@ -60,7 +60,7 @@
     "shape": "circular",
     "slot_style": "linear",
     "label": "Circular Linear - 2 Sections",
-    "tooltip": "This is a tooltip",
+    "tooltip": "Circular Design - Linear Waveform\nTwo Panels\n\nAvailable size:\n24 to 42 inch diameter",
     "thumbnail": "/assets/style/thumbnails/circular_linear_n2.png",
     "number_sections": 2,
     "number_slots": 24,
@@ -98,7 +98,7 @@
     "thumbnail": "/assets/style/thumbnails/rectangular_radial_n4.png",
     "number_sections": 4,
     "number_slots": 48,
-    "separation": 2
+    "separation": 1
   },
   "rectangular_linear_n1": {
     "id": "rectangular_linear_n1",

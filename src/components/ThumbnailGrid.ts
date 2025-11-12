@@ -109,12 +109,12 @@ export class ThumbnailGrid implements PanelComponent {
           contentContainer.className = 'tooltip-content-wrapper';
           
           // Large version of the thumbnail image
-          if (item.thumbnailUrl) {
+          /* if (item.thumbnailUrl) {
             const largeImage = document.createElement('img');
             largeImage.src = item.thumbnailUrl;
             largeImage.alt = item.label;
             contentContainer.appendChild(largeImage);
-          }
+          } */
           
           // Text description with dark background
           const description = document.createElement('p');

@@ -1303,9 +1303,12 @@ export class ApplicationController {
 		if (!subcategory) return;
 
 		// Preserve scroll position
-		const scrollTop = this._rightMainPanel.scrollTop;
+    const scrollTop = this._rightMainPanel.scrollTop;
 
-		this._rightMainPanel.innerHTML = '';
+    this._rightMainPanel.innerHTML = '';
+    
+    // Immediately restore scroll to prevent visible jump to top
+    this._rightMainPanel.scrollTop = scrollTop;
 		
 		// Clear section selector panel when changing subcategories
 		if (this._rightSecondaryPanel) {
@@ -1637,24 +1640,17 @@ export class ApplicationController {
     this._rightMainPanel.style.display = 'block';
     this._rightMainPanel.classList.add('visible');
     
-    // Restore scroll position
+    /* // Gracefully center selected card after render
     requestAnimationFrame(() => {
-      if (this._rightMainPanel) {
-        this._rightMainPanel.scrollTop = scrollTop;
-      }
-    });
-    
-    // Ensure scroll happens after panel is visible and has layout
-    setTimeout(() => {
       const selectedCard = this._rightMainPanel?.querySelector('.thumbnail-card.selected') as HTMLElement;
       if (selectedCard) {
         selectedCard.scrollIntoView({ 
-          behavior: 'smooth', 
+          behavior: 'smooth',
           block: 'center',
           inline: 'nearest'
         });
       }
-    }, 50);
+    }); */
   }
 	
 	/**

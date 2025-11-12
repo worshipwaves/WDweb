@@ -78,7 +78,7 @@ export class SceneManager {
         manager._rootNode = new TransformNode("root", manager._scene);
         manager._rootNode.rotation.x = Math.PI / 2;
         manager._camera.setTarget(new Vector3(manager._cameraOffset, 0, 0));
-        manager._camera.radius = 47;
+        manager._camera.radius = 72;
         
         // Store initial aspect ratio as reference
         const canvas = manager._engine.getRenderingCanvas();
@@ -243,7 +243,7 @@ export class SceneManager {
             PerformanceMonitor.end('apply_materials');
             
             this.pulseAllSections();
-						this._camera.radius = this.calculateIdealRadius();
+						//this._camera.radius = this.calculateIdealRadius();
 						this.setupSectionInteraction();
 
             const sectionIndicator = document.getElementById('sectionIndicator');
@@ -658,24 +658,6 @@ export class SceneManager {
         this._scene.beginAnimation(this._camera, 0, 20, false);
     }
 	
-    private calculateIdealRadius(): number {
-        const state = this._controller?.getState();
-        const frameDesign = state?.composition?.frame_design;
-
-        // If we don't have the design info yet, return a safe default.
-        if (!frameDesign) {
-            return 47;
-        }
-
-        // Calculate the art's TRUE, UNSCALED vertical size from the design parameters.
-        const verticalSize = frameDesign.shape === 'rectangular' 
-            ? frameDesign.finish_y 
-            : Math.min(frameDesign.finish_x, frameDesign.finish_y);
-            
-        // Set the camera radius based on this true size, ignoring the in-scene scale.
-        return Math.max(verticalSize * 2.0, this._camera.lowerRadiusLimit ?? 20);
-    }
-	
     public startCinematicRotation(onAnimationEnd?: () => void): void {
         const animAlpha = new Animation('cinematicAlpha', 'alpha', 30, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_CONSTANT);
         animAlpha.setKeys([{ frame: 0, value: this._camera.alpha }, { frame: 300, value: this._camera.alpha + (2 * Math.PI) }]);
@@ -686,6 +668,22 @@ export class SceneManager {
         const animatable = this._scene.beginAnimation(this._camera, 0, 300, false);
         if (onAnimationEnd) animatable.onAnimationEnd = onAnimationEnd;
     }
+		
+		private calculateIdealRadius(): number {
+				const state = this._controller?.getState();
+				const frameDesign = state?.composition?.frame_design;
+				
+				if (!frameDesign) {
+						return 47;
+				}
+				
+				const width = frameDesign.finish_x;
+				const height = frameDesign.finish_y;
+				const dominantDimension = Math.max(width, height);
+				const paddingFactor = 1.5;
+				
+				return Math.max(dominantDimension * paddingFactor, this._camera.lowerRadiusLimit ?? 20);
+		}
   
     public resetCamera(): void {
         const targetRadius = this.calculateIdealRadius();

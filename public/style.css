@@ -374,20 +374,6 @@ html, body {
   max-height: calc(100vh - 64px);
 }
 
-/* RIGHT PANEL (cascading - WOOD category legacy) */
-.panel-right {
-  right: 8px;
-  z-index: 11;
-  width: 240px;
-}
-
-/* Backward compatibility for existing LeftPanelRenderer */
-.panel-left {
-  left: 8px;
-  z-index: 10;
-  width: 200px;
-}
-
 .panel-cascading {
   /* Position calculated dynamically via JavaScript (PanelStackManager) */
   width: 240px;
@@ -395,18 +381,6 @@ html, body {
 
 .panel-stack-right {
   position: relative;
-}
-
-/* Bottom Center Controls (relative to canvas) */
-.ui-controls-bottom-center {
-  position: absolute;
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 1rem;
-  pointer-events: auto;
-  z-index: 1;
 }
 
 #resetCameraButton {
@@ -1324,6 +1298,7 @@ html, body {
 
 /* Text description part of the tooltip */
 .tooltip-description {
+	width: 230px;
   background: rgba(30, 30, 30, 0.95);
   border-radius: 0 0 8px 8px;
   padding: 12px 16px;
@@ -1331,6 +1306,7 @@ html, body {
   line-height: 1.5;
   color: rgba(255, 255, 255, 0.8);
   margin: 0;
+  white-space: pre-line;
 }
 
 
@@ -1448,12 +1424,15 @@ html, body {
 .filter-icon-strip {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 4px 8px;
+  padding: 0px 0px;
   background: rgba(255, 255, 255, 0.03);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   margin-bottom: 0px;
-  /* No flex-wrap or justify-content here */
+	position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .filter-group {
