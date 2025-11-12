@@ -20,15 +20,22 @@ import {
   ApplicationState,
   BackgroundsConfigSchema,
   CompositionStateDTO,
+  PlacementDefaultsSchema,
   WoodMaterialsConfigSchema,
+  type ArtPlacement,
   type AudioProcessResponse,
   type BackgroundsConfig,
+  type CompositionOverrides,
   type CSGDataResponse,
+  type PlacementDefaults,
   type SectionMaterial,
   type WoodMaterialsConfig,
 } from './types/schemas';
 import { fetchAndValidate } from './utils/validation';
+import { deepMerge } from './utils/mergeUtils';
 import { Action, WaveformDesignerFacade } from './WaveformDesignerFacade';
+import { applyDimensionChange, type DimensionConstraints } from './utils/dimensionUtils';
+import { AspectRatioLock } from './components/AspectRatioLock';
 
 
 // Internal facade APIs that aren't exposed in the public interface
@@ -166,6 +173,8 @@ export class ApplicationController {
   private _selectedSectionIndices: Set<number> = new Set();
 	private _backgroundsConfig: BackgroundsConfig | null = null;
   private _idleTextureLoader: unknown = null; // IdleTextureLoader instance
+	private _placementDefaults: PlacementDefaults | null = null;
+	private _compositionCache: Map<string, CompositionStateDTO> = new Map();
 	
 	// Four-panel navigation configuration
   private _thumbnailConfig: ThumbnailConfig | null = null;
@@ -258,20 +267,27 @@ export class ApplicationController {
         WoodMaterialsConfigSchema
       );
 			
-			// Load backgrounds configuration
-      this._backgroundsConfig = await fetchAndValidate<BackgroundsConfig>(
-        'http://localhost:8000/api/config/backgrounds',
-        BackgroundsConfigSchema
-      );
+			// Load placement defaults configuration
+      try {
+        this._placementDefaults = await fetchAndValidate<PlacementDefaults>(
+          'http://localhost:8000/api/config/placement-defaults',
+          PlacementDefaultsSchema
+        );
+      } catch (error) {
+        console.error('Failed to load placement defaults:', error);
+        // Non-fatal: application can continue with base archetype defaults
+      }
 			
 			// Load thumbnail and categories configuration
       // Load all configs in parallel
-			const [archetypes, woodMaterials, uiConfig, _compositionDefaults] = await Promise.all([
+			const [archetypes, woodMaterials, backgrounds, placementDefaults, uiConfig, _compositionDefaults] = await Promise.all([
 				fetch('http://localhost:8000/api/config/archetypes').then(r => r.json()),
 				fetch('http://localhost:8000/api/config/wood-materials').then(r => r.json()),
+				fetchAndValidate<BackgroundsConfig>('http://localhost:8000/api/config/backgrounds', BackgroundsConfigSchema),
+				fetch('http://localhost:8000/api/config/placement-defaults').then(r => r.json()),
 				fetch('http://localhost:8000/api/config/ui').then(r => r.json()),
 				fetch('http://localhost:8000/api/config/composition-defaults').then(r => r.json())
-			]) as [Record<string, Archetype>, WoodMaterialsConfig, UIConfig, unknown];
+			]) as [Record<string, Archetype>, WoodMaterialsConfig, BackgroundsConfig, PlacementDefaults, UIConfig, unknown];
 
 			// Store archetypes
 			Object.entries(archetypes).forEach(([id, data]) => {
@@ -280,6 +296,8 @@ export class ApplicationController {
 
 			// Store configs
 			this._woodMaterialsConfig = woodMaterials;
+			this._backgroundsConfig = backgrounds;
+			this._placementDefaults = placementDefaults;
 			this._thumbnailConfig = uiConfig.thumbnail_config;
 			this._categoriesConfig = uiConfig.categories;
 			
@@ -343,6 +361,13 @@ export class ApplicationController {
         );
       }
       await this.dispatch({ type: 'STATE_RESTORED', payload: this._state });
+			
+			// Restore composition cache from persisted state
+      if (this._state.compositionCache) {
+        Object.entries(this._state.compositionCache).forEach(([key, comp]) => {
+          this._compositionCache.set(key, comp);
+        });
+      }
     } else {
       if (restored) {
         console.warn('[DEBUG] Restored state is invalid (missing rawSamples). Discarding and creating fresh state.');
@@ -415,6 +440,8 @@ export class ApplicationController {
     renderComposition: (csgData: CSGDataResponse) => Promise<void>;
     applySectionMaterials: () => void;
     applySingleSectionMaterial?: (sectionId: number) => void;
+    applyArtPlacement?: (placement: ArtPlacement) => void;
+    resetArtPlacement?: () => void;
   }): void {
     this._sceneManager = sceneManager;
     
@@ -472,6 +499,42 @@ export class ApplicationController {
     return () => {
       this._subscribers.delete(callback);
     };
+  }
+	
+	/**
+   * Get art placement for current background state
+   * Used by SceneManager during initial render
+   */
+  public getCurrentArtPlacement(): ArtPlacement | null {
+    if (!this._state || !this._backgroundsConfig) return null;
+    
+    const archetypeId = this._getActiveArchetypeId();
+    if (!archetypeId) return null;
+    
+    const backgroundKey = this._getBackgroundKeyForCache(this._state.ui.currentBackground);
+    let artPlacement: ArtPlacement | undefined;
+    
+    // 1. Check placement_defaults for archetype-specific override
+    if (this._placementDefaults) {
+      const placementData = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.[backgroundKey];
+      artPlacement = placementData?.art_placement;
+      
+      if (!artPlacement && backgroundKey !== 'paint_and_accent') {
+        artPlacement = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.['paint_and_accent']?.art_placement;
+      }
+    }
+    
+    // 2. Fallback to background's default art_placement
+    if (!artPlacement) {
+      const bgType = this._state.ui.currentBackground.type;
+      if (bgType === 'rooms') {
+        const bgId = this._state.ui.currentBackground.id;
+        const background = this._backgroundsConfig.categories.rooms.find(bg => bg.id === bgId);
+        artPlacement = background?.art_placement;
+      }
+    }
+    
+    return artPlacement || null;
   }
 	
 	/**
@@ -555,6 +618,9 @@ export class ApplicationController {
       
       // Clear the audio cache
       this._audioCache.clearAll();
+			
+			// Clear composition cache on new audio upload
+      this._compositionCache.clear();
 
       // Process audio through facade
       const audioResponse: AudioProcessResponse = await this._facade.processAudio(
@@ -815,6 +881,67 @@ export class ApplicationController {
       (this._sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string) => void })
         .changeBackground(type, backgroundId, background.rgb, background.path);
     }
+    
+    // Apply placement defaults and caching if archetype is selected
+    if (this._state) {
+      const archetypeId = this._getActiveArchetypeId();
+      
+      // Only apply caching if archetype exists
+      if (archetypeId) {
+        const backgroundKey = this._getBackgroundKeyForCache({ id: backgroundId, type });
+        const cacheKey = this._getCacheKey(archetypeId, backgroundKey);
+        
+        let composition = this._compositionCache.get(cacheKey);
+        
+        if (!composition) {
+          // First visit: apply current composition + placement defaults
+          composition = structuredClone(this._state.composition);
+          
+          if (this._placementDefaults) {
+            const placementData = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.[backgroundKey];
+            if (placementData?.composition_overrides) {
+              composition = deepMerge(composition, placementData.composition_overrides);
+            }
+          }
+          
+          // Cache the result
+          this._compositionCache.set(cacheKey, composition);
+          
+          // Apply composition
+          void this.handleCompositionUpdate(composition);
+        } else {
+          // Subsequent visit: restore cached composition
+          void this.handleCompositionUpdate(composition);
+        }
+        
+        // Apply art placement
+				let artPlacement: ArtPlacement | undefined;
+				
+				// 1. Check placement_defaults for archetype-specific override
+				if (this._placementDefaults) {
+					const placementData = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.[backgroundKey];
+					artPlacement = placementData?.art_placement;
+					
+					if (!artPlacement && backgroundKey !== 'paint_and_accent') {
+						artPlacement = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.['paint_and_accent']?.art_placement;
+					}
+				}
+				
+				// 2. Fallback to background's default art_placement
+				if (!artPlacement && this._backgroundsConfig) {
+					if (type === 'rooms') {
+						const background = this._backgroundsConfig.categories.rooms.find(bg => bg.id === backgroundId);
+						artPlacement = background?.art_placement;
+					}
+				}
+
+				if (artPlacement && 'applyArtPlacement' in this._sceneManager) {
+					(this._sceneManager as any).applyArtPlacement(artPlacement);
+				} else if ('resetArtPlacement' in this._sceneManager) {
+					(this._sceneManager as any).resetArtPlacement();
+				}
+      }
+    }
   }
 	
 	/**
@@ -1008,13 +1135,6 @@ export class ApplicationController {
 
     const subcategory = categoryConfig.subcategories[subcategoryId];
     if (!subcategory) return;
-		
-		// Update camera offset after right secondary visibility changes
-    requestAnimationFrame(() => {
-      if (this._sceneManager && 'updateCameraOffset' in this._sceneManager) {
-        (this._sceneManager as { updateCameraOffset: () => void }).updateCameraOffset();
-      }
-    });
 
     // Always render the main panel after subcategory selection
     this._renderRightMainFiltered();
@@ -1182,6 +1302,9 @@ export class ApplicationController {
 		const subcategory = categoryConfig?.subcategories[this._state.ui.activeSubcategory];
 		if (!subcategory) return;
 
+		// Preserve scroll position
+		const scrollTop = this._rightMainPanel.scrollTop;
+
 		this._rightMainPanel.innerHTML = '';
 		
 		// Clear section selector panel when changing subcategories
@@ -1228,6 +1351,13 @@ export class ApplicationController {
 			this._rightMainPanel.appendChild(panelContent);
 			this._rightMainPanel.style.display = 'block';
 			this._rightMainPanel.classList.add('visible');
+			
+			// Restore scroll position
+			requestAnimationFrame(() => {
+				if (this._rightMainPanel) {
+					this._rightMainPanel.scrollTop = scrollTop;
+				}
+			});
 			return;
 		}
 
@@ -1239,34 +1369,40 @@ export class ApplicationController {
       switch (optionConfig.type) {
         case 'slider_group': {
           const sliderConfigs = ((optionConfig.element_keys as string[] | undefined) || [])
-            .filter((key: string) => {
-              const elConfig = window.uiEngine?.getElementConfig(key);
-              if (!elConfig) return false;
-              
-              // Check show_when condition
-              if (elConfig.show_when) {
-                const currentShape = this._state!.composition.frame_design.shape;
-                const currentSlotStyle = this._state!.composition.pattern_settings.slot_style;
-                
-                // Check shape constraint
-                if (elConfig.show_when.shape) {
-                  const allowedShapes = elConfig.show_when.shape;
-                  if (!allowedShapes.includes(currentShape)) {
-                    return false; // Filter out this slider
-                  }
-                }
-                
-                // Check slot_style constraint
-                if (elConfig.show_when.slot_style) {
-                  const allowedStyles = elConfig.show_when.slot_style;
-                  if (!allowedStyles.includes(currentSlotStyle)) {
-                    return false; // Filter out this slider
-                  }
-                }
-              }
-              
-              return true; // Include this slider
-            })
+						.filter((key: string) => {
+								const elConfig = window.uiEngine?.getElementConfig(key);
+								if (!elConfig) return false;
+								
+								// If there's no show_when rule, always show it.
+								if (!elConfig.show_when) return true;
+								
+								// Check all conditions in the show_when object.
+								return Object.entries(elConfig.show_when).every(([stateKey, allowedValues]) => {
+										// Correctly look up the nested state value based on the key.
+										let currentValue: any;
+										switch (stateKey) {
+												case 'shape':
+														currentValue = this._state!.composition.frame_design.shape;
+														break;
+												case 'number_sections':
+														currentValue = this._state!.composition.frame_design.number_sections;
+														break;
+												case 'slot_style':
+														currentValue = this._state!.composition.pattern_settings.slot_style;
+														break;
+												default:
+														// If we don't know the key, assume it's not a match to be safe.
+														return false; 
+										}
+
+										if (Array.isArray(allowedValues)) {
+												// Use `includes` for a direct match. `some` with `==` is too loose.
+												return allowedValues.includes(currentValue);
+										}
+										
+										return false;
+								});
+						})
             .map((key: string) => {
               const elConfig = window.uiEngine?.getElementConfig(key);
               const value = window.uiEngine?.getStateValue(this._state!.composition, elConfig!.state_path) as number;
@@ -1286,9 +1422,26 @@ export class ApplicationController {
             (id, value) => {
               void this._updateStateValue(id, value);
             },
-            this._state.composition.frame_design.number_sections
+            this._state.composition.frame_design.number_sections,
+            'Layout'
           );
           panelContent.appendChild(sliderGroup.render());
+          
+          // Add aspect ratio lock control if shape allows it
+          const shape = this._state.composition.frame_design.shape;
+          const uiConfig = window.uiEngine?.config;
+          const shapeConstraints = uiConfig?.dimension_constraints?.[shape];
+          const allowLock = shapeConstraints?.allow_aspect_lock ?? false;
+          
+          if (allowLock) {
+            const lockControl = new AspectRatioLock(
+              this._state.ui.aspectRatioLocked ?? false,
+              true, // enabled
+              (locked) => this._handleAspectRatioLockChange(locked)
+            );
+            panelContent.appendChild(lockControl.render());
+          }
+          
           break;
         }
 
@@ -1484,6 +1637,13 @@ export class ApplicationController {
     this._rightMainPanel.style.display = 'block';
     this._rightMainPanel.classList.add('visible');
     
+    // Restore scroll position
+    requestAnimationFrame(() => {
+      if (this._rightMainPanel) {
+        this._rightMainPanel.scrollTop = scrollTop;
+      }
+    });
+    
     // Ensure scroll happens after panel is visible and has layout
     setTimeout(() => {
       const selectedCard = this._rightMainPanel?.querySelector('.thumbnail-card.selected') as HTMLElement;
@@ -1498,8 +1658,7 @@ export class ApplicationController {
   }
 	
 	/**
-   * Get active thumbnail ID by matching current state to thumbnail state_updates
-   * @private
+   * Get the current archetype ID from application state
    */
   private _getActiveArchetypeId(): string | null {
     if (!this._state) return null;
@@ -1517,6 +1676,22 @@ export class ApplicationController {
     }
     
     return null;
+  }
+	
+	/**
+   * Generate cache key for archetype + background combination
+   */
+  private _getCacheKey(archetypeId: string, backgroundId: string): string {
+    return `${archetypeId}_${backgroundId}`;
+  }
+  
+  /**
+   * Get background key for cache lookup (converts paint/accent to generic key)
+   */
+  private _getBackgroundKeyForCache(background: { id: string; type: string }): string {
+    return (background.type === 'paint' || background.type === 'accent') 
+      ? 'paint_and_accent' 
+      : background.id;
   }
 
   /**
@@ -1552,44 +1727,90 @@ export class ApplicationController {
       return;
     }
     
-    const newComposition = structuredClone(this._state.composition);
+    const backgroundId = this._getBackgroundKeyForCache(this._state.ui.currentBackground);
+    const cacheKey = this._getCacheKey(archetypeId, backgroundId);
     
-    // Apply all properties from the archetype to the composition state
-    newComposition.frame_design.shape = archetype.shape;
-    newComposition.frame_design.number_sections = archetype.number_sections;
-    newComposition.frame_design.separation = archetype.separation;
-    newComposition.pattern_settings.slot_style = archetype.slot_style;
-    newComposition.pattern_settings.number_slots = archetype.number_slots;
-    if (archetype.side_margin !== undefined) {
-      newComposition.pattern_settings.side_margin = archetype.side_margin;
-    }
-		
-    // If the new shape is circular, intelligently adjust and clamp the size.
-    if (archetype.shape === 'circular') {
-      // 1. Get the current dimensions from the state-in-progress.
-      const currentX = newComposition.frame_design.finish_x;
-      const currentY = newComposition.frame_design.finish_y;
-      const smallerCurrentDim = Math.min(currentX, currentY);
-
-      // 2. Determine the maximum allowed size for this archetype from the UI config.
-      let maxAllowedSize = 60; // Default fallback from the config's "max" property
-      const sizeConfig = window.uiEngine?.getElementConfig('size');
-      if (sizeConfig?.dynamic_max_by_sections) {
-        const nKey = String(archetype.number_sections);
-        maxAllowedSize = sizeConfig.dynamic_max_by_sections[nKey] ?? sizeConfig.max ?? maxAllowedSize;
-      } else if (sizeConfig?.max) {
-        maxAllowedSize = sizeConfig.max;
+    // Check cache first
+    let composition = this._compositionCache.get(cacheKey);
+    
+    if (!composition) {
+      // First visit: apply archetype base
+      composition = structuredClone(this._state.composition);
+      
+      // Apply all properties from the archetype to the composition state
+      composition.frame_design.shape = archetype.shape;
+      composition.frame_design.number_sections = archetype.number_sections;
+      composition.frame_design.separation = archetype.separation;
+      composition.pattern_settings.slot_style = archetype.slot_style;
+      composition.pattern_settings.number_slots = archetype.number_slots;
+      if (archetype.side_margin !== undefined) {
+        composition.pattern_settings.side_margin = archetype.side_margin;
       }
       
-      // 3. The new size is the smaller of the current dimensions, but clamped to the max allowed size.
-      const newSize = Math.min(smallerCurrentDim, maxAllowedSize);
+      // If the new shape is circular, intelligently adjust and clamp the size.
+      if (archetype.shape === 'circular') {
+        const currentX = composition.frame_design.finish_x;
+        const currentY = composition.frame_design.finish_y;
+        const smallerCurrentDim = Math.min(currentX, currentY);
 
-      // 4. Apply the new, equalized, and validated size.
-      newComposition.frame_design.finish_x = newSize;
-      newComposition.frame_design.finish_y = newSize;
-    }		
+        let maxAllowedSize = 60;
+        const sizeConfig = window.uiEngine?.getElementConfig('size');
+        if (sizeConfig?.dynamic_max_by_sections) {
+          const nKey = String(archetype.number_sections);
+          maxAllowedSize = sizeConfig.dynamic_max_by_sections[nKey] ?? sizeConfig.max ?? maxAllowedSize;
+        } else if (sizeConfig?.max) {
+          maxAllowedSize = sizeConfig.max;
+        }
+        
+        const newSize = Math.min(smallerCurrentDim, maxAllowedSize);
+        composition.frame_design.finish_x = newSize;
+        composition.frame_design.finish_y = newSize;
+      }
+      
+      // Apply placement defaults (first visit only)
+      if (this._placementDefaults) {
+        const placementData = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.[backgroundId];
+        if (placementData?.composition_overrides) {
+          composition = deepMerge(composition, placementData.composition_overrides);
+        }
+      }
+      
+      // Cache the result
+      this._compositionCache.set(cacheKey, composition);
+    }
     
-    await this.handleCompositionUpdate(newComposition);
+    // Apply cached or newly created composition
+    await this.handleCompositionUpdate(composition);
+    
+    // Update art placement
+    if (this._sceneManager) {
+      let artPlacement: ArtPlacement | undefined;
+      
+      // 1. Check placement_defaults for archetype-specific override
+      if (this._placementDefaults) {
+        const placementData = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.[backgroundId];
+        artPlacement = placementData?.art_placement;
+        
+        if (!artPlacement && backgroundId !== 'paint_and_accent') {
+          artPlacement = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.['paint_and_accent']?.art_placement;
+        }
+      }
+      
+      // 2. Fallback to background's default art_placement
+      if (!artPlacement && this._backgroundsConfig && this._state) {
+        const bgType = this._state.ui.currentBackground.type;
+        if (bgType === 'rooms') {
+          const background = this._backgroundsConfig.categories.rooms.find(bg => bg.id === backgroundId);
+          artPlacement = background?.art_placement;
+        }
+      }
+
+      if (artPlacement && 'applyArtPlacement' in this._sceneManager) {
+        (this._sceneManager as any).applyArtPlacement(artPlacement);
+      } else if ('resetArtPlacement' in this._sceneManager) {
+        (this._sceneManager as any).resetArtPlacement();
+      }
+    }
     
     // Re-render the panel to show updated selection
     this._renderRightMainFiltered();
@@ -1631,12 +1852,102 @@ export class ApplicationController {
   }
 	
 	/**
+   * Update dimension with constraint logic
+   * Handles width/height changes respecting aspect ratio lock and shape constraints
+   * @private
+   */
+  private async _updateDimension(
+    axis: 'x' | 'y',
+    value: number
+  ): Promise<void> {
+    if (!this._state) return;
+
+    const newComposition = structuredClone(this._state.composition);
+    
+    // Build constraints from current state and config
+    const uiConfig = window.uiEngine?.config;
+    const shapeConstraints = uiConfig?.dimension_constraints?.[newComposition.frame_design.shape];
+    
+    const constraints: DimensionConstraints = {
+      shape: newComposition.frame_design.shape,
+      aspectRatioLocked: this._state.ui.aspectRatioLocked ?? false,
+      lockedAspectRatio: this._state.ui.lockedAspectRatio ?? null,
+      minDimension: shapeConstraints?.min_dimension ?? 8.0,
+      maxDimension: shapeConstraints?.max_dimension ?? 84.0
+    };
+    
+    // Calculate new dimensions using utility function
+    const result = applyDimensionChange(
+      axis,
+      value,
+      newComposition.frame_design.finish_x,
+      newComposition.frame_design.finish_y,
+      constraints
+    );
+    
+    // Apply calculated dimensions
+    newComposition.frame_design.finish_x = result.finish_x;
+    newComposition.frame_design.finish_y = result.finish_y;
+    
+    // Update UI state if lock was broken by clamping
+    if (result.lockBroken && this._state.ui.aspectRatioLocked) {
+      this._state = {
+        ...this._state,
+        ui: {
+          ...this._state.ui,
+          aspectRatioLocked: false,
+          lockedAspectRatio: null
+        }
+      };
+    }
+    
+    // Single update through facade
+    await this.handleCompositionUpdate(newComposition);
+  }
+
+	/**
+   * Handle aspect ratio lock toggle
+   * Captures current ratio when locked, clears when unlocked
+   * @private
+   */
+  private _handleAspectRatioLockChange(locked: boolean): void {
+    if (!this._state) return;
+    
+    const newState = structuredClone(this._state);
+    newState.ui.aspectRatioLocked = locked;
+    
+    if (locked) {
+      // Capture current ratio
+      const { finish_x, finish_y } = this._state.composition.frame_design;
+      newState.ui.lockedAspectRatio = finish_x / finish_y;
+    } else {
+      // Clear locked ratio
+      newState.ui.lockedAspectRatio = null;
+    }
+    
+    // Update state (no backend call needed - UI-only state)
+    this._state = newState;
+    this._facade.persistState(this._state);
+    
+    // Re-render to update UI
+    this._renderRightMainFiltered();
+  }
+	
+	/**
  * Update state value and trigger re-render
  * Uses UI config as single source of truth for state paths
  * @private
  */
 	private async _updateStateValue(option: string, value: unknown): Promise<void> {
 		if (!this._state) return;
+
+		// Route width/height changes through dimension calculator
+		if (option === 'width' || option === 'size') {
+			return this._updateDimension('x', value as number);
+		}
+		if (option === 'height') {
+			return this._updateDimension('y', value as number);
+		}
 
 		const newComposition = structuredClone(this._state.composition);
 
@@ -1733,11 +2044,6 @@ export class ApplicationController {
     // Trigger the rendering pipeline with the updated composition
     await this.handleCompositionUpdate(newComposition);
   }
-	
-	/**
-   * Update backing enabled state
-   * @private
-   */
   
 	/**
    * Update backing material
@@ -2000,6 +2306,14 @@ export class ApplicationController {
       
       // Persist state
       this._facade.persistState(this._state);
+			
+			// Update cache with user's customization
+      const archetypeId = this._getActiveArchetypeId();
+      if (archetypeId) {
+        const backgroundId = this._getBackgroundKeyForCache(this._state.ui.currentBackground);
+        const cacheKey = this._getCacheKey(archetypeId, backgroundId);
+        this._compositionCache.set(cacheKey, structuredClone(newComposition));
+      }
       
       // Apply materials to existing meshes (no CSG regeneration)
       if (this._sceneManager) {
@@ -2099,6 +2413,47 @@ export class ApplicationController {
       // Now, trigger the render directly with the received CSG data.
       if (this._sceneManager) {
         await this._sceneManager.renderComposition(response);
+        
+        // Re-apply art placement after rendering
+        const archetypeId = this._getActiveArchetypeId();
+        if (archetypeId) {
+          const backgroundKey = this._getBackgroundKeyForCache(this._state.ui.currentBackground);
+          let artPlacement: ArtPlacement | undefined;
+          
+          // 1. Check placement_defaults for archetype-specific override
+          if (this._placementDefaults) {
+            const placementData = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.[backgroundKey];
+            artPlacement = placementData?.art_placement;
+            
+            if (!artPlacement && backgroundKey !== 'paint_and_accent') {
+              artPlacement = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.['paint_and_accent']?.art_placement;
+            }
+          }
+          
+          // 2. Fallback to background's default art_placement
+          if (!artPlacement && this._backgroundsConfig) {
+            const bgType = this._state.ui.currentBackground.type;
+            if (bgType === 'rooms') {
+              const bgId = this._state.ui.currentBackground.id;
+              const background = this._backgroundsConfig.categories.rooms.find(bg => bg.id === bgId);
+              artPlacement = background?.art_placement;
+            }
+          }
+
+          if (artPlacement && 'applyArtPlacement' in this._sceneManager) {
+            (this._sceneManager as any).applyArtPlacement(artPlacement);
+          } else if ('resetArtPlacement' in this._sceneManager) {
+            (this._sceneManager as any).resetArtPlacement();
+          }
+        }
+      }
+      
+      // Update cache with user's customization
+      const archetypeId = this._getActiveArchetypeId();
+      if (archetypeId) {
+        const backgroundId = this._getBackgroundKeyForCache(this._state.ui.currentBackground);
+        const cacheKey = this._getCacheKey(archetypeId, backgroundId);
+        this._compositionCache.set(cacheKey, structuredClone(response.updated_state));
       }
       
       // Finally, notify all other UI components that the state has changed.

@@ -352,6 +352,23 @@ class WaveformDesignerFacade:
         Returns:
             A dictionary containing the 'updated_state' and 'csg_data'.
         """
+        # Validate dimensions before processing
+        from services.dimension_validator import validate_frame_design_dimensions
+        
+        constraints = self._config_service.get_dimension_constraints()
+        shape_constraints = constraints.get(state.frame_design.shape, {})
+        
+        validation_result = validate_frame_design_dimensions(
+            shape=state.frame_design.shape,
+            finish_x=state.frame_design.finish_x,
+            finish_y=state.frame_design.finish_y,
+            min_dimension=shape_constraints.get('min_dimension', 8.0),
+            max_dimension=shape_constraints.get('max_dimension', 84.0)
+        )
+        
+        if not validation_result.valid:
+            raise ValueError(f"Invalid dimensions: {validation_result.error}")
+        
         # Step 1: Determine what processing is needed and get the updated state.
         updated_state = self._processing_level_service.process_by_level(
             state,

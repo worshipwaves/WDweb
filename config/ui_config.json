@@ -1,4 +1,24 @@
 {
+	"dimension_constraints": {
+    "circular": {
+      "enforce_square": true,
+      "allow_aspect_lock": false,
+      "min_dimension": 8.0,
+      "max_dimension": 84.0
+    },
+    "rectangular": {
+      "enforce_square": false,
+      "allow_aspect_lock": true,
+      "min_dimension": 8.0,
+      "max_dimension": 84.0
+    },
+    "diamond": {
+      "enforce_square": false,
+      "allow_aspect_lock": true,
+      "min_dimension": 8.0,
+      "max_dimension": 84.0
+    }
+  },
   "elements": {
     "shape": {
       "id": "shape",
@@ -95,6 +115,7 @@
       "type": "range",
       "label": "Gap",
       "state_path": "frame_design.separation",
+      "show_when": {"number_sections": [2, 3, 4]},
       "min": 0.5,
       "max": 4.0,
       "step": 0.5,
@@ -105,11 +126,10 @@
 			"type": "range",
 			"label": "Side Margin",
 			"show_when": {
-				"shape": ["circular", "diamond"],
 				"slot_style": ["linear"]
 			},
 			"state_path": "pattern_settings.side_margin",
-			"min": 1.0,
+			"min": 0,
 			"max": 12.0,
 			"step": 0.5,
 			"display_value_id": "sideMarginValue"
@@ -232,7 +252,7 @@
           "options": {
             "main": {
               "type": "slider_group",
-              "element_keys": ["size", "width", "height", "separation", "slots", "side_margin"]
+              "element_keys": ["size", "width", "height", "slots", "separation", "side_margin"]
             }
           }
         },

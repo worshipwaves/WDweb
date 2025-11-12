@@ -37,6 +37,30 @@ class SectionMaterialDTO(BaseModel):
     species: str
     grain_direction: Literal["horizontal", "vertical", "radiant", "diamond"]
     
+class ArtPlacementDTO(BaseModel):
+    """Defines the 3D placement of the artwork in a scene."""
+    model_config = ConfigDict(frozen=True)
+    position: Tuple[float, float, float]
+    scale_factor: float
+    rotation: Tuple[float, float, float]
+
+class BackgroundPlacementDTO(BaseModel):
+    """Contains overrides for a specific background."""
+    model_config = ConfigDict(frozen=True)
+    composition_overrides: Optional[Dict[str, Any]] = None
+    art_placement: Optional[ArtPlacementDTO] = None
+
+class ArchetypePlacementDTO(BaseModel):
+    """Contains all background-specific overrides for a single archetype."""
+    model_config = ConfigDict(frozen=True)
+    backgrounds: Dict[str, BackgroundPlacementDTO]
+
+class PlacementDefaultsDTO(BaseModel):
+    """The root model for placement_defaults.json."""
+    model_config = ConfigDict(frozen=True)
+    version: str
+    archetypes: Dict[str, ArchetypePlacementDTO]
+
 class BackingConfig(BaseModel):
     """Backing material configuration."""
     model_config = ConfigDict(frozen=True, populate_by_name=True)

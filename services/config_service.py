@@ -1,7 +1,7 @@
 """Configuration service for loading default application state."""
 import json
 from pathlib import Path
-from services.dtos import CompositionStateDTO
+from services.dtos import CompositionStateDTO, PlacementDefaultsDTO
 
 class ConfigService:
     """Service for managing application configuration and default state."""
@@ -31,7 +31,11 @@ class ConfigService:
             self._backgrounds = json.load(f)
         
         with open(config_dir / 'backing_materials.json', 'r') as f:
-            self._backing_materials = json.load(f)  
+            self._backing_materials = json.load(f) 
+
+        with open(config_dir / 'placement_defaults.json', 'r') as f:
+            placement_data = json.load(f)
+        self._placement_defaults = PlacementDefaultsDTO(**placement_data)    
     
     def get_default_state(self) -> CompositionStateDTO:
         """Return the default application state.
@@ -87,4 +91,24 @@ class ConfigService:
         Returns:
             Dictionary with backing materials configuration.
         """
-        return self._backing_materials    
+        return self._backing_materials
+        
+    def get_dimension_constraints(self) -> dict:
+        """Return dimension constraints configuration.
+        
+        Returns:
+            Dictionary with dimension constraints for all shapes.
+        """
+        return self._ui_config.get('dimension_constraints', {
+            'circular': {'min_dimension': 8.0, 'max_dimension': 84.0},
+            'rectangular': {'min_dimension': 8.0, 'max_dimension': 84.0},
+            'diamond': {'min_dimension': 8.0, 'max_dimension': 84.0}
+        })    
+
+    def get_placement_defaults(self) -> dict:
+        """Return scene placement default overrides.
+        
+        Returns:
+            Dictionary with placement defaults configuration.
+        """
+        return self._placement_defaults.model_dump()

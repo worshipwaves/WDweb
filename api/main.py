@@ -104,6 +104,13 @@ def get_backing_materials_config():
     Get backing materials configuration including material types and properties.
     """
     return config_service.get_backing_materials_config()
+    
+@app.get("/api/config/placement-defaults")
+def get_placement_defaults():
+    """
+    Get placement defaults configuration for scene-specific parameter overrides.
+    """
+    return config_service.get_placement_defaults()    
 
 @app.get("/composition/default", response_model=CompositionStateDTO)
 def get_default_composition():

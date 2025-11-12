@@ -11,7 +11,7 @@ import { FrameGenerationService } from './FrameGenerationService';
 import { PerformanceMonitor } from './PerformanceMonitor';
 import { TextureCacheService } from './TextureCacheService';
 import { IdleTextureLoader } from './IdleTextureLoader';
-import { SmartCsgResponse, WoodMaterialsConfig, BackgroundsConfig, ApplicationState, CompositionStateDTO } from './types/schemas';
+import { SmartCsgResponse, WoodMaterialsConfig, BackgroundsConfig, ApplicationState, CompositionStateDTO, ArtPlacement } from './types/schemas';
 import { WaveformDesignerFacade } from './WaveformDesignerFacade';
 import { WoodMaterial } from './WoodMaterial';
 import { BackingMaterial } from './BackingMaterial';
@@ -44,7 +44,6 @@ export class SceneManager {
     private _isRendering = false;
     private _isInteractionSetup: boolean = false;
     private _isFirstRender: boolean = true;
-		private _referenceAspectRatio: number = 0;
 
     private constructor(canvasId: string, facade: WaveformDesignerFacade, controller: ApplicationController) {
         const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
@@ -69,7 +68,6 @@ export class SceneManager {
             this._engine.resize();
             this.checkLayoutMode();
             this.updateCameraOffset();
-            this.adjustCameraForAspectRatio();
         });
 
         this._engine.runRenderLoop(() => this._scene.render());
@@ -146,14 +144,6 @@ export class SceneManager {
             this._scene.clearColor = new Color3(0.9, 0.88, 0.86).toColor4();
             this._backgroundLayer = new Layer('backgroundLayer', path, this._scene, true);
         }
-        
-        // Apply art placement for room backgrounds
-        if (type === 'rooms') {
-            this.applyArtPlacement(id);
-        } else {
-            // Reset to default position for paint/accent backgrounds
-            this.resetArtPlacement();
-        }
     }
 	
     private checkLayoutMode(): void {
@@ -191,20 +181,6 @@ export class SceneManager {
         const offsetUnits = offsetPixels / pixelsPerUnit;
         this._cameraOffset = offsetUnits;
         this._camera.target.x = this._cameraOffset;
-    }
-		
-		private adjustCameraForAspectRatio(): void {
-        if (this._referenceAspectRatio === 0) return;
-        
-        const canvas = this._engine.getRenderingCanvas();
-        if (!canvas) return;
-        
-        const currentAspect = canvas.width / canvas.height;
-        const aspectRatio = this._referenceAspectRatio / currentAspect;
-        
-        // Adjust radius to maintain horizontal FOV
-        const baseRadius = this.calculateIdealRadius();
-        this._camera.radius = baseRadius * aspectRatio;
     }
 
     public preloadDefaultTextures(config: WoodMaterialsConfig): void {
@@ -259,30 +235,16 @@ export class SceneManager {
 						if (!this._rootNode) {
 								this._rootNode = new TransformNode("root", this._scene);
 								this._rootNode.rotation.x = Math.PI / 2;
-								
-								// Reapply art placement if room background is active
-								if (this._controller) {
-										const state = this._controller.getState();
-										if (state?.ui?.currentBackground?.type === 'rooms') {
-												this.applyArtPlacement(state.ui.currentBackground.id);
-										}
-								}
 						}
 						this._sectionMeshes = meshes;
-
-						// Reapply art placement AFTER meshes are parented (meshes must exist for bounding box)
-						const state = this._controller.getState();
-						if (state?.ui?.currentBackground?.type === 'rooms') {
-								this.applyArtPlacement(state.ui.currentBackground.id);
-						}
             PerformanceMonitor.end('csg_mesh_generation');
             PerformanceMonitor.start('apply_materials');
             this.applySectionMaterials();
             PerformanceMonitor.end('apply_materials');
             
             this.pulseAllSections();
-            this._camera.radius = this.calculateIdealRadius();
-            this.setupSectionInteraction();
+						this._camera.radius = this.calculateIdealRadius();
+						this.setupSectionInteraction();
 
             const sectionIndicator = document.getElementById('sectionIndicator');
             if (this._sectionMeshes.length > 1) {
@@ -306,6 +268,14 @@ export class SceneManager {
             } else {
                 if (sectionIndicator) sectionIndicator.style.display = 'none';
                 this.clearSelection();
+            }
+						
+						// Apply art placement from current state (fixes initial render bug)
+            const artPlacement = this._controller.getCurrentArtPlacement();
+            if (artPlacement) {
+                this.applyArtPlacement(artPlacement);
+            } else {
+                this.resetArtPlacement();
             }
             
             document.dispatchEvent(new CustomEvent('demo:renderComplete'));
@@ -869,30 +839,12 @@ export class SceneManager {
         }
     }
 		
-		private applyArtPlacement(backgroundId: string): void {
-        if (!this._controller) {
-            console.warn('[SceneManager] Controller not available yet');
-            return;
-        }
-
-        const config = this._controller.getBackgroundsConfig();
-        if (!config) {
-            console.warn('[SceneManager] No backgrounds config available');
-            return;
-        }
-
-        const background = config.categories.rooms.find(bg => bg.id === backgroundId);
-        if (!background || !background.art_placement) {
-            this.resetArtPlacement();
-            return;
-        }
-
+		public applyArtPlacement(placement: ArtPlacement): void {
         if (!this._rootNode) {
             console.warn('[SceneManager] Root node not available for art placement');
             return;
         }
 
-        const placement = background.art_placement;
         const state = this._controller.getState();
         const frameDesign = state?.composition?.frame_design;
 
@@ -910,24 +862,22 @@ export class SceneManager {
         const targetScale = placement.scale_factor;
         this._rootNode.scaling = new Vector3(targetScale, targetScale, targetScale);
 
-        // Apply rotation if specified
-        if (placement.rotation) {
-            const rotX = placement.rotation[0] * Math.PI / 180;
-            const rotY = placement.rotation[1] * Math.PI / 180;
-            const rotZ = placement.rotation[2] * Math.PI / 180;
-            
-            // Preserve the existing X rotation (Math.PI / 2) and add placement rotation
-            this._rootNode.rotation = new Vector3(
-                Math.PI / 2 + rotX,
-                rotY,
-                rotZ
-            );
-        }
+        // Apply rotation
+        const rotX = placement.rotation[0] * Math.PI / 180;
+        const rotY = placement.rotation[1] * Math.PI / 180;
+        const rotZ = placement.rotation[2] * Math.PI / 180;
         
-        console.log(`[SceneManager] Applied art placement for ${backgroundId}:`, placement);
+        // Preserve the existing X rotation (Math.PI / 2) and add placement rotation
+        this._rootNode.rotation = new Vector3(
+            Math.PI / 2 + rotX,
+            rotY,
+            rotZ
+        );
+        
+        console.log('[SceneManager] Applied art placement:', placement);
     }
     
-    private resetArtPlacement(): void {
+    public resetArtPlacement(): void {
         if (!this._rootNode) return;
         
         // Reset to default position (centered, no offset)

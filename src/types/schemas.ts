@@ -48,11 +48,11 @@ export const WoodMaterialsConfigSchema = z.object({
 
 export type WoodMaterialsConfig = z.infer<typeof WoodMaterialsConfigSchema>;
 
-// Art placement metadata schema
+// Art placement metadata schema (for placement_defaults.json)
 export const ArtPlacementSchema = z.object({
   position: z.tuple([z.number(), z.number(), z.number()]),
-  scale_factor: z.number().default(1.0),
-  rotation: z.tuple([z.number(), z.number(), z.number()]).optional()
+  scale_factor: z.number(),
+  rotation: z.tuple([z.number(), z.number(), z.number()]),
 }).strict();
 
 export type ArtPlacement = z.infer<typeof ArtPlacementSchema>;
@@ -355,7 +355,9 @@ export const UIStateSchema = z.object({
   currentBackground: z.object({
     type: z.enum(['paint', 'accent', 'rooms']),
     id: z.string()
-  })
+  }),
+	aspectRatioLocked: z.boolean().optional().default(false),
+  lockedAspectRatio: z.number().nullable().optional().default(null)
 });
 
 export type UIState = z.infer<typeof UIStateSchema>;
@@ -459,6 +461,7 @@ export type CategoriesConfig = z.infer<typeof CategoriesConfigSchema>;
 export const ApplicationStateSchema = z.object({
   phase: z.enum(['upload', 'discovery', 'reveal', 'intent', 'customize']),
   composition: CompositionStateDTOSchema,
+  compositionCache: z.record(z.string(), CompositionStateDTOSchema).default({}),
   audio: AudioDataSchema, // New addition for smart processing
   ui: UIStateSchema,
   processing: z.object({
@@ -466,5 +469,37 @@ export const ApplicationStateSchema = z.object({
     progress: z.number(),
   }),
 });
+
+// ======================================================================
+// PLACEMENT DEFAULTS SCHEMAS
+// ======================================================================
+
+// Composition Overrides Schema (partial for flexibility)
+export const CompositionOverridesSchema = z.record(z.string(), z.any());
+
+export type CompositionOverrides = Partial<CompositionStateDTO>;
+
+// Schema for a single background's placement settings
+export const BackgroundPlacementSchema = z.object({
+  composition_overrides: CompositionOverridesSchema.optional(),
+  art_placement: ArtPlacementSchema.optional(),
+}).strict();
+
+export type BackgroundPlacement = z.infer<typeof BackgroundPlacementSchema>;
+
+// Schema for a single archetype's placement rules
+export const ArchetypePlacementSchema = z.object({
+  backgrounds: z.record(z.string(), BackgroundPlacementSchema),
+}).strict();
+
+export type ArchetypePlacement = z.infer<typeof ArchetypePlacementSchema>;
+
+// The top-level schema for the entire placement_defaults.json file
+export const PlacementDefaultsSchema = z.object({
+  version: z.string(),
+  archetypes: z.record(z.string(), ArchetypePlacementSchema),
+}).strict();
+
+export type PlacementDefaults = z.infer<typeof PlacementDefaultsSchema>;
 
 export type ApplicationState = z.infer<typeof ApplicationStateSchema>;

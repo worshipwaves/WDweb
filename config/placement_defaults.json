@@ -1,0 +1,35 @@
+{
+  "version": "1.0.0",
+  "archetypes": {
+    "circular_radial_n2": {
+      "backgrounds": {
+        "paint_and_accent": {
+          "composition_overrides": {
+            "frame_design": {
+              "finish_x": 36,
+              "finish_y": 36
+            }
+          },
+          "art_placement": {
+            "position": [0, 0, 0],
+            "scale_factor": 1.0,
+            "rotation": [0, 0, 0]
+          }
+        },
+        "bedroom": {
+          "composition_overrides": {
+            "frame_design": {
+              "finish_x": 30,
+              "finish_y": 30
+            }
+          },
+          "art_placement": {
+            "position": [-2.125, -3, -20],
+            "scale_factor": 0.725,
+            "rotation": [0, 0, 0]
+          }
+        }
+      }
+    }
+  }
+}

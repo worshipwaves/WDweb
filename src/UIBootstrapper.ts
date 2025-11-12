@@ -197,7 +197,8 @@ export class UIBootstrapper {
 
 			if (widthSlider && heightSlider) {
 				const syncSliders = (source: HTMLInputElement, target: HTMLInputElement, targetDisplay: HTMLElement | null) => {
-					const shape = (this.uiEngine.getElement('shape') as HTMLSelectElement)?.value;
+					const currentState = this.controller.getState();
+					const shape = currentState.composition.frame_design.shape;
 					if (shape === 'circular') {
 						target.value = source.value;
 						if (targetDisplay) {

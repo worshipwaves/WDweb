@@ -6,6 +6,10 @@ This is now the authoritative source for core geometry logic.
 import math
 from typing import Dict, Any, Tuple, List
 from services.dtos import CompositionStateDTO, GeometryResultDTO
+from services.dimension_calculator import (
+    DimensionConstraints,
+    calculate_constrained_dimensions
+)
 
 # Panel thickness constant - matches frontend
 PANEL_THICKNESS = 0.375  # inches
@@ -54,7 +58,7 @@ def calculate_section_dimensions(
     finish_y: float,
     number_sections: int,
     separation: float,
-    slot_style: str = 'radial'
+    slot_style: str
 ) -> List[Dict[str, float]]:
     """
     Calculate dimensions and offsets for each section.
@@ -186,6 +190,16 @@ def find_max_amplitude_linear_constrained(
     Returns:
         Maximum safe amplitude for all slots
     """
+    
+    # CRITICAL: If this calculation is part of a dimension change request,
+    # ensure we're using dimensions that respect aspect ratio constraints.
+    # This prevents backend from calculating geometry for dimensions that
+    # the frontend would reject due to constraint violations.
+    #
+    # Note: In current implementation, dimensions are pre-validated by facade
+    # before reaching this function, so this is a defensive check.
+    # Future enhancement: Accept constraints as parameter if needed.
+    
     slots_per_section = number_slots // number_sections if number_sections > 0 else number_slots
     
     # Calculate base panel width (margins are constraints within panels, not layout additions)

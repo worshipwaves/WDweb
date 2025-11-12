@@ -20,15 +20,18 @@ export class SliderGroup implements PanelComponent {
   private _sliders: SliderConfig[];
   private _onChange: (id: string, value: number) => void;
 	private _numberSections?: number;
+	private _title?: string;
   
   constructor(
     sliders: SliderConfig[],
     onChange: (id: string, value: number) => void,
-    numberSections?: number
+    numberSections?: number,
+    title?: string
   ) {
     this._sliders = sliders;
     this._onChange = onChange;
     this._numberSections = numberSections;
+    this._title = title;
     
     // Apply dynamic max values based on number of sections
     this._updateDynamicMaxValues();
@@ -61,6 +64,14 @@ export class SliderGroup implements PanelComponent {
   render(): HTMLElement {
     const container = document.createElement('div');
     container.className = 'slider-group';
+
+    // Add optional header
+    if (this._title) {
+      const header = document.createElement('div');
+      header.className = 'panel-header';
+      header.innerHTML = `<h3>${this._title}</h3>`;
+      container.appendChild(header);
+    }
 
     this._sliders.forEach(config => {
       const group = document.createElement('div');
