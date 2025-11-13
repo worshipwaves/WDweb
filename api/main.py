@@ -110,7 +110,14 @@ def get_placement_defaults():
     """
     Get placement defaults configuration for scene-specific parameter overrides.
     """
-    return config_service.get_placement_defaults()    
+    return config_service.get_placement_defaults()
+
+@app.get("/api/config/constraints")
+def get_constraints_config():
+    """
+    Get constraints configuration for manufacturing limits and scene presentation.
+    """
+    return config_service.get_constraints_config()    
 
 @app.get("/composition/default", response_model=CompositionStateDTO)
 def get_default_composition():

@@ -40,12 +40,6 @@
       "min": 24,
       "max": 60,
       "step": 1,
-      "dynamic_max_by_sections": {
-        "1": 30,
-        "2": 42,
-        "3": 54,
-        "4": 60
-      },
       "on_change_triggers": [
         {
           "action": "apply_size_defaults",

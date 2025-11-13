@@ -502,4 +502,42 @@ export const PlacementDefaultsSchema = z.object({
 
 export type PlacementDefaults = z.infer<typeof PlacementDefaultsSchema>;
 
+// ======================================================================
+// CONSTRAINTS CONFIGURATION SCHEMA
+// ======================================================================
+
+export const ConstraintsConfigSchema = z.object({
+  version: z.string(),
+  description: z.string(),
+  manufacturing: z.object({
+    circular: z.object({
+      general: z.object({
+        min: z.number(),
+        max: z.number(),
+        reason: z.string()
+      }),
+      by_section_count: z.record(z.string(), z.object({
+        min: z.number(),
+        max: z.number()
+      }))
+    }),
+    rectangular: z.object({
+      width: z.object({ min: z.number(), max: z.number() }),
+      height: z.object({ min: z.number(), max: z.number() }),
+      reason: z.string()
+    }),
+    diamond: z.object({
+      width: z.object({ min: z.number(), max: z.number() }),
+      height: z.object({ min: z.number(), max: z.number() }),
+      reason: z.string()
+    })
+  }),
+  scenes: z.record(z.string(), z.object({
+    max_height: z.number(),
+    reason: z.string()
+  }))
+}).strict();
+
+export type ConstraintsConfig = z.infer<typeof ConstraintsConfigSchema>;
+
 export type ApplicationState = z.infer<typeof ApplicationStateSchema>;

@@ -12,6 +12,9 @@ class ConfigService:
         Args:
             config_dir: Path to the configuration directory.
         """
+        
+        self._constraints: dict
+        
         # Load composition defaults for DTO
         with open(config_dir / 'composition_defaults.json', 'r') as f:
             composition_data = json.load(f)
@@ -35,7 +38,10 @@ class ConfigService:
 
         with open(config_dir / 'placement_defaults.json', 'r') as f:
             placement_data = json.load(f)
-        self._placement_defaults = PlacementDefaultsDTO(**placement_data)    
+        self._placement_defaults = PlacementDefaultsDTO(**placement_data)
+        
+        with open(config_dir / 'constraints.json', 'r') as f:
+            self._constraints = json.load(f)
     
     def get_default_state(self) -> CompositionStateDTO:
         """Return the default application state.
@@ -44,6 +50,14 @@ class ConfigService:
             The default CompositionStateDTO instance.
         """
         return self._default_state
+        
+    def get_constraints_config(self) -> dict:
+        """Return manufacturing and scene constraints configuration.
+        
+        Returns:
+            Dictionary with constraints configuration.
+        """
+        return self._constraints       
         
     def get_wood_materials_config(self) -> dict:
         """Return wood materials configuration.
@@ -99,11 +113,21 @@ class ConfigService:
         Returns:
             Dictionary with dimension constraints for all shapes.
         """
-        return self._ui_config.get('dimension_constraints', {
-            'circular': {'min_dimension': 8.0, 'max_dimension': 84.0},
-            'rectangular': {'min_dimension': 8.0, 'max_dimension': 84.0},
-            'diamond': {'min_dimension': 8.0, 'max_dimension': 84.0}
-        })    
+        mfg = self._constraints['manufacturing']
+        return {
+            'circular': {
+                'min_dimension': float(mfg['circular']['general']['min']),
+                'max_dimension': float(mfg['circular']['general']['max'])
+            },
+            'rectangular': {
+                'min_dimension': float(mfg['rectangular']['width']['min']),
+                'max_dimension': float(mfg['rectangular']['width']['max'])
+            },
+            'diamond': {
+                'min_dimension': float(mfg['diamond']['width']['min']),
+                'max_dimension': float(mfg['diamond']['width']['max'])
+            }
+        }    
 
     def get_placement_defaults(self) -> dict:
         """Return scene placement default overrides.

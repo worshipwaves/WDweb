@@ -20,12 +20,14 @@ import {
   ApplicationState,
   BackgroundsConfigSchema,
   CompositionStateDTO,
+	ConstraintsConfigSchema, 
   PlacementDefaultsSchema,
   WoodMaterialsConfigSchema,
   type ArtPlacement,
   type AudioProcessResponse,
   type BackgroundsConfig,
   type CompositionOverrides,
+	type ConstraintsConfig,
   type CSGDataResponse,
   type PlacementDefaults,
   type SectionMaterial,
@@ -174,6 +176,7 @@ export class ApplicationController {
 	private _backgroundsConfig: BackgroundsConfig | null = null;
   private _idleTextureLoader: unknown = null; // IdleTextureLoader instance
 	private _placementDefaults: PlacementDefaults | null = null;
+	private _constraints: ConstraintsConfig | null = null;
 	private _compositionCache: Map<string, CompositionStateDTO> = new Map();
 	
 	// Four-panel navigation configuration
@@ -280,14 +283,15 @@ export class ApplicationController {
 			
 			// Load thumbnail and categories configuration
       // Load all configs in parallel
-			const [archetypes, woodMaterials, backgrounds, placementDefaults, uiConfig, _compositionDefaults] = await Promise.all([
+			const [archetypes, woodMaterials, backgrounds, placementDefaults, uiConfig, _compositionDefaults, constraints] = await Promise.all([
 				fetch('http://localhost:8000/api/config/archetypes').then(r => r.json()),
 				fetch('http://localhost:8000/api/config/wood-materials').then(r => r.json()),
 				fetchAndValidate<BackgroundsConfig>('http://localhost:8000/api/config/backgrounds', BackgroundsConfigSchema),
 				fetch('http://localhost:8000/api/config/placement-defaults').then(r => r.json()),
 				fetch('http://localhost:8000/api/config/ui').then(r => r.json()),
-				fetch('http://localhost:8000/api/config/composition-defaults').then(r => r.json())
-			]) as [Record<string, Archetype>, WoodMaterialsConfig, BackgroundsConfig, PlacementDefaults, UIConfig, unknown];
+				fetch('http://localhost:8000/api/config/composition-defaults').then(r => r.json()),
+				fetchAndValidate('http://localhost:8000/api/config/constraints', ConstraintsConfigSchema)
+			]) as [Record<string, Archetype>, WoodMaterialsConfig, BackgroundsConfig, PlacementDefaults, UIConfig, unknown, ConstraintsConfig];
 
 			// Store archetypes
 			Object.entries(archetypes).forEach(([id, data]) => {
@@ -298,6 +302,7 @@ export class ApplicationController {
 			this._woodMaterialsConfig = woodMaterials;
 			this._backgroundsConfig = backgrounds;
 			this._placementDefaults = placementDefaults;
+			this._constraints = constraints;
 			this._thumbnailConfig = uiConfig.thumbnail_config;
 			this._categoriesConfig = uiConfig.categories;
 			
@@ -1750,12 +1755,10 @@ export class ApplicationController {
         const smallerCurrentDim = Math.min(currentX, currentY);
 
         let maxAllowedSize = 60;
-        const sizeConfig = window.uiEngine?.getElementConfig('size');
-        if (sizeConfig?.dynamic_max_by_sections) {
+        if (this._constraints?.manufacturing.circular.by_section_count) {
           const nKey = String(archetype.number_sections);
-          maxAllowedSize = sizeConfig.dynamic_max_by_sections[nKey] ?? sizeConfig.max ?? maxAllowedSize;
-        } else if (sizeConfig?.max) {
-          maxAllowedSize = sizeConfig.max;
+          const constraint = this._constraints.manufacturing.circular.by_section_count[nKey];
+          maxAllowedSize = constraint?.max ?? this._constraints.manufacturing.circular.general.max;
         }
         
         const newSize = Math.min(smallerCurrentDim, maxAllowedSize);
@@ -2083,6 +2086,45 @@ export class ApplicationController {
       await this._sceneManager.generateBackingIfEnabled(backingParams, newComposition);
     }
   }
+	
+	private async _updateBackingEnabled(enabled: boolean): Promise<void> {
+		if (!this._state) return;
+		
+		const currentBacking = this._state.composition.frame_design.backing || { 
+			type: 'acrylic', 
+			material: 'clear', 
+			inset: 0.5 
+		};
+		
+		const newComposition: CompositionStateDTO = {
+			...this._state.composition,
+			frame_design: {
+				...this._state.composition.frame_design,
+				backing: {
+					...currentBacking,
+					enabled
+				}
+			}
+		};
+		
+		const response = await fetch('http://localhost:8000/geometry/backing-parameters', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(newComposition)
+		});
+
+		if (!response.ok) {
+			console.error('[Controller] Failed to fetch backing parameters');
+			return;
+		}
+		
+		const backingParams = await response.json();
+		await this.dispatch({ type: 'COMPOSITION_UPDATED', payload: newComposition });
+
+		if (this._sceneManager) {
+			await this._sceneManager.generateBackingIfEnabled(backingParams, newComposition);
+		}
+	}
 
   /**
    * Handle navigation to cascading panels

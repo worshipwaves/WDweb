@@ -1,0 +1,43 @@
+{
+  "version": "1.0.0",
+  "description": "Physical manufacturing constraints and scene presentation limits",
+  "manufacturing": {
+    "circular": {
+      "general": {
+        "min": 24,
+        "max": 60,
+        "reason": "CNC table size and shipping requirements"
+      },
+      "by_section_count": {
+        "1": {"min": 24, "max": 30},
+        "2": {"min": 24, "max": 42},
+        "3": {"min": 24, "max": 54},
+        "4": {"min": 24, "max": 60}
+      }
+    },
+    "rectangular": {
+      "width": {"min": 12, "max": 84},
+      "height": {"min": 12, "max": 84},
+      "reason": "CNC table size and shipping requirements"
+    },
+    "diamond": {
+      "width": {"min": 12, "max": 84},
+      "height": {"min": 12, "max": 84},
+      "reason": "CNC table size and shipping requirements"
+    }
+  },
+  "scenes": {
+    "bedroom": {
+      "max_height": 36,
+      "reason": "headboard_and_ceiling_clearance"
+    },
+    "living_room": {
+      "max_height": 72,
+      "reason": "standard_wall_height"
+    },
+    "office": {
+      "max_height": 48,
+      "reason": "desk_and_shelf_clearance"
+    }
+  }
+}
