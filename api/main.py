@@ -50,6 +50,7 @@ class CsgDataResponse(BaseModel):
     csg_data: Dict[str, Any]
     updated_state: CompositionStateDTO
     max_amplitude_local: float
+    backing_parameters: Optional[Dict[str, Any]] = None
 
 @app.get("/")
 def health_check():

@@ -278,6 +278,11 @@ export class SceneManager {
                 this.resetArtPlacement();
             }
             
+            // Regenerate backing if enabled (fixes backing disappearance on layout changes)
+            if (csgData.backing_parameters) {
+                await this.generateBackingIfEnabled(csgData.backing_parameters, csgData.updated_state);
+            }
+            
             document.dispatchEvent(new CustomEvent('demo:renderComplete'));
             PerformanceMonitor.end('render_internal_total');
         } catch (error: unknown) {
@@ -759,10 +764,11 @@ export class SceneManager {
                 mesh.bakeCurrentTransformIntoVertices();
             }
             
-            mesh.parent = this._rootNode;
-            
+            // Apply material BEFORE parenting to prevent white flash
             const backingMaterial = new BackingMaterial(this._scene, backingParams);
             mesh.material = backingMaterial.getMaterial();
+            
+            mesh.parent = this._rootNode;
             
             this._backingMeshes.push(mesh);
         }

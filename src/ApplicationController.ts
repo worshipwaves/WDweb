@@ -905,23 +905,17 @@ export class ApplicationController {
         let composition = this._compositionCache.get(cacheKey);
         
         if (!composition) {
-          // First visit: apply current composition + placement defaults
+          // Cache miss: preserve current user-modified state without applying defaults
+          // Defaults are ONLY applied during archetype selection, not background changes
           composition = structuredClone(this._state.composition);
           
-          if (this._placementDefaults) {
-            const placementData = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.[backgroundKey];
-            if (placementData?.composition_overrides) {
-              composition = deepMerge(composition, placementData.composition_overrides);
-            }
-          }
-          
-          // Cache the result
+          // Cache the current state as-is to preserve user modifications
           this._compositionCache.set(cacheKey, composition);
           
-          // Apply composition
+          // Apply composition (no changes needed, just ensures scene updates)
           void this.handleCompositionUpdate(composition);
         } else {
-          // Subsequent visit: restore cached composition
+          // Cache hit: restore cached composition (includes user modifications)
           void this.handleCompositionUpdate(composition);
         }
         
@@ -1731,7 +1725,9 @@ export class ApplicationController {
         composition.frame_design.finish_x = newSize;
         composition.frame_design.finish_y = newSize;
       }
-      
+			
+			// CRITICAL: Apply placement defaults (composition_overrides) ONLY during archetype selection
+      // Background changes (handleBackgroundSelected) must NOT reapply these defaults to preserve user modifications
       // Apply placement defaults (first visit only)
       if (this._placementDefaults) {
         const placementData = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.[backgroundId];

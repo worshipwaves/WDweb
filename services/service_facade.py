@@ -386,11 +386,15 @@ class WaveformDesignerFacade:
         csg_data["section_local_centers"] = geometry.section_local_centers
         csg_data["true_min_radius"] = geometry.true_min_radius
 
-        # Step 5: Return both so the frontend can sync its state.
+        # Step 5: Include backing parameters if backing is enabled
+        backing_params = self.get_backing_parameters(updated_state)
+        
+        # Step 6: Return both so the frontend can sync its state.
         return {
             "csg_data": csg_data,
             "updated_state": updated_state,
-            "max_amplitude_local": geometry.max_amplitude_local
+            "max_amplitude_local": geometry.max_amplitude_local,
+            "backing_parameters": backing_params
         }
     
     def get_composition_summary(self, state: CompositionStateDTO) -> Dict[str, Any]:

@@ -316,6 +316,7 @@ export const SmartCsgResponseSchema = z.object({
   csg_data: CSGDataResponseSchema,
   updated_state: CompositionStateDTOSchema,
   max_amplitude_local: z.number(),
+  backing_parameters: z.any().optional(),
 });
 
 export type SmartCsgResponse = z.infer<typeof SmartCsgResponseSchema>;
