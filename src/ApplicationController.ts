@@ -2242,254 +2242,264 @@ export class ApplicationController {
    * Handles a request to update the composition, using the smart processing pipeline.
    * This is the core of the optimization logic on the frontend.
    */
-  async handleCompositionUpdate(initialComposition: CompositionStateDTO): Promise<void> {
-    if (!this._state) {
-      throw new Error('Controller not initialized');
-    }
-		
-		// Create a mutable working copy to avoid reassigning the function parameter.
-    let newComposition = initialComposition;
-
-    // Check if the size has changed
-    const oldSize = this._state.composition.frame_design.finish_x;
-    const newSize = newComposition.frame_design.finish_x;
-
-    if (oldSize !== newSize) {
-      // Size has changed, apply smart defaults
-      const sizeKey = String(newSize);
-      const defaults = newComposition.size_defaults?.[sizeKey];
-
-      if (defaults) {
-        newComposition = {
-          ...newComposition,
-          pattern_settings: {
-            ...newComposition.pattern_settings,
-            number_slots: defaults.number_slots,
-          },
-          frame_design: {
-            ...newComposition.frame_design,
-            separation: defaults.separation,
-          },
-        };
-				
-				// Update UI dropdown to hide/show grain options and reset to valid value if needed
-				if (typeof window !== 'undefined' && (window as { updateGrainDirectionOptionsFromController?: (n: number) => void }).updateGrainDirectionOptionsFromController) {
-					(window as { updateGrainDirectionOptionsFromController?: (n: number) => void }).updateGrainDirectionOptionsFromController?.(newN);
-					const updateFn = (window as { updateGrainDirectionOptionsFromController?: (n: number) => void }).updateGrainDirectionOptionsFromController;
-					if (updateFn) updateFn(newN);
-				}
-      }
-    }
-		
-		// Initialize section_materials when number_sections changes (CHAT 2 FIX)
-    const oldN = this._state.composition.frame_design.number_sections;
-    const newN = newComposition.frame_design.number_sections;
-
-    if (oldN !== newN) {
-    
-    // CRITICAL: Use materials from UI snapshot, NOT old state
-    const uiCapturedMaterials = newComposition.frame_design.section_materials || [];
-    const initializedMaterials = initializeSectionMaterials(
-      oldN,
-      newN,
-      uiCapturedMaterials,
-      this._woodMaterialsConfig
-    );
-      
-      newComposition = {
-        ...newComposition,
-        frame_design: {
-          ...newComposition.frame_design,
-          section_materials: initializedMaterials
-        }
-      };
-    }
-
-    // 1. Detect what changed to determine the processing level.
-    const changedParams = this._detectChangedParams(
-      this._state.composition,
-      newComposition
-    );
-
-    // If nothing relevant changed, just update the local state without an API call.
-    if (changedParams.length === 0) {
-      await this.dispatch({ type: 'COMPOSITION_UPDATED', payload: newComposition });
+ 
+	async handleCompositionUpdate(initialComposition: CompositionStateDTO): Promise<void> {
+    if (this._isUpdatingComposition) {
+      console.warn('[Controller] Composition update already in progress. Ignoring request.');
       return;
     }
-
-    // 2. Check if ONLY material properties changed (fast path - no backend call)
-    const onlyMaterialsChanged = changedParams.every(param => 
-      param === 'section_materials' || param.startsWith('section_materials.')
-    );
-
-    if (onlyMaterialsChanged) {
-      
-      // Update state locally
-      this._state = {
-        ...this._state,
-        composition: newComposition
-      };
-      
-      // Persist state
-      this._facade.persistState(this._state);
-			
-			// Update cache with user's customization
-      const archetypeId = this._getActiveArchetypeId();
-      if (archetypeId) {
-        const backgroundId = this._getBackgroundKeyForCache(this._state.ui.currentBackground);
-        const cacheKey = this._getCacheKey(archetypeId, backgroundId);
-        this._compositionCache.set(cacheKey, structuredClone(newComposition));
-      }
-      
-      // Apply materials to existing meshes (no CSG regeneration)
-      if (this._sceneManager) {
-        // When no specific sections are selected, this implies an update to all
-        const targets = this._selectedSectionIndices.size > 0 
-          ? this._selectedSectionIndices 
-          : new Set(Array.from({ length: this._state.composition.frame_design.number_sections }, (_, i) => i));
-
-        targets.forEach(sectionId => {
-          this._sceneManager.applySingleSectionMaterial?.(sectionId);
-        });
-      }
-      
-      // Notify subscribers
-      this.notifySubscribers();
-      
-      return; // CRITICAL: Stop execution here to prevent full re-render
-    }
-
-    // 3. Check if this is an audio-level change that we can handle client-side
-    const audioLevelParams = ['number_sections', 'number_slots', 'binning_mode'];
-    const isAudioChange = changedParams.some(param => audioLevelParams.includes(param));
-    
-    let stateToSend = newComposition;
-    
-    if (isAudioChange && this._state.audio.audioSessionId) {
-      const rebinnedAmplitudes = this._audioCache.rebinFromCache(
-        this._state.audio.audioSessionId,
-        {
-          numSlots: newComposition.pattern_settings.number_slots,
-          binningMode: 'mean_abs'
-        }
-      );
-      
-      if (rebinnedAmplitudes) {
-        // The rebinned amplitudes are NORMALIZED (0-1). We send them directly
-        // to the backend, which will calculate the new max_amplitude_local for
-        // the new geometry and perform the final scaling.
-        stateToSend = {
-          ...newComposition,
-          processed_amplitudes: Array.from(rebinnedAmplitudes)
-        };
-      } else {
-        return; // Abort if we can't generate valid amplitudes
-      }
-		} else {
-					// Filter valid amplitudes first
-					const validAmps = this._state.composition.processed_amplitudes.filter(
-						(amp): amp is number => amp !== null && isFinite(amp)
-					);
-					
-					// CRITICAL: For geometry changes, send NORMALIZED amplitudes (0-1 range)
-					// Backend will apply the new max_amplitude_local to these normalized values
-					let normalizedAmps = validAmps;
-					if (validAmps.length > 0) {
-						const maxAmp = Math.max(...validAmps.map(Math.abs));
-						if (maxAmp > 1.5) {
-							// Amplitudes are already scaled, normalize them
-							normalizedAmps = validAmps.map(a => a / maxAmp);
-						}
-					}
-					
-					stateToSend = {
-							...newComposition,
-							processed_amplitudes: normalizedAmps,
-					};
-				}
-    
+    this._isUpdatingComposition = true;
     try {
-      // 4. Make one smart API call.
-      const response = await this._facade.getSmartCSGData(
-        stateToSend,
-        changedParams,
-        this._state.audio.previousMaxAmplitude
+      if (!this._state) {
+        throw new Error('Controller not initialized');
+      }
+      
+      // Create a mutable working copy to avoid reassigning the function parameter.
+      let newComposition = initialComposition;
+
+      // Check if the size has changed
+      const oldSize = this._state.composition.frame_design.finish_x;
+      const newSize = newComposition.frame_design.finish_x;
+
+      if (oldSize !== newSize) {
+        // Size has changed, apply smart defaults
+        const sizeKey = String(newSize);
+        const defaults = newComposition.size_defaults?.[sizeKey];
+
+        if (defaults) {
+          newComposition = {
+            ...newComposition,
+            pattern_settings: {
+              ...newComposition.pattern_settings,
+              number_slots: defaults.number_slots,
+            },
+            frame_design: {
+              ...newComposition.frame_design,
+              separation: defaults.separation,
+            },
+          };
+          
+          // Update UI dropdown to hide/show grain options and reset to valid value if needed
+          if (typeof window !== 'undefined' && (window as { updateGrainDirectionOptionsFromController?: (n: number) => void }).updateGrainDirectionOptionsFromController) {
+            (window as { updateGrainDirectionOptionsFromController?: (n: number) => void }).updateGrainDirectionOptionsFromController?.(newComposition.frame_design.number_sections);
+          }
+        }
+      }
+      
+      // Initialize section_materials when number_sections changes
+      const oldN = this._state.composition.frame_design.number_sections;
+      const newN = newComposition.frame_design.number_sections;
+
+      if (oldN !== newN) {
+      
+      // CRITICAL: Use materials from UI snapshot, NOT old state
+      const uiCapturedMaterials = newComposition.frame_design.section_materials || [];
+      if (this._woodMaterialsConfig) { // Ensure config is loaded
+        const initializedMaterials = initializeSectionMaterials(
+          oldN,
+          newN,
+          uiCapturedMaterials,
+          this._woodMaterialsConfig
+        );
+        
+        newComposition = {
+          ...newComposition,
+          frame_design: {
+            ...newComposition.frame_design,
+            section_materials: initializedMaterials
+          }
+        };
+      }
+      }
+
+      // 1. Detect what changed to determine the processing level.
+      const changedParams = this._detectChangedParams(
+        this._state.composition,
+        newComposition
       );
 
-      // 5. Handle the handshake: update state FIRST, then trigger the render.
-      // This is the crucial step to prevent infinite loops.
+      // If nothing relevant changed, just update the local state without an API call.
+      if (changedParams.length === 0) {
+        await this.dispatch({ type: 'COMPOSITION_UPDATED', payload: newComposition });
+        return;
+      }
 
-      // First, update the application state internally with the new, processed state.
-      // We do this BEFORE notifying subscribers to prevent race conditions.
-      // The backend is now the single source of truth for calculations.
-      // We read the new max amplitude directly from the API response.
-      this._state = {
-        ...this._state,
-        composition: response.updated_state,
-        audio: { // Also update the audio tracking state
-          ...this._state.audio,
-          // The new "previous" is the value calculated and returned by the backend.
-          previousMaxAmplitude: response.max_amplitude_local,
-        },
-      };
+      // 2. Check if ONLY material properties changed (fast path - no backend call)
+      const onlyMaterialsChanged = changedParams.every(param => 
+        param === 'section_materials' || param.startsWith('section_materials.')
+      );
 
-      // Manually persist the new state
-      this._facade.persistState(this._state);
-      
-      // Now, trigger the render directly with the received CSG data.
-      if (this._sceneManager) {
-        await this._sceneManager.renderComposition(response);
+      if (onlyMaterialsChanged) {
         
-        // Re-apply art placement after rendering
+        // Update state locally
+        this._state = {
+          ...this._state,
+          composition: newComposition
+        };
+        
+        // Persist state
+        this._facade.persistState(this._state);
+        
+        // Update cache with user's customization
         const archetypeId = this._getActiveArchetypeId();
         if (archetypeId) {
-          const backgroundKey = this._getBackgroundKeyForCache(this._state.ui.currentBackground);
-          let artPlacement: ArtPlacement | undefined;
-          
-          // 1. Check placement_defaults for archetype-specific override
-          if (this._placementDefaults) {
-            const placementData = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.[backgroundKey];
-            artPlacement = placementData?.art_placement;
-            
-            if (!artPlacement && backgroundKey !== 'paint_and_accent') {
-              artPlacement = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.['paint_and_accent']?.art_placement;
-            }
-          }
-          
-          // 2. Fallback to background's default art_placement
-          if (!artPlacement && this._backgroundsConfig) {
-            const bgType = this._state.ui.currentBackground.type;
-            if (bgType === 'rooms') {
-              const bgId = this._state.ui.currentBackground.id;
-              const background = this._backgroundsConfig.categories.rooms.find(bg => bg.id === bgId);
-              artPlacement = background?.art_placement;
-            }
-          }
+          const backgroundId = this._getBackgroundKeyForCache(this._state.ui.currentBackground);
+          const cacheKey = this._getCacheKey(archetypeId, backgroundId);
+          this._compositionCache.set(cacheKey, structuredClone(newComposition));
+        }
+        
+        // Apply materials to existing meshes (no CSG regeneration)
+        if (this._sceneManager) {
+          // When no specific sections are selected, this implies an update to all
+          const targets = this._selectedSectionIndices.size > 0 
+            ? this._selectedSectionIndices 
+            : new Set(Array.from({ length: this._state.composition.frame_design.number_sections }, (_, i) => i));
 
-          if (artPlacement && 'applyArtPlacement' in this._sceneManager) {
-            (this._sceneManager as any).applyArtPlacement(artPlacement);
-          } else if ('resetArtPlacement' in this._sceneManager) {
-            (this._sceneManager as any).resetArtPlacement();
+          targets.forEach(sectionId => {
+            this._sceneManager.applySingleSectionMaterial?.(sectionId);
+          });
+        }
+        
+        // Notify subscribers
+        this.notifySubscribers();
+        
+        return; // CRITICAL: Stop execution here to prevent full re-render
+      }
+
+      // 3. Check if this is an audio-level change that we can handle client-side
+      const audioLevelParams = ['number_sections', 'number_slots', 'binning_mode'];
+      const isAudioChange = changedParams.some(param => audioLevelParams.includes(param));
+      
+      let stateToSend = newComposition;
+      
+      if (isAudioChange && this._state.audio.audioSessionId) {
+        const rebinnedAmplitudes = this._audioCache.rebinFromCache(
+          this._state.audio.audioSessionId,
+          {
+            numSlots: newComposition.pattern_settings.number_slots,
+            binningMode: 'mean_abs'
+          }
+        );
+        
+        if (rebinnedAmplitudes) {
+          // The rebinned amplitudes are NORMALIZED (0-1). We send them directly
+          // to the backend, which will calculate the new max_amplitude_local for
+          // the new geometry and perform the final scaling.
+          stateToSend = {
+            ...newComposition,
+            processed_amplitudes: Array.from(rebinnedAmplitudes)
+          };
+        } else {
+          return; // Abort if we can't generate valid amplitudes
+        }
+      } else {
+            // Filter valid amplitudes first
+            const validAmps = this._state.composition.processed_amplitudes.filter(
+              (amp): amp is number => amp !== null && isFinite(amp)
+            );
+            
+            // CRITICAL: For geometry changes, send NORMALIZED amplitudes (0-1 range)
+            // Backend will apply the new max_amplitude_local to these normalized values
+            let normalizedAmps = validAmps;
+            if (validAmps.length > 0) {
+              const maxAmp = Math.max(...validAmps.map(Math.abs));
+              if (maxAmp > 1.5) {
+                // Amplitudes are already scaled, normalize them
+                normalizedAmps = validAmps.map(a => a / maxAmp);
+              }
+            }
+            
+            stateToSend = {
+                ...newComposition,
+                processed_amplitudes: normalizedAmps,
+            };
+          }
+      
+      try {
+        // 4. Make one smart API call.
+        const response = await this._facade.getSmartCSGData(
+          stateToSend,
+          changedParams,
+          this._state.audio.previousMaxAmplitude
+        );
+
+        // 5. Handle the handshake: update state FIRST, then trigger the render.
+        // This is the crucial step to prevent infinite loops.
+
+        // First, update the application state internally with the new, processed state.
+        // We do this BEFORE notifying subscribers to prevent race conditions.
+        // The backend is now the single source of truth for calculations.
+        // We read the new max amplitude directly from the API response.
+        this._state = {
+          ...this._state,
+          composition: response.updated_state,
+          audio: { // Also update the audio tracking state
+            ...this._state.audio,
+            // The new "previous" is the value calculated and returned by the backend.
+            previousMaxAmplitude: response.max_amplitude_local,
+          },
+        };
+
+        // Manually persist the new state
+        this._facade.persistState(this._state);
+        
+        // Now, trigger the render directly with the received CSG data.
+        if (this._sceneManager) {
+          await this._sceneManager.renderComposition(response);
+          
+          // Re-apply art placement after rendering
+          const archetypeId = this._getActiveArchetypeId();
+          if (archetypeId) {
+            const backgroundKey = this._getBackgroundKeyForCache(this._state.ui.currentBackground);
+            let artPlacement: ArtPlacement | undefined;
+            
+            // 1. Check placement_defaults for archetype-specific override
+            if (this._placementDefaults) {
+              const placementData = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.[backgroundKey];
+              artPlacement = placementData?.art_placement;
+              
+              if (!artPlacement && backgroundKey !== 'paint_and_accent') {
+                artPlacement = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.['paint_and_accent']?.art_placement;
+              }
+            }
+            
+            // 2. Fallback to background's default art_placement
+            if (!artPlacement && this._backgroundsConfig && this._state) {
+              const bgType = this._state.ui.currentBackground.type;
+              if (bgType === 'rooms') {
+                const bgId = this._state.ui.currentBackground.id;
+                const background = this._backgroundsConfig.categories.rooms.find(bg => bg.id === bgId);
+                artPlacement = background?.art_placement;
+              }
+            }
+
+            if (artPlacement && 'applyArtPlacement' in this._sceneManager) {
+              (this._sceneManager as any).applyArtPlacement(artPlacement);
+            } else if ('resetArtPlacement' in this._sceneManager) {
+              (this._sceneManager as any).resetArtPlacement();
+            }
           }
         }
-      }
-      
-      // Update cache with user's customization
-      const archetypeId = this._getActiveArchetypeId();
-      if (archetypeId) {
-        const backgroundId = this._getBackgroundKeyForCache(this._state.ui.currentBackground);
-        const cacheKey = this._getCacheKey(archetypeId, backgroundId);
-        this._compositionCache.set(cacheKey, structuredClone(response.updated_state));
-      }
-      
-      // Finally, notify all other UI components that the state has changed.
-      this.notifySubscribers();
+        
+        // Update cache with user's customization
+        const archetypeId = this._getActiveArchetypeId();
+        if (archetypeId) {
+          const backgroundId = this._getBackgroundKeyForCache(this._state.ui.currentBackground);
+          const cacheKey = this._getCacheKey(archetypeId, backgroundId);
+          this._compositionCache.set(cacheKey, structuredClone(response.updated_state));
+        }
+        
+        // Finally, notify all other UI components that the state has changed.
+        this.notifySubscribers();
 
-    } catch (error: unknown) {
-      // Optionally dispatch an error state to the UI
+      } catch (error: unknown) {
+        // Optionally dispatch an error state to the UI
+      }
+    } finally {
+      this._isUpdatingComposition = false;
     }
-  }
-	
+  } 
+ 
 	/**
    * Get wood materials configuration
    */
