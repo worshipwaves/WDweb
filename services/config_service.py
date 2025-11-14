@@ -40,7 +40,10 @@ class ConfigService:
             placement_data = json.load(f)
         self._placement_defaults = PlacementDefaultsDTO(**placement_data)
         
-        with open(config_dir / 'constraints.json', 'r') as f:
+        constraints_path = config_dir / 'constraints.json'
+        if not constraints_path.exists():
+            raise FileNotFoundError(f"CRITICAL: constraints.json not found at {constraints_path}")
+        with open(constraints_path, 'r') as f:
             self._constraints = json.load(f)
     
     def get_default_state(self) -> CompositionStateDTO:
@@ -57,7 +60,7 @@ class ConfigService:
         Returns:
             Dictionary with constraints configuration.
         """
-        return self._constraints       
+        return self._constraints      
         
     def get_wood_materials_config(self) -> dict:
         """Return wood materials configuration.

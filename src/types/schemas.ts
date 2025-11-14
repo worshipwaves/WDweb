@@ -506,38 +506,69 @@ export type PlacementDefaults = z.infer<typeof PlacementDefaultsSchema>;
 // CONSTRAINTS CONFIGURATION SCHEMA
 // ======================================================================
 
+const ArchetypeSliderConstraintSchema = z.object({
+  min: z.number(),
+  max: z.number(),
+  step: z.number()
+}).strict();
+
+const ArchetypeSlotsConstraintSchema = z.object({
+  min: z.number(),
+  max: z.number()
+}).strict();
+
+const ArchetypeConstraintSchema = z.object({
+  available_sliders: z.array(z.string()),
+  size: ArchetypeSliderConstraintSchema.optional(),
+  width: ArchetypeSliderConstraintSchema.optional(),
+  height: ArchetypeSliderConstraintSchema.optional(),
+  slots: ArchetypeSlotsConstraintSchema.optional(),
+  separation: ArchetypeSliderConstraintSchema.optional(),
+  side_margin: ArchetypeSliderConstraintSchema.optional(),
+  interdependent: z.string().optional()
+}).strict();
+
+const SceneConstraintSchema = z.object({
+  max_height: z.number().nullable(),
+  reason: z.string()
+}).strict();
+
 export const ConstraintsConfigSchema = z.object({
   version: z.string(),
   description: z.string(),
   manufacturing: z.object({
+    cnc_table: z.object({
+      max_x: z.number(),
+      max_y: z.number(),
+      reason: z.string()
+    }).strict(),
     circular: z.object({
       general: z.object({
         min: z.number(),
         max: z.number(),
         reason: z.string()
-      }),
+      }).strict(),
       by_section_count: z.record(z.string(), z.object({
         min: z.number(),
         max: z.number()
-      }))
-    }),
+      }).strict())
+    }).strict(),
     rectangular: z.object({
-      width: z.object({ min: z.number(), max: z.number() }),
-      height: z.object({ min: z.number(), max: z.number() }),
+      width: z.object({ min: z.number(), max: z.number() }).strict(),
+      height: z.object({ min: z.number(), max: z.number() }).strict(),
       reason: z.string()
-    }),
+    }).strict(),
     diamond: z.object({
-      width: z.object({ min: z.number(), max: z.number() }),
-      height: z.object({ min: z.number(), max: z.number() }),
+      width: z.object({ min: z.number(), max: z.number() }).strict(),
+      height: z.object({ min: z.number(), max: z.number() }).strict(),
       reason: z.string()
-    })
-  }),
-  scenes: z.record(z.string(), z.object({
-    max_height: z.number(),
-    reason: z.string()
-  }))
+    }).strict()
+  }).strict(),
+  archetype_constraints: z.record(z.string(), ArchetypeConstraintSchema),
+  scenes: z.record(z.string(), SceneConstraintSchema)
 }).strict();
 
 export type ConstraintsConfig = z.infer<typeof ConstraintsConfigSchema>;
 
 export type ApplicationState = z.infer<typeof ApplicationStateSchema>;
+

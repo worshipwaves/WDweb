@@ -1,7 +1,12 @@
 {
-  "version": "1.0.0",
-  "description": "Physical manufacturing constraints and scene presentation limits",
+  "version": "2.0.0",
+  "description": "Complete operational constraints including archetype-specific limits",
   "manufacturing": {
+    "cnc_table": {
+      "max_x": 30,
+      "max_y": 42,
+      "reason": "Physical CNC table dimensions"
+    },
     "circular": {
       "general": {
         "min": 24,
@@ -26,18 +31,143 @@
       "reason": "CNC table size and shipping requirements"
     }
   },
+  "archetype_constraints": {
+    "circular_radial_n1": {
+      "available_sliders": ["size", "slots"],
+      "size": {"min": 24, "max": 30, "step": 1},
+      "slots": {"min": 36, "max": 60}
+    },
+    "circular_radial_n2": {
+      "available_sliders": ["size", "slots", "separation"],
+      "size": {"min": 24, "max": 42, "step": 1},
+      "slots": {"min": 36, "max": 60},
+      "separation": {"min": 0.5, "max": 4.0, "step": 0.5}
+    },
+    "circular_radial_n3": {
+      "available_sliders": ["size", "slots", "separation"],
+      "size": {"min": 30, "max": 54, "step": 1},
+      "slots": {"min": 36, "max": 96},
+      "separation": {"min": 0.5, "max": 4.0, "step": 0.5}
+    },
+    "circular_radial_n4": {
+      "available_sliders": ["size", "slots", "separation"],
+      "size": {"min": 30, "max": 60, "step": 1},
+      "slots": {"min": 36, "max": 96},
+      "separation": {"min": 0.5, "max": 4.0, "step": 0.5}
+    },
+    "circular_linear_n1": {
+      "available_sliders": ["size", "slots", "side_margin"],
+      "size": {"min": 24, "max": 30, "step": 1},
+      "slots": {"min": 12, "max": 30},
+      "side_margin": {"min": 0, "max": 12, "step": 1.0}
+    },
+    "circular_linear_n2": {
+      "available_sliders": ["size", "slots", "separation", "side_margin"],
+      "size": {"min": 24, "max": 42, "step": 1},
+      "slots": {"min": 12, "max": 42},
+      "separation": {"min": 0.5, "max": 4.0, "step": 0.5},
+      "side_margin": {"min": 0, "max": 12, "step": 1.0}
+    },
+    "rectangular_radial_n1": {
+      "available_sliders": ["width", "height", "slots"],
+      "width": {"min": 24, "max": 30, "step": 1},
+      "height": {"min": 24, "max": 30, "step": 1},
+      "slots": {"min": 36, "max": 60}
+    },
+    "rectangular_radial_n2": {
+      "available_sliders": ["width", "height", "slots", "separation"],
+      "width": {"min": 24, "max": 42, "step": 1},
+      "height": {"min": 24, "max": 42, "step": 1},
+      "slots": {"min": 36, "max": 60},
+      "separation": {"min": 0.5, "max": 4.0, "step": 0.5}
+    },
+    "rectangular_radial_n4": {
+      "available_sliders": ["width", "height", "slots", "separation"],
+      "width": {"min": 30, "max": 60, "step": 1},
+      "height": {"min": 30, "max": 60, "step": 1},
+      "slots": {"min": 36, "max": 96},
+      "separation": {"min": 0.5, "max": 4.0, "step": 0.5}
+    },
+    "rectangular_linear_n1": {
+      "available_sliders": ["width", "height", "slots", "side_margin"],
+      "width": {"min": 24, "max": 30, "step": 1},
+      "height": {"min": 12, "max": 42, "step": 1},
+      "slots": {"min": 12, "max": 42},
+      "side_margin": {"min": 0, "max": 12, "step": 1.0}
+    },
+    "rectangular_linear_n2": {
+      "available_sliders": ["width", "height", "slots", "separation", "side_margin"],
+      "width": {"min": 12, "max": 60, "step": 1},
+      "height": {"min": 12, "max": 42, "step": 1},
+      "slots": {"min": 12, "max": 60},
+      "separation": {"min": 0.5, "max": 4.0, "step": 0.5},
+      "side_margin": {"min": 0, "max": 12, "step": 1.0}
+    },
+    "rectangular_linear_n3": {
+      "available_sliders": ["width", "height", "slots", "separation", "side_margin"],
+      "width": {"min": 12, "max": 60, "step": 1},
+      "height": {"min": 12, "max": 42, "step": 1},
+      "slots": {"min": 12, "max": 60},
+      "separation": {"min": 0.5, "max": 4.0, "step": 0.5},
+      "side_margin": {"min": 0, "max": 12, "step": 1.0}
+    },
+    "rectangular_linear_n4": {
+      "available_sliders": ["width", "height", "slots", "separation", "side_margin"],
+      "width": {"min": 12, "max": 60, "step": 1},
+      "height": {"min": 12, "max": 42, "step": 1},
+      "slots": {"min": 12, "max": 60},
+      "separation": {"min": 0.5, "max": 4.0, "step": 0.5},
+      "side_margin": {"min": 0, "max": 12, "step": 1.0}
+    },
+    "diamond_radial_n1": {
+      "available_sliders": ["width", "height", "slots"],
+      "width": {"min": 24, "max": 30, "step": 1},
+      "height": {"min": 24, "max": 42, "step": 1},
+      "slots": {"min": 24, "max": 48}
+    },
+    "diamond_radial_n2": {
+      "available_sliders": ["width", "height", "slots", "separation"],
+      "width": {"min": 36, "max": 42, "step": 1},
+      "height": {"min": 36, "max": 42, "step": 1},
+      "slots": {"min": 24, "max": 48},
+      "separation": {"min": 0.5, "max": 4.0, "step": 0.5}
+    },
+    "diamond_radial_n4": {
+      "available_sliders": ["width", "height", "slots", "separation"],
+      "width": {"min": 36, "max": 84, "step": 1},
+      "height": {"min": 36, "max": 84, "step": 1},
+      "slots": {"min": 24, "max": 96},
+      "separation": {"min": 0.5, "max": 4.0, "step": 0.5},
+      "interdependent": "if width > 60 then height <= 60, if height > 60 then width <= 60"
+    },
+    "diamond_linear_n1": {
+      "available_sliders": ["width", "height", "slots", "side_margin"],
+      "width": {"min": 30, "max": 30, "step": 1},
+      "height": {"min": 30, "max": 42, "step": 1},
+      "slots": {"min": 12, "max": 24},
+      "side_margin": {"min": 0, "max": 12, "step": 1.0}
+    },
+    "diamond_linear_n2": {
+      "available_sliders": ["width", "height", "slots", "separation", "side_margin"],
+      "width": {"min": 36, "max": 60, "step": 1},
+      "height": {"min": 30, "max": 42, "step": 1},
+      "slots": {"min": 24, "max": 48},
+      "separation": {"min": 0.5, "max": 4.0, "step": 0.5},
+      "side_margin": {"min": 0, "max": 12, "step": 1.0}
+    }
+  },
   "scenes": {
     "bedroom": {
       "max_height": 36,
       "reason": "headboard_and_ceiling_clearance"
     },
     "living_room": {
-      "max_height": 72,
-      "reason": "standard_wall_height"
+      "max_height": null,
+      "reason": "placeholder_pending_scene_development"
     },
     "office": {
-      "max_height": 48,
-      "reason": "desk_and_shelf_clearance"
+      "max_height": null,
+      "reason": "placeholder_pending_scene_development"
     }
   }
 }

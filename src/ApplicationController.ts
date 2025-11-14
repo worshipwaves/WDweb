@@ -38,6 +38,7 @@ import { deepMerge } from './utils/mergeUtils';
 import { Action, WaveformDesignerFacade } from './WaveformDesignerFacade';
 import { applyDimensionChange, type DimensionConstraints } from './utils/dimensionUtils';
 import { AspectRatioLock } from './components/AspectRatioLock';
+import { ConstraintResolver } from './services/ConstraintResolver';
 
 
 // Internal facade APIs that aren't exposed in the public interface
@@ -177,6 +178,7 @@ export class ApplicationController {
   private _idleTextureLoader: unknown = null; // IdleTextureLoader instance
 	private _placementDefaults: PlacementDefaults | null = null;
 	private _constraints: ConstraintsConfig | null = null;
+	private _resolver: ConstraintResolver | null = null;
 	private _compositionCache: Map<string, CompositionStateDTO> = new Map();
 	
 	// Four-panel navigation configuration
@@ -303,6 +305,7 @@ export class ApplicationController {
 			this._backgroundsConfig = backgrounds;
 			this._placementDefaults = placementDefaults;
 			this._constraints = constraints;
+			this._resolver = new ConstraintResolver(constraints);
 			this._thumbnailConfig = uiConfig.thumbnail_config;
 			this._categoriesConfig = uiConfig.categories;
 			
@@ -1376,55 +1379,15 @@ export class ApplicationController {
     if (optionConfig) {
       switch (optionConfig.type) {
         case 'slider_group': {
-          const sliderConfigs = ((optionConfig.element_keys as string[] | undefined) || [])
-						.filter((key: string) => {
-								const elConfig = window.uiEngine?.getElementConfig(key);
-								if (!elConfig) return false;
-								
-								// If there's no show_when rule, always show it.
-								if (!elConfig.show_when) return true;
-								
-								// Check all conditions in the show_when object.
-								return Object.entries(elConfig.show_when).every(([stateKey, allowedValues]) => {
-										// Correctly look up the nested state value based on the key.
-										let currentValue: any;
-										switch (stateKey) {
-												case 'shape':
-														currentValue = this._state!.composition.frame_design.shape;
-														break;
-												case 'number_sections':
-														currentValue = this._state!.composition.frame_design.number_sections;
-														break;
-												case 'slot_style':
-														currentValue = this._state!.composition.pattern_settings.slot_style;
-														break;
-												default:
-														// If we don't know the key, assume it's not a match to be safe.
-														return false; 
-										}
-
-										if (Array.isArray(allowedValues)) {
-												// Use `includes` for a direct match. `some` with `==` is too loose.
-												return allowedValues.includes(currentValue);
-										}
-										
-										return false;
-								});
-						})
-            .map((key: string) => {
-              const elConfig = window.uiEngine?.getElementConfig(key);
-              const value = window.uiEngine?.getStateValue(this._state!.composition, elConfig!.state_path) as number;
-              return {
-                id: key,
-                label: elConfig!.label,
-                min: elConfig!.min!,
-                max: elConfig!.max!,
-                step: elConfig!.step!,
-                value: value ?? elConfig!.min!,
-                unit: key === 'slots' ? '' : '"',
-                dynamic_max_by_sections: (elConfig as { dynamic_max_by_sections?: Record<string, number> }).dynamic_max_by_sections,
-              };
-            });
+          // Resolve slider configurations dynamically based on the current archetype
+          const archetypeId = this._getActiveArchetypeId();
+          let sliderConfigs: SliderConfig[] = [];
+          if (this._resolver && archetypeId && this._state) {
+            sliderConfigs = this._resolver.resolveSliderConfigs(
+              archetypeId,
+              this._state.composition
+            );
+          }
           const sliderGroup = new SliderGroup(
             sliderConfigs,
             (id, value) => {
@@ -1780,6 +1743,9 @@ export class ApplicationController {
     
     // Apply cached or newly created composition
     await this.handleCompositionUpdate(composition);
+		
+		// Re-render the panel to show updated selection and new slider limits
+    this._renderRightMainFiltered();
     
     // Update art placement
     if (this._sceneManager) {
@@ -1862,6 +1828,19 @@ export class ApplicationController {
     if (!this._state) return;
 
     const newComposition = structuredClone(this._state.composition);
+		
+		let newValue = value; // Use a mutable variable for clamping
+
+    // Enforce interdependent constraint for diamond_radial_n4 before calculating
+    const archetypeId = this._getActiveArchetypeId();
+    if (archetypeId === 'diamond_radial_n4') {
+      if (axis === 'x' && newValue > 60 && this._state.composition.frame_design.finish_y > 60) {
+        newValue = 60; // Clamp width because height is already large
+      }
+      if (axis === 'y' && newValue > 60 && this._state.composition.frame_design.finish_x > 60) {
+        newValue = 60; // Clamp height because width is already large
+      }
+    }
     
     // Build constraints from current state and config
     const uiConfig = window.uiEngine?.config;
@@ -1878,7 +1857,7 @@ export class ApplicationController {
     // Calculate new dimensions using utility function
     const result = applyDimensionChange(
       axis,
-      value,
+      newValue,
       newComposition.frame_design.finish_x,
       newComposition.frame_design.finish_y,
       constraints
@@ -1902,7 +1881,13 @@ export class ApplicationController {
     
     // Single update through facade
     await this.handleCompositionUpdate(newComposition);
-  }
+    
+    // For interdependent archetypes, force a full slider re-render
+    // to update the max value of the *other* slider.
+    if (archetypeId === 'diamond_radial_n4') {
+      this._renderRightMainFiltered();
+    }
+	}	
 
 	/**
    * Handle aspect ratio lock toggle
