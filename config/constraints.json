@@ -1,3 +1,12 @@
+/*
+  FOR FUTURE ME: HOW THIS WORKS
+  1. archetype_constraints: Defines WHICH sliders appear for an archetype (e.g., 'size', 'separation') and what their MIN/MAX/STEP values are. This is the main driver for the Layout panel.
+
+  2. ui_visibility: A global override that HIDES or DISABLES elements or options based on the current state (like hiding 'diamond' grain if shape isn't 'diamond').
+
+  - To change slider limits for a specific archetype -> edit archetype_constraints.
+  - To hide an option everywhere based on a rule -> edit ui_visibility.
+*/
 {
   "version": "2.0.0",
   "description": "Complete operational constraints including archetype-specific limits",
@@ -168,6 +177,50 @@
     "office": {
       "max_height": null,
       "reason": "placeholder_pending_scene_development"
+    }
+	},
+  "ui_visibility": {
+    "elements": {
+      "size": {
+        "show_when": { "shape": ["circular"] }
+      },
+      "width": {
+        "show_when": { "shape": ["rectangular", "diamond"] }
+      },
+      "height": {
+        "show_when": { "shape": ["rectangular", "diamond"] }
+      },
+      "separation": {
+        "show_when": { "number_sections": [2, 3, 4] }
+      },
+      "side_margin": {
+        "show_when": { "slot_style": ["linear"] }
+      },
+      "patternDiameter": {
+        "show_when": { "shape": ["rectangular", "diamond"] }
+      }
+    },
+    "options": {
+      "sections": {
+        "3": {
+          "disabled_when": { "shape": ["rectangular", "diamond"] }
+        }
+      },
+      "grainDirection": {
+        "radiant": {
+          "show_when": { "number_sections": [3, 4] }
+        },
+        "diamond": {
+          "show_when": { "number_sections": [4] }
+        }
+      }
+    }
+	},
+  "audio": {
+    "upload": {
+      "accepted_mime_types": ["audio/mpeg", "audio/wav", "audio/flac", "audio/mp3", "audio/x-wav", "audio/x-m4a"],
+      "accepted_extensions": ["mp3", "wav", "flac", "m4a", "aac", "ogg"],
+      "max_file_size_mb": 100
     }
   }
 }

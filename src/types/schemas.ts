@@ -1,4 +1,4 @@
-import { z } from 'zod';'FILE_UPLOADED'
+import { z } from 'zod';
 
 export const SectionMaterialSchema = z.object({
   section_id: z.number().int().min(0).max(3),
@@ -343,7 +343,7 @@ export const UIStateSchema = z.object({
   rightPanelVisible: z.boolean(),
   selectedCategory: z.string().nullable(),
   selectedOption: z.string().nullable(),
-  currentStyleIndex: z.number(),
+  currentStyleIndex: z.number().nullable(),
   isAutoPlaying: z.boolean(),
   showHint: z.boolean(),
   renderQuality: z.enum(['low', 'medium', 'high']),
@@ -457,6 +457,16 @@ export type SubcategoryConfig = z.infer<typeof SubcategoryConfigSchema>;
 export type StyleCategoryConfig = z.infer<typeof StyleCategoryConfigSchema>;
 export type CategoriesConfig = z.infer<typeof CategoriesConfigSchema>;
 
+const AudioUploadConstraintsSchema = z.object({
+  accepted_mime_types: z.array(z.string()),
+  accepted_extensions: z.array(z.string()),
+  max_file_size_mb: z.number(),
+});
+
+const AudioConstraintsSchema = z.object({
+  upload: AudioUploadConstraintsSchema,
+});
+
 // The single, authoritative schema for the entire application state
 export const ApplicationStateSchema = z.object({
   phase: z.enum(['upload', 'discovery', 'reveal', 'intent', 'customize']),
@@ -528,6 +538,18 @@ const ArchetypeConstraintSchema = z.object({
   interdependent: z.string().optional()
 }).strict();
 
+const UIVisibilityConditionSchema = z.record(z.string(), z.array(z.union([z.string(), z.number()])));
+
+const UIVisibilityRuleSchema = z.object({
+  show_when: UIVisibilityConditionSchema.optional(),
+  disabled_when: UIVisibilityConditionSchema.optional(),
+});
+
+const UIVisibilitySchema = z.object({
+  elements: z.record(z.string(), UIVisibilityRuleSchema),
+  options: z.record(z.string(), z.record(z.string(), UIVisibilityRuleSchema)),
+});
+
 const SceneConstraintSchema = z.object({
   max_height: z.number().nullable(),
   reason: z.string()
@@ -565,7 +587,9 @@ export const ConstraintsConfigSchema = z.object({
     }).strict()
   }).strict(),
   archetype_constraints: z.record(z.string(), ArchetypeConstraintSchema),
-  scenes: z.record(z.string(), SceneConstraintSchema)
+  scenes: z.record(z.string(), SceneConstraintSchema),
+  ui_visibility: UIVisibilitySchema,
+  audio: AudioConstraintsSchema.optional()
 }).strict();
 
 export type ConstraintsConfig = z.infer<typeof ConstraintsConfigSchema>;

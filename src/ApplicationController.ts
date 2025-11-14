@@ -180,6 +180,9 @@ export class ApplicationController {
 	private _constraints: ConstraintsConfig | null = null;
 	private _resolver: ConstraintResolver | null = null;
 	private _compositionCache: Map<string, CompositionStateDTO> = new Map();
+	public getResolver(): ConstraintResolver | null {
+    return this._resolver;
+  }
 	
 	// Four-panel navigation configuration
   private _thumbnailConfig: ThumbnailConfig | null = null;

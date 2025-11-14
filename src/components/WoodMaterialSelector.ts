@@ -153,51 +153,37 @@ export class WoodMaterialSelector implements PanelComponent {
   }
 
 	private _getAvailableGrains(): { id: string; label: string; isAvailable: boolean }[] {
-    const grainConfig = window.uiEngine?.getElementConfig('grainDirection');
-    if (!grainConfig || !grainConfig.options) {
-      console.warn('[WoodMaterialSelector] Grain direction config not found in UIEngine.');
-      return []; // Fallback to empty
-    }
+		const resolver = window.controller?.getResolver();
+		const state = window.controller?.getState()?.composition;
+		const grainConfig = window.uiEngine?.getElementConfig('grainDirection');
 
-    const grainOptions = grainConfig.options.map(opt => {
-      let isAvailable = true;
-      if (opt.show_when?.number_sections) {
-        isAvailable = opt.show_when.number_sections.includes(this._numberSections);
-      }
-      return {
-        // Map the state value ('vertical') to the thumbnail ID ('n1_vertical')
-        id: this._mapGrainToId(String(opt.value)),
-        label: opt.label,
-        isAvailable: isAvailable,
-      };
-    });
+		if (!resolver || !state || !grainConfig || !grainConfig.options) {
+			console.warn('[WoodMaterialSelector] Missing resolver, state, or config for grain options.');
+			return [];
+		}
 
-    // Ensure we have a unique set of IDs, as some grains might share a base thumbnail name
-    const uniqueOptions: { id: string; label: string; isAvailable: boolean }[] = [];
-    const seenIds = new Set<string>();
+		const availableGrains = grainConfig.options
+			.filter(opt => resolver.isOptionVisible('grainDirection', opt.value, state))
+			.map(opt => ({
+				id: this._mapGrainToId(String(opt.value)),
+				label: opt.label,
+				isAvailable: true,
+			}));
+		
+		// This part is to make sure we don't show duplicate thumbnail types (like n1_vertical and n1_horizontal)
+		// when only one is needed to represent the basic grains.
+		const uniqueOptions: { id: string; label: string; isAvailable: boolean }[] = [];
+		const seenIds = new Set<string>();
 
-    // This logic ensures we get the n1 and n4 thumbnails correctly
-    if (grainOptions.find(o => o.isAvailable && (o.id.includes('vertical') || o.id.includes('horizontal')))) {
-      if (!seenIds.has('n1_vertical')) {
-        uniqueOptions.push({ id: 'n1_vertical', label: 'Vertical', isAvailable: true });
-        seenIds.add('n1_vertical');
-      }
-      if (!seenIds.has('n1_horizontal')) {
-        uniqueOptions.push({ id: 'n1_horizontal', label: 'Horizontal', isAvailable: true });
-        seenIds.add('n1_horizontal');
-      }
-    }
-    if (grainOptions.find(o => o.isAvailable && o.id.includes('radiant'))) {
-        uniqueOptions.push({ id: 'n4_radiant', label: 'Radiant', isAvailable: true });
-        seenIds.add('n4_radiant');
-    }
-    if (grainOptions.find(o => o.isAvailable && o.id.includes('diamond'))) {
-        uniqueOptions.push({ id: 'n4_diamond', label: 'Diamond', isAvailable: true });
-        seenIds.add('n4_diamond');
-    }
+		for (const option of availableGrains) {
+			if (!seenIds.has(option.id)) {
+				uniqueOptions.push(option);
+				seenIds.add(option.id);
+			}
+		}
 
-    return uniqueOptions;
-  }
+		return uniqueOptions;
+	}
 
   destroy(): void {
     this._tooltip.destroy();

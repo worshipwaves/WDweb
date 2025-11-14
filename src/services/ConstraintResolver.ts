@@ -92,4 +92,81 @@ export class ConstraintResolver {
     // Filter out any nulls that may have occurred from missing configs
     return sliderConfigs.filter((s): s is SliderConfig => s !== null);
   }
+	
+	/**
+   * Determines if a UI element should be visible based on the current state.
+   * Reads rules from the `ui_visibility` section of constraints.
+   */
+  public isElementVisible(elementKey: string, state: CompositionStateDTO): boolean {
+    const rules = this.constraints.ui_visibility?.elements[elementKey];
+    if (!rules?.show_when) {
+      return true; // Default to visible if no rules are defined
+    }
+
+    return this._evaluateConditions(rules.show_when, state);
+  }
+
+  /**
+   * Determines if a specific option within an element should be disabled.
+   */
+  public isOptionDisabled(elementKey: string, optionValue: string | number, state: CompositionStateDTO): boolean {
+    const rules = this.constraints.ui_visibility?.options[elementKey]?.[optionValue];
+    if (!rules?.disabled_when) {
+      return false; // Default to enabled
+    }
+
+    return this._evaluateConditions(rules.disabled_when, state);
+  }
+
+  /**
+   * Determines if a specific option within an element should be shown.
+   */
+  public isOptionVisible(elementKey: string, optionValue: string | number, state: CompositionStateDTO): boolean {
+    const rules = this.constraints.ui_visibility?.options[elementKey]?.[optionValue];
+    if (!rules?.show_when) {
+      return true; // Default to visible
+    }
+    return this._evaluateConditions(rules.show_when, state);
+  }
+
+  /**
+   * Evaluates a set of conditions against the current composition state.
+   */
+  private _evaluateConditions(conditions: Record<string, (string | number)[]>, state: CompositionStateDTO): boolean {
+    // A simple map to resolve common keys to their full state path
+    const pathMap: Record<string, (s: CompositionStateDTO) => any> = {
+      shape: (s) => s.frame_design.shape,
+      number_sections: (s) => s.frame_design.number_sections,
+      slot_style: (s) => s.pattern_settings.slot_style,
+    };
+
+    for (const [key, allowedValues] of Object.entries(conditions)) {
+      const valueGetter = pathMap[key];
+      if (!valueGetter) {
+        console.warn(`[Resolver] Unknown condition key: ${key}`);
+        continue;
+      }
+      const currentValue = valueGetter(state);
+      if (!allowedValues.includes(currentValue)) {
+        return false; // Condition not met
+      }
+    }
+    return true; // All conditions met
+  }
+	
+	/**
+   * Retrieves the audio upload constraints.
+   */
+  public getAudioUploadConstraints() {
+    if (this.constraints.audio?.upload) {
+      return this.constraints.audio.upload;
+    }
+    // Return safe defaults if the config section is missing
+    console.warn('[Resolver] Audio constraints not found in config, using safe defaults.');
+    return {
+      accepted_mime_types: ['audio/*'],
+      accepted_extensions: ['mp3', 'wav', 'flac', 'm4a'],
+      max_file_size_mb: 100,
+    };
+  }
 }

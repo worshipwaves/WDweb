@@ -250,14 +250,10 @@ export class UIBootstrapper {
         }, this.uiEngine);
     }
 
-    private _updateConditionalUI(compositionOrSnapshot: Partial<CompositionStateDTO> | Record<string, unknown>): void {
-        const currentState = {
-            shape: (compositionOrSnapshot as CompositionStateDTO).frame_design?.shape ?? (compositionOrSnapshot as Record<string, unknown>).shape,
-            number_sections: (compositionOrSnapshot as CompositionStateDTO).frame_design?.number_sections ?? (compositionOrSnapshot as Record<string, unknown>).number_sections,
-            slot_style: (compositionOrSnapshot as CompositionStateDTO).pattern_settings?.slot_style ?? (compositionOrSnapshot as Record<string, unknown>).slot_style
-        };
-        this.uiEngine.updateConditionalOptions(currentState);
-        this.uiEngine.updateElementVisibility(currentState);
+    private _updateConditionalUI(): void {
+        const composition = this.controller.getState().composition;
+        this.uiEngine.updateConditionalOptions(composition);
+        this.uiEngine.updateElementVisibility(composition);
     }
 
     private _ensureSectionsOptionsVisible(): void {

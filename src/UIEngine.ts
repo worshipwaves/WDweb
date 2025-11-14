@@ -48,15 +48,16 @@ interface UIUploadConfig {
   container_id: string;
   drop_zone_id: string;
   file_input_id: string;
-  accepted_mime_types: string[];
-  accepted_extensions: string[];
-  max_file_size_mb: number;
   hint_delay_ms: number;
   messages: {
     invalid_type: string;
     file_too_large: string;
     drop_hint: string;
   };
+  // Properties now from constraints
+  accepted_mime_types?: string[];
+  accepted_extensions?: string[];
+  max_file_size_mb?: number;
 }
 
 interface UIConfig {
@@ -84,9 +85,6 @@ const UIUploadConfigSchema = z.object({
   container_id: z.string(),
   drop_zone_id: z.string(),
   file_input_id: z.string(),
-  accepted_mime_types: z.array(z.string()),
-  accepted_extensions: z.array(z.string()),
-  max_file_size_mb: z.number(),
   hint_delay_ms: z.number(),
   messages: z.object({
     invalid_type: z.string(),
@@ -175,7 +173,26 @@ export class UIEngine {
    * Get upload configuration
    */
   getUploadConfig(): UIUploadConfig | null {
-    return this.config?.upload || null;
+    const resolver = window.controller?.getResolver();
+    const uiPart = this.config?.upload;
+
+    if (!resolver || !uiPart) {
+      return null;
+    }
+
+    const constraints = resolver.getAudioUploadConstraints();
+
+    const {
+      accepted_mime_types,
+      accepted_extensions,
+      max_file_size_mb,
+      ...restOfUiPart
+    } = uiPart as any; // Cast to bypass type check for removed properties
+
+    return {
+      ...restOfUiPart,
+      ...constraints,
+    };
   }
   
   /**
@@ -519,39 +536,36 @@ export class UIEngine {
   /**
    * Handle conditional option disabling (e.g., n=3 for rectangular)
    */
-  updateConditionalOptions(currentState: Record<string, unknown>): void {
-    const elementsConfig = this.config?.elements;
-    if (!elementsConfig) return;
-    
-    Object.entries(elementsConfig).forEach(([key, config]) => {
+  updateConditionalOptions(compositionState: CompositionStateDTO): void {
+    const resolver = window.controller?.getResolver();
+    if (!resolver || !this.config) {
+      return;
+    }
+
+    Object.entries(this.config.elements).forEach(([key, config]) => {
       if (!config.options) return;
-      
+
       const element = this.getElement(key) as HTMLSelectElement;
       if (!element) return;
-      
+
       config.options.forEach(option => {
-        if (!option.disabled_when) return;
-        
         const optionEl = element.querySelector(`option[value="${option.value}"]`) as HTMLOptionElement;
         if (!optionEl) return;
-        
-        // Check if disabled_when conditions are met
-        const shouldDisable = Object.entries(option.disabled_when).every(([stateKey, stateValue]) => {
-          return currentState[stateKey] === stateValue;
-        });
-        
+
+        const shouldDisable = resolver.isOptionDisabled(key, option.value, compositionState);
+        const shouldShow = resolver.isOptionVisible(key, option.value, compositionState);
+
         optionEl.disabled = shouldDisable;
-        if (shouldDisable) {
-          optionEl.style.display = 'none';
-          // If this option is currently selected, change to first valid option
-          if (element.value === String(option.value)) {
-            const firstValid = config.options?.find(opt => !opt.disabled_when);
-            if (firstValid) {
-              element.value = String(firstValid.value);
-            }
+        optionEl.style.display = shouldShow ? '' : 'none';
+
+        if (shouldDisable && element.value === String(option.value)) {
+          const firstValidOption = config.options?.find(opt => 
+            !resolver.isOptionDisabled(key, opt.value, compositionState) &&
+            resolver.isOptionVisible(key, opt.value, compositionState)
+          );
+          if (firstValidOption) {
+            element.value = String(firstValidOption.value);
           }
-        } else {
-          optionEl.style.display = '';
         }
       });
     });
@@ -560,27 +574,18 @@ export class UIEngine {
 	/**
    * Update element visibility based on show_when conditions
    */
-  updateElementVisibility(currentState: Record<string, unknown>): void {
-    const elementsConfig = this.config?.elements;
-    if (!elementsConfig) return;
+  updateElementVisibility(compositionState: CompositionStateDTO): void {
+    const resolver = window.controller?.getResolver();
+    if (!resolver || !this.config) {
+      return;
+    }
     
-    Object.entries(elementsConfig).forEach(([key, config]) => {
-      if (!config.show_when) return;
-      
+    Object.keys(this.config.elements).forEach(key => {
       const element = this.getElement(key);
-      if (!element) return;
-      
-      // Get the parent control-group div
-      const controlGroup = element.closest('.control-group');
+      const controlGroup = element?.closest('.control-group');
       if (!controlGroup) return;
-      
-      // Check if show_when conditions are met
-      const shouldShow = Object.entries(config.show_when).every(([stateKey, allowedValues]) => {
-        const currentValue = currentState[stateKey];
-        return allowedValues.includes(currentValue);
-      });
-      
-      // Show or hide the entire control group
+
+      const shouldShow = resolver.isElementVisible(key, compositionState);
       (controlGroup as HTMLElement).style.display = shouldShow ? '' : 'none';
     });
   }
