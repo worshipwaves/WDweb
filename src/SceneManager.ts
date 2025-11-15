@@ -43,7 +43,9 @@ export class SceneManager {
     private _renderQueue: Promise<void> = Promise.resolve();
     private _isRendering = false;
     private _isInteractionSetup: boolean = false;
-    private _isFirstRender: boolean = true;
+    private _isFirstRender: boolean = true;		
+		private _baseCameraRadius: number = 50;  // Standard 50" gallery viewing distance
+    private _idealCameraRadius: number = 50;
 
     private constructor(canvasId: string, facade: WaveformDesignerFacade, controller: ApplicationController) {
         const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
@@ -78,7 +80,6 @@ export class SceneManager {
         manager._rootNode = new TransformNode("root", manager._scene);
         manager._rootNode.rotation.x = Math.PI / 2;
         manager._camera.setTarget(new Vector3(manager._cameraOffset, 0, 0));
-        manager._camera.radius = 72;
         
         // Store initial aspect ratio as reference
         const canvas = manager._engine.getRenderingCanvas();
@@ -90,7 +91,9 @@ export class SceneManager {
     }
 
     private setupCamera(): ArcRotateCamera {
-        const camera = new ArcRotateCamera('mainCamera', Math.PI / 2, Math.PI / 2, 50, Vector3.Zero(), this._scene);
+        const camera = new ArcRotateCamera('mainCamera', Math.PI / 2, Math.PI / 2, 50, Vector3.Zero(), this._scene);  // Standard 50" gallery viewing distance
+        this._baseCameraRadius = camera.radius;  // Capture base for scene-specific calculations
+        camera.lowerRadiusLimit = 20;
         camera.lowerRadiusLimit = 20;
         camera.upperRadiusLimit = 300;
         camera.lowerBetaLimit = 0.1;
@@ -691,7 +694,7 @@ export class SceneManager {
 		}
   
     public resetCamera(): void {
-        const targetRadius = this.calculateIdealRadius();
+        const targetRadius = this._idealCameraRadius;
         const animAlpha = new Animation('alphaAnim', 'alpha', 60, Animation.ANIMATIONTYPE_FLOAT);
         const animBeta = new Animation('betaAnim', 'beta', 60, Animation.ANIMATIONTYPE_FLOAT);
         const animRadius = new Animation('radiusAnim', 'radius', 60, Animation.ANIMATIONTYPE_FLOAT);
@@ -879,6 +882,12 @@ export class SceneManager {
         );
         
         console.log('[SceneManager] Applied art placement:', placement);
+        
+        // Calculate ideal camera radius based on scene scale
+        // Inverse relationship: smaller scale_factor = art appears smaller = camera must be closer
+        const scaleFactor = placement.scale_factor || 1.0;
+        this._idealCameraRadius = this._baseCameraRadius / scaleFactor;
+        this._camera.radius = this._idealCameraRadius;
     }
     
     public resetArtPlacement(): void {
@@ -892,6 +901,10 @@ export class SceneManager {
         
         // Reset rotation to default (preserve coordinate transform rotation)
         this._rootNode.rotation = new Vector3(Math.PI / 2, 0, 0);
+        
+        // Reset to base camera radius (scale_factor = 1.0, no scene)
+        this._idealCameraRadius = this._baseCameraRadius;
+        this._camera.radius = this._idealCameraRadius;
         
         console.log('[SceneManager] Reset art placement to defaults');
     }
