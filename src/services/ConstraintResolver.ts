@@ -62,7 +62,7 @@ export class ConstraintResolver {
       let finalMax = sliderConstraint.max;
       
       // Handle interdependent constraint for diamond_radial_n4 to update UI display
-      if (archetypeId === 'diamond_radial_n4' && archetypeConstraints.interdependent) {
+      if ((archetypeId === 'diamond_radial_n4' || archetypeId === 'rectangular_radial_n4') && archetypeConstraints.interdependent) {
         if (sliderKey === 'width') {
           // If height is currently over 60, clamp my (width's) max to 60.
           // Otherwise, my max is the default from the constraints file (e.g., 84).

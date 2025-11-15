@@ -46,6 +46,8 @@ export class SceneManager {
     private _isFirstRender: boolean = true;		
 		private _baseCameraRadius: number = 50;  // Standard 50" gallery viewing distance
     private _idealCameraRadius: number = 50;
+		private _archetypeIdealRadius: Map<string, number> = new Map();
+    private _currentArchetypeId: string | null = null;
 
     private constructor(canvasId: string, facade: WaveformDesignerFacade, controller: ApplicationController) {
         const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
@@ -677,6 +679,45 @@ export class SceneManager {
         if (onAnimationEnd) animatable.onAnimationEnd = onAnimationEnd;
     }
 		
+		private _calculateArchetypeCameraRadius(archetypeId: string): void {
+        const constraints = this._controller.getConstraintsConfig();
+        const resolver = this._controller.getResolver();
+        
+        if (constraints && resolver) {
+            const archetypeConstraints = resolver.getArchetypeConstraints(archetypeId);
+            
+            if (archetypeConstraints) {
+                let maxDimension = 0;
+                
+                const archetypes = constraints.archetype_constraints;
+                const archetype = archetypes[archetypeId];
+                
+                if (archetype) {
+                    if (archetype.size) {
+                        maxDimension = archetype.size.max;
+                    } else if (archetype.width && archetype.height) {
+                        const maxWidth = archetype.width.max;
+                        const maxHeight = archetype.height.max;
+                        
+                        if (archetype.interdependent) {
+                            maxDimension = Math.sqrt(84 * 84 + 60 * 60);
+                        } else {
+                            maxDimension = Math.sqrt(maxWidth * maxWidth + maxHeight * maxHeight);
+                        }
+                    }
+                    
+                    const canvas = this._engine.getRenderingCanvas();
+                    const fov = this._camera.fov || 0.8;
+                    const paddingFactor = 1.11;
+                    const halfHeight = Math.tan(fov / 2);
+                    const idealRadius = (maxDimension / 2) * paddingFactor / halfHeight;
+                    
+                    this._archetypeIdealRadius.set(archetypeId, idealRadius);
+                }
+            }
+        }
+    }
+		
 		private calculateIdealRadius(): number {
 				const state = this._controller?.getState();
 				const frameDesign = state?.composition?.frame_design;
@@ -883,28 +924,46 @@ export class SceneManager {
         
         console.log('[SceneManager] Applied art placement:', placement);
         
-        // Calculate ideal camera radius based on scene scale
-        // Inverse relationship: smaller scale_factor = art appears smaller = camera must be closer
+        const archetypeId = state?.composition?.archetype_id || null;
         const scaleFactor = placement.scale_factor || 1.0;
-        this._idealCameraRadius = this._baseCameraRadius / scaleFactor;
+        
+        if (archetypeId && archetypeId !== this._currentArchetypeId) {
+            this._currentArchetypeId = archetypeId;
+            this._calculateArchetypeCameraRadius(archetypeId);
+        }
+        
+        // Apply cached archetype radius with scene scale adjustment
+        const baseRadius = this._archetypeIdealRadius.get(archetypeId || '') || this._baseCameraRadius;
+        this._idealCameraRadius = baseRadius / scaleFactor;
         this._camera.radius = this._idealCameraRadius;
     }
     
     public resetArtPlacement(): void {
         if (!this._rootNode) return;
         
-        // Reset to default position (centered, no offset)
         this._rootNode.position = new Vector3(0, 0, 0);
-        
-        // Reset scale to 1.0
         this._rootNode.scaling = new Vector3(1, 1, 1);
-        
-        // Reset rotation to default (preserve coordinate transform rotation)
         this._rootNode.rotation = new Vector3(Math.PI / 2, 0, 0);
         
-        // Reset to base camera radius (scale_factor = 1.0, no scene)
-        this._idealCameraRadius = this._baseCameraRadius;
-        this._camera.radius = this._idealCameraRadius;
+        const state = this._controller.getState();
+        const frameDesign = state?.composition?.frame_design;
+        
+        if (frameDesign) {
+            const width = frameDesign.finish_x;
+            const height = frameDesign.finish_y;
+            const currentDimension = Math.max(width, height);
+            
+            const fov = this._camera.fov || 0.8;
+            const paddingFactor = 1.11;
+            const halfHeight = Math.tan(fov / 2);
+            const idealRadius = (currentDimension / 2) * paddingFactor / halfHeight;
+            
+            this._idealCameraRadius = idealRadius;
+            this._camera.radius = this._idealCameraRadius;
+        } else {
+            this._idealCameraRadius = this._baseCameraRadius;
+            this._camera.radius = this._idealCameraRadius;
+        }
         
         console.log('[SceneManager] Reset art placement to defaults');
     }

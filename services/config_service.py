@@ -138,4 +138,4 @@ class ConfigService:
         Returns:
             Dictionary with placement defaults configuration.
         """
-        return self._placement_defaults.model_dump()
+        return self._placement_defaults.model_dump(exclude_none=True)

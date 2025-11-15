@@ -183,6 +183,9 @@ export class ApplicationController {
 	public getResolver(): ConstraintResolver | null {
     return this._resolver;
   }
+	public getConstraintsConfig(): ConstraintsConfig | null {
+    return this._constraints;
+  }
 	
 	// Four-panel navigation configuration
   private _thumbnailConfig: ThumbnailConfig | null = null;
@@ -519,7 +522,7 @@ export class ApplicationController {
   public getCurrentArtPlacement(): ArtPlacement | null {
     if (!this._state || !this._backgroundsConfig) return null;
     
-    const archetypeId = this._getActiveArchetypeId();
+    const archetypeId = this.getActiveArchetypeId();
     if (!archetypeId) return null;
     
     const backgroundKey = this._getBackgroundKeyForCache(this._state.ui.currentBackground);
@@ -895,7 +898,7 @@ export class ApplicationController {
     
     // Apply placement defaults and caching if archetype is selected
     if (this._state) {
-      const archetypeId = this._getActiveArchetypeId();
+      const archetypeId = this.getActiveArchetypeId();
       
       // Only apply caching if archetype exists
       if (archetypeId) {
@@ -1377,7 +1380,7 @@ export class ApplicationController {
       switch (optionConfig.type) {
         case 'slider_group': {
           // Resolve slider configurations dynamically based on the current archetype
-          const archetypeId = this._getActiveArchetypeId();
+          const archetypeId = this.getActiveArchetypeId();
           let sliderConfigs: SliderConfig[] = [];
           if (this._resolver && archetypeId && this._state) {
             sliderConfigs = this._resolver.resolveSliderConfigs(
@@ -1555,7 +1558,7 @@ export class ApplicationController {
               tooltip: archetype.tooltip
             }));
             
-          const activeSelection = this._getActiveArchetypeId();
+          const activeSelection = this.getActiveArchetypeId();
           
           const thumbnailGrid = new ThumbnailGrid(
             matchingArchetypes,
@@ -1621,7 +1624,7 @@ export class ApplicationController {
 	/**
    * Get the current archetype ID from application state
    */
-  private _getActiveArchetypeId(): string | null {
+  public getActiveArchetypeId(): string | null {
     if (!this._state) return null;
     
     for (const archetype of this._archetypes.values()) {
@@ -1831,8 +1834,8 @@ export class ApplicationController {
 		let newValue = value; // Use a mutable variable for clamping
 
     // Enforce interdependent constraint for diamond_radial_n4 before calculating
-    const archetypeId = this._getActiveArchetypeId();
-    if (archetypeId === 'diamond_radial_n4') {
+    const archetypeId = this.getActiveArchetypeId();
+    if (archetypeId === 'diamond_radial_n4' || archetypeId === 'rectangular_radial_n4') {
       if (axis === 'x' && newValue > 60 && this._state.composition.frame_design.finish_y > 60) {
         newValue = 60; // Clamp width because height is already large
       }
@@ -1883,9 +1886,9 @@ export class ApplicationController {
     
     // For interdependent archetypes, force a full slider re-render
     // to update the max value of the *other* slider.
-    if (archetypeId === 'diamond_radial_n4') {
-      this._renderRightMainFiltered();
-    }
+		if (archetypeId === 'diamond_radial_n4' || archetypeId === 'rectangular_radial_n4') {
+			this._renderRightMainFiltered();
+		}
 	}	
 
 	/**
@@ -2337,7 +2340,7 @@ export class ApplicationController {
         this._facade.persistState(this._state);
         
         // Update cache with user's customization
-        const archetypeId = this._getActiveArchetypeId();
+        const archetypeId = this.getActiveArchetypeId();
         if (archetypeId) {
           const backgroundId = this._getBackgroundKeyForCache(this._state.ui.currentBackground);
           const cacheKey = this._getCacheKey(archetypeId, backgroundId);
@@ -2444,7 +2447,7 @@ export class ApplicationController {
           await this._sceneManager.renderComposition(response);
           
           // Re-apply art placement after rendering
-          const archetypeId = this._getActiveArchetypeId();
+          const archetypeId = this.getActiveArchetypeId();
           if (archetypeId) {
             const backgroundKey = this._getBackgroundKeyForCache(this._state.ui.currentBackground);
             let artPlacement: ArtPlacement | undefined;
@@ -2478,7 +2481,7 @@ export class ApplicationController {
         }
         
         // Update cache with user's customization
-        const archetypeId = this._getActiveArchetypeId();
+        const archetypeId = this.getActiveArchetypeId();
         if (archetypeId) {
           const backgroundId = this._getBackgroundKeyForCache(this._state.ui.currentBackground);
           const cacheKey = this._getCacheKey(archetypeId, backgroundId);
