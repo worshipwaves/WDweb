@@ -159,7 +159,7 @@ html, body {
 }
 
 .upload-zone.drag-over .upload-icon {
-  color: rgba(100, 150, 255, 1);
+  color: rgba(217, 164, 100, 1);
   transform: scale(1.1);
 }
 
@@ -582,6 +582,7 @@ html, body {
   max-height: calc(100vh - 32px);
 }
 
+
 .panel-header {
   display: flex;
   justify-content: space-between;
@@ -639,16 +640,10 @@ html, body {
    ============================================ */
 
 .panel-content {
-  padding: 4px 0px;
+  padding: 16px 0px;
   height: 100%;
   display: flex;
   flex-direction: column;
-}
-
-.panel-header {
-  margin-bottom: 0px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 12px;
 }
 
 .panel-header h3 {
@@ -1298,7 +1293,7 @@ html, body {
 
 /* Text description part of the tooltip */
 .tooltip-description {
-	width: 230px;
+	width: 100%;
   background: rgba(30, 30, 30, 0.95);
   border-radius: 0 0 8px 8px;
   padding: 12px 16px;
@@ -1318,7 +1313,7 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 8px;
+  padding: 16px;
 }
 
 .species-card {
@@ -1427,7 +1422,9 @@ html, body {
   justify-content: center;
   gap: 4px;
   padding: 0px 0px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(17, 17, 17, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   margin-bottom: 0px;
 	position: sticky;

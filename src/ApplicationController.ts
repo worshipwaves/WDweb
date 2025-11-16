@@ -456,6 +456,8 @@ export class ApplicationController {
     applySingleSectionMaterial?: (sectionId: number) => void;
     applyArtPlacement?: (placement: ArtPlacement) => void;
     resetArtPlacement?: () => void;
+    applyLighting?: (lighting: LightingConfig) => void;
+    resetLighting?: () => void;
   }): void {
     this._sceneManager = sceneManager;
     
@@ -499,6 +501,13 @@ export class ApplicationController {
       if (background) {
         (sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string) => void })
           .changeBackground(bgState.type, bgState.id, background.rgb, background.path);
+        
+        // Apply lighting config on initial load
+        if (background.lighting && 'applyLighting' in sceneManager) {
+          (sceneManager as any).applyLighting(background.lighting);
+        } else if ('resetLighting' in sceneManager) {
+          (sceneManager as any).resetLighting();
+        }
       }
     }
   }	
@@ -947,6 +956,17 @@ export class ApplicationController {
 					(this._sceneManager as any).applyArtPlacement(artPlacement);
 				} else if ('resetArtPlacement' in this._sceneManager) {
 					(this._sceneManager as any).resetArtPlacement();
+				}
+
+				// Apply lighting config if present
+				console.log('[Controller] Checking lighting:', background?.lighting);
+				console.log('[Controller] Has applyLighting?', 'applyLighting' in this._sceneManager);
+				if (background?.lighting && 'applyLighting' in this._sceneManager) {
+					console.log('[Controller] Calling applyLighting with:', background.lighting);
+					(this._sceneManager as any).applyLighting(background.lighting);
+				} else if ('resetLighting' in this._sceneManager) {
+					console.log('[Controller] Calling resetLighting');
+					(this._sceneManager as any).resetLighting();
 				}
       }
     }
@@ -1420,6 +1440,7 @@ export class ApplicationController {
 					if (this._woodMaterialsConfig && this._state) {
 						const header = document.createElement('div');
 						header.className = 'panel-header';
+						header.style.padding = '16px';
 						header.innerHTML = '<h3>Wood & Grain</h3>';
 						panelContent.appendChild(header);
 						const body = document.createElement('div');
@@ -1834,8 +1855,10 @@ export class ApplicationController {
 		let newValue = value; // Use a mutable variable for clamping
 
     // Enforce interdependent constraint for diamond_radial_n4 before calculating
-    const archetypeId = this.getActiveArchetypeId();
-    if (archetypeId === 'diamond_radial_n4' || archetypeId === 'rectangular_radial_n4') {
+		const archetypeId = this.getActiveArchetypeId();
+		const archetypeConstraints = this._constraintResolver?.getArchetypeConstraints(archetypeId);
+
+		if (archetypeConstraints?.interdependent) {
       if (axis === 'x' && newValue > 60 && this._state.composition.frame_design.finish_y > 60) {
         newValue = 60; // Clamp width because height is already large
       }

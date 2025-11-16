@@ -363,7 +363,10 @@ class WaveformDesignerFacade:
             finish_x=state.frame_design.finish_x,
             finish_y=state.frame_design.finish_y,
             min_dimension=shape_constraints.get('min_dimension', 8.0),
-            max_dimension=shape_constraints.get('max_dimension', 84.0)
+            max_dimension=shape_constraints.get('max_dimension', 84.0),
+            aspect_ratio_locked=False,
+            locked_aspect_ratio=None,
+            tolerance=0.01
         )
         
         if not validation_result.valid:

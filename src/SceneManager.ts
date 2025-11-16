@@ -3,7 +3,7 @@
 import {
     Engine, Scene, ArcRotateCamera, HemisphericLight, DirectionalLight,
     Vector3, Color3, Color4, Mesh, MeshBuilder, StandardMaterial,
-    TransformNode, Animation, CubicEase, EasingFunction, Layer, PointerEventTypes
+    TransformNode, Animation, CubicEase, EasingFunction, Layer, PointerEventTypes, ShadowGenerator
 } from '@babylonjs/core';
 import { GLTFFileLoader } from '@babylonjs/loaders/glTF';
 import { ApplicationController } from './ApplicationController';
@@ -11,7 +11,7 @@ import { FrameGenerationService } from './FrameGenerationService';
 import { PerformanceMonitor } from './PerformanceMonitor';
 import { TextureCacheService } from './TextureCacheService';
 import { IdleTextureLoader } from './IdleTextureLoader';
-import { SmartCsgResponse, WoodMaterialsConfig, BackgroundsConfig, ApplicationState, CompositionStateDTO, ArtPlacement } from './types/schemas';
+import { SmartCsgResponse, WoodMaterialsConfig, BackgroundsConfig, ApplicationState, CompositionStateDTO, ArtPlacement, LightingConfig } from './types/schemas';
 import { WaveformDesignerFacade } from './WaveformDesignerFacade';
 import { WoodMaterial } from './WoodMaterial';
 import { BackingMaterial } from './BackingMaterial';
@@ -48,6 +48,10 @@ export class SceneManager {
     private _idealCameraRadius: number = 50;
 		private _archetypeIdealRadius: Map<string, number> = new Map();
     private _currentArchetypeId: string | null = null;
+		private _hemisphericLight: HemisphericLight | null = null;
+    private _directionalLight: DirectionalLight | null = null;
+    private _shadowGenerator: ShadowGenerator | null = null;
+    private _shadowReceiverPlane: Mesh | null = null;
 
     private constructor(canvasId: string, facade: WaveformDesignerFacade, controller: ApplicationController) {
         const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
@@ -58,6 +62,7 @@ export class SceneManager {
 
         this._engine = new Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, antialias: true });
         this._scene = new Scene(this._engine);
+				(window as any).scene = this._scene;
         this._scene.clearColor = new Color3(0.1, 0.1, 0.1).toColor4();
         this._textureCache = new TextureCacheService(this._scene);
         this._camera = this.setupCamera();
@@ -113,15 +118,17 @@ export class SceneManager {
     }
 
     private setupLighting(): void {
-        const ambientLight = new HemisphericLight('ambientLight', new Vector3(0, 1, 0), this._scene);
-        ambientLight.intensity = 1.0;
-        ambientLight.diffuse = new Color3(1, 1, 0.95);
-        ambientLight.specular = new Color3(1, 1, 1);
-        ambientLight.groundColor = new Color3(0.3, 0.3, 0.3);
+        this._hemisphericLight = new HemisphericLight('ambientLight', new Vector3(0, 1, 0), this._scene);
+        this._hemisphericLight.intensity = 1.0;
+        this._hemisphericLight.diffuse = new Color3(1, 1, 0.95);
+        this._hemisphericLight.specular = new Color3(1, 1, 1);
+        this._hemisphericLight.groundColor = new Color3(0.3, 0.3, 0.3);
         
-        const directionalLight = new DirectionalLight('directionalLight', new Vector3(0, 0, -1), this._scene);
-        directionalLight.position = new Vector3(0, 0, 50);
-        directionalLight.intensity = 2.0;
+        this._directionalLight = new DirectionalLight('directionalLight', new Vector3(0, 0, -1), this._scene);
+        this._directionalLight.position = new Vector3(0, 0, 50);
+				// enable automatic calculation of the shadow camera Z bounds after the light position is set
+				this._directionalLight.autoCalcShadowZBounds = true;
+        this._directionalLight.intensity = 2.0;
         
         this._scene.environmentIntensity = 0.6;
         this._scene.clearColor = new Color3(0.90, 0.88, 0.86).toColor4();
@@ -242,6 +249,12 @@ export class SceneManager {
 								this._rootNode.rotation.x = Math.PI / 2;
 						}
 						this._sectionMeshes = meshes;
+            
+            // Enable shadow receiving on all section meshes (required for BlurExponentialShadowMap)
+            this._sectionMeshes.forEach(mesh => {
+                mesh.receiveShadows = true;
+            });
+            
             PerformanceMonitor.end('csg_mesh_generation');
             PerformanceMonitor.start('apply_materials');
             this.applySectionMaterials();
@@ -627,6 +640,15 @@ export class SceneManager {
             mesh.material = material;
             mesh.parent = this._rootNode;
         }
+        
+        // Register meshes as shadow casters if shadow generator exists
+        if (this._shadowGenerator) {
+            this._sectionMeshes.forEach(mesh => {
+                if (!this._shadowGenerator!.getShadowMap()?.renderList?.includes(mesh)) {
+                    this._shadowGenerator!.addShadowCaster(mesh);
+                }
+            });
+        }
     }
 	
     public applySingleSectionMaterial(sectionIndex: number): void {
@@ -936,6 +958,132 @@ export class SceneManager {
         const baseRadius = this._archetypeIdealRadius.get(archetypeId || '') || this._baseCameraRadius;
         this._idealCameraRadius = baseRadius / scaleFactor;
         this._camera.radius = this._idealCameraRadius;
+				
+				// Reposition shadow receiver to stay behind artwork
+        if (this._shadowReceiverPlane) {
+            this._shadowReceiverPlane.position = new Vector3(
+                this._rootNode.position.x,
+                this._rootNode.position.y,
+                this._rootNode.position.z - 5
+            );
+            // Ensure rotation stays correct (face toward artwork)
+            this._shadowReceiverPlane.rotation.y = Math.PI;
+        }
+        
+        // Reposition directional light to maintain shadow camera relationship
+        if (this._directionalLight && this._shadowGenerator) {
+            const lightDirection = this._directionalLight.direction.clone().normalize();
+            this._directionalLight.position = this._rootNode.position.subtract(lightDirection.scale(50));
+        }
+    }
+		
+		private _positionShadowReceiver(lighting: LightingConfig): void {
+        if (!this._shadowReceiverPlane) return;
+        
+        if (lighting.shadow_receiver_position) {
+            // Use explicit coordinates from config
+            this._shadowReceiverPlane.position = new Vector3(
+                lighting.shadow_receiver_position[0],
+                lighting.shadow_receiver_position[1],
+                lighting.shadow_receiver_position[2]
+            );
+        } else {
+            // Auto-position: 5 units behind artwork's actual position
+            const artworkPos = this._rootNode?.position || new Vector3(0, 0, 0);
+            this._shadowReceiverPlane.position = new Vector3(
+                artworkPos.x,
+                artworkPos.y,
+                artworkPos.z - 5
+            );
+        }
+    }
+		
+		public applyLighting(lighting: LightingConfig): void {
+        if (!this._directionalLight || !this._hemisphericLight) {
+            console.warn('[SceneManager] Lights not available for lighting config');
+            return;
+        }
+
+        // Override directional light
+				const lightDirection = new Vector3(lighting.direction[0], lighting.direction[1], lighting.direction[2]).normalize();
+				this._directionalLight.direction = lightDirection;
+				this._directionalLight.intensity = lighting.intensity;
+				
+				// Position light dynamically relative to artwork for shadow camera
+				const artworkPosition = this._rootNode?.position || Vector3.Zero();
+				this._directionalLight.position = artworkPosition.subtract(lightDirection.scale(50));
+				
+				// Force the shadow camera to automatically calculate its viewing frustum
+        // to perfectly enclose all shadow casters from the light's new position.
+        this._directionalLight.autoCalcShadowZBounds = true;
+
+        // Boost ambient if specified
+        const baseAmbient = 1.0;
+        const ambientBoost = lighting.ambient_boost ?? 0;
+        this._hemisphericLight.intensity = baseAmbient + ambientBoost;
+
+        // Handle shadows
+        if (lighting.shadow_enabled) {
+            if (!this._shadowGenerator) {
+                this._shadowGenerator = new ShadowGenerator(1024, this._directionalLight);
+            }
+            
+            // Add all section meshes to shadow casters (ensures they're added on re-creation)
+            this._sectionMeshes.forEach(mesh => {
+                this._shadowGenerator!.addShadowCaster(mesh);
+            });
+            
+            this._shadowGenerator.blurScale = lighting.shadow_blur ?? 1;
+            this._shadowGenerator.darkness = lighting.shadow_darkness ?? 0.5;
+						this._shadowGenerator.useBlurExponentialShadowMap = true;
+
+            // Create shadow receiver plane if needed
+            if (!this._shadowReceiverPlane) {
+                this._shadowReceiverPlane = MeshBuilder.CreatePlane('shadowReceiver', { size: 200 }, this._scene);
+                this._positionShadowReceiver(lighting);
+                // Rotate 180° around Y to face artwork (normal points toward -Z)
+                this._shadowReceiverPlane.rotation.y = Math.PI;
+                
+                // Make invisible but receive shadows
+                const shadowMat = new StandardMaterial('shadowReceiverMat', this._scene);
+                shadowMat.alpha = 0;
+                shadowMat.alphaMode = Engine.ALPHA_COMBINE;
+                this._shadowReceiverPlane.material = shadowMat;
+                this._shadowReceiverPlane.receiveShadows = true;
+            }
+        } else {
+            if (this._shadowGenerator) {
+                this._shadowGenerator.dispose();
+                this._shadowGenerator = null;
+            }
+            if (this._shadowReceiverPlane) {
+                this._shadowReceiverPlane.dispose();
+                this._shadowReceiverPlane = null;
+            }
+        }
+
+        console.log('[SceneManager] Applied lighting config:', lighting);
+    }
+
+    public resetLighting(): void {
+        if (!this._directionalLight || !this._hemisphericLight) return;
+
+        // Restore universal defaults
+        this._directionalLight.direction = new Vector3(0, 0, -1);
+        this._directionalLight.intensity = 2.0;
+        this._hemisphericLight.intensity = 1.0;
+
+        // Disable shadows
+        if (this._shadowGenerator) {
+            this._shadowGenerator.dispose();
+            this._shadowGenerator = null;
+        }
+        if (this._shadowReceiverPlane) {
+            this._shadowReceiverPlane.dispose();
+            this._shadowReceiverPlane = null;
+        }
+
+        console.log('[SceneManager] Reset lighting to universal defaults');
     }
     
     public resetArtPlacement(): void {

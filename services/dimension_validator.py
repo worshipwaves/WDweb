@@ -25,7 +25,7 @@ class ValidationResult:
 def validate_circular_dimensions(
     finish_x: float,
     finish_y: float,
-    tolerance: float = 0.01
+    tolerance: float
 ) -> ValidationResult:
     """
     Validate that circular panel dimensions are equal (square).
@@ -33,7 +33,7 @@ def validate_circular_dimensions(
     Args:
         finish_x: Width dimension
         finish_y: Height dimension
-        tolerance: Acceptable difference (default 0.01 inches)
+        tolerance: Acceptable difference in inches
         
     Returns:
         ValidationResult indicating if dimensions form a valid circle
@@ -83,7 +83,7 @@ def validate_aspect_ratio_lock(
     finish_x: float,
     finish_y: float,
     locked_aspect_ratio: float,
-    tolerance: float = 0.01
+    tolerance: float
 ) -> ValidationResult:
     """
     Validate that dimensions match the locked aspect ratio.
@@ -92,7 +92,7 @@ def validate_aspect_ratio_lock(
         finish_x: Width dimension
         finish_y: Height dimension
         locked_aspect_ratio: Expected ratio (width/height)
-        tolerance: Acceptable ratio difference (default 0.01)
+        tolerance: Acceptable ratio difference
         
     Returns:
         ValidationResult indicating if ratio is maintained
@@ -118,10 +118,11 @@ def validate_frame_design_dimensions(
     shape: Literal['circular', 'rectangular', 'diamond'],
     finish_x: float,
     finish_y: float,
-    aspect_ratio_locked: bool = False,
-    locked_aspect_ratio: float | None = None,
-    min_dimension: float = 8.0,
-    max_dimension: float = 84.0
+    min_dimension: float,
+    max_dimension: float,
+    aspect_ratio_locked: bool,
+    locked_aspect_ratio: float | None,
+    tolerance: float
 ) -> ValidationResult:
     """
     Comprehensive validation of frame design dimensions.
@@ -133,10 +134,11 @@ def validate_frame_design_dimensions(
         shape: Panel shape
         finish_x: Width dimension
         finish_y: Height dimension
-        aspect_ratio_locked: Whether aspect ratio is locked
-        locked_aspect_ratio: Locked ratio if lock is active
         min_dimension: Minimum allowed dimension
         max_dimension: Maximum allowed dimension
+        aspect_ratio_locked: Whether aspect ratio is locked
+        locked_aspect_ratio: Locked ratio if lock is active
+        tolerance: Acceptable difference for equality/ratio checks
         
     Returns:
         ValidationResult with validation status and error if invalid
@@ -150,14 +152,14 @@ def validate_frame_design_dimensions(
     
     # Check circular constraint
     if shape == 'circular':
-        circular_result = validate_circular_dimensions(finish_x, finish_y)
+        circular_result = validate_circular_dimensions(finish_x, finish_y, tolerance)
         if not circular_result.valid:
             return circular_result
     
     # Check aspect ratio lock if active
     if aspect_ratio_locked and locked_aspect_ratio:
         ratio_result = validate_aspect_ratio_lock(
-            finish_x, finish_y, locked_aspect_ratio
+            finish_x, finish_y, locked_aspect_ratio, tolerance
         )
         if not ratio_result.valid:
             return ratio_result

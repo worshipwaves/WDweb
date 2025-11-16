@@ -117,15 +117,23 @@
         "path": "/assets/backgrounds/rooms/dining.jpg",
         "description": "Elegant dining space"
       },
-      {
-        "id": "bedroom",
+			{
+      "id": "bedroom",
         "name": "Bedroom",
         "path": "/assets/backgrounds/rooms/bedroom.png",
         "description": "Serene bedroom setting",
         "art_placement": {
-          "position": [-2.125, -3, -20],
-          "scale_factor": 0.715,
+          "position": [-2.5, -3, -20],
+          "scale_factor": 0.705,
           "rotation": [0, 0, 0]
+        },
+        "lighting": {
+          "direction": [0.8, -0.3, 0.2],
+          "intensity": 3.5,
+          "shadow_enabled": true,
+          "shadow_blur": 5,
+          "shadow_darkness": 0.25,
+          "ambient_boost": 1.5
         }
       },
       {

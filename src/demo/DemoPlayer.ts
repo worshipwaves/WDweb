@@ -143,13 +143,82 @@ export class DemoPlayer {
         }, action.duration);
         break;
 
-      case 'simulate_upload': {        
-        // Just wait for visual effect, then continue
-        setTimeout(() => {
-          void this.executeNextStep();
-        }, 2000);
-        break;
-      }
+			case 'simulate_upload': {
+				console.log('[DemoPlayer] Starting simulate_upload');
+				
+				try {
+					console.log('[DemoPlayer] Fetching demo audio file...');
+					// WRONG: const response = await fetch('/assets/demo/demo_audio.mp3');
+					// RIGHT: Files in /public are served from root without /public prefix
+					const response = await fetch('/assets/demo/demo_audio.mp3');
+					
+					if (!response.ok) {
+						console.error('[DemoPlayer] Demo file fetch failed:', response.status, response.statusText);
+						void this.executeNextStep();
+						break;
+					}
+					
+					const blob = await response.blob();
+					console.log('[DemoPlayer] Blob created:', {
+						size: blob.size,
+						type: blob.type
+					});
+					
+					if (blob.size === 0 || blob.type.includes('html')) {
+						console.error('[DemoPlayer] Invalid file type:', blob.type);
+						void this.executeNextStep();
+						break;
+					}
+					
+					const file = new File([blob], 'demo_audio.mp3', { 
+						type: blob.type || 'audio/mpeg'
+					});
+					
+					console.log('[DemoPlayer] File object created:', {
+						name: file.name,
+						size: file.size,
+						type: file.type
+					});
+					
+					const currentState = this.controller.getState();
+					const uiComposition = currentState.composition;
+					
+					console.log('[DemoPlayer] Dispatching FILE_UPLOADED...');
+					await this.controller.dispatch({
+						type: 'FILE_UPLOADED',
+						payload: { file, uiSnapshot: uiComposition }
+					});
+					
+					console.log('[DemoPlayer] FILE_UPLOADED dispatched, waiting for processing...');
+					
+					let attempts = 0;
+					const maxAttempts = 100;
+					
+					const checkProcessing = (): void => {
+						const state = this.controller.getState();
+						attempts++;
+						
+						console.log(`[DemoPlayer] Check ${attempts}: stage=${state.processing.stage}`);
+						
+						if (state.processing.stage === 'idle') {
+							console.log('[DemoPlayer] Processing complete! Continuing demo...');
+							void this.executeNextStep();
+						} else if (attempts >= maxAttempts) {
+							console.error('[DemoPlayer] Processing timeout');
+							void this.executeNextStep();
+						} else {
+							setTimeout(checkProcessing, 100);
+						}
+					};
+					
+					checkProcessing();
+					
+				} catch (error: unknown) {
+					console.error('[DemoPlayer] Demo upload failed:', error);
+					void this.executeNextStep();
+				}
+				break;
+			}
 			
 			case 'update_progress':
         this.updateProgress(action.scene);

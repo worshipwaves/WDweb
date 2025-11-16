@@ -57,13 +57,26 @@ export const ArtPlacementSchema = z.object({
 
 export type ArtPlacement = z.infer<typeof ArtPlacementSchema>;
 
+export const LightingConfigSchema = z.object({
+  direction: z.tuple([z.number(), z.number(), z.number()]),
+  intensity: z.number(),
+  shadow_enabled: z.boolean(),
+  shadow_blur: z.number().optional(),
+  shadow_darkness: z.number().optional(),
+  ambient_boost: z.number().optional(),
+  shadow_receiver_position: z.tuple([z.number(), z.number(), z.number()]).optional(),
+}).strict();
+
+export type LightingConfig = z.infer<typeof LightingConfigSchema>;
+
 export const BackgroundItemSchema = z.object({
   id: z.string(),
   name: z.string(),
   path: z.string().optional(),
   rgb: z.array(z.number()).optional(),
   description: z.string(),
-  art_placement: ArtPlacementSchema.optional()
+  art_placement: ArtPlacementSchema.optional(),
+  lighting: LightingConfigSchema.optional()
 }).strict();
 
 export const BackgroundsConfigSchema = z.object({

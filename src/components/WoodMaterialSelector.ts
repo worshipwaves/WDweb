@@ -168,7 +168,12 @@ export class WoodMaterialSelector implements PanelComponent {
 				id: this._mapGrainToId(String(opt.value)),
 				label: opt.label,
 				isAvailable: true,
-			}));
+			}))
+			.sort((a, b) => {
+				// Sort to ensure vertical comes before horizontal
+				const order = ['n1_vertical', 'n1_horizontal', 'n4_radiant', 'n4_diamond'];
+				return order.indexOf(a.id) - order.indexOf(b.id);
+			});
 		
 		// This part is to make sure we don't show duplicate thumbnail types (like n1_vertical and n1_horizontal)
 		// when only one is needed to represent the basic grains.

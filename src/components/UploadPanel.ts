@@ -60,8 +60,10 @@ export class UploadPanel implements PanelComponent {
     uploadButton.style.padding = '16px 24px';
     uploadButton.style.fontSize = '16px';
     uploadButton.style.fontWeight = '500';
-    uploadButton.style.backgroundColor = 'rgba(100, 150, 255, 0.2)';
-    uploadButton.style.border = '2px solid rgba(100, 150, 255, 0.5)';
+    uploadButton.style.background = 'linear-gradient(135deg, #D9A464 0%, #C89550 100%)';
+		uploadButton.style.border = 'none';
+		uploadButton.style.boxShadow = '0 4px 12px rgba(217, 164, 100, 0.3)';
+		uploadButton.style.color = '#1a1a1a';
     uploadButton.style.borderRadius = '8px';
     uploadButton.style.color = 'rgba(255, 255, 255, 0.9)';
     uploadButton.style.cursor = 'pointer';
@@ -70,16 +72,14 @@ export class UploadPanel implements PanelComponent {
     
     // Upload button hover effects
     uploadButton.addEventListener('mouseenter', () => {
-      uploadButton.style.backgroundColor = 'rgba(100, 150, 255, 0.3)';
-      uploadButton.style.borderColor = 'rgba(100, 150, 255, 0.8)';
-      uploadButton.style.transform = 'translateY(-2px)';
-    });
+			uploadButton.style.boxShadow = '0 6px 16px rgba(217, 164, 100, 0.4)';
+			uploadButton.style.transform = 'translateY(-2px)';
+		});
     
-    uploadButton.addEventListener('mouseleave', () => {
-      uploadButton.style.backgroundColor = 'rgba(100, 150, 255, 0.2)';
-      uploadButton.style.borderColor = 'rgba(100, 150, 255, 0.5)';
-      uploadButton.style.transform = 'translateY(0)';
-    });
+		uploadButton.addEventListener('mouseleave', () => {
+			uploadButton.style.boxShadow = '0 4px 12px rgba(217, 164, 100, 0.3)';
+			uploadButton.style.transform = 'translateY(0)';
+		});
     
     uploadButton.addEventListener('click', () => {
       this._fileInput?.click();
@@ -95,7 +95,7 @@ export class UploadPanel implements PanelComponent {
     dropZone.style.textAlign = 'center';
     dropZone.style.color = 'rgba(255, 255, 255, 0.6)';
     dropZone.style.cursor = 'pointer';
-    dropZone.innerHTML = '<div style="font-size: 48px; margin-bottom: 16px;">⬆️</div><div>Or drag and drop your audio file here</div><div style="margin-top: 8px; font-size: 12px; opacity: 0.7;">Supported formats: MP3, WAV, FLAC, M4A</div>';
+    dropZone.innerHTML = '<div style="font-size: 48px; margin-bottom: 16px;"></div><div>Or drag and drop your audio file here</div><div style="margin-top: 8px; font-size: 12px; opacity: 0.7;">Supported formats: MP3, WAV, FLAC, M4A</div>';
     this._dropZone = dropZone;
     
     // Drop zone click triggers file input
@@ -114,12 +114,12 @@ export class UploadPanel implements PanelComponent {
     });
     
     // Drag and drop handlers
-    dropZone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dropZone.style.borderColor = 'rgba(100, 150, 255, 0.8)';
-      dropZone.style.backgroundColor = 'rgba(100, 150, 255, 0.1)';
-    });
+		dropZone.addEventListener('dragover', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			dropZone.style.borderColor = 'rgba(217, 164, 100, 0.8)';
+			dropZone.style.backgroundColor = 'rgba(217, 164, 100, 0.1)';
+		});
     
     dropZone.addEventListener('dragleave', (e) => {
       e.preventDefault();
