@@ -1731,6 +1731,20 @@ export class ApplicationController {
       if (archetype.side_margin !== undefined) {
         composition.pattern_settings.side_margin = archetype.side_margin;
       }
+			
+			// Clamp width/height to new archetype constraints
+      if (this._resolver && (archetype.shape === 'rectangular' || archetype.shape === 'diamond')) {
+        const sliderConfigs = this._resolver.resolveSliderConfigs(archetypeId, composition);
+        const widthConfig = sliderConfigs.find(s => s.id === 'width');
+        const heightConfig = sliderConfigs.find(s => s.id === 'height');
+        
+        if (widthConfig) {
+          composition.frame_design.finish_x = Math.max(widthConfig.min, Math.min(composition.frame_design.finish_x, widthConfig.max));
+        }
+        if (heightConfig) {
+          composition.frame_design.finish_y = Math.max(heightConfig.min, Math.min(composition.frame_design.finish_y, heightConfig.max));
+        }
+      }
       
       // If the new shape is circular, intelligently adjust and clamp the size.
       if (archetype.shape === 'circular') {

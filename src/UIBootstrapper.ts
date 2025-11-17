@@ -85,7 +85,6 @@ export class UIBootstrapper {
             document.body.classList.toggle('menus-hidden', menusHidden);
             const btn = document.getElementById('toggleMenusBtn');
             if (btn) btn.title = menusHidden ? 'Show Menus' : 'Hide Menus';
-            setTimeout(() => this.sceneManager.updateCameraOffset(), 250);
         });
     }
     

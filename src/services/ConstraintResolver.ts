@@ -221,13 +221,13 @@ export class ConstraintResolver {
         }
         
         // Apply scene-specific constraints from constraints.json
+        // Only apply max_height to width for circular shapes (where width = height = diameter)
         const controller = (window as any).controller;
         const fullState = controller?.getState();
         const currentBg = fullState?.ui?.currentBackground;
-        if (currentBg?.type === 'rooms' && this.constraints.scenes?.[currentBg.id]) {
+        if (shape === 'circular' && currentBg?.type === 'rooms' && this.constraints.scenes?.[currentBg.id]) {
           const sceneConstraint = this.constraints.scenes[currentBg.id];
           if (sceneConstraint.max_height !== null && sceneConstraint.max_height !== undefined) {
-            // For circular shapes, both dimensions limited by scene max_height
             calculatedMax = Math.min(calculatedMax, sceneConstraint.max_height);
           }
         }

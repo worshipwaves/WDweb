@@ -974,7 +974,17 @@ export class SceneManager {
         // Apply cached archetype radius with scene scale adjustment
         const baseRadius = this._archetypeIdealRadius.get(archetypeId || '') || this._baseCameraRadius;
         this._idealCameraRadius = baseRadius / scaleFactor;
-        this._camera.radius = this._idealCameraRadius;
+        
+        // Let the resize handler apply aspect ratio adjustment
+        const canvas = this._engine.getRenderingCanvas();
+        if (canvas && canvas.width > 0 && canvas.height > 0) {
+            const currentAspect = canvas.width / canvas.height;
+            const aspectRatio = this._baselineAspectRatio / currentAspect;
+            this._baseRadiusBeforeAspect = this._idealCameraRadius;
+            this._camera.radius = this._baseRadiusBeforeAspect * aspectRatio;
+        } else {
+            this._camera.radius = this._idealCameraRadius;
+        }
 				
 				// Reposition shadow receiver to stay behind artwork
         if (this._shadowReceiverPlane) {

@@ -70,8 +70,8 @@
     },
     "rectangular_radial_n1": {
       "available_sliders": ["width", "height", "slots"],
-      "width": {"min": 24, "max": 30, "step": 1},
-      "height": {"min": 24, "max": 30, "step": 1},
+      "width": {"min": 24, "max": 42, "step": 1},
+      "height": {"min": 24, "max": 42, "step": 1},
       "slots": {"min": 36, "max": 60}
     },
     "rectangular_radial_n2": {
@@ -90,7 +90,7 @@
     },
     "rectangular_linear_n1": {
       "available_sliders": ["width", "height", "slots", "side_margin"],
-      "width": {"min": 24, "max": 30, "step": 1},
+      "width": {"min": 24, "max": 42, "step": 1},
       "height": {"min": 12, "max": 42, "step": 1},
       "slots": {"min": 12, "max": 42},
       "side_margin": {"min": 0, "max": 12, "step": 1.0}
