@@ -8,7 +8,10 @@ import type { ArchetypeConstraint, CompositionStateDTO, ConstraintsConfig } from
  * This is the intelligence layer between raw constraint data and the UI.
  */
 export class ConstraintResolver {
-  constructor(private constraints: ConstraintsConfig) {
+  constructor(
+    private constraints: ConstraintsConfig,
+    private placementDefaults?: any
+  ) {
     if (!constraints.archetype_constraints) {
       throw new Error('Invalid constraints file: missing "archetype_constraints" section.');
     }
@@ -23,6 +26,102 @@ export class ConstraintResolver {
       return null;
     }
     return this.constraints.archetype_constraints[archetypeId];
+  }
+	
+	/**
+   * Calculate max width based on CNC table constraints
+   */
+  private calculateMaxWidthRectLinear(
+    numSections: number,
+    currentHeight: number,
+    separation: number,
+    tableMaxX: number,
+    tableMaxY: number,
+    minWidth: number
+  ): number {
+    const sectionHeight = currentHeight;
+    
+    if (sectionHeight <= tableMaxX) {
+      const maxSectionWidth = tableMaxY;
+      return numSections * maxSectionWidth + (numSections - 1) * separation;
+    } else if (sectionHeight <= tableMaxY) {
+      const maxSectionWidth = tableMaxX;
+      return numSections * maxSectionWidth + (numSections - 1) * separation;
+    } else {
+      return minWidth;
+    }
+  }
+
+  private calculateMaxHeightRectLinear(
+    numSections: number,
+    currentWidth: number,
+    separation: number,
+    tableMaxX: number,
+    tableMaxY: number,
+    minHeight: number
+  ): number {
+    const sectionWidth = (currentWidth - (numSections - 1) * separation) / numSections;
+    
+    if (sectionWidth <= tableMaxX) {
+      return tableMaxY;
+    } else if (sectionWidth <= tableMaxY) {
+      return tableMaxX;
+    } else {
+      return minHeight;
+    }
+  }
+
+  private calculateMaxWidthRectRadialN4(
+    currentHeight: number,
+    separation: number,
+    tableMaxX: number,
+    tableMaxY: number,
+    minWidth: number
+  ): number {
+    const sectionHeight = (currentHeight - separation) / 2;
+    
+    if (sectionHeight <= tableMaxX) {
+      const maxSectionWidth = tableMaxY;
+      return 2 * maxSectionWidth + separation;
+    } else if (sectionHeight <= tableMaxY) {
+      const maxSectionWidth = tableMaxX;
+      return 2 * maxSectionWidth + separation;
+    } else {
+      return minWidth;
+    }
+  }
+
+  private calculateMaxHeightRectRadialN4(
+    currentWidth: number,
+    separation: number,
+    tableMaxX: number,
+    tableMaxY: number,
+    minHeight: number
+  ): number {
+    const sectionWidth = (currentWidth - separation) / 2;
+    
+    if (sectionWidth <= tableMaxX) {
+      return 2 * tableMaxY + separation;
+    } else if (sectionWidth <= tableMaxY) {
+      return 2 * tableMaxX + separation;
+    } else {
+      return minHeight;
+    }
+  }
+
+  private calculateMaxDimensionCircular(
+    numSections: number,
+    minDim: number,
+    maxDim: number
+  ): number {
+    const knownLimits: Record<number, number> = {
+      1: 30,
+      2: 42,
+      3: 54,
+      4: 60
+    };
+    
+    return knownLimits[numSections] ?? Math.min(maxDim, 30);
   }
 
   /**
@@ -61,18 +160,124 @@ export class ConstraintResolver {
       
       let finalMax = sliderConstraint.max;
       
-      // Handle interdependent constraint for diamond_radial_n4 to update UI display
-      if (archetypeConstraints.interdependent) {
-        if (sliderKey === 'width') {
-          // If height is currently over 60, clamp my (width's) max to 60.
-          // Otherwise, my max is the default from the constraints file (e.g., 84).
-          finalMax = state.frame_design.finish_y > 60 ? 60 : sliderConstraint.max;
+      // Apply CNC table constraints for width/height sliders
+      const tableMaxX = this.constraints.manufacturing?.cnc_table?.max_x ?? 30;
+      const tableMaxY = this.constraints.manufacturing?.cnc_table?.max_y ?? 42;
+      const shape = state.frame_design.shape;
+      const slotStyle = state.pattern_settings.slot_style;
+      const numSections = state.frame_design.number_sections;
+      const separation = state.frame_design.separation;
+			
+			if (sliderKey === 'size') {
+        let calculatedMax = sliderConstraint.max;
+        if (shape === 'circular') {
+          calculatedMax = this.calculateMaxDimensionCircular(numSections, sliderConstraint.min, sliderConstraint.max);
         }
-        if (sliderKey === 'height') {
-          // If width is currently over 60, clamp my (height's) max to 60.
-          // Otherwise, my max is the default.
-          finalMax = state.frame_design.finish_x > 60 ? 60 : sliderConstraint.max;
+        
+        // Apply scene-specific constraints from constraints.json
+        const controller = (window as any).controller;
+        const fullState = controller?.getState();
+        const currentBg = fullState?.ui?.currentBackground;
+        if (currentBg?.type === 'rooms' && this.constraints.scenes?.[currentBg.id]) {
+          const sceneConstraint = this.constraints.scenes[currentBg.id];
+          if (sceneConstraint.max_height !== null && sceneConstraint.max_height !== undefined) {
+            calculatedMax = Math.min(calculatedMax, sceneConstraint.max_height);
+          }
         }
+        
+        finalMax = Math.min(sliderConstraint.max, calculatedMax);
+      } else if (sliderKey === 'width') {
+        let calculatedMax = sliderConstraint.max;
+        if (shape === 'circular') {
+          calculatedMax = this.calculateMaxDimensionCircular(numSections, sliderConstraint.min, sliderConstraint.max);
+        } else if (shape === 'rectangular' || shape === 'diamond') {
+          if (slotStyle === 'linear') {
+            calculatedMax = this.calculateMaxWidthRectLinear(
+              numSections,
+              state.frame_design.finish_y,
+              separation,
+              tableMaxX,
+              tableMaxY,
+              sliderConstraint.min
+            );
+          } else if (numSections === 4) {
+            calculatedMax = this.calculateMaxWidthRectRadialN4(
+              state.frame_design.finish_y,
+              separation,
+              tableMaxX,
+              tableMaxY,
+              sliderConstraint.min
+            );
+          } else {
+            calculatedMax = this.calculateMaxWidthRectLinear(
+              numSections,
+              state.frame_design.finish_y,
+              separation,
+              tableMaxX,
+              tableMaxY,
+              sliderConstraint.min
+            );
+          }
+        }
+        
+        // Apply scene-specific constraints from constraints.json
+        const controller = (window as any).controller;
+        const fullState = controller?.getState();
+        const currentBg = fullState?.ui?.currentBackground;
+        if (currentBg?.type === 'rooms' && this.constraints.scenes?.[currentBg.id]) {
+          const sceneConstraint = this.constraints.scenes[currentBg.id];
+          if (sceneConstraint.max_height !== null && sceneConstraint.max_height !== undefined) {
+            // For circular shapes, both dimensions limited by scene max_height
+            calculatedMax = Math.min(calculatedMax, sceneConstraint.max_height);
+          }
+        }
+        
+        finalMax = Math.min(sliderConstraint.max, calculatedMax);
+      } else if (sliderKey === 'height') {
+        let calculatedMax = sliderConstraint.max;
+        if (shape === 'circular') {
+          calculatedMax = this.calculateMaxDimensionCircular(numSections, sliderConstraint.min, sliderConstraint.max);
+        } else if (shape === 'rectangular' || shape === 'diamond') {
+          if (slotStyle === 'linear') {
+            calculatedMax = this.calculateMaxHeightRectLinear(
+              numSections,
+              state.frame_design.finish_x,
+              separation,
+              tableMaxX,
+              tableMaxY,
+              sliderConstraint.min
+            );
+          } else if (numSections === 4) {
+            calculatedMax = this.calculateMaxHeightRectRadialN4(
+              state.frame_design.finish_x,
+              separation,
+              tableMaxX,
+              tableMaxY,
+              sliderConstraint.min
+            );
+          } else {
+            calculatedMax = this.calculateMaxHeightRectLinear(
+              numSections,
+              state.frame_design.finish_x,
+              separation,
+              tableMaxX,
+              tableMaxY,
+              sliderConstraint.min
+            );
+          }
+        }
+        
+        // Apply scene-specific constraints from constraints.json
+        const currentBg = (window as any).controller?.getState()?.ui?.currentBackground;
+        if (currentBg?.type === 'rooms' && this.constraints.scenes?.[currentBg.id]) {
+          const sceneConstraint = this.constraints.scenes[currentBg.id];
+          if (sceneConstraint.max_height !== null && sceneConstraint.max_height !== undefined) {
+            // For circular shapes, both dimensions limited by scene max_height
+            calculatedMax = Math.min(calculatedMax, sceneConstraint.max_height);
+          }
+        }
+        
+        finalMax = Math.min(sliderConstraint.max, calculatedMax);
       }
 
       // Clamp the current value against the new dynamic max for display

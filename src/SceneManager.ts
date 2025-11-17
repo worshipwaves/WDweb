@@ -48,6 +48,8 @@ export class SceneManager {
     private _idealCameraRadius: number = 50;
 		private _archetypeIdealRadius: Map<string, number> = new Map();
     private _currentArchetypeId: string | null = null;
+		private _baselineAspectRatio: number = 1.0;
+		private _baseRadiusBeforeAspect: number = 50;
 		private _hemisphericLight: HemisphericLight | null = null;
     private _directionalLight: DirectionalLight | null = null;
     private _shadowGenerator: ShadowGenerator | null = null;
@@ -77,6 +79,20 @@ export class SceneManager {
             this._engine.resize();
             this.checkLayoutMode();
             this.updateCameraOffset();
+            
+            // Maintain consistent pixels-per-inch when aspect ratio changes
+            const canvas = this._engine.getRenderingCanvas();
+            if (canvas && canvas.width > 0 && canvas.height > 0) {
+                const currentAspect = canvas.width / canvas.height;
+                const aspectRatio = this._baselineAspectRatio / currentAspect;
+                
+                // Store current ideal before aspect adjustment
+                this._baseRadiusBeforeAspect = this._idealCameraRadius;
+                
+                // Adjust camera radius to compensate for aspect ratio change
+                // When viewport gets taller (aspect decreases), move camera farther
+                this._camera.radius = this._baseRadiusBeforeAspect * aspectRatio;
+            }
         });
 
         this._engine.runRenderLoop(() => this._scene.render());
@@ -92,6 +108,7 @@ export class SceneManager {
         const canvas = manager._engine.getRenderingCanvas();
         if (canvas) {
             manager._referenceAspectRatio = canvas.width / canvas.height;
+            manager._baselineAspectRatio = manager._referenceAspectRatio;
         }
         
         return manager;

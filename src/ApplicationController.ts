@@ -311,7 +311,7 @@ export class ApplicationController {
 			this._backgroundsConfig = backgrounds;
 			this._placementDefaults = placementDefaults;
 			this._constraints = constraints;
-			this._resolver = new ConstraintResolver(constraints);
+			this._resolver = new ConstraintResolver(constraints, placementDefaults);
 			this._thumbnailConfig = uiConfig.thumbnail_config;
 			this._categoriesConfig = uiConfig.categories;
 			
@@ -1739,13 +1739,15 @@ export class ApplicationController {
         const smallerCurrentDim = Math.min(currentX, currentY);
 
         let maxAllowedSize = 60;
+        let minAllowedSize = 24;
         if (this._constraints?.manufacturing.circular.by_section_count) {
           const nKey = String(archetype.number_sections);
           const constraint = this._constraints.manufacturing.circular.by_section_count[nKey];
           maxAllowedSize = constraint?.max ?? this._constraints.manufacturing.circular.general.max;
+          minAllowedSize = constraint?.min ?? this._constraints.manufacturing.circular.general.min;
         }
         
-        const newSize = Math.min(smallerCurrentDim, maxAllowedSize);
+        const newSize = Math.max(minAllowedSize, Math.min(smallerCurrentDim, maxAllowedSize));
         composition.frame_design.finish_x = newSize;
         composition.frame_design.finish_y = newSize;
       }
@@ -1848,25 +1850,19 @@ export class ApplicationController {
     axis: 'x' | 'y',
     value: number
   ): Promise<void> {
+		
+		console.log('[DIMENSION UPDATE]', {
+      axis,
+      value,
+      currentArchetype: this.getActiveArchetypeId()
+    });
+		
     if (!this._state) return;
 
     const newComposition = structuredClone(this._state.composition);
 		
 		let newValue = value; // Use a mutable variable for clamping
 
-    // Enforce interdependent constraint for diamond_radial_n4 before calculating
-		const archetypeId = this.getActiveArchetypeId();
-		const archetypeConstraints = this._constraintResolver?.getArchetypeConstraints(archetypeId);
-
-		if (archetypeConstraints?.interdependent) {
-      if (axis === 'x' && newValue > 60 && this._state.composition.frame_design.finish_y > 60) {
-        newValue = 60; // Clamp width because height is already large
-      }
-      if (axis === 'y' && newValue > 60 && this._state.composition.frame_design.finish_x > 60) {
-        newValue = 60; // Clamp height because width is already large
-      }
-    }
-    
     // Build constraints from current state and config
     const uiConfig = window.uiEngine?.config;
     const shapeConstraints = uiConfig?.dimension_constraints?.[newComposition.frame_design.shape];
@@ -1907,10 +1903,48 @@ export class ApplicationController {
     // Single update through facade
     await this.handleCompositionUpdate(newComposition);
     
-    // For interdependent archetypes, force a full slider re-render
-    // to update the max value of the *other* slider.
-		if (archetypeId === 'diamond_radial_n4' || archetypeId === 'rectangular_radial_n4') {
-			this._renderRightMainFiltered();
+    // Update the OTHER slider's max value directly without re-rendering
+		const archetypeId = this.getActiveArchetypeId();
+		if (archetypeId && this._resolver && this._state) {
+			const sliderConfigs = this._resolver.resolveSliderConfigs(archetypeId, this._state.composition);
+			
+			// Update width slider max if height changed
+			if (axis === 'y') {
+				const widthConfig = sliderConfigs.find(s => s.id === 'width');
+				if (widthConfig) {
+					const widthSlider = document.getElementById('width') as HTMLInputElement;
+					if (widthSlider) {
+						widthSlider.max = String(widthConfig.max);
+						// Clamp current value if it exceeds new max
+						if (parseFloat(widthSlider.value) > widthConfig.max) {
+							widthSlider.value = String(widthConfig.max);
+							const valueDisplay = document.getElementById('width-value');
+							if (valueDisplay) {
+								valueDisplay.textContent = `${widthConfig.max}"`;
+							}
+						}
+					}
+				}
+			}
+			
+			// Update height slider max if width changed
+			if (axis === 'x') {
+				const heightConfig = sliderConfigs.find(s => s.id === 'height');
+				if (heightConfig) {
+					const heightSlider = document.getElementById('height') as HTMLInputElement;
+					if (heightSlider) {
+						heightSlider.max = String(heightConfig.max);
+						// Clamp current value if it exceeds new max
+						if (parseFloat(heightSlider.value) > heightConfig.max) {
+							heightSlider.value = String(heightConfig.max);
+							const valueDisplay = document.getElementById('height-value');
+							if (valueDisplay) {
+								valueDisplay.textContent = `${heightConfig.max}"`;
+							}
+						}
+					}
+				}
+			}
 		}
 	}	
 
@@ -2266,6 +2300,7 @@ export class ApplicationController {
    */
  
 	async handleCompositionUpdate(initialComposition: CompositionStateDTO): Promise<void> {
+		
     if (this._isUpdatingComposition) {
       console.warn('[Controller] Composition update already in progress. Ignoring request.');
       return;
