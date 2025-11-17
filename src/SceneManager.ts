@@ -80,18 +80,42 @@ export class SceneManager {
             this.checkLayoutMode();
             this.updateCameraOffset();
             
-            // Maintain consistent pixels-per-inch when aspect ratio changes
+            // ============================================================================
+            // CRITICAL: MAINTAIN CONSTANT HORIZONTAL FIELD OF VIEW ON RESIZE
+            // ============================================================================
+            // PROBLEM: Background images are width-constrained (fill viewport width, grow
+            // vertically). When entering fullscreen, background only grows vertically but
+            // 3D scene was growing both horizontally AND vertically, causing artwork to
+            // appear wider than the background reference (e.g., bedroom headboard).
+            //
+            // SOLUTION: Adjust vertical FOV to maintain constant horizontal FOV, matching
+            // the background's width-constrained scaling behavior.
+            //
+            // FAILED APPROACHES (DO NOT REVERT TO):
+            // - Adjusting camera radius: Changes both H and V FOV, doesn't maintain width
+            // - Using _baseRadiusBeforeAspect: Still allows horizontal growth
+            // - Removing adjustment entirely: Makes horizontal growth even worse
+            //
+            // MATHEMATICAL RELATIONSHIP:
+            // hFOV = 2 * atan(tan(vFOV/2) * aspectRatio)
+            // To keep hFOV constant when aspectRatio changes:
+            // tan(vFOV_new/2) = tan(vFOV_base/2) * (baselineAspect / currentAspect)
+            //
+            // DO NOT MODIFY THIS LOGIC WITHOUT TESTING:
+            // 1. Load bedroom scene (80" artwork over headboard)
+            // 2. Note artwork width matches headboard exactly (80")
+            // 3. Enter fullscreen
+            // 4. VERIFY: Artwork still matches headboard width (grows only vertically)
+            // ============================================================================
             const canvas = this._engine.getRenderingCanvas();
             if (canvas && canvas.width > 0 && canvas.height > 0) {
                 const currentAspect = canvas.width / canvas.height;
                 const aspectRatio = this._baselineAspectRatio / currentAspect;
                 
-                // Store current ideal before aspect adjustment
-                this._baseRadiusBeforeAspect = this._idealCameraRadius;
-                
-                // Adjust camera radius to compensate for aspect ratio change
-                // When viewport gets taller (aspect decreases), move camera farther
-                this._camera.radius = this._baseRadiusBeforeAspect * aspectRatio;
+                const baseFov = 0.8; // Standard vertical FOV (radians)
+                const halfBaseFov = baseFov / 2;
+                const newHalfFov = Math.atan(Math.tan(halfBaseFov) * aspectRatio);
+                this._camera.fov = newHalfFov * 2;
             }
         });
 
@@ -975,13 +999,12 @@ export class SceneManager {
         const baseRadius = this._archetypeIdealRadius.get(archetypeId || '') || this._baseCameraRadius;
         this._idealCameraRadius = baseRadius / scaleFactor;
         
-        // Let the resize handler apply aspect ratio adjustment
+        // Establish current aspect ratio as new baseline
         const canvas = this._engine.getRenderingCanvas();
         if (canvas && canvas.width > 0 && canvas.height > 0) {
-            const currentAspect = canvas.width / canvas.height;
-            const aspectRatio = this._baselineAspectRatio / currentAspect;
+            this._baselineAspectRatio = canvas.width / canvas.height;
             this._baseRadiusBeforeAspect = this._idealCameraRadius;
-            this._camera.radius = this._baseRadiusBeforeAspect * aspectRatio;
+            this._camera.radius = this._idealCameraRadius;
         } else {
             this._camera.radius = this._idealCameraRadius;
         }
