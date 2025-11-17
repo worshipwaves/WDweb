@@ -137,26 +137,24 @@ class SlotGenerationService:
             local_slot_index = slot_index % slots_per_section
             
             # Determine margins for this section
-            # For rectangular: use x_offset only (no side_margin)
-            # For circular/diamond: use side_margin on exterior edges
-            if frame.shape == "rectangular":
-                # Rectangular: x_offset for all edges
-                left_margin = x_offset
-                right_margin = x_offset
-            elif number_sections == 1:
-                # Single section: side_margin on both edges (both are exterior)
-                left_margin = side_margin
-                right_margin = side_margin
+            # x_offset is the minimum manufacturing clearance (always enforced)
+            # side_margin is user-adjustable additional spacing on exterior edges
+            # Exterior edges: max(x_offset, side_margin) ensures manufacturing minimum
+            # Interior edges: x_offset only
+            if number_sections == 1:
+                # Single section: both edges are exterior
+                left_margin = max(x_offset, side_margin)
+                right_margin = max(x_offset, side_margin)
             elif section_id == 0:
-                # First section: side_margin on left (outer), x_offset on right (interior)
-                left_margin = side_margin
+                # First section: left is exterior, right is interior
+                left_margin = max(x_offset, side_margin)
                 right_margin = x_offset
             elif section_id == number_sections - 1:
-                # Last section: x_offset on left (interior), side_margin on right (outer)
+                # Last section: left is interior, right is exterior
                 left_margin = x_offset
-                right_margin = side_margin
+                right_margin = max(x_offset, side_margin)
             else:
-                # Internal sections: x_offset on both sides
+                # Internal sections: both edges are interior
                 left_margin = x_offset
                 right_margin = x_offset
             
