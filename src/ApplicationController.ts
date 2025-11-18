@@ -7,6 +7,7 @@
  */
 
 import { AudioCacheService } from './AudioCacheService';
+import { AspectRatioLock } from './components/AspectRatioLock';
 import { FilterIconStrip } from './components/FilterIconStrip';
 import { PanelStackManager } from './components/PanelStackManager';
 import { RightPanelContentRenderer } from './components/RightPanelContent';
@@ -15,6 +16,7 @@ import { SliderGroup } from './components/SliderGroup';
 import { ThumbnailGrid } from './components/ThumbnailGrid';
 import { WoodMaterialSelector } from './components/WoodMaterialSelector';
 import { PerformanceMonitor } from './PerformanceMonitor';
+import { ConstraintResolver } from './services/ConstraintResolver';
 import type { CategoriesConfig, FilterIconGroup, ThumbnailConfig } from './types/PanelTypes';
 import {
   ApplicationState,
@@ -26,19 +28,16 @@ import {
   type ArtPlacement,
   type AudioProcessResponse,
   type BackgroundsConfig,
-  type CompositionOverrides,
 	type ConstraintsConfig,
   type CSGDataResponse,
   type PlacementDefaults,
   type SectionMaterial,
   type WoodMaterialsConfig,
 } from './types/schemas';
-import { fetchAndValidate } from './utils/validation';
-import { deepMerge } from './utils/mergeUtils';
-import { Action, WaveformDesignerFacade } from './WaveformDesignerFacade';
 import { applyDimensionChange, type DimensionConstraints } from './utils/dimensionUtils';
-import { AspectRatioLock } from './components/AspectRatioLock';
-import { ConstraintResolver } from './services/ConstraintResolver';
+import { deepMerge } from './utils/mergeUtils';
+import { fetchAndValidate } from './utils/validation';
+import { Action, WaveformDesignerFacade } from './WaveformDesignerFacade';
 
 
 // Internal facade APIs that aren't exposed in the public interface
@@ -89,6 +88,8 @@ interface ElementConfig {
 interface UIEngine {
   getElementConfig: (key: string) => ElementConfig | undefined;
   getStateValue: (composition: CompositionStateDTO, path: string) => unknown;
+  isGrainDirectionAvailable: (grain: string, numberSections: number) => boolean;
+  config?: { dimension_constraints?: Record<string, { allow_aspect_lock?: boolean; min_dimension?: number; max_dimension?: number }> };
 }
 
 declare global {
@@ -106,7 +107,7 @@ type StateSubscriber = (state: ApplicationState) => void;
  */
 function isGrainAvailableForN(grain: string, n: number): boolean {
   // Defer to the UIEngine, which reads from the configuration file.
-  if (window.uiEngine) {
+  if (window.uiEngine && typeof window.uiEngine.isGrainDirectionAvailable === 'function') {
     return window.uiEngine.isGrainDirectionAvailable(grain, n);
   }
 
@@ -180,6 +181,7 @@ export class ApplicationController {
 	private _constraints: ConstraintsConfig | null = null;
 	private _resolver: ConstraintResolver | null = null;
 	private _compositionCache: Map<string, CompositionStateDTO> = new Map();
+	private _isUpdatingComposition: boolean = false;
 	public getResolver(): ConstraintResolver | null {
     return this._resolver;
   }
@@ -292,14 +294,14 @@ export class ApplicationController {
 			// Load thumbnail and categories configuration
       // Load all configs in parallel
 			const [archetypes, woodMaterials, backgrounds, placementDefaults, uiConfig, _compositionDefaults, constraints] = await Promise.all([
-				fetch('http://localhost:8000/api/config/archetypes').then(r => r.json()),
-				fetch('http://localhost:8000/api/config/wood-materials').then(r => r.json()),
+				fetch('http://localhost:8000/api/config/archetypes').then(r => r.json() as Promise<Record<string, Archetype>>),
+				fetch('http://localhost:8000/api/config/wood-materials').then(r => r.json() as Promise<WoodMaterialsConfig>),
 				fetchAndValidate<BackgroundsConfig>('http://localhost:8000/api/config/backgrounds', BackgroundsConfigSchema),
-				fetch('http://localhost:8000/api/config/placement-defaults').then(r => r.json()),
-				fetch('http://localhost:8000/api/config/ui').then(r => r.json()),
-				fetch('http://localhost:8000/api/config/composition-defaults').then(r => r.json()),
+				fetch('http://localhost:8000/api/config/placement-defaults').then(r => r.json() as Promise<PlacementDefaults>),
+				fetch('http://localhost:8000/api/config/ui').then(r => r.json() as Promise<UIConfig>),
+				fetch('http://localhost:8000/api/config/composition-defaults').then(r => r.json() as Promise<unknown>),
 				fetchAndValidate('http://localhost:8000/api/config/constraints', ConstraintsConfigSchema)
-			]) as [Record<string, Archetype>, WoodMaterialsConfig, BackgroundsConfig, PlacementDefaults, UIConfig, unknown, ConstraintsConfig];
+			]);
 
 			// Store archetypes
 			Object.entries(archetypes).forEach(([id, data]) => {
@@ -504,9 +506,9 @@ export class ApplicationController {
         
         // Apply lighting config on initial load
         if (background.lighting && 'applyLighting' in sceneManager) {
-          (sceneManager as any).applyLighting(background.lighting);
+          (sceneManager as unknown as { applyLighting: (lighting: unknown) => void }).applyLighting(background.lighting);
         } else if ('resetLighting' in sceneManager) {
-          (sceneManager as any).resetLighting();
+          (sceneManager as unknown as { resetLighting: () => void }).resetLighting();
         }
       }
     }
@@ -953,20 +955,16 @@ export class ApplicationController {
 				}
 
 				if (artPlacement && 'applyArtPlacement' in this._sceneManager) {
-					(this._sceneManager as any).applyArtPlacement(artPlacement);
+					(this._sceneManager as unknown as { applyArtPlacement: (placement: ArtPlacement) => void }).applyArtPlacement(artPlacement);
 				} else if ('resetArtPlacement' in this._sceneManager) {
-					(this._sceneManager as any).resetArtPlacement();
+					(this._sceneManager as unknown as { resetArtPlacement: () => void }).resetArtPlacement();
 				}
 
 				// Apply lighting config if present
-				console.log('[Controller] Checking lighting:', background?.lighting);
-				console.log('[Controller] Has applyLighting?', 'applyLighting' in this._sceneManager);
 				if (background?.lighting && 'applyLighting' in this._sceneManager) {
-					console.log('[Controller] Calling applyLighting with:', background.lighting);
-					(this._sceneManager as any).applyLighting(background.lighting);
+					(this._sceneManager as unknown as { applyLighting: (lighting: unknown) => void }).applyLighting(background.lighting);
 				} else if ('resetLighting' in this._sceneManager) {
-					console.log('[Controller] Calling resetLighting');
-					(this._sceneManager as any).resetLighting();
+					(this._sceneManager as unknown as { resetLighting: () => void }).resetLighting();
 				}
       }
     }
@@ -1124,28 +1122,17 @@ export class ApplicationController {
    * @private
    */
   private _handleSubcategorySelected(subcategoryId: string): void {
-    console.log('[Controller] _handleSubcategorySelected called with:', subcategoryId);
-    console.log('[Controller] Current state:', {
-      hasConfig: !!this._categoriesConfig,
-      hasState: !!this._state,
-      activeCategory: this._state?.ui.activeCategory
-    });
-    
     if (!this._categoriesConfig || !this._state?.ui.activeCategory) {
-      console.error('[Controller] Early return: missing config or state');
       return;
     }
     
     const categoryConfig = this._categoriesConfig[this._state.ui.activeCategory as keyof CategoriesConfig];
     if (!categoryConfig) {
-      console.error('[Controller] Early return: no category config for', this._state.ui.activeCategory);
       return;
     }
 
-    console.log('[Controller] Dispatching SUBCATEGORY_SELECTED');
     // Dispatch state update
     void this.dispatch({ type: 'SUBCATEGORY_SELECTED', payload: { category: this._state.ui.activeCategory, subcategory: subcategoryId } });
-    console.log('[Controller] Dispatch completed');
 
     // Re-render the LeftSecondaryPanel immediately to show the new selection
     const subcategories = Object.entries(categoryConfig.subcategories).map(([id, config]) => ({ id, config }));
@@ -1193,7 +1180,7 @@ export class ApplicationController {
     }
     
     // Get current selection from SceneManager
-    const selectedSections = this._sceneManager.getSelectedSections();
+    const selectedSections = (this._sceneManager as unknown as { getSelectedSections: () => Set<number> }).getSelectedSections();
     
     // Clear and render new selector
     this._rightSecondaryPanel.innerHTML = '';
@@ -1233,19 +1220,26 @@ export class ApplicationController {
   private _handleSectionSelectionFromUI(newSelection: Set<number>): void {
     if (!this._sceneManager) return;
     
+    const sceneManager = this._sceneManager as unknown as {
+      clearSelection: () => void;
+      toggleSection: (index: number) => void;
+      getSelectedSections: () => Set<number>;
+      updateSectionUI: (selection: Set<number>) => void;
+    };
+    
     // Clear current selection
-    this._sceneManager.clearSelection();
+    sceneManager.clearSelection();
     
     // Apply new selection
     newSelection.forEach(index => {
-      this._sceneManager.toggleSection(index);
+      sceneManager.toggleSection(index);
     });
     
     // Sync controller state
-    this.selectSection(this._sceneManager.getSelectedSections());
+    this.selectSection(sceneManager.getSelectedSections());
     
     // Update white dot overlays
-    this._sceneManager.updateSectionUI(this._sceneManager.getSelectedSections());
+    sceneManager.updateSectionUI(sceneManager.getSelectedSections());
   }
   
   /**
@@ -1418,7 +1412,7 @@ export class ApplicationController {
           
           // Add aspect ratio lock control if shape allows it
           const shape = this._state.composition.frame_design.shape;
-          const uiConfig = window.uiEngine?.config;
+          const uiConfig = window.uiEngine?.config as { dimension_constraints?: Record<string, { allow_aspect_lock?: boolean }> } | undefined;
           const shapeConstraints = uiConfig?.dimension_constraints?.[shape];
           const allowLock = shapeConstraints?.allow_aspect_lock ?? false;
           
@@ -1498,7 +1492,7 @@ export class ApplicationController {
 						const type = subcategoryId as 'paint' | 'accent' | 'rooms';
 						const items = this._backgroundsConfig.categories[type];
 						
-						const thumbnailItems: ThumbnailItem[] = items.map(item => {
+						const thumbnailItems = items.map(item => {
 							if (item.rgb) {
 								// Paint color - render as color swatch
 								return {
@@ -1548,7 +1542,7 @@ export class ApplicationController {
             console.error('[Controller] Failed to load TourLauncherPanel:', error);
           });
           break;
-        }				
+        }
 
         case 'archetype_grid': {
           const filterKey = `${this._state.ui.activeCategory}_${this._state.ui.activeSubcategory}`;
@@ -1573,7 +1567,7 @@ export class ApplicationController {
               id: archetype.id,
               label: archetype.label,
               thumbnailUrl: archetype.thumbnail,
-              disabled: false, // Future validation logic here
+              disabled: false,
               tooltip: archetype.tooltip
             }));
             
@@ -1831,9 +1825,9 @@ export class ApplicationController {
       }
 
       if (artPlacement && 'applyArtPlacement' in this._sceneManager) {
-        (this._sceneManager as any).applyArtPlacement(artPlacement);
-      } else if ('resetArtPlacement' in this._sceneManager) {
-        (this._sceneManager as any).resetArtPlacement();
+					(this._sceneManager as unknown as { applyArtPlacement: (placement: ArtPlacement) => void }).applyArtPlacement(artPlacement);
+				} else if ('resetArtPlacement' in this._sceneManager) {
+					(this._sceneManager as unknown as { resetArtPlacement: () => void }).resetArtPlacement();
       }
     }
     
@@ -1886,28 +1880,24 @@ export class ApplicationController {
     value: number
   ): Promise<void> {
 		
-		console.log('[DIMENSION UPDATE]', {
-      axis,
-      value,
-      currentArchetype: this.getActiveArchetypeId()
-    });
+		// Dimension update
 		
     if (!this._state) return;
 
     const newComposition = structuredClone(this._state.composition);
 		
-		let newValue = value; // Use a mutable variable for clamping
+		const newValue = value;
 
     // Build constraints from current state and config
-    const uiConfig = window.uiEngine?.config;
-    const shapeConstraints = uiConfig?.dimension_constraints?.[newComposition.frame_design.shape];
+    const uiConfig = window.uiEngine;
+    const shapeConstraintsConfig = uiConfig?.config?.dimension_constraints?.[newComposition.frame_design.shape] as { min_dimension?: number; max_dimension?: number } | undefined;
     
     const constraints: DimensionConstraints = {
       shape: newComposition.frame_design.shape,
       aspectRatioLocked: this._state.ui.aspectRatioLocked ?? false,
       lockedAspectRatio: this._state.ui.lockedAspectRatio ?? null,
-      minDimension: shapeConstraints?.min_dimension ?? 8.0,
-      maxDimension: shapeConstraints?.max_dimension ?? 84.0
+      minDimension: (shapeConstraintsConfig?.min_dimension as number | undefined) ?? 8.0,
+      maxDimension: (shapeConstraintsConfig?.max_dimension as number | undefined) ?? 84.0
     };
     
     // Calculate new dimensions using utility function
@@ -2470,7 +2460,7 @@ export class ApplicationController {
           {
             numSlots: newComposition.pattern_settings.number_slots,
             binningMode: 'mean_abs'
-          }
+          } as { numSlots: number; binningMode: 'mean_abs' }
         );
         
         if (rebinnedAmplitudes) {
@@ -2492,14 +2482,11 @@ export class ApplicationController {
             
             // CRITICAL: For geometry changes, send NORMALIZED amplitudes (0-1 range)
             // Backend will apply the new max_amplitude_local to these normalized values
-            let normalizedAmps = validAmps;
-            if (validAmps.length > 0) {
+            const normalizedAmps = (() => {
+              if (validAmps.length === 0) return validAmps;
               const maxAmp = Math.max(...validAmps.map(Math.abs));
-              if (maxAmp > 1.5) {
-                // Amplitudes are already scaled, normalize them
-                normalizedAmps = validAmps.map(a => a / maxAmp);
-              }
-            }
+              return maxAmp > 1.5 ? validAmps.map(a => a / maxAmp) : validAmps;
+            })();
             
             stateToSend = {
                 ...newComposition,
@@ -2566,9 +2553,9 @@ export class ApplicationController {
             }
 
             if (artPlacement && 'applyArtPlacement' in this._sceneManager) {
-              (this._sceneManager as any).applyArtPlacement(artPlacement);
+              (this._sceneManager as unknown as { applyArtPlacement: (placement: ArtPlacement) => void }).applyArtPlacement(artPlacement);
             } else if ('resetArtPlacement' in this._sceneManager) {
-              (this._sceneManager as any).resetArtPlacement();
+              (this._sceneManager as unknown as { resetArtPlacement: () => void }).resetArtPlacement();
             }
           }
         }

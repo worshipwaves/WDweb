@@ -1,7 +1,7 @@
 /**
  * Type guard for object detection
  */
-function isObject(item: any): item is Record<string, any> {
+function isObject(item: unknown): item is Record<string, unknown> {
   return item !== null && typeof item === 'object' && !Array.isArray(item);
 }
 
@@ -19,10 +19,10 @@ export function deepMerge<T extends object>(target: T, source: Partial<T>): T {
       
       if (isObject(sourceValue) && isObject(targetValue)) {
         // Recursive merge for nested objects
-        (output as any)[key] = deepMerge(targetValue, sourceValue);
+        (output as Record<string, unknown>)[key] = deepMerge(targetValue, sourceValue);
       } else {
         // Direct replacement for primitives and arrays
-        (output as any)[key] = sourceValue;
+        (output as Record<string, unknown>)[key] = sourceValue;
       }
     });
   }

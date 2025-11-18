@@ -3,6 +3,23 @@
 import type { SliderConfig } from '../types/PanelTypes';
 import type { ArchetypeConstraint, CompositionStateDTO, ConstraintsConfig } from '../types/schemas';
 
+interface WindowWithController extends Window {
+  controller?: {
+    getState: () => { ui?: { currentBackground?: { type: string; id: string } } };
+  };
+}
+
+interface UIEngine {
+  getElementConfig: (key: string) => { label: string; state_path: string } | undefined;
+  getStateValue: (state: CompositionStateDTO, path: string) => unknown;
+}
+
+declare global {
+  interface Window {
+    uiEngine?: UIEngine;
+  }
+}
+
 /**
  * Interprets operational constraints from constraints.json based on the current application state.
  * This is the intelligence layer between raw constraint data and the UI.
@@ -10,7 +27,7 @@ import type { ArchetypeConstraint, CompositionStateDTO, ConstraintsConfig } from
 export class ConstraintResolver {
   constructor(
     private constraints: ConstraintsConfig,
-    private placementDefaults?: any
+    private placementDefaults?: Record<string, unknown>
   ) {
     if (!constraints.archetype_constraints) {
       throw new Error('Invalid constraints file: missing "archetype_constraints" section.');
@@ -25,7 +42,7 @@ export class ConstraintResolver {
       console.warn(`[Resolver] No constraints found for archetype: ${archetypeId ?? 'null'}`);
       return null;
     }
-    return this.constraints.archetype_constraints[archetypeId];
+    return this.constraints.archetype_constraints[archetypeId] as ArchetypeConstraint;
   }
 	
 	/**
@@ -134,18 +151,19 @@ export class ConstraintResolver {
       return []; // Return no sliders if no constraints are defined
     }
 
-    const { available_sliders } = archetypeConstraints;
+    const archetypeConstraintsTyped = archetypeConstraints as { available_sliders: string[] };
+    const available_sliders: string[] = archetypeConstraintsTyped.available_sliders;
     
     // UIEngine is available on the window object from main.ts
-    const uiEngine = window.uiEngine; 
+    const uiEngine: UIEngine | undefined = window.uiEngine;
     if (!uiEngine) {
       console.error("[Resolver] UIEngine not available on window object.");
       return [];
     }
 
-    const sliderConfigs = available_sliders.map((sliderKey): SliderConfig | null => {
+    const sliderConfigs: (SliderConfig | null)[] = available_sliders.map((sliderKey: string): SliderConfig | null => {
       // The type assertion here is safe because we check for existence.
-      const sliderConstraint = archetypeConstraints[sliderKey as keyof ArchetypeConstraint] as { min: number; max: number; step: number } | undefined;
+      const sliderConstraint = (archetypeConstraints as Record<string, unknown>)[sliderKey] as { min: number; max: number; step: number } | undefined;
       const elementConfig = uiEngine.getElementConfig(sliderKey);
       
       if (!sliderConstraint || !elementConfig) {
@@ -156,7 +174,7 @@ export class ConstraintResolver {
       const currentValue = uiEngine.getStateValue(state, elementConfig.state_path) as number;
       
       // Clamp the current value to be within the new dynamic limits
-      const clampedValue = Math.max(sliderConstraint.min, Math.min(currentValue, sliderConstraint.max));
+      const _clampedValue = Math.max(sliderConstraint.min, Math.min(currentValue, sliderConstraint.max));
       
       let finalMax = sliderConstraint.max;
       
@@ -175,10 +193,10 @@ export class ConstraintResolver {
         }
         
         // Apply scene-specific constraints from constraints.json
-        const controller = (window as any).controller;
+        const controller = (window as WindowWithController).controller;
         const fullState = controller?.getState();
         const currentBg = fullState?.ui?.currentBackground;
-        if (currentBg?.type === 'rooms' && this.constraints.scenes?.[currentBg.id]) {
+        if (currentBg && currentBg.type === 'rooms' && currentBg.id && this.constraints.scenes?.[currentBg.id]) {
           const sceneConstraint = this.constraints.scenes[currentBg.id];
           if (sceneConstraint.max_height !== null && sceneConstraint.max_height !== undefined) {
             calculatedMax = Math.min(calculatedMax, sceneConstraint.max_height);
@@ -222,10 +240,10 @@ export class ConstraintResolver {
         
         // Apply scene-specific constraints from constraints.json
         // Only apply max_height to width for circular shapes (where width = height = diameter)
-        const controller = (window as any).controller;
+        const controller = (window as WindowWithController).controller;
         const fullState = controller?.getState();
         const currentBg = fullState?.ui?.currentBackground;
-        if (shape === 'circular' && currentBg?.type === 'rooms' && this.constraints.scenes?.[currentBg.id]) {
+        if (shape === 'circular' && currentBg && currentBg.type === 'rooms' && currentBg.id && this.constraints.scenes?.[currentBg.id]) {
           const sceneConstraint = this.constraints.scenes[currentBg.id];
           if (sceneConstraint.max_height !== null && sceneConstraint.max_height !== undefined) {
             calculatedMax = Math.min(calculatedMax, sceneConstraint.max_height);
@@ -268,8 +286,8 @@ export class ConstraintResolver {
         }
         
         // Apply scene-specific constraints from constraints.json
-        const currentBg = (window as any).controller?.getState()?.ui?.currentBackground;
-        if (currentBg?.type === 'rooms' && this.constraints.scenes?.[currentBg.id]) {
+        const currentBg = (window as WindowWithController).controller?.getState()?.ui?.currentBackground;
+        if (currentBg && currentBg.type === 'rooms' && currentBg.id && this.constraints.scenes?.[currentBg.id]) {
           const sceneConstraint = this.constraints.scenes[currentBg.id];
           if (sceneConstraint.max_height !== null && sceneConstraint.max_height !== undefined) {
             // For circular shapes, both dimensions limited by scene max_height
@@ -339,7 +357,7 @@ export class ConstraintResolver {
    */
   private _evaluateConditions(conditions: Record<string, (string | number)[]>, state: CompositionStateDTO): boolean {
     // A simple map to resolve common keys to their full state path
-    const pathMap: Record<string, (s: CompositionStateDTO) => any> = {
+    const pathMap: Record<string, (s: CompositionStateDTO) => string | number> = {
       shape: (s) => s.frame_design.shape,
       number_sections: (s) => s.frame_design.number_sections,
       slot_style: (s) => s.pattern_settings.slot_style,

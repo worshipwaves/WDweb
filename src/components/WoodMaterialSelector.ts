@@ -1,8 +1,8 @@
 // src/components/WoodMaterialSelector.ts
 import type { PanelComponent } from '../types/PanelTypes';
 
-import { Tooltip } from './Tooltip';
 import { TooltipClassNameFactory } from '../utils/TooltipClassNameFactory';
+import { Tooltip } from './Tooltip';
 
 interface SpeciesInfo {
   id: string;
@@ -162,9 +162,15 @@ export class WoodMaterialSelector implements PanelComponent {
 			return [];
 		}
 
-		const availableGrains = grainConfig.options
-			.filter(opt => resolver.isOptionVisible('grainDirection', opt.value, state))
-			.map(opt => ({
+		interface GrainOption {
+			value: string | number;
+			label: string;
+		}
+
+		const options = grainConfig.options as GrainOption[];
+		const availableGrains: { id: string; label: string; isAvailable: boolean }[] = options
+			.filter((opt: GrainOption) => resolver.isOptionVisible('grainDirection', opt.value, state))
+			.map((opt: GrainOption) => ({
 				id: this._mapGrainToId(String(opt.value)),
 				label: opt.label,
 				isAvailable: true,

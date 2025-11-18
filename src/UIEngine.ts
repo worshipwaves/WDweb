@@ -8,6 +8,8 @@
  */
  
 import { z } from 'zod';
+
+import type { CompositionStateDTO } from './types/schemas';
  
 
 interface UIElementConfig {
@@ -183,11 +185,11 @@ export class UIEngine {
     const constraints = resolver.getAudioUploadConstraints();
 
     const {
-      accepted_mime_types,
-      accepted_extensions,
-      max_file_size_mb,
+      accepted_mime_types: _accepted_mime_types,
+      accepted_extensions: _accepted_extensions,
+      max_file_size_mb: _max_file_size_mb,
       ...restOfUiPart
-    } = uiPart as any; // Cast to bypass type check for removed properties
+    } = uiPart;
 
     return {
       ...restOfUiPart,
