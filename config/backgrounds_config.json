@@ -68,9 +68,15 @@
     ],
     "accent": [
       {
-        "id": "brick-wall",
-        "name": "Brick Wall",
-        "path": "/assets/backgrounds/accent/brick.jpg",
+        "id": "brick-wall-white",
+        "name": "White Brick Wall",
+        "path": "/assets/backgrounds/accent/brick_wall_white.jpg",
+        "description": "Painted exposed brick"
+      },
+			{
+        "id": "brick-wall-red",
+        "name": "Red Brick Wall",
+        "path": "/assets/backgrounds/accent/brick_wall_red.jpg",
         "description": "Rustic exposed brick"
       },
       {
