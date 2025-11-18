@@ -140,11 +140,13 @@ export class ThumbnailGrid implements PanelComponent {
       requestAnimationFrame(() => {
         const selectedCard = container.querySelector('.thumbnail-card.selected') as HTMLElement;
         if (selectedCard) {
-          selectedCard.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center',
-            inline: 'nearest'
-          });
+          // This scrollIntoView is causing a bug where the parent panel scrolls
+          // instead of the scrollable content area, breaking the sticky header.
+          // Disabling it is the most robust fix. The user can scroll manually.
+          // selectedCard.scrollIntoView({ 
+          //   behavior: 'smooth', 
+          //   block: 'nearest'
+          // });
         }
       });
     }

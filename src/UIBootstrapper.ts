@@ -8,6 +8,7 @@ import { UploadInterface } from './UploadInterface';
 import { ProcessingOverlay } from './ProcessingOverlay';
 import { TourModal } from './components/TourModal';
 import { DemoPlayer } from './demo/DemoPlayer';
+import { Tooltip } from './components/Tooltip';
 
 export class UIBootstrapper {
     private uiEngine: UIEngine;
@@ -70,22 +71,53 @@ export class UIBootstrapper {
     }
 
     private _initializeBottomControls(): void {
-        document.getElementById('resetViewBtn')?.addEventListener('click', () => this.sceneManager.resetCamera());
-        document.getElementById('zoomInBtn')?.addEventListener('click', () => this.sceneManager.toggleZoom(true));
-        document.getElementById('zoomOutBtn')?.addEventListener('click', () => this.sceneManager.toggleZoom(false));
+        const tooltip = new Tooltip();
+        
+        const resetBtn = document.getElementById('resetViewBtn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => this.sceneManager.resetCamera());
+            resetBtn.addEventListener('mouseenter', () => tooltip.show('Reset View', resetBtn, 'above', 'tooltip-filter'));
+            resetBtn.addEventListener('mouseleave', () => tooltip.hide());
+        }
+        
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        if (zoomInBtn) {
+            zoomInBtn.addEventListener('click', () => this.sceneManager.toggleZoom(true));
+            zoomInBtn.addEventListener('mouseenter', () => tooltip.show('Zoom In', zoomInBtn, 'above', 'tooltip-filter'));
+            zoomInBtn.addEventListener('mouseleave', () => tooltip.hide());
+        }
+        
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+        if (zoomOutBtn) {
+            zoomOutBtn.addEventListener('click', () => this.sceneManager.toggleZoom(false));
+            zoomOutBtn.addEventListener('mouseenter', () => tooltip.show('Zoom Out', zoomOutBtn, 'above', 'tooltip-filter'));
+            zoomOutBtn.addEventListener('mouseleave', () => tooltip.hide());
+        }
 
-        document.getElementById('fullscreenBtn')?.addEventListener('click', () => {
-            if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(err => console.error(err));
-            else if (document.exitFullscreen) document.exitFullscreen();
-        });
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener('click', () => {
+                if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(err => console.error(err));
+                else if (document.exitFullscreen) document.exitFullscreen();
+            });
+            fullscreenBtn.addEventListener('mouseenter', () => tooltip.show('Fullscreen', fullscreenBtn, 'above', 'tooltip-filter'));
+            fullscreenBtn.addEventListener('mouseleave', () => tooltip.hide());
+        }
 
         let menusHidden = false;
-        document.getElementById('toggleMenusBtn')?.addEventListener('click', () => {
-            menusHidden = !menusHidden;
-            document.body.classList.toggle('menus-hidden', menusHidden);
-            const btn = document.getElementById('toggleMenusBtn');
-            if (btn) btn.title = menusHidden ? 'Show Menus' : 'Hide Menus';
-        });
+        const toggleMenusBtn = document.getElementById('toggleMenusBtn');
+        if (toggleMenusBtn) {
+            toggleMenusBtn.addEventListener('click', () => {
+                menusHidden = !menusHidden;
+                document.body.classList.toggle('menus-hidden', menusHidden);
+                toggleMenusBtn.removeAttribute('title');
+            });
+            toggleMenusBtn.addEventListener('mouseenter', () => {
+                const text = menusHidden ? 'Show Menus' : 'Hide Menus';
+                tooltip.show(text, toggleMenusBtn, 'above', 'tooltip-filter');
+            });
+            toggleMenusBtn.addEventListener('mouseleave', () => tooltip.hide());
+        }
     }
     
     private _syncUIFromState(composition: CompositionStateDTO): void {

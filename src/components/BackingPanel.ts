@@ -47,7 +47,7 @@ export class BackingPanel implements PanelComponent {
     this.currentMaterial = material;
     this.onOptionSelected = onOptionSelected;
     this.container = document.createElement('div');
-    this.container.className = 'panel-content';
+    this.container.className = 'backing-panel-body';
 
     // Fetch config and then render
     void this.loadBackingConfig().then(() => {
@@ -73,13 +73,8 @@ export class BackingPanel implements PanelComponent {
 
     this.container.innerHTML = ''; // Clear previous content
 
-    const body = document.createElement('div');
-    body.className = 'backing-panel-body';
-
-    // 1. Enable Toggle
-    body.appendChild(this.createEnableToggle());
-
     const contentWrapper = document.createElement('div');
+    contentWrapper.style.padding = '16px';
     contentWrapper.style.opacity = this.isEnabled ? '1' : '0.4';
     contentWrapper.style.pointerEvents = this.isEnabled ? 'auto' : 'none';
     contentWrapper.style.display = 'flex';
@@ -95,8 +90,7 @@ export class BackingPanel implements PanelComponent {
       contentWrapper.appendChild(this.createFinishGrid(selectedTypeData));
     }
 
-    body.appendChild(contentWrapper);
-    this.container.appendChild(body);
+    this.container.appendChild(contentWrapper);
   }
 
   private createEnableToggle(): HTMLElement {

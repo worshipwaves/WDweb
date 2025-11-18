@@ -1330,13 +1330,11 @@ export class ApplicationController {
 		const subcategory = categoryConfig?.subcategories[this._state.ui.activeSubcategory];
 		if (!subcategory) return;
 
-		// Preserve scroll position
-    const scrollTop = this._rightMainPanel.scrollTop;
+		// Preserve scroll position from the actual scrollable content area
+    const scrollableContent = this._rightMainPanel.querySelector('.panel-content-scrollable') as HTMLElement;
+    const scrollTop = scrollableContent?.scrollTop || 0;
 
     this._rightMainPanel.innerHTML = '';
-    
-    // Immediately restore scroll to prevent visible jump to top
-    this._rightMainPanel.scrollTop = scrollTop;
 		
 		// Clear section selector panel when changing subcategories
 		if (this._rightSecondaryPanel) {
@@ -1592,22 +1590,37 @@ export class ApplicationController {
         }
 				case 'backing_selector': {
           if (this._state) {
-            void import('./components/BackingPanel').then(({ BackingPanel }) => {
-              const backing = this._state!.composition.frame_design.backing || {
-                enabled: false,
-                type: 'acrylic',
-                material: 'clear',
-                inset: 0.5
-              };
+            const backing = this._state.composition.frame_design.backing || {
+              enabled: false,
+              type: 'acrylic',
+              material: 'clear',
+              inset: 0.5
+            };
 
+            // Create toggle as sibling to panelContent (like filter strip)
+            const enableToggle = document.createElement('div');
+            enableToggle.className = 'backing-enable-toggle';
+            enableToggle.innerHTML = `
+              <label for="backing-enabled-checkbox">Enable Backing</label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="backing-enabled-checkbox" ${backing.enabled ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+              </label>
+            `;
+            const checkbox = enableToggle.querySelector('input')! as HTMLInputElement;
+            checkbox.addEventListener('change', () => {
+              void this._updateBackingEnabled(checkbox.checked);
+            });
+            this._rightMainPanel.appendChild(enableToggle);
+
+            // Create BackingPanel with grids only
+            void import('./components/BackingPanel').then(({ BackingPanel }) => {
               const backingPanel = new BackingPanel(
                 backing.enabled,
                 backing.type,
                 backing.material,
                 (option: string, value: unknown) => {
-                  if (option === 'backing_enabled') {
-                    void this._updateBackingEnabled(value as boolean);
-                  } else if (option === 'backing_material') {
+                  if (option === 'backing_material') {
                     const { type, material } = value as { type: string; material: string };
                     void this._updateBackingMaterial(type, material);
                   }
@@ -1628,6 +1641,14 @@ export class ApplicationController {
     this._rightMainPanel.appendChild(panelContent);
     this._rightMainPanel.style.display = 'block';
     this._rightMainPanel.classList.add('visible');
+    
+    // Restore scroll position to the new scrollable content area
+    requestAnimationFrame(() => {
+      const newScrollableContent = this._rightMainPanel?.querySelector('.panel-content-scrollable') as HTMLElement;
+      if (newScrollableContent) {
+        newScrollableContent.scrollTop = scrollTop;
+      }
+    });
     
     /* // Gracefully center selected card after render
     requestAnimationFrame(() => {
