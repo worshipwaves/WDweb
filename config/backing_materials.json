@@ -139,6 +139,20 @@
 						"diffuse": "/assets/textures/fabric/fabric-017_color.png",
 						"normal": "/assets/textures/fabric/fabric-017_normal.png"
 					}
+				},
+				{
+					"id": "blue",
+					"display": "Blue",
+					"description": "Medium blue fabric",
+					"color_rgb": [0.1, 0.15, 0.3],
+					"pbr_properties": {
+						"metallic": 0.0,
+						"roughness": 0.85
+					},
+					"texture_files": {
+						"diffuse": "/assets/textures/fabric/fabric_199_color.png",
+						"normal": "/assets/textures/fabric/fabric_199_normal.png"
+					}
 				}
 			]
 		},
