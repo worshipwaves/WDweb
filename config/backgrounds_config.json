@@ -129,8 +129,8 @@
         "path": "/assets/backgrounds/rooms/bedroom.png",
         "description": "Serene bedroom setting",
         "art_placement": {
-          "position": [-2, -3, -20],
-          "scale_factor": 0.715,
+          "position": [-2.67, -3, -20],
+          "scale_factor": 0.66,
           "rotation": [0, 0, 0]
         },
         "lighting": {

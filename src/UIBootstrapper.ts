@@ -76,21 +76,21 @@ export class UIBootstrapper {
         const resetBtn = document.getElementById('resetViewBtn');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => this.sceneManager.resetCamera());
-            resetBtn.addEventListener('mouseenter', () => tooltip.show('Reset View', resetBtn, 'above', 'tooltip-filter'));
+            resetBtn.addEventListener('mouseenter', () => tooltip.show('Reset View', resetBtn, 'right', 'tooltip-filter'));
             resetBtn.addEventListener('mouseleave', () => tooltip.hide());
         }
         
         const zoomInBtn = document.getElementById('zoomInBtn');
         if (zoomInBtn) {
             zoomInBtn.addEventListener('click', () => this.sceneManager.toggleZoom(true));
-            zoomInBtn.addEventListener('mouseenter', () => tooltip.show('Zoom In', zoomInBtn, 'above', 'tooltip-filter'));
+            zoomInBtn.addEventListener('mouseenter', () => tooltip.show('Zoom In', zoomInBtn, 'right', 'tooltip-filter'));
             zoomInBtn.addEventListener('mouseleave', () => tooltip.hide());
         }
         
         const zoomOutBtn = document.getElementById('zoomOutBtn');
         if (zoomOutBtn) {
             zoomOutBtn.addEventListener('click', () => this.sceneManager.toggleZoom(false));
-            zoomOutBtn.addEventListener('mouseenter', () => tooltip.show('Zoom Out', zoomOutBtn, 'above', 'tooltip-filter'));
+            zoomOutBtn.addEventListener('mouseenter', () => tooltip.show('Zoom Out', zoomOutBtn, 'right', 'tooltip-filter'));
             zoomOutBtn.addEventListener('mouseleave', () => tooltip.hide());
         }
 
@@ -100,7 +100,7 @@ export class UIBootstrapper {
                 if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(err => console.error(err));
                 else if (document.exitFullscreen) document.exitFullscreen();
             });
-            fullscreenBtn.addEventListener('mouseenter', () => tooltip.show('Fullscreen', fullscreenBtn, 'above', 'tooltip-filter'));
+            fullscreenBtn.addEventListener('mouseenter', () => tooltip.show('Fullscreen', fullscreenBtn, 'right', 'tooltip-filter'));
             fullscreenBtn.addEventListener('mouseleave', () => tooltip.hide());
         }
 
@@ -114,7 +114,7 @@ export class UIBootstrapper {
             });
             toggleMenusBtn.addEventListener('mouseenter', () => {
                 const text = menusHidden ? 'Show Menus' : 'Hide Menus';
-                tooltip.show(text, toggleMenusBtn, 'above', 'tooltip-filter');
+                tooltip.show(text, toggleMenusBtn, 'right', 'tooltip-filter');
             });
             toggleMenusBtn.addEventListener('mouseleave', () => tooltip.hide());
         }
