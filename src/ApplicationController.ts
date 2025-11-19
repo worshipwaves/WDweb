@@ -1003,15 +1003,6 @@ export class ApplicationController {
         this._leftSecondaryPanel.innerHTML = '';
         this._leftSecondaryPanel.appendChild(panel.render());
         this._leftSecondaryPanel.style.display = 'block';
-        
-        // Position left-secondary based on left-main's actual width
-        const leftMainPanel = document.getElementById('left-main-panel');
-        if (leftMainPanel) {
-          const gap = 16; // Gap between panels
-          const leftPosition = leftMainPanel.offsetLeft + leftMainPanel.offsetWidth + gap;
-          this._leftSecondaryPanel.style.left = `${leftPosition}px`;
-        }
-        
         this._leftSecondaryPanel.classList.add('visible');
         
         requestAnimationFrame(() => {
@@ -1635,26 +1626,26 @@ export class ApplicationController {
     this._rightMainPanel.appendChild(panelContent);
     this._rightMainPanel.style.display = 'block';
     this._rightMainPanel.classList.add('visible');
-    
-    // Restore scroll position to the new scrollable content area
+		
+    // Scroll to selected card for archetype grids, otherwise restore scroll position
     requestAnimationFrame(() => {
-      const newScrollableContent = this._rightMainPanel?.querySelector('.panel-content-scrollable') as HTMLElement;
+      requestAnimationFrame(() => {
+        const newScrollableContent = this._rightMainPanel?.querySelector('.panel-content-scrollable') as HTMLElement;
       if (newScrollableContent) {
-        newScrollableContent.scrollTop = scrollTop;
+        const selectedCard = newScrollableContent.querySelector('.thumbnail-card.selected') as HTMLElement;
+        if (selectedCard && optionConfig?.type === 'archetype_grid') {
+          // Scroll to center selected archetype
+          const cardTop = selectedCard.offsetTop;
+          const cardHeight = selectedCard.offsetHeight;
+          const parentHeight = newScrollableContent.clientHeight;
+          newScrollableContent.scrollTop = cardTop - (parentHeight / 2) + (cardHeight / 2);
+        } else {
+          // Restore previous scroll position for non-archetype content
+          newScrollableContent.scrollTop = scrollTop;
+        }
       }
+      });
     });
-    
-    /* // Gracefully center selected card after render
-    requestAnimationFrame(() => {
-      const selectedCard = this._rightMainPanel?.querySelector('.thumbnail-card.selected') as HTMLElement;
-      if (selectedCard) {
-        selectedCard.scrollIntoView({ 
-          behavior: 'smooth',
-          block: 'center',
-          inline: 'nearest'
-        });
-      }
-    }); */
   }
 	
 	/**

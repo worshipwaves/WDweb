@@ -7,6 +7,11 @@
   box-sizing: border-box;
 }
 
+:root {
+  --canvas-left: 0px;
+  --canvas-right: 100vw;
+}
+
 html, body {
   width: 100%;
   height: 100%;
@@ -36,7 +41,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #eeeeee; /* Letterbox color */
+  background-color: #000; /* Letterbox color */
 }
 
 #renderCanvas {
@@ -266,7 +271,7 @@ html, body {
 
 /* Base Panel Styling (Glassmorphism) */
 .panel {
-  position: fixed;
+  position: absolute;
   top: 32px;
   bottom: 32px;
   min-width: auto; 
@@ -288,7 +293,7 @@ html, body {
 
 /* LEFT MAIN PANEL: Categories (always visible) */
 .panel-left-main {
-  left: 8px;
+  left: calc(var(--canvas-left) + 8px);
   z-index: 10;
   width: auto;
   min-width: 140px; /* Minimum width for touch targets */
@@ -333,7 +338,7 @@ html, body {
 
 /* LEFT SECONDARY PANEL: Subcategories (appears when category selected) */
 .panel-left-secondary {
-  left: calc(var(--panel-spacing, 8px) + var(--left-main-actual-width, 140px) + var(--panel-gap, 16px));
+  left: calc(var(--canvas-left) + 166px); /* 8px offset + 140px width + 2px border + 16px gap */
   z-index: 11;
   width: auto; /* Let content determine width */
   min-width: 70px; /* Set a reasonable minimum width */
@@ -352,7 +357,7 @@ html, body {
 
 /* RIGHT SECONDARY PANEL: Filter strip (appears when subcategory selected) */
 .panel-right-secondary {
-  right: 274px; /* 250px + 16px + 8px */
+  right: calc(var(--canvas-right-offset) + 274px);
   z-index: 12;
 	width: auto;
   min-width: 50px;
@@ -372,7 +377,7 @@ html, body {
 
 /* RIGHT MAIN PANEL: Options grid (primary content) */
 .panel-right-main {
-  right: 8px;
+  left: calc(var(--canvas-right) - 258px);
   z-index: 13;
   width: 250px;
   /* REMOVED bottom: auto, height: auto, max-height. It now inherits top/bottom from .panel */
@@ -479,6 +484,10 @@ html, body {
     width: 280px;
   }
   
+  .panel-left-secondary {
+    left: calc(var(--canvas-left) + 266px); /* 8px offset + 240px width + 2px border + 16px gap */
+  }
+  
   .panel-cascading {
     right: 36px !important;
   }
@@ -520,23 +529,24 @@ html, body {
 
 /* Desktop Large (>1441px) */
 @media (min-width: 1441px) {
-  .panel-left-main {
-    left: 16px;
-    width: 120px;
+.panel-left-main {
+    left: calc(var(--canvas-left) + 16px);
+    width: auto;
+    min-width: 120px;
   }
   
   .panel-left-secondary {
-    left: 152px; /* 120px + 16px + 16px */
+    left: calc(var(--canvas-left) + 154px); /* 16px offset + 120px width + 2px border + 16px gap */
     width: 80px;
   }
   
   .panel-right-secondary {
-    right: 274px; /* 250px + 16px + 8px */
+    right: calc(var(--canvas-right-offset) + 274px);
     width: 60px;
   }
   
   .panel-right-main {
-    right: 16px;
+    left: calc(var(--canvas-right) - 266px);
     width: 250px;
   }
   
@@ -1913,9 +1923,9 @@ html, body {
    BOTTOM CONTROL BAR
    ============================================ */
 .bottom-controls {
-  position: fixed;
+  position: absolute;
   bottom: 32px;
-  left: 16px;
+  left: calc(var(--canvas-left) + 16px);
   z-index: 100;
   
   display: flex;

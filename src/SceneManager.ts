@@ -72,6 +72,7 @@ export class SceneManager {
         //this.setupBackground();
         this.checkLayoutMode();
         this.updateCameraOffset();
+				this.updateCanvasBoundaries();
 
         GLTFFileLoader; // Reference to prevent tree-shaking
 
@@ -79,6 +80,7 @@ export class SceneManager {
             this._engine.resize();
             this.checkLayoutMode();
             this.updateCameraOffset();
+						this.updateCanvasBoundaries();
             
             // ============================================================================
             // CRITICAL: MAINTAIN CONSTANT HORIZONTAL FIELD OF VIEW ON RESIZE
@@ -134,6 +136,7 @@ export class SceneManager {
             manager._referenceAspectRatio = canvas.width / canvas.height;
             manager._baselineAspectRatio = manager._referenceAspectRatio;
         }
+				manager.updateCanvasBoundaries();
         
         return manager;
     }
@@ -202,6 +205,31 @@ export class SceneManager {
     private checkLayoutMode(): void {
         const DESKTOP_BREAKPOINT = 768;
         this._isDesktopLayout = window.innerWidth >= DESKTOP_BREAKPOINT;
+    }
+		
+		private updateCanvasBoundaries(): void {
+        const canvas = this._engine.getRenderingCanvas();
+        if (!canvas) return;
+        
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const viewportAspect = viewportWidth / viewportHeight;
+        const targetAspect = 16 / 9;
+        
+        let canvasLeft = 0;
+        let canvasRight = viewportWidth;
+        
+        if (viewportAspect > targetAspect) {
+            const canvasWidth = viewportHeight * targetAspect;
+            canvasLeft = (viewportWidth - canvasWidth) / 2;
+            canvasRight = canvasLeft + canvasWidth;
+        }
+        
+        const canvasRightOffset = viewportWidth - canvasRight;
+        
+        document.documentElement.style.setProperty('--canvas-left', `${canvasLeft}px`);
+        document.documentElement.style.setProperty('--canvas-right', `${canvasRight}px`);
+        document.documentElement.style.setProperty('--canvas-right-offset', `${canvasRightOffset}px`);
     }
 	
     public updateCameraOffset(): void {
