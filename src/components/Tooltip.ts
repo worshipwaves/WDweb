@@ -14,6 +14,9 @@ export class Tooltip {
 	show(content: string | HTMLElement, targetElement: HTMLElement, position: 'left' | 'above' | 'right' = 'left', className: string = 'tooltip', offsetX: number = 0, offsetY: number = 0, fixedToPanel: boolean = false): void {    this.hide();
     
     this._showTimer = window.setTimeout(() => {
+			if (!targetElement.isConnected) {
+        return;
+      }
       const tooltip = document.createElement('div');
       tooltip.className = className;
       

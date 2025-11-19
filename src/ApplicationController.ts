@@ -2143,9 +2143,12 @@ export class ApplicationController {
     await this.dispatch({ type: 'COMPOSITION_UPDATED', payload: newComposition });
 
     if (this._sceneManager) {
-      await this._sceneManager.generateBackingIfEnabled(backingParams, newComposition);
-    }
-  }
+			await this._sceneManager.generateBackingIfEnabled(backingParams, newComposition);
+		}
+		
+		// Re-render panel to update BackingPanel with new enabled state
+		this._renderRightMainFiltered();
+	}
 	
 	private async _updateBackingEnabled(enabled: boolean): Promise<void> {
 		if (!this._state) return;

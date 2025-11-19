@@ -20,6 +20,7 @@ export class ThumbnailGrid implements PanelComponent {
   private _onSelect: (id: string) => void;
   private _tooltip: Tooltip = new Tooltip();
 	private _tooltipClassName: string;
+	private _isDestroyed: boolean = false;
   
   constructor(
     items: ThumbnailItem[],
@@ -104,6 +105,7 @@ export class ThumbnailGrid implements PanelComponent {
 			// Tooltip handlers
       if (item.tooltip) {
         card.addEventListener('mouseenter', () => {
+					if (this._isDestroyed) return;
           // Create structured tooltip with image + text (matching species tooltip style)
           const contentContainer = document.createElement('div');
           contentContainer.className = 'tooltip-content-wrapper';
@@ -155,6 +157,8 @@ export class ThumbnailGrid implements PanelComponent {
   }
   
   destroy(): void {
+		this._isDestroyed = true;
+    this._tooltip.destroy();
     if (this._container) {
       this._container.remove();
       this._container = null;

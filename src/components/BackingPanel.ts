@@ -30,6 +30,8 @@ export class BackingPanel implements PanelComponent {
   private backingConfig: BackingConfig | null = null;
   private onOptionSelected: (option: string, value: unknown) => void;
   private tooltip: Tooltip = new Tooltip();
+	private typeGrid: ThumbnailGrid | null = null;
+  private finishGrid: ThumbnailGrid | null = null;
 
   // Internal state for rendering
   private isEnabled: boolean;
@@ -70,6 +72,15 @@ export class BackingPanel implements PanelComponent {
 
   private renderContent(): void {
     if (!this.backingConfig) return;
+		
+		if (this.typeGrid) {
+      this.typeGrid.destroy();
+      this.typeGrid = null;
+    }
+    if (this.finishGrid) {
+      this.finishGrid.destroy();
+      this.finishGrid = null;
+    }
 
     this.container.innerHTML = ''; // Clear previous content
 
@@ -130,14 +141,14 @@ export class BackingPanel implements PanelComponent {
       };
     });
 
-    const typeGrid = new ThumbnailGrid(typeItems, (typeId) => {
+    this.typeGrid = new ThumbnailGrid(typeItems, (typeId) => {
       this.currentType = typeId;
       this.currentMaterial = this.backingConfig!.material_catalog[typeId].materials[0].id;
       this.renderContent(); 
       this.onOptionSelected('backing_material', { type: this.currentType, material: this.currentMaterial });
     }, this.currentType);
     
-    group.appendChild(typeGrid.render());
+    group.appendChild(this.typeGrid.render());
     return group;
   }
 
@@ -156,16 +167,27 @@ export class BackingPanel implements PanelComponent {
         tooltip: mat.description,
     }));
 
-    const finishGrid = new ThumbnailGrid(finishItems, (materialId) => {
+    this.finishGrid = new ThumbnailGrid(finishItems, (materialId) => {
         this.currentMaterial = materialId;
         this.renderContent();
         this.onOptionSelected('backing_material', { type: this.currentType, material: this.currentMaterial });
     }, this.currentMaterial, { subcategory: 'backing_finish' });
 
-    group.appendChild(finishGrid.render());
+    group.appendChild(this.finishGrid.render());
     return group;
   }
 
   public render(): HTMLElement { return this.container; }
-  public destroy(): void { this.container.remove(); }
+  public destroy(): void {
+    if (this.typeGrid) {
+      this.typeGrid.destroy();
+      this.typeGrid = null;
+    }
+    if (this.finishGrid) {
+      this.finishGrid.destroy();
+      this.finishGrid = null;
+    }
+    this.tooltip.destroy();
+    this.container.remove();
+  }
 }
