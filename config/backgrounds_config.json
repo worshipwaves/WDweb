@@ -110,12 +110,13 @@
           "rotation": [0, 0, 0]
         },
         "lighting": {
-          "direction": [0.8, -0.3, 0.2],
-          "intensity": 3.5,
+          "direction": [1.0, -0.5, -1.0],
+          "intensity": 2.0,
           "shadow_enabled": true,
-          "shadow_blur": 5,
-          "shadow_darkness": 0.25,
-          "ambient_boost": 1.5
+          "shadow_blur": 1,
+          "shadow_darkness": 0.4,
+          "ambient_boost": 1.5,
+          "shadow_receiver_position": [0, -1.0, 0]
         }
       },
 			{
@@ -124,17 +125,18 @@
         "path": "/assets/backgrounds/rooms/living_modern_fireplace.png",
         "description": "Contemporary living space with fireplace",
 				"art_placement": {
-          "position": [-1, -3, -20],
-          "scale_factor": 0.66,
+          "position": [-1.3, -4, -20],
+          "scale_factor": 0.67,
           "rotation": [0, 0, 0]
         },
-        "lighting": {
-          "direction": [0.8, -0.3, 0.2],
-          "intensity": 3.5,
+				"lighting": {
+          "direction": [1.0, -0.5, -1.0],
+          "intensity": 2.0,
           "shadow_enabled": true,
-          "shadow_blur": 5,
+          "shadow_blur": 1,
           "shadow_darkness": 0.25,
-          "ambient_boost": 1.5
+          "ambient_boost": 1.5,
+          "shadow_receiver_position": [0, -1.0, 0]
         }
       },
       {

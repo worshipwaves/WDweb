@@ -21,17 +21,25 @@ export class WoodMaterial extends PBRMaterial {
     private normalMap: Texture | null = null;
     private roughnessMap: Texture | null = null;
     
-    constructor(name: string, scene: Scene) {
-        super(name, scene);
-        this.scene = scene;
-        
-        // Initialize base PBR properties
-        this.metallic = 0;
-        this.roughness = 1.0;
-        
-        // Prepare for future custom shader implementation
-        this.prepareCustomShaderHooks();
-    }
+		constructor(name: string, scene: Scene) {
+				super(name, scene);
+				this.scene = scene;
+				
+				// --- REALISM FIXES ---
+				this.metallic = 0;
+				this.roughness = 1.0;
+				
+				// 1. Reduce ambient reflection (removes the "milky" film)
+				this.environmentIntensity = 0.4; 
+				
+				// 2. Use realistic light falloff (prevents super bright hotspots)
+				this.usePhysicalLightFalloff = true; 
+				
+				// 3. Optional: Make the color strictly adhere to the texture
+				this.useAmbientInGrayScale = true;
+
+				this.prepareCustomShaderHooks();
+		}
     
     /**
      * Updates the material textures and grain rotation for a specific wood species.
@@ -180,6 +188,13 @@ export class WoodMaterial extends PBRMaterial {
         this.albedoMap.uOffset = offset.u;
         this.albedoMap.vOffset = offset.v;
         this.albedoTexture = this.albedoMap;
+				this.albedoTexture = this.albedoMap;
+
+				// If the PNG looks "rich" in a viewer but "pale" in Babylon:
+				// BJS assumes the texture is already sRGB. 
+				// If it looks washed out, the lighting is adding too much energy.
+				// Darken the texture input slightly so the lights bring it back up to normal.
+				this.albedoTexture.level = 0.8; // Try values between 0.8 and 1.0				
         
         // Configure normal map
         this.normalMap.wrapU = Texture.WRAP_ADDRESSMODE;

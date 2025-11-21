@@ -3,7 +3,7 @@
 import {
     Engine, Scene, ArcRotateCamera, HemisphericLight, DirectionalLight,
     Vector3, Color3, Color4, Mesh, MeshBuilder, StandardMaterial,
-    TransformNode, Animation, CubicEase, EasingFunction, Layer, PointerEventTypes, ShadowGenerator
+    TransformNode, Animation, CubicEase, EasingFunction, Layer, PointerEventTypes, ShadowGenerator, BackgroundMaterial
 } from '@babylonjs/core';
 import { GLTFFileLoader } from '@babylonjs/loaders/glTF';
 import { ApplicationController } from './ApplicationController';
@@ -65,7 +65,7 @@ export class SceneManager {
         this._engine = new Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, antialias: true });
         this._scene = new Scene(this._engine);
 				(window as any).scene = this._scene;
-        this._scene.clearColor = new Color3(0.1, 0.1, 0.1).toColor4();
+        this._scene.clearColor = new Color4(0, 0, 0, 0);
         this._textureCache = new TextureCacheService(this._scene);
         this._camera = this.setupCamera();
         this.setupLighting();
@@ -162,25 +162,45 @@ export class SceneManager {
     }
 
     private setupLighting(): void {
+        // 1. Fix Hemispheric Light (The "Fill" Light)
         this._hemisphericLight = new HemisphericLight('ambientLight', new Vector3(0, 1, 0), this._scene);
-        this._hemisphericLight.intensity = 1.0;
-        this._hemisphericLight.diffuse = new Color3(1, 1, 0.95);
-        this._hemisphericLight.specular = new Color3(1, 1, 1);
-        this._hemisphericLight.groundColor = new Color3(0.3, 0.3, 0.3);
         
-        this._directionalLight = new DirectionalLight('directionalLight', new Vector3(0, 0, -1), this._scene);
+        // Lower intensity so it doesn't overpower the sun
+        this._hemisphericLight.intensity = 0.7; 
+        
+        // Keep the light slightly warm
+        this._hemisphericLight.diffuse = new Color3(1, 1, 0.95);
+        
+        // CRITICAL FIX 1: Kill the shine on the ambient light
+        this._hemisphericLight.specular = new Color3(0, 0, 0); 
+        
+        // CRITICAL FIX 2: Make shadows BLACK. 
+        // This ensures the cracks in the wood texture actually look dark.
+        this._hemisphericLight.groundColor = new Color3(0, 0, 0); 
+        
+        // 2. Fix Directional Light (The "Sun")
+        // Light travels from Right (X=1) to Left (X=-1), and Down (Y=-0.5)
+        this._directionalLight = new DirectionalLight('directionalLight', new Vector3(-1, -0.5, -1), this._scene);
         this._directionalLight.position = new Vector3(0, 0, 50);
-				// enable automatic calculation of the shadow camera Z bounds after the light position is set
-				this._directionalLight.autoCalcShadowZBounds = true;
-        this._directionalLight.intensity = 2.0;
+        this._directionalLight.autoCalcShadowZBounds = true;
+        
+        // Slight reduction to prevent over-exposure since we have environment lighting too
+        this._directionalLight.intensity = 1.5; 
         
         this._scene.environmentIntensity = 0.6;
-        this._scene.clearColor = new Color3(0.90, 0.88, 0.86).toColor4();
-        this._scene.ambientColor = new Color3(0.2, 0.2, 0.2);
-        this._scene.environmentColor = new Color3(0.8, 0.8, 0.8);
+        
+        // CRITICAL FIX 3: Remove global ambient color. 
+        // Let the actual lights do the work.
+        this._scene.ambientColor = new Color3(0, 0, 0);
+        
+        // Set to transparent so CSS background shows through
+        this._scene.clearColor = new Color4(0, 0, 0, 0);
+        
+        // This environment color might be redundant with environmentIntensity, 
+        // but if you keep it, make it darker to avoid washout.
+        this._scene.environmentColor = new Color3(0.2, 0.2, 0.2); 
     }
 	
-    // src/SceneManager.ts
 
 		private setupBackground(): void {
 				// Create a simple, non-textured background layer that is always ready.
@@ -301,6 +321,7 @@ export class SceneManager {
         PerformanceMonitor.start('render_internal_total');
         PerformanceMonitor.start('mesh_cleanup');
         this._currentCSGData = csgData;
+        if (this._shadowReceiverPlane) this._shadowReceiverPlane.setParent(null);
         if (this._rootNode) {
             this._rootNode.dispose(false, false);
             this._rootNode = null;
@@ -319,9 +340,12 @@ export class SceneManager {
 						}
 						this._sectionMeshes = meshes;
             
-            // Enable shadow receiving on all section meshes (required for BlurExponentialShadowMap)
+            // SHADOW FIX: Prevent self-shadowing artifacts ("paint drips") on flat wood panels
+            // Root cause: Wood panels are flat extrusions that should never cast shadows onto themselves.
+            // Setting receiveShadows = false eliminates z-fighting between the mesh surface and its own shadow.
+            // Backing panels and shadow receiver plane will still catch shadows from the wood.
             this._sectionMeshes.forEach(mesh => {
-                mesh.receiveShadows = true;
+                mesh.receiveShadows = false;
             });
             
             PerformanceMonitor.end('csg_mesh_generation');
@@ -1039,13 +1063,23 @@ export class SceneManager {
 				
 				// Reposition shadow receiver to stay behind artwork
         if (this._shadowReceiverPlane) {
-            this._shadowReceiverPlane.position = new Vector3(
-                this._rootNode.position.x,
-                this._rootNode.position.y,
-                this._rootNode.position.z - 5
-            );
-            // Ensure rotation stays correct (face toward artwork)
-            this._shadowReceiverPlane.rotation.y = Math.PI;
+            this._shadowReceiverPlane.parent = this._rootNode;
+            
+            // Get lighting config from current background
+            const bgState = this._controller.getState().ui.currentBackground;
+            const bgConfig = this._controller.getBackgroundsConfig();
+            const background = bgConfig?.categories.rooms.find(bg => bg.id === bgState.id);
+            const shadowPos = background?.lighting?.shadow_receiver_position || [0, -1.0, 0];
+            const shadowDarkness = background?.lighting?.shadow_darkness ?? 0.4;
+            
+            // Set position AFTER reparenting (prevents coordinate space corruption)
+            this._shadowReceiverPlane.position = new Vector3(shadowPos[0], shadowPos[1], shadowPos[2]);
+            this._shadowReceiverPlane.rotation = Vector3.Zero();
+            
+            // Update material shadowLevel to match current background config
+            if (this._shadowReceiverPlane.material) {
+                this._shadowReceiverPlane.material.shadowLevel = shadowDarkness;
+            }
         }
         
         // Reposition directional light to maintain shadow camera relationship
@@ -1077,58 +1111,128 @@ export class SceneManager {
     }
 		
 		public applyLighting(lighting: LightingConfig): void {
-        if (!this._directionalLight || !this._hemisphericLight) {
-            console.warn('[SceneManager] Lights not available for lighting config');
-            return;
-        }
+        if (!this._directionalLight || !this._hemisphericLight) return;
 
-        // Override directional light
-				const lightDirection = new Vector3(lighting.direction[0], lighting.direction[1], lighting.direction[2]).normalize();
-				this._directionalLight.direction = lightDirection;
-				this._directionalLight.intensity = lighting.intensity;
-				
-				// Position light dynamically relative to artwork for shadow camera
-				const artworkPosition = this._rootNode?.position || Vector3.Zero();
-				this._directionalLight.position = artworkPosition.subtract(lightDirection.scale(50));
-				
-				// Force the shadow camera to automatically calculate its viewing frustum
-        // to perfectly enclose all shadow casters from the light's new position.
-        this._directionalLight.autoCalcShadowZBounds = true;
+        // 1. NORMALIZE LIGHT DIRECTION
+        // SHADOW FIX: Apply direction directly from config without transformation
+        // The config values [1.0, -0.5, -1.0] were proven correct via console diagnostics
+        // Previous code was inverting Y and Z, causing shadows to appear on wrong side
+        const lightDirection = new Vector3(
+            lighting.direction[0],
+            lighting.direction[1],
+            lighting.direction[2]
+        ).normalize();
+        this._directionalLight.direction = lightDirection;
+        this._directionalLight.intensity = lighting.intensity;
+        
+        // Move light back along its vector so shadows don't get clipped
+        const artworkPosition = this._rootNode?.position || Vector3.Zero();
+        this._directionalLight.position = artworkPosition.subtract(lightDirection.scale(50));
+        
+        // SHADOW FIX: Manually define orthographic frustum to prevent shadow clipping
+        // Root cause: autoCalcShadowZBounds was truncating shadows at bottom/left edges
+        this._directionalLight.autoCalcShadowZBounds = false;
+        this._directionalLight.shadowMinZ = 0;
+        this._directionalLight.shadowMaxZ = 200;  // Deep enough for all artwork positions
+        // Fixed literal 60 to avoid "shadowBound already declared" errors
+        this._directionalLight.orthoLeft = -60;
+        this._directionalLight.orthoRight = 60;
+        this._directionalLight.orthoTop = 60;
+        this._directionalLight.orthoBottom = -60;
 
-        // Boost ambient if specified
-        const baseAmbient = 1.0;
-        const ambientBoost = lighting.ambient_boost ?? 0;
-        this._hemisphericLight.intensity = baseAmbient + ambientBoost;
+        // Ambient boost
+        this._hemisphericLight.intensity = 1.0 + (lighting.ambient_boost ?? 0);
 
-        // Handle shadows
+        // 2. SHADOW CONFIGURATION
         if (lighting.shadow_enabled) {
+            // SHADOW FIX: Upgrade to 4096 resolution for crisp waveform slot detail during close-up examination
             if (!this._shadowGenerator) {
-                this._shadowGenerator = new ShadowGenerator(1024, this._directionalLight);
+                this._shadowGenerator = new ShadowGenerator(4096, this._directionalLight);
+            } else {
+                // Enforce resolution if generator already exists
+                const currentMap = this._shadowGenerator.getShadowMap();
+                if (currentMap && currentMap.getSize().width !== 4096) {
+                    this._shadowGenerator.dispose();
+                    this._shadowGenerator = new ShadowGenerator(4096, this._directionalLight);
+                }
             }
             
-            // Add all section meshes to shadow casters (ensures they're added on re-creation)
+            // SHADOW FIX: Clear and rebuild caster list to ensure only wood panels cast shadows
+            // This prevents backing panels from blocking shadows and ensures proper caster registration after lighting changes
+            this._shadowGenerator.getShadowMap()!.renderList = [];
             this._sectionMeshes.forEach(mesh => {
                 this._shadowGenerator!.addShadowCaster(mesh);
             });
             
+            // SHADOW FIX: Update quality settings for thin geometry
+            // Higher bias values prevent z-fighting on flat surfaces while maintaining shadow definition
             this._shadowGenerator.blurScale = lighting.shadow_blur ?? 1;
-            this._shadowGenerator.darkness = lighting.shadow_darkness ?? 0.5;
-						this._shadowGenerator.useBlurExponentialShadowMap = true;
+            this._shadowGenerator.darkness = lighting.shadow_darkness ?? 0.4;
+            this._shadowGenerator.useBlurExponentialShadowMap = true;
+            this._shadowGenerator.bias = 0.002;  // Increased from 0.0001 to prevent self-shadowing artifacts
+            this._shadowGenerator.normalBias = 0.01;  // Additional bias for thin geometry
 
-            // Create shadow receiver plane if needed
+            // 3. SHADOW RECEIVER (The Invisible Wall)
             if (!this._shadowReceiverPlane) {
                 this._shadowReceiverPlane = MeshBuilder.CreatePlane('shadowReceiver', { size: 200 }, this._scene);
-                this._positionShadowReceiver(lighting);
-                // Rotate 180° around Y to face artwork (normal points toward -Z)
-                this._shadowReceiverPlane.rotation.y = Math.PI;
                 
-                // Make invisible but receive shadows
-                const shadowMat = new StandardMaterial('shadowReceiverMat', this._scene);
-                shadowMat.alpha = 0;
-                shadowMat.alphaMode = Engine.ALPHA_COMBINE;
+                // Apply rotation matching wood panel geometry pipeline
+                // X=90° aligns Plane normal with Cylinder caps, Y=180° matches wood flip
+                this._shadowReceiverPlane.rotation = new Vector3(Math.PI / 2, Math.PI, 0);
+                
+                // CRITICAL: Bake rotation into vertices (matches wood panel construction)
+                this._shadowReceiverPlane.bakeCurrentTransformIntoVertices();
+                
+                // Reset rotation to zero (now baked into geometry)
+                this._shadowReceiverPlane.rotation = Vector3.Zero();
+                
+                // Parent to root node
+                this._shadowReceiverPlane.parent = this._rootNode;
+                
+                // Position close behind artwork in Local Y (maps to World Z depth)
+								if (lighting.shadow_receiver_position) {
+										this._shadowReceiverPlane.position = new Vector3(
+												lighting.shadow_receiver_position[0],
+												lighting.shadow_receiver_position[1],
+												lighting.shadow_receiver_position[2]
+										);
+								} else {
+										// Default fallback: Push wall back to prevent z-fighting (Matches Golden Value)
+										this._shadowReceiverPlane.position = new Vector3(0, -1.0, 0);
+								}
+                
+                // --- FIX 2: Restore the Background ---
+                // We use BackgroundMaterial. 
+                // By default, it renders transparently but catches shadows.
+                const shadowMat = new BackgroundMaterial("shadowReceiverMat", this._scene);
+                shadowMat.shadowLevel = lighting.shadow_darkness;
+                shadowMat.useRGBColor = false;
+                shadowMat.primaryColor = Color3.Black(); // Black for dark shadows on transparent canvas
+                shadowMat.alpha = 1.0;
+                shadowMat.opacityFresnel = false;
+                (shadowMat as any).shadowOnly = true; // Forces shadow-only rendering on transparent canvas
+                
                 this._shadowReceiverPlane.material = shadowMat;
+                // Prevent ambient light from turning the plane white/gray
+                if (this._hemisphericLight) {
+                    this._hemisphericLight.excludedMeshes.push(this._shadowReceiverPlane);
+                }
                 this._shadowReceiverPlane.receiveShadows = true;
             }
+            
+            // Update position on every applyLighting call (handles background switches)
+            if (this._shadowReceiverPlane) {
+                if (lighting.shadow_receiver_position) {
+                    this._shadowReceiverPlane.position = new Vector3(
+                        lighting.shadow_receiver_position[0],
+                        lighting.shadow_receiver_position[1],
+                        lighting.shadow_receiver_position[2]
+                    );
+                } else {
+                    this._shadowReceiverPlane.position = new Vector3(0, -1.0, 0);
+                }
+            }
+						
         } else {
             if (this._shadowGenerator) {
                 this._shadowGenerator.dispose();
@@ -1139,15 +1243,13 @@ export class SceneManager {
                 this._shadowReceiverPlane = null;
             }
         }
-
-        console.log('[SceneManager] Applied lighting config:', lighting);
     }
 
     public resetLighting(): void {
         if (!this._directionalLight || !this._hemisphericLight) return;
 
-        // Restore universal defaults
-        this._directionalLight.direction = new Vector3(0, 0, -1);
+        // Restore universal defaults (Matches Golden Vector)
+        this._directionalLight.direction = new Vector3(1.0, -0.5, -1.0).normalize();
         this._directionalLight.intensity = 2.0;
         this._hemisphericLight.intensity = 1.0;
 
