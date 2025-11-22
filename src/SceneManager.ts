@@ -353,7 +353,7 @@ export class SceneManager {
             this.applySectionMaterials();
             PerformanceMonitor.end('apply_materials');
             
-            this.pulseAllSections();
+            //this.pulseAllSections();
 						//this._camera.radius = this.calculateIdealRadius();
 						this.setupSectionInteraction();
 
@@ -591,35 +591,52 @@ export class SceneManager {
         const config = this._controller.getWoodMaterialsConfig();
         const csgData = this._currentCSGData.csg_data;
         const numSections = csgData.panel_config.number_sections;
-        let bifurcationAngles: number[];
-        if (numSections === 4) {
-          const angleMap: Record<string, number> = { 'TR': 45, 'BR': 315, 'BL': 225, 'TL': 135 };
-          const quadrantOrder = ['TR', 'BR', 'BL', 'TL'];
-          bifurcationAngles = quadrantOrder.map(q => angleMap[q]);
-        } else {
-          bifurcationAngles = config.geometry_constants.section_positioning_angles[String(numSections)] || [0];
-        }
+        const shape = csgData.panel_config.shape;
+        const slotStyle = csgData.panel_config.slot_style;
+        
         const boundingInfo = mesh.getBoundingInfo();
         const size = boundingInfo.boundingBox.extendSize;
         const maxDimension = Math.max(size.x, size.z);
         const overlayRadius = maxDimension * 0.05;
         const overlay = MeshBuilder.CreateDisc(`selectionOverlay_${index}`, { radius: overlayRadius, tessellation: 32 }, this._scene);
-        const localCenter = csgData.section_local_centers[index];
-        const bifurcationAngle = bifurcationAngles[index];
-        const minRadius = csgData.true_min_radius;
-        if (!localCenter || bifurcationAngle === undefined) return null;
-        const distanceFromCenter = minRadius * 0.6;
-        const angleRad = (bifurcationAngle * Math.PI) / 180;
-        const cncCenterX = csgData.panel_config.finish_x / 2.0;
-        const cncCenterY = csgData.panel_config.finish_y / 2.0;
-        const localCenterBabylon = { x: localCenter[0] - cncCenterX, z: localCenter[1] - cncCenterY };
-        let xPos = localCenterBabylon.x + distanceFromCenter * Math.cos(angleRad);
-        let zPos = localCenterBabylon.z + distanceFromCenter * Math.sin(angleRad);
-        if (numSections !== 1) {
-          xPos = -xPos;
-          zPos = -zPos;
-        }
+        
         const center = boundingInfo.boundingBox.center;
+        let xPos: number, zPos: number;
+        
+        // Rectangular linear: place dot at mesh center (side-by-side panels)
+        if (shape === 'rectangular' && slotStyle === 'linear') {
+          xPos = center.x;
+          zPos = center.z;
+        } else {
+          // Radial patterns: use bifurcation angles
+          let bifurcationAngles: number[];
+          if (numSections === 4) {
+            const angleMap: Record<string, number> = { 'TR': 45, 'BR': 315, 'BL': 225, 'TL': 135 };
+            const quadrantOrder = ['TR', 'BR', 'BL', 'TL'];
+            bifurcationAngles = quadrantOrder.map(q => angleMap[q]);
+          } else {
+            bifurcationAngles = config.geometry_constants.section_positioning_angles[String(numSections)] || [0];
+          }
+          
+          const localCenter = csgData.section_local_centers[index];
+          const bifurcationAngle = bifurcationAngles[index];
+          const minRadius = csgData.true_min_radius;
+          if (!localCenter || bifurcationAngle === undefined) return null;
+          
+          const distanceFromCenter = minRadius * 0.6;
+          const angleRad = (bifurcationAngle * Math.PI) / 180;
+          const cncCenterX = csgData.panel_config.finish_x / 2.0;
+          const cncCenterY = csgData.panel_config.finish_y / 2.0;
+          const localCenterBabylon = { x: localCenter[0] - cncCenterX, z: localCenter[1] - cncCenterY };
+          xPos = localCenterBabylon.x + distanceFromCenter * Math.cos(angleRad);
+          zPos = localCenterBabylon.z + distanceFromCenter * Math.sin(angleRad);
+          
+          if (numSections !== 1) {
+            xPos = -xPos;
+            zPos = -zPos;
+          }
+        }
+        
         overlay.position = new Vector3(xPos, center.y + 0.01, zPos);
         overlay.renderingGroupId = 1;
         overlay.rotation.x = Math.PI / 2;
@@ -888,6 +905,9 @@ export class SceneManager {
         this.disposeBackingMeshes();
         this._backingMeshes = [];
         
+        // NOTE: Backing meshes must NOT cast shadows (receive only) to avoid blocking the wood panel's slot shadows.
+        // They are intentionally excluded from this._shadowGenerator.addShadowCaster() calls.
+        
         // Create all backing panels at once (reuses panel CSG logic)
         const panelService = new PanelGenerationService(this._scene);
         
@@ -915,19 +935,21 @@ export class SceneManager {
             const mesh = backingPanels[i];
             
             mesh.name = `backing_section_${i}`;
-            mesh.position.y = section.position_y;
             
-            // CRITICAL: Apply n=3 rotation for backing (matches wood panel rotation from cutSlots)
-            if (composition.frame_design.number_sections === 3 && composition.frame_design.shape === 'circular') {
-                mesh.rotation.y = Math.PI;
-                mesh.bakeCurrentTransformIntoVertices();
-            }
+            // CRITICAL: Apply rotation for ALL backing (matches wood panel rotation from cutSlots)
+            // Wood panels get this normalization regardless of section count
+            mesh.rotation.y = Math.PI;
+            mesh.bakeCurrentTransformIntoVertices();
+            
+            // Set position AFTER baking (baking resets position to 0)
+            mesh.position.y = section.position_y;
             
             // Apply material BEFORE parenting to prevent white flash
             const backingMaterial = new BackingMaterial(this._scene, backingParams);
             mesh.material = backingMaterial.getMaterial();
             
             mesh.parent = this._rootNode;
+            mesh.receiveShadows = true;  // Enable backing to receive slot shadows
             
             this._backingMeshes.push(mesh);
         }
@@ -1134,11 +1156,13 @@ export class SceneManager {
         this._directionalLight.autoCalcShadowZBounds = false;
         this._directionalLight.shadowMinZ = 0;
         this._directionalLight.shadowMaxZ = 200;  // Deep enough for all artwork positions
-        // Fixed literal 60 to avoid "shadowBound already declared" errors
-        this._directionalLight.orthoLeft = -60;
-        this._directionalLight.orthoRight = 60;
-        this._directionalLight.orthoTop = 60;
-        this._directionalLight.orthoBottom = -60;
+        
+        // Use config-driven frustum size (default 60 for standard gallery settings)
+        const frustumSize = lighting.shadow_frustum_size ?? 60;
+        this._directionalLight.orthoLeft = -frustumSize;
+        this._directionalLight.orthoRight = frustumSize;
+        this._directionalLight.orthoTop = frustumSize;
+        this._directionalLight.orthoBottom = -frustumSize;
 
         // Ambient boost
         this._hemisphericLight.intensity = 1.0 + (lighting.ambient_boost ?? 0);
@@ -1168,13 +1192,31 @@ export class SceneManager {
             // Higher bias values prevent z-fighting on flat surfaces while maintaining shadow definition
             this._shadowGenerator.blurScale = lighting.shadow_blur ?? 1;
             this._shadowGenerator.darkness = lighting.shadow_darkness ?? 0.4;
-            this._shadowGenerator.useBlurExponentialShadowMap = true;
-            this._shadowGenerator.bias = 0.002;  // Increased from 0.0001 to prevent self-shadowing artifacts
-            this._shadowGenerator.normalBias = 0.01;  // Additional bias for thin geometry
+            
+            // Apply filter mode from config (default: pcf for high-quality product visualization)
+            const filterMode = lighting.shadow_filter_mode ?? 'pcf';
+            this._shadowGenerator.useBlurExponentialShadowMap = false;
+            this._shadowGenerator.usePercentageCloserFiltering = false;
+            this._shadowGenerator.useContactHardeningShadow = false;
+            
+            if (filterMode === 'exponential') {
+                this._shadowGenerator.useBlurExponentialShadowMap = true;
+            } else if (filterMode === 'pcf') {
+                this._shadowGenerator.usePercentageCloserFiltering = true;
+                this._shadowGenerator.filteringQuality = ShadowGenerator.QUALITY_HIGH;
+            } else if (filterMode === 'contact_hardening') {
+                this._shadowGenerator.useContactHardeningShadow = true;
+                this._shadowGenerator.contactHardeningLightSizeUVRatio = 0.05;
+                this._shadowGenerator.filteringQuality = ShadowGenerator.QUALITY_HIGH;
+            }
+            
+            this._shadowGenerator.bias = 0.0005;  // Increased from 0.0001 to prevent self-shadowing artifacts
+            this._shadowGenerator.normalBias = 0.003;  // Additional bias for thin geometry
 
             // 3. SHADOW RECEIVER (The Invisible Wall)
             if (!this._shadowReceiverPlane) {
-                this._shadowReceiverPlane = MeshBuilder.CreatePlane('shadowReceiver', { size: 200 }, this._scene);
+                const receiverSize = lighting.shadow_receiver_size ?? 200;
+                this._shadowReceiverPlane = MeshBuilder.CreatePlane('shadowReceiver', { size: receiverSize }, this._scene);
                 
                 // Apply rotation matching wood panel geometry pipeline
                 // X=90° aligns Plane normal with Cylinder caps, Y=180° matches wood flip
@@ -1230,6 +1272,11 @@ export class SceneManager {
                     );
                 } else {
                     this._shadowReceiverPlane.position = new Vector3(0, -1.0, 0);
+                }
+                
+                // Update material shadowLevel to match current config
+                if (this._shadowReceiverPlane.material) {
+                    this._shadowReceiverPlane.material.shadowLevel = lighting.shadow_darkness ?? 0.4;
                 }
             }
 						

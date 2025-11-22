@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="48" height="48" viewBox="0 0 0.5 0.5">
+  <g style="stroke:red">
+    <g style="fill:#000;stroke:#000">
+      <path d="
+M25.858 22.5H48L25.858 0z
+M0 22.5 22.142 0v22.5z
+M22.142 48V25.5H0z
+M25.858 48 48 25.5H25.858z
+" style="fill:#000;stroke:#000;stroke-width:.01;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1" transform="scale(.01041)"/>
+    </g>
+  </g>
+</svg>

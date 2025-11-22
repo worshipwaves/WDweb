@@ -65,6 +65,9 @@ export const LightingConfigSchema = z.object({
   shadow_darkness: z.number().optional(),
   ambient_boost: z.number().optional(),
   shadow_receiver_position: z.tuple([z.number(), z.number(), z.number()]).optional(),
+  shadow_filter_mode: z.enum(['exponential', 'pcf', 'contact_hardening']).optional(),
+  shadow_receiver_size: z.number().optional(),
+  shadow_frustum_size: z.number().optional(),
 }).strict();
 
 export type LightingConfig = z.infer<typeof LightingConfigSchema>;

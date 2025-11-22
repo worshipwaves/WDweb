@@ -498,8 +498,6 @@ export class PanelGenerationService {
       result.bakeCurrentTransformIntoVertices();
     }
     
-    result.createNormals(true);
-    
     return result;
   }
   
