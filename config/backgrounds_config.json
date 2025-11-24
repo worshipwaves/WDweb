@@ -1,69 +1,79 @@
 {
   "default_background": {
     "type": "paint",
-    "id": "agreeable-gray"
+    "id": "warm-gray"
   },
   "categories": {
     "paint": [
       {
-        "id": "agreeable-gray",
-        "name": "Agreeable Gray",
-        "rgb": [0.816, 0.804, 0.784],
-        "description": "Warm, versatile greige"
-      },
-      {
-        "id": "repose-gray",
-        "name": "Repose Gray",
-        "rgb": [0.796, 0.788, 0.769],
-        "description": "Cool, light gray"
-      },
-      {
-        "id": "alabaster",
-        "name": "Alabaster",
+        "id": "soft-white",
+        "name": "Soft White",
         "rgb": [0.929, 0.918, 0.878],
-        "description": "Soft, warm white"
+        "description": "Soft, warm white",
+        "group": "Whites"
       },
       {
-        "id": "pure-white",
-        "name": "Pure White",
+        "id": "bright-white",
+        "name": "Bright White",
         "rgb": [0.969, 0.965, 0.953],
-        "description": "Clean, bright white"
+        "description": "Clean, bright white",
+        "group": "Whites"
       },
       {
-        "id": "tricorn-black",
-        "name": "Tricorn Black",
-        "rgb": [0.227, 0.231, 0.235],
-        "description": "Deep, rich black"
+        "id": "warm-gray",
+        "name": "Warm Gray",
+        "rgb": [0.816, 0.804, 0.784],
+        "description": "Warm, versatile greige",
+        "group": "Warm Neutrals"
       },
       {
-        "id": "requisite-gray",
-        "name": "Requisite Gray",
-        "rgb": [0.741, 0.729, 0.702],
-        "description": "Classic medium gray"
-      },
-      {
-        "id": "sea-salt",
-        "name": "Sea Salt",
-        "rgb": [0.835, 0.867, 0.851],
-        "description": "Soft green-gray"
-      },
-      {
-        "id": "accessible-beige",
-        "name": "Accessible Beige",
+        "id": "warm-beige",
+        "name": "Warm Beige",
         "rgb": [0.851, 0.820, 0.769],
-        "description": "Warm, neutral beige"
+        "description": "Warm, neutral beige",
+        "group": "Warm Neutrals"
       },
       {
-        "id": "mindful-gray",
-        "name": "Mindful Gray",
+        "id": "taupe-gray",
+        "name": "Taupe Gray",
         "rgb": [0.737, 0.725, 0.698],
-        "description": "Warm taupe-gray"
+        "description": "Warm taupe-gray",
+        "group": "Warm Neutrals"
       },
       {
-        "id": "colonnade-gray",
-        "name": "Colonnade Gray",
+        "id": "cool-gray",
+        "name": "Cool Gray",
+        "rgb": [0.796, 0.788, 0.769],
+        "description": "Cool, light gray",
+        "group": "Cool Neutrals"
+      },
+      {
+        "id": "classic-gray",
+        "name": "Classic Gray",
+        "rgb": [0.741, 0.729, 0.702],
+        "description": "Classic medium gray",
+        "group": "Cool Neutrals"
+      },
+      {
+        "id": "stone-gray",
+        "name": "Stone Gray",
         "rgb": [0.745, 0.741, 0.718],
-        "description": "Soft, neutral gray"
+        "description": "Soft, neutral gray",
+        "group": "Cool Neutrals"
+      },
+      {
+        "id": "sage-mist",
+        "name": "Sage Mist",
+        "rgb": [0.835, 0.867, 0.851],
+        "description": "Soft green-gray",
+        "group": "Greens"
+      },
+      {
+        "id": "deep-black",
+        "name": "Deep Black",
+        "rgb": [0.227, 0.231, 0.235],
+        "description": "Deep, rich black",
+        "group": "Darks"
       }
     ],
     "accent": [

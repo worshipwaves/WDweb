@@ -11,7 +11,7 @@ export class Tooltip {
   private _element: HTMLElement | null = null;
   private _showTimer: number | null = null;
   
-	show(content: string | HTMLElement, targetElement: HTMLElement, position: 'left' | 'above' | 'right' = 'left', className: string = 'tooltip', offsetX: number = 0, offsetY: number = 0, fixedToPanel: boolean = false): void {    this.hide();
+	show(content: string | HTMLElement, targetElement: HTMLElement, position: 'left' | 'above' | 'right' | 'below' = 'left', className: string = 'tooltip', offsetX: number = 0, offsetY: number = 0, fixedToPanel: boolean = false, verticalAlign: 'center' | 'top' = 'center'): void {    this.hide();
     
     this._showTimer = window.setTimeout(() => {
 			if (!targetElement.isConnected) {
@@ -47,14 +47,20 @@ export class Tooltip {
 							if (rightMainPanel) {
 									const panelRect = rightMainPanel.getBoundingClientRect();
 									tooltip.style.left = `${panelRect.left - tooltip.offsetWidth - 16 + offsetX}px`;
+									if (verticalAlign === 'top') {
+											tooltip.style.top = `${panelRect.top + offsetY}px`;
+									} else {
+											tooltip.style.top = `${rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2) + offsetY}px`;
+									}
 							} else {
 									tooltip.style.left = `${rect.left - tooltip.offsetWidth - 8 + offsetX}px`;
+									tooltip.style.top = `${rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2) + offsetY}px`;
 							}
 					} else {
 							// Relative to target element
 							tooltip.style.left = `${rect.left - tooltip.offsetWidth - 8 + offsetX}px`;
+							tooltip.style.top = `${rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2) + offsetY}px`;
 					}
-					tooltip.style.top = `${rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2) + offsetY}px`;
 			}
 			
 			this._element = tooltip;

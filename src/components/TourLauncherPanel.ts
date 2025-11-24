@@ -29,10 +29,6 @@ export class TourLauncherPanel implements PanelComponent {
     const container = document.createElement('div');
     container.className = 'panel-content tour-launcher-panel';
     
-    const header = document.createElement('div');
-    header.className = 'panel-header';
-    header.innerHTML = '<h3>Interactive Tour</h3>';
-    
     const body = document.createElement('div');
     body.className = 'panel-body';
     
@@ -47,7 +43,6 @@ export class TourLauncherPanel implements PanelComponent {
     
     body.appendChild(description);
     body.appendChild(button);
-    container.appendChild(header);
     container.appendChild(body);
     
     this._container = container;

@@ -31,12 +31,6 @@ export class UploadPanel implements PanelComponent {
     const container = document.createElement('div');
     container.className = 'panel-content upload-panel';
     
-    // Header
-    const header = document.createElement('div');
-    header.className = 'panel-header';
-    header.innerHTML = '<h3>Upload Audio</h3>';
-    container.appendChild(header);
-    
     // Body with upload controls
     const body = document.createElement('div');
     body.className = 'panel-body';

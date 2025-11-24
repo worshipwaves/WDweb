@@ -143,6 +143,8 @@
       "subcategories": {
         "panel": {
           "label": "Panel",
+          "panel_title": "ART STYLE",
+					"panel_help": "Choose your art style. Each combines a panel shape with a waveform pattern. Use the filter icons above to narrow by shape or pattern type.",
           "filters": {
             "shape": {
               "type": "single",
@@ -178,12 +180,16 @@
         },
         "assembled": {
           "label": "Assembled",
+					"panel_title": "ASSEMBLED",
+          "panel_help": "View pre-configured multi-panel assemblies. Coming soon.",
           "note": "",
           "filters": {},
           "options": {}
         },
         "wood_species": {
           "label": "Species",
+					"panel_title": "WOOD & GRAIN",
+					"panel_help": "Select your wood species and grain direction. Each thumbnail shows how the grain pattern will appear on your panel. Click any combination to preview.",
           "filters": {},
           "options": {
             "main": {
@@ -193,6 +199,8 @@
         },
         "layout": {
           "label": "Layout",
+					"panel_title": "LAYOUT",
+					"panel_help": "Adjust physical dimensions and slot count. Size controls overall scale, slots affects waveform detail. Some options may be limited by your chosen art style.",
           "filters": {},
           "options": {
             "main": {
@@ -203,6 +211,8 @@
         },
         "backing": {
           "label": "Backing",
+					"panel_title": "BACKING",
+					"panel_help": "Add an optional backing material behind your panel. Backings add depth and color contrast, making the waveform pattern more visible.",
           "note": "",
           "filters": {},
           "options": {
@@ -213,6 +223,8 @@
         },
         "frames": {
           "label": "Frames",
+					"panel_title": "FRAMES",
+          "panel_help": "Add a decorative frame around your panel. Coming soon.",
           "note": "",
           "filters": {},
           "options": {}
@@ -225,18 +237,24 @@
       "subcategories": {
         "canvas": {
           "label": "Canvas",
+					"panel_title": "CANVAS",
+          "panel_help": "Print your waveform design on gallery-wrapped canvas. Coming soon.",
           "note": "",
           "filters": {},
           "options": {}
         },
         "fine_art_paper": {
           "label": "Fine Art Paper",
+					"panel_title": "FINE ART PAPER",
+          "panel_help": "Print your waveform design on archival fine art paper. Coming soon.",
           "note": "",
           "filters": {},
           "options": {}
         },
         "metal": {
           "label": "Metal",
+					"panel_title": "METAL",
+          "panel_help": "Print your waveform design on brushed aluminum for a modern look. Coming soon.",
           "note": "",
           "filters": {},
           "options": {}
@@ -249,6 +267,8 @@
       "subcategories": {
         "paint": {
           "label": "Paint Colors",
+					"panel_title": "PAINT COLORS",
+          "panel_help": "Choose a wall color to see how your panel will look against different backgrounds. Colors are grouped by tone for easy browsing.",
           "filters": {},
           "options": {
             "paint_grid": {
@@ -258,6 +278,8 @@
         },
         "accent": {
           "label": "Accent Walls",
+					"panel_title": "ACCENT WALLS",
+          "panel_help": "Add texture to your wall with accent materials like brick, stone, or wood paneling. Great for visualizing your art in different room styles.",
           "filters": {},
           "options": {
             "accent_grid": {
@@ -267,6 +289,8 @@
         },
         "rooms": {
           "label": "Room Settings",
+					"panel_title": "ROOM SETTINGS",
+          "panel_help": "Preview your panel in realistic room environments. Each scene includes appropriate lighting and positioning to show how the art will look in your space.",
           "filters": {},
           "options": {
             "rooms_grid": {
@@ -282,6 +306,8 @@
       "subcategories": {
         "tour": {
           "label": "Tour",
+					"panel_title": "take the tour",
+          "panel_help": "Take a guided tour to see how WaveDesigner transforms audio into art. Perfect for first-time visitors.",
           "note": "",
           "filters": {},
           "options": {
@@ -292,12 +318,16 @@
         },
         "collections": {
           "label": "Collections",
+					"panel_title": "COLLECTIONS",
+          "panel_help": "Browse pre-made designs from popular hymns and worship songs. Select one to use as a starting point for your custom piece.",
           "note": "",
           "filters": {},
           "options": {}
         },
         "custom": {
           "label": "Custom",
+					"panel_title": "upload your worship",
+          "panel_help": "Upload your own audio file to create a unique waveform design. Supports MP3, WAV, and FLAC formats up to 50MB.",
           "filters": {},
           "options": {
             "file_upload": {

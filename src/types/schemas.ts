@@ -78,6 +78,7 @@ export const BackgroundItemSchema = z.object({
   path: z.string().optional(),
   rgb: z.array(z.number()).optional(),
   description: z.string(),
+  group: z.string().optional(),
   art_placement: ArtPlacementSchema.optional(),
   lighting: LightingConfigSchema.optional()
 }).strict();
@@ -443,6 +444,8 @@ export const OptionsConfigSchema = z.object({
  */
 export const SubcategoryConfigSchema = z.object({
   label: z.string(),
+	panel_title: z.string().optional(),
+	panel_help: z.string().optional(),
   note: z.string().optional(),
   filters: z.record(z.string(), FilterConfigSchema),
   options: z.record(z.string(), OptionsConfigSchema)

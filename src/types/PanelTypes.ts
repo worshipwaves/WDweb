@@ -269,6 +269,8 @@ export interface OptionsConfig {
  */
 export interface SubcategoryConfig {
   label: string;
+  panel_title?: string;
+  panel_help?: string;
   note?: string;
   filters: Record<string, FilterConfig>;
   options: Record<string, OptionsConfig>;

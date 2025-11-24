@@ -200,6 +200,7 @@ export class ApplicationController {
   private _rightMainPanel: HTMLElement | null = null;
   private _filterIconStrip: FilterIconStrip | null = null;
   private _sectionSelectorPanel: SectionSelectorPanel | null = null;
+  private _helpTooltip: Tooltip | null = null;	
   
   constructor(facade: WaveformDesignerFacade) {
     this._facade = facade;
@@ -264,6 +265,11 @@ export class ApplicationController {
     try {
       // Initialize facade (loads style presets)
       this._facade.initialize();
+			
+			// Initialize help tooltip
+      void import('./components/Tooltip').then(({ Tooltip }) => {
+        this._helpTooltip = new Tooltip();
+      });
 			
 			// Initialize panel references (DOM is ready at this point)
       this._leftSecondaryPanel = document.getElementById('left-secondary-panel');
@@ -1351,6 +1357,9 @@ export class ApplicationController {
     const scrollableContent = this._rightMainPanel.querySelector('.panel-content-scrollable') as HTMLElement;
     const scrollTop = scrollableContent?.scrollTop || 0;
 
+    // Hide help tooltip when changing panels
+    this._helpTooltip?.hide();
+
     this._rightMainPanel.innerHTML = '';
 		
 		// Clear section selector panel when changing subcategories
@@ -1365,6 +1374,40 @@ export class ApplicationController {
 		if (this._sectionSelectorPanel) {
 			this._sectionSelectorPanel.destroy();
 			this._sectionSelectorPanel = null;
+		}
+		
+		// Add header if panel_title is defined in config
+		if (subcategory.panel_title) {
+			const header = document.createElement('div');
+			header.className = 'panel-header';
+			
+			const title = document.createElement('h3');
+			title.textContent = subcategory.panel_title;
+			header.appendChild(title);
+			
+			if (subcategory.panel_help) {
+				const helpButton = document.createElement('button');
+				helpButton.className = 'panel-help-icon';
+				helpButton.innerHTML = '?';
+				helpButton.title = 'Help';
+				
+				const helpContent = subcategory.panel_help;
+				let helpTooltipVisible = false;
+				
+				helpButton.addEventListener('click', () => {
+					if (helpTooltipVisible) {
+						this._helpTooltip?.hide();
+						helpTooltipVisible = false;
+					} else {
+						this._helpTooltip?.show(helpContent, helpButton, 'left', 'tooltip-help', 0, 0, true, 'top');
+						helpTooltipVisible = true;
+					}
+				});
+				
+				header.appendChild(helpButton);
+			}
+			
+			this._rightMainPanel.appendChild(header);
 		}
 		
 		// Render filter icon strip if filters exist - OUTSIDE panel-content
@@ -1428,8 +1471,7 @@ export class ApplicationController {
             (id, value) => {
               void this._updateStateValue(id, value);
             },
-            this._state.composition.frame_design.number_sections,
-            'Layout'
+            this._state.composition.frame_design.number_sections
           );
           panelContent.appendChild(sliderGroup.render());
           
@@ -1453,11 +1495,6 @@ export class ApplicationController {
 
 				case 'wood_species_image_grid': {
 					if (this._woodMaterialsConfig && this._state) {
-						const header = document.createElement('div');
-						header.className = 'panel-header';
-						header.style.padding = '16px';
-						header.innerHTML = '<h3>Wood & Grain</h3>';
-						panelContent.appendChild(header);
 						const body = document.createElement('div');
 						body.className = 'panel-body';
 						
@@ -1614,21 +1651,29 @@ export class ApplicationController {
               inset: 0.5
             };
 
-            // Create toggle as sibling to panelContent (like filter strip)
-            const enableToggle = document.createElement('div');
-            enableToggle.className = 'backing-enable-toggle';
-            enableToggle.innerHTML = `
-              <label for="backing-enabled-checkbox">Enable Backing</label>
-              <label class="toggle-switch">
+            // Add toggle to existing header after title, before help button
+            const existingHeader = this._rightMainPanel.querySelector('.panel-header');
+            if (existingHeader) {
+              const toggleWrapper = document.createElement('label');
+              toggleWrapper.className = 'toggle-switch toggle-switch-small';
+              toggleWrapper.innerHTML = `
                 <input type="checkbox" id="backing-enabled-checkbox" ${backing.enabled ? 'checked' : ''}>
                 <span class="toggle-slider"></span>
-              </label>
-            `;
-            const checkbox = enableToggle.querySelector('input')! as HTMLInputElement;
-            checkbox.addEventListener('change', () => {
-              void this._updateBackingEnabled(checkbox.checked);
-            });
-            this._rightMainPanel.appendChild(enableToggle);
+              `;
+              const checkbox = toggleWrapper.querySelector('input')! as HTMLInputElement;
+              checkbox.addEventListener('change', () => {
+                void this._updateBackingEnabled(checkbox.checked);
+              });
+              
+              // Insert after h3, before help button
+              const title = existingHeader.querySelector('h3');
+              const helpButton = existingHeader.querySelector('.panel-help-icon');
+              if (title && helpButton) {
+                title.insertAdjacentElement('afterend', toggleWrapper);
+              } else {
+                existingHeader.appendChild(toggleWrapper);
+              }
+            }
 
             // Create BackingPanel with grids only
             void import('./components/BackingPanel').then(({ BackingPanel }) => {
