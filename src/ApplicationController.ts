@@ -907,11 +907,13 @@ export class ApplicationController {
       this.notifySubscribers();
     }
     
-    // Apply to scene
-    if ('changeBackground' in this._sceneManager) {
-      (this._sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string) => void })
-        .changeBackground(type, backgroundId, background.rgb, background.path);
-    }
+    // Apply to scene (deferred until after composition update to prevent flash of wrong size)
+		const applyBackground = () => {
+			if ('changeBackground' in this._sceneManager) {
+				(this._sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string) => void })
+					.changeBackground(type, backgroundId, background.rgb, background.path);
+			}
+		};
     
     // Apply placement defaults and caching if archetype is selected
     if (this._state) {
@@ -928,16 +930,25 @@ export class ApplicationController {
           // Cache miss: preserve current user-modified state without applying defaults
           // Defaults are ONLY applied during archetype selection, not background changes
           composition = structuredClone(this._state.composition);
+					
+					// Clamp to scene constraints (new scene may have tighter limits)
+          if (this._resolver) {
+            const sliderConfigs = this._resolver.resolveSliderConfigs(archetypeId, composition);
+            const sizeOrWidth = sliderConfigs.find(s => s.id === 'width' || s.id === 'size');
+            const sizeOrHeight = sliderConfigs.find(s => s.id === 'height' || s.id === 'size');
+            if (sizeOrWidth) composition.frame_design.finish_x = Math.min(composition.frame_design.finish_x, sizeOrWidth.max);
+            if (sizeOrHeight) composition.frame_design.finish_y = Math.min(composition.frame_design.finish_y, sizeOrHeight.max);
+          }
           
           // Cache the current state as-is to preserve user modifications
           this._compositionCache.set(cacheKey, composition);
           
           // Apply composition (no changes needed, just ensures scene updates)
-          void this.handleCompositionUpdate(composition);
-        } else {
-          // Cache hit: restore cached composition (includes user modifications)
-          void this.handleCompositionUpdate(composition);
-        }
+          void this.handleCompositionUpdate(composition).then(applyBackground);
+				} else {
+					// Cache hit: restore cached composition (includes user modifications)
+					void this.handleCompositionUpdate(composition).then(applyBackground);
+				}
         
         // Apply art placement
 				let artPlacement: ArtPlacement | undefined;

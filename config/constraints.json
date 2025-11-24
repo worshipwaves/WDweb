@@ -40,7 +40,7 @@
     "circular_radial_n2": {
       "available_sliders": ["size", "slots", "separation"],
       "size": {"min": 24, "max": 42, "step": 1},
-      "slots": {"min": 36, "max": 60},
+      "slots": {"min": 36, "max": 72},
       "separation": {"min": 0.5, "max": 4.0, "step": 0.5}
     },
     "circular_radial_n3": {
@@ -160,8 +160,12 @@
       "max_height": 42,
       "reason": "headboard_and_ceiling_clearance"
     },
-    "living_room": {
-      "max_height": null,
+    "living-room": {
+      "max_height": 54,
+      "reason": "placeholder_pending_scene_development"
+    },
+		"living-room-fireplace": {
+      "max_height": 48,
       "reason": "placeholder_pending_scene_development"
     },
     "office": {

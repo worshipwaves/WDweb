@@ -1129,7 +1129,7 @@ export class SceneManager {
         const frameDesign = state?.composition?.frame_design;
 
         // This offset calculation is the key. It finds the SCALED half-height of the artwork.
-        const yOffset = (frameDesign ? (frameDesign.shape === 'rectangular' ? frameDesign.finish_y / 2 : Math.min(frameDesign.finish_x, frameDesign.finish_y) / 2) : 0) * placement.scale_factor;
+        const yOffset = (frameDesign ? (frameDesign.shape === 'circular' ? Math.min(frameDesign.finish_x, frameDesign.finish_y) / 2 : frameDesign.finish_y / 2) : 0) * placement.scale_factor;
         
         // The final Y position is the anchor point from your config PLUS half the art's height.
         this._rootNode.position = new Vector3(
