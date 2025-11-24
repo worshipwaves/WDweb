@@ -1,13 +1,25 @@
 {
   "version": "1.0.0",
   "archetypes": {
-    "circular_radial_n2": {
+    "diamond_radial_n1": {
       "backgrounds": {
         "paint_and_accent": {
           "composition_overrides": {
             "frame_design": {
-              "finish_x": 36,
-              "finish_y": 36
+              "finish_x": 42,
+              "finish_y": 42
+            }
+          }
+        }
+      }
+    },
+		"diamond_linear_n1": {
+      "backgrounds": {
+        "paint_and_accent": {
+          "composition_overrides": {
+            "frame_design": {
+              "finish_x": 42,
+              "finish_y": 42
             }
           }
         }

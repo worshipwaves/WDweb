@@ -110,15 +110,13 @@
           "rotation": [0, 0, 0]
         },
         "lighting": {
-          "direction": [1.0, -0.5, -1.0],
+          "direction": [-1.0, -0.5, -1.0],
           "intensity": 2.0,
-          "shadow_enabled": false,
+          "shadow_enabled": true,
           "shadow_blur": 20,
           "shadow_darkness": 0.8,
           "ambient_boost": 1.5,
-          "shadow_receiver_position": [0, -1.0, 0],
           "shadow_filter_mode": "pcf",
-          "shadow_receiver_size": 200,
           "shadow_frustum_size": 60
         }
       },
@@ -135,20 +133,18 @@
 				"lighting": {
           "direction": [0.6, 0, -1.0],
           "intensity": 2.0,
-          "shadow_enabled": false,
+          "shadow_enabled": true,
           "shadow_blur": 5,
           "shadow_darkness": 0.8,
           "ambient_boost": 1.5,
-          "shadow_receiver_position": [0, -0.5, 0],
           "shadow_filter_mode": "pcf",
-          "shadow_receiver_size": 200,
           "shadow_frustum_size": 60
         }
       },
       {
         "id": "living-room-classic",
         "name": "Classic Living Room",
-        "path": "/assets/backgrounds/rooms/living_modern2.png",
+        "path": "/assets/backgrounds/rooms/living_room_3.png",
         "description": "Traditional living area"
       },
       {
@@ -170,13 +166,11 @@
         "lighting": {
           "direction": [1.0, -0.5, -1.0],
           "intensity": 2.0,
-          "shadow_enabled": false,
+          "shadow_enabled": true,
           "shadow_blur": 20,
           "shadow_darkness": 0.8,
           "ambient_boost": 1.5,
-          "shadow_receiver_position": [0, -1.0, 0],
           "shadow_filter_mode": "pcf",
-          "shadow_receiver_size": 200,
           "shadow_frustum_size": 60
         }
       },

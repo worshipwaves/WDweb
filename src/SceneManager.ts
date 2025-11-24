@@ -53,7 +53,7 @@ export class SceneManager {
 		private _hemisphericLight: HemisphericLight | null = null;
     private _directionalLight: DirectionalLight | null = null;
     private _shadowGenerator: ShadowGenerator | null = null;
-    private _shadowReceiverPlane: Mesh | null = null;
+    private _shadowReceiverPlane: Mesh | null = null;		
 
     private constructor(canvasId: string, facade: WaveformDesignerFacade, controller: ApplicationController) {
         const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
@@ -321,7 +321,10 @@ export class SceneManager {
         PerformanceMonitor.start('render_internal_total');
         PerformanceMonitor.start('mesh_cleanup');
         this._currentCSGData = csgData;
-        if (this._shadowReceiverPlane) this._shadowReceiverPlane.setParent(null);
+        if (this._shadowReceiverPlane) {
+            this._shadowReceiverPlane.dispose();
+            this._shadowReceiverPlane = null;
+        }
         if (this._rootNode) {
             this._rootNode.dispose(false, false);
             this._rootNode = null;
@@ -362,14 +365,13 @@ export class SceneManager {
                 if (sectionIndicator) sectionIndicator.style.display = 'flex';
                 if (this._isFirstRender) {
                     this._selectedSectionIndices.clear();
-                    for (let i = 0; i < this._sectionMeshes.length; i++) {
-                        this._selectedSectionIndices.add(i);
-                    }
                     this._overlayMeshes.clear();
-                    this._selectedSectionIndices.forEach(index => {
-                        const overlay = this.createCircularOverlay(index);
-                        if (overlay) this._overlayMeshes.set(index, overlay);
-                    });
+                    // Check UI state for initial tutorial pulse
+                    const state = this._controller.getState();
+                    const shouldShowTutorial = state.ui.activeCategory === 'wood' && state.ui.activeSubcategory === 'wood_species';
+                    if (shouldShowTutorial) {
+                        this.playTutorialPulse();
+                    }
                     this._isFirstRender = false;
                 } else {
                     this.clearSelection();
@@ -393,6 +395,9 @@ export class SceneManager {
             if (csgData.backing_parameters) {
                 await this.generateBackingIfEnabled(csgData.backing_parameters, csgData.updated_state);
             }
+            
+            // Regenerate shadow receiver (same lifecycle as backing)
+            this._createShadowReceiver(csgData);
             
             document.dispatchEvent(new CustomEvent('demo:renderComplete'));
             PerformanceMonitor.end('render_internal_total');
@@ -431,6 +436,20 @@ export class SceneManager {
 	
     public async captureArchetypeThumbnail(size: number = 1024): Promise<void> {
         throw new Error('Method captureArchetypeThumbnail() not implemented.');
+    }
+		
+		public setSectionInteractionEnabled(enabled: boolean): void {
+        // Enable/disable clicking on section meshes
+        this._sectionMeshes.forEach(mesh => {
+            mesh.isPickable = enabled;
+        });
+    }
+		
+		public setSectionOverlaysVisible(visible: boolean): void {
+        // Show/hide white dot overlays
+        this._overlayMeshes.forEach(overlay => {
+            overlay.setEnabled(visible);
+        });
     }
   
     private setupSectionInteraction(): void {
@@ -475,6 +494,32 @@ export class SceneManager {
                 if (overlay) this._overlayMeshes.set(index, overlay);
             }
         }
+    }
+		
+		public playTutorialPulse(): void {
+        // Wait for textures/shaders so wood is visible before pulsing
+        this._scene.executeWhenReady(() => {
+            const numSections = this._sectionMeshes.length;
+            if (numSections <= 1) return;
+            
+            const pulseDuration = 800;
+            
+            for (let i = 0; i < numSections; i++) {
+                setTimeout(() => {
+                    // Re-check existence in case user navigated away quickly
+                    if (i >= this._sectionMeshes.length) return;
+                    
+                    const overlay = this.createCircularOverlay(i);
+                    if (overlay) {
+                        this._overlayMeshes.set(i, overlay);
+                        setTimeout(() => {
+                            this._fadeOutAndDispose(overlay);
+                            this._overlayMeshes.delete(i);
+                        }, pulseDuration);
+                    }
+                }, i * pulseDuration);
+            }
+        });
     }
 	
     private pulseAllSections(): void {
@@ -888,6 +933,8 @@ export class SceneManager {
     public async generateBackingIfEnabled(backingParams: BackingParameters | null, composition: CompositionStateDTO): Promise<void> {
         console.log('[SceneManager] generateBackingIfEnabled called');
         console.log('[SceneManager] composition:', composition ? 'exists' : 'null');
+				
+				PerformanceMonitor.start('generate_backing');
         
         if (!composition) {
             console.log('[SceneManager] Early return: no composition');
@@ -955,6 +1002,51 @@ export class SceneManager {
         }
         
         console.log(`[SceneManager] Generated ${this._backingMeshes.length} backing meshes`);
+				
+				PerformanceMonitor.end('generate_backing');
+    }
+    
+    private _createShadowReceiver(csgData: SmartCsgResponse): void {
+        const bgState = this._controller.getState().ui.currentBackground;
+        const bgConfig = this._controller.getBackgroundsConfig();
+        const background = bgConfig?.categories.rooms.find(bg => bg.id === bgState.id);
+        const shadowDarkness = background?.lighting?.shadow_darkness ?? 0.4;
+        
+        const receiverSize = 200;
+        this._shadowReceiverPlane = MeshBuilder.CreatePlane('shadowReceiver', { size: receiverSize }, this._scene);
+        
+        this._shadowReceiverPlane.rotation = new Vector3(Math.PI / 2, Math.PI, 0);
+        this._shadowReceiverPlane.bakeCurrentTransformIntoVertices();
+        
+        let finalYPos: number;
+        const backingEnabled = csgData.updated_state?.frame_design?.backing?.enabled ?? false;
+        if (backingEnabled && csgData.backing_parameters?.sections?.[0]) {
+            const backingThickness = csgData.backing_parameters.sections[0].thickness;
+            const backingCenterY = csgData.backing_parameters.sections[0].position_y;
+            finalYPos = backingCenterY - (backingThickness / 2) - 0.001;
+        } else if (csgData.csg_data?.panel_config) {
+            const panelThickness = csgData.csg_data.panel_config.thickness;
+            finalYPos = -(panelThickness / 2) - 0.001;
+        } else {
+            finalYPos = -1.0;
+        }
+        this._shadowReceiverPlane.position = new Vector3(0, finalYPos, 0);
+        
+        const shadowMat = new BackgroundMaterial("shadowReceiverMat", this._scene);
+        shadowMat.shadowLevel = shadowDarkness;
+        shadowMat.useRGBColor = false;
+        shadowMat.primaryColor = Color3.Black();
+        shadowMat.alpha = 1.0;
+        shadowMat.opacityFresnel = false;
+        (shadowMat as any).shadowOnly = true;
+        this._shadowReceiverPlane.material = shadowMat;
+        
+        if (this._hemisphericLight) {
+            this._hemisphericLight.excludedMeshes.push(this._shadowReceiverPlane);
+        }
+        
+        this._shadowReceiverPlane.parent = this._rootNode;
+        this._shadowReceiverPlane.receiveShadows = true;
     }
 		
 		private createBackingMesh(
@@ -1028,7 +1120,10 @@ export class SceneManager {
         if (!this._rootNode) {
             console.warn('[SceneManager] Root node not available for art placement');
             return;
+						
         }
+				
+				PerformanceMonitor.start('apply_art_placement');
 
         const state = this._controller.getState();
         const frameDesign = state?.composition?.frame_design;
@@ -1091,12 +1186,34 @@ export class SceneManager {
             const bgState = this._controller.getState().ui.currentBackground;
             const bgConfig = this._controller.getBackgroundsConfig();
             const background = bgConfig?.categories.rooms.find(bg => bg.id === bgState.id);
-            const shadowPos = background?.lighting?.shadow_receiver_position || [0, -1.0, 0];
             const shadowDarkness = background?.lighting?.shadow_darkness ?? 0.4;
             
+            // Position shadow receiver 0.001" behind backing (if enabled) or panel bottom
+            let finalYPos: number;
+            const backingEnabled = state?.composition?.frame_design?.backing?.enabled ?? false;
+            if (backingEnabled && this._currentCSGData?.backing_parameters) {
+                // Get backing thickness and position
+                const backingThickness = this._currentCSGData.backing_parameters.sections[0].thickness;
+                const backingCenterY = this._currentCSGData.backing_parameters.sections[0].position_y;
+                // Position 0.001" behind backing bottom surface
+                finalYPos = backingCenterY - (backingThickness / 2) - 0.001;
+            } else if (this._currentCSGData?.csg_data?.panel_config) {
+                // No backing - position 0.001" behind wood panel bottom surface
+                const panelThickness = this._currentCSGData.csg_data.panel_config.thickness;
+                finalYPos = -(panelThickness / 2) - 0.001;
+            } else {
+                // Fallback - default position behind artwork
+                finalYPos = -1.0;
+            }
+            
             // Set position AFTER reparenting (prevents coordinate space corruption)
-            this._shadowReceiverPlane.position = new Vector3(shadowPos[0], shadowPos[1], shadowPos[2]);
+            // Always centered at [0, 0] relative to artwork (X and Z), only Y varies based on backing/panel
+            this._shadowReceiverPlane.position = new Vector3(0, finalYPos, 0);
             this._shadowReceiverPlane.rotation = Vector3.Zero();
+            
+            // Counteract parent scaling to maintain constant world-space size
+            const parentScale = this._rootNode.scaling.x;
+            this._shadowReceiverPlane.scaling = new Vector3(1/parentScale, 1/parentScale, 1/parentScale);
             
             // Update material shadowLevel to match current background config
             if (this._shadowReceiverPlane.material) {
@@ -1108,7 +1225,18 @@ export class SceneManager {
         if (this._directionalLight && this._shadowGenerator) {
             const lightDirection = this._directionalLight.direction.clone().normalize();
             this._directionalLight.position = this._rootNode.position.subtract(lightDirection.scale(50));
+            
+            // Recalculate frustum for new artwork dimensions
+            const artworkDimension = frameDesign ? Math.max(frameDesign.finish_x, frameDesign.finish_y) : 60;
+            const scaleFactor = this._rootNode?.scaling.x ?? 1.0;
+            const frustumSize = ((artworkDimension * scaleFactor * 0.6) + 10);
+            this._directionalLight.orthoLeft = -frustumSize;
+            this._directionalLight.orthoRight = frustumSize;
+            this._directionalLight.orthoTop = frustumSize;
+            this._directionalLight.orthoBottom = -frustumSize;
         }
+				
+				PerformanceMonitor.end('apply_art_placement');
     }
 		
 		private _positionShadowReceiver(lighting: LightingConfig): void {
@@ -1156,9 +1284,18 @@ export class SceneManager {
         this._directionalLight.autoCalcShadowZBounds = false;
         this._directionalLight.shadowMinZ = 0;
         this._directionalLight.shadowMaxZ = 200;  // Deep enough for all artwork positions
+				
+				// CRITICAL: Disable automatic X/Y frustum recalculation
+        // autoUpdateExtends causes BabylonJS to override orthoLeft/Right/Top/Bottom every frame
+        this._directionalLight.autoUpdateExtends = false;
         
-        // Use config-driven frustum size (default 60 for standard gallery settings)
-        const frustumSize = lighting.shadow_frustum_size ?? 60;
+        // Calculate dynamic frustum size based on actual artwork dimensions
+        // Always calculate dynamically - ignore config value to ensure shadows scale with artwork
+        const state = this._controller.getState();
+        const frameDesign = state?.composition?.frame_design;
+        const artworkDimension = frameDesign ? Math.max(frameDesign.finish_x, frameDesign.finish_y) : 60;
+        const scaleFactor = this._rootNode?.scaling.x ?? 1.0;
+        const frustumSize = ((artworkDimension * scaleFactor * 0.6) + 10);
         this._directionalLight.orthoLeft = -frustumSize;
         this._directionalLight.orthoRight = frustumSize;
         this._directionalLight.orthoTop = frustumSize;
@@ -1214,8 +1351,12 @@ export class SceneManager {
             this._shadowGenerator.normalBias = 0.003;  // Additional bias for thin geometry
 
             // 3. SHADOW RECEIVER (The Invisible Wall)
-            if (!this._shadowReceiverPlane) {
-                const receiverSize = lighting.shadow_receiver_size ?? 200;
+            if (this._shadowReceiverPlane) {
+                this._shadowReceiverPlane.dispose();
+                this._shadowReceiverPlane = null;
+            }
+            if (true) {
+                const receiverSize = 200; // Global constant - large enough for all artwork sizes
                 this._shadowReceiverPlane = MeshBuilder.CreatePlane('shadowReceiver', { size: receiverSize }, this._scene);
                 
                 // Apply rotation matching wood panel geometry pipeline
@@ -1261,25 +1402,6 @@ export class SceneManager {
                 }
                 this._shadowReceiverPlane.receiveShadows = true;
             }
-            
-            // Update position on every applyLighting call (handles background switches)
-            if (this._shadowReceiverPlane) {
-                if (lighting.shadow_receiver_position) {
-                    this._shadowReceiverPlane.position = new Vector3(
-                        lighting.shadow_receiver_position[0],
-                        lighting.shadow_receiver_position[1],
-                        lighting.shadow_receiver_position[2]
-                    );
-                } else {
-                    this._shadowReceiverPlane.position = new Vector3(0, -1.0, 0);
-                }
-                
-                // Update material shadowLevel to match current config
-                if (this._shadowReceiverPlane.material) {
-                    this._shadowReceiverPlane.material.shadowLevel = lighting.shadow_darkness ?? 0.4;
-                }
-            }
-						
         } else {
             if (this._shadowGenerator) {
                 this._shadowGenerator.dispose();

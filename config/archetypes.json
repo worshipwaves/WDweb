@@ -164,7 +164,7 @@
     "thumbnail": "/assets/style/thumbnails/diamond_radial_n2.png",
     "number_sections": 2,
     "number_slots": 48,
-    "separation": 3
+    "separation": 1.5
   },
   "diamond_radial_n4": {
     "id": "diamond_radial_n4",

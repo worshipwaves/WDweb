@@ -869,6 +869,12 @@ export class ApplicationController {
       this._sectionSelectorPanel = null;
     }
     
+    // Disable section interaction when leaving WOOD category
+    if (this._sceneManager && 'setSectionInteractionEnabled' in this._sceneManager) {
+      (this._sceneManager as { setSectionInteractionEnabled: (enabled: boolean) => void }).setSectionInteractionEnabled(false);
+      (this._sceneManager as { setSectionOverlaysVisible: (visible: boolean) => void }).setSectionOverlaysVisible(false);
+    }
+    
     void this.dispatch({ type: 'CATEGORY_SELECTED', payload: categoryId });
     
     this._handleStyleCategorySelected();
@@ -968,6 +974,9 @@ export class ApplicationController {
 				}
       }
     }
+    
+    // Re-render panel to show updated selection
+    this._renderRightMainFiltered();
   }
 	
 	/**
@@ -1124,6 +1133,18 @@ export class ApplicationController {
 
     // Dispatch state update
     void this.dispatch({ type: 'SUBCATEGORY_SELECTED', payload: { category: this._state.ui.activeCategory, subcategory: subcategoryId } });
+
+    // Enable/disable section interaction and overlays based on UI state
+    if (this._sceneManager && 'setSectionInteractionEnabled' in this._sceneManager) {
+      const enableInteraction = this._state.ui.activeCategory === 'wood' && subcategoryId === 'wood_species';
+      (this._sceneManager as { setSectionInteractionEnabled: (enabled: boolean) => void }).setSectionInteractionEnabled(enableInteraction);
+      (this._sceneManager as { setSectionOverlaysVisible: (visible: boolean) => void }).setSectionOverlaysVisible(enableInteraction);
+      
+      // Trigger tutorial pulse when entering Wood Species
+      if (enableInteraction && 'playTutorialPulse' in this._sceneManager) {
+        (this._sceneManager as unknown as { playTutorialPulse: () => void }).playTutorialPulse();
+      }
+    }
 
     // Re-render the LeftSecondaryPanel immediately to show the new selection
     const subcategories = Object.entries(categoryConfig.subcategories).map(([id, config]) => ({ id, config }));
@@ -2187,6 +2208,9 @@ export class ApplicationController {
 		if (this._sceneManager) {
 			await this._sceneManager.generateBackingIfEnabled(backingParams, newComposition);
 		}
+		
+		// Re-render panel to update BackingPanel with new enabled state
+		this._renderRightMainFiltered();
 	}
 
   /**

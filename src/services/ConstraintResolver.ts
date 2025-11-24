@@ -208,6 +208,8 @@ export class ConstraintResolver {
         let calculatedMax = sliderConstraint.max;
         if (shape === 'circular') {
           calculatedMax = this.calculateMaxDimensionCircular(numSections, sliderConstraint.min, sliderConstraint.max);
+        } else if (shape === 'diamond' && numSections === 1) {
+          calculatedMax = sliderConstraint.max;
         } else if (shape === 'rectangular' || shape === 'diamond') {
           if (slotStyle === 'linear') {
             calculatedMax = this.calculateMaxWidthRectLinear(
@@ -255,6 +257,8 @@ export class ConstraintResolver {
         let calculatedMax = sliderConstraint.max;
         if (shape === 'circular') {
           calculatedMax = this.calculateMaxDimensionCircular(numSections, sliderConstraint.min, sliderConstraint.max);
+        } else if (shape === 'diamond' && numSections === 1) {
+          calculatedMax = sliderConstraint.max;
         } else if (shape === 'rectangular' || shape === 'diamond') {
           if (slotStyle === 'linear') {
             calculatedMax = this.calculateMaxHeightRectLinear(

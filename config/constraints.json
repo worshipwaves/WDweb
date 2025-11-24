@@ -121,15 +121,15 @@
     },
     "diamond_radial_n1": {
       "available_sliders": ["width", "height", "slots"],
-      "width": {"min": 24, "max": 30, "step": 1},
+      "width": {"min": 24, "max": 42, "step": 1},
       "height": {"min": 24, "max": 42, "step": 1},
       "slots": {"min": 24, "max": 48}
     },
     "diamond_radial_n2": {
       "available_sliders": ["width", "height", "slots", "separation"],
-      "width": {"min": 36, "max": 42, "step": 1},
-      "height": {"min": 36, "max": 42, "step": 1},
-      "slots": {"min": 24, "max": 48},
+      "width": {"min": 36, "max": 60, "step": 1},
+      "height": {"min": 36, "max": 60, "step": 1},
+      "slots": {"min": 24, "max": 96},
       "separation": {"min": 0.5, "max": 4.0, "step": 0.5}
     },
     "diamond_radial_n4": {
@@ -141,7 +141,7 @@
     },
     "diamond_linear_n1": {
       "available_sliders": ["width", "height", "slots", "side_margin"],
-      "width": {"min": 30, "max": 30, "step": 1},
+      "width": {"min": 30, "max": 42, "step": 1},
       "height": {"min": 30, "max": 42, "step": 1},
       "slots": {"min": 12, "max": 24},
       "side_margin": {"min": 0, "max": 12, "step": 1.0}
@@ -157,7 +157,7 @@
   },
   "scenes": {
     "bedroom": {
-      "max_height": 36,
+      "max_height": 42,
       "reason": "headboard_and_ceiling_clearance"
     },
     "living_room": {
