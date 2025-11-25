@@ -656,6 +656,18 @@ html, body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+.tooltip-backing {
+  position: fixed;
+  z-index: 10000;
+	pointer-events: none;
+  max-width: 280px;
+  background: rgba(30, 30, 30, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
 .panel-close {
   background: none;
   border: none;
@@ -1023,11 +1035,11 @@ html, body {
   align-items: center;
   gap: 10px;
   padding: 1px 1px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px solid transparent;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s;
 }
 
 .thumbnail-card.disabled {
@@ -1037,14 +1049,13 @@ html, body {
 }
 
 .thumbnail-card:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.6);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .thumbnail-card.selected {
-  background: rgba(217, 164, 100, 0.15);
+	background: rgba(100, 150, 255, 0.08);
   border-color: #D9A464;
-  box-shadow: 0 0 8px rgba(217, 164, 100, 0.3);
+	box-shadow: none;
 }
 
 .thumbnail-card img {
@@ -1313,6 +1324,7 @@ html, body {
 .tooltip-accent,
 .tooltip-rooms,
 .tooltip-species,
+.tooltip-backing,
 .tooltip-grid {
   position: fixed;
   background: transparent;
@@ -1325,12 +1337,13 @@ html, body {
 }
 
 /* Size variations by type */
-.tooltip-archetype { max-width: 360px; }
-.tooltip-paint     { max-width: 220px; }
-.tooltip-accent    { max-width: 320px; }
-.tooltip-rooms     { max-width: 400px; }
+.tooltip-archetype { max-width: 280px; }
+.tooltip-paint     { max-width: 280px; }
+.tooltip-accent    { max-width: 280px; }
+.tooltip-rooms     { max-width: 280px; }
 .tooltip-species   { max-width: 280px; }
-.tooltip-grid      { max-width: 320px; }
+.tooltip-grid      { max-width: 280px; }
+.tooltip-backing   { max-width: 280px; }
 
 /* Container for image + text */
 .tooltip-content-wrapper {
@@ -1419,6 +1432,119 @@ html, body {
 }
 
 .grain-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ============================================
+   PAINT COLOR SELECTOR
+   ============================================ */
+
+.paint-color-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.color-group-card {
+  padding: 12px;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.color-group-card.active {
+  background-color: rgba(100, 150, 255, 0.08);
+  border-color: rgba(100, 150, 255, 0.3);
+}
+
+.color-group-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+  margin-bottom: 12px;
+}
+
+.color-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.color-swatch {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.color-swatch:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.color-swatch.selected {
+  border-color: #D9A464;
+}
+
+.color-swatch-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+}
+
+/* Tooltip large color swatch - fixed size to match image tooltips (280x280) */
+.tooltip-color-swatch {
+  width: 280px;
+  height: 280px;
+  border-radius: 8px 8px 0 0;
+}
+
+/* ============================================
+   ROOM SELECTOR
+   ============================================ */
+
+.room-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.room-thumbnail-wrapper {
+  width: 100%;
+}
+
+.room-thumbnail {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.room-thumbnail:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.room-thumbnail.selected {
+  border-color: #D9A464;
+}
+
+.room-thumbnail-image {
   width: 100%;
   height: 100%;
   object-fit: cover;

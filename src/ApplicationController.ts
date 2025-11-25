@@ -200,7 +200,9 @@ export class ApplicationController {
   private _rightMainPanel: HTMLElement | null = null;
   private _filterIconStrip: FilterIconStrip | null = null;
   private _sectionSelectorPanel: SectionSelectorPanel | null = null;
-  private _helpTooltip: Tooltip | null = null;	
+  private _helpTooltip: Tooltip | null = null;
+  private _activeRightPanelComponent: PanelComponent | null = null;
+  private _renderId: number = 0;	
   
   constructor(facade: WaveformDesignerFacade) {
     this._facade = facade;
@@ -933,9 +935,9 @@ export class ApplicationController {
         let composition = this._compositionCache.get(cacheKey);
         
         if (!composition) {
-          // Cache miss: preserve current user-modified state without applying defaults
-          // Defaults are ONLY applied during archetype selection, not background changes
-          composition = structuredClone(this._state.composition);
+					// Cache miss: preserve current user-modified state without applying defaults
+					// Defaults are ONLY applied during archetype selection, not background changes
+					composition = structuredClone(this._state.composition);
 					
 					// Clamp to scene constraints (new scene may have tighter limits)
           if (this._resolver) {
@@ -952,7 +954,15 @@ export class ApplicationController {
           // Apply composition (no changes needed, just ensures scene updates)
           void this.handleCompositionUpdate(composition).then(applyBackground);
 				} else {
-					// Cache hit: restore cached composition (includes user modifications)
+					// Cache hit: restore cached composition but preserve current backing state
+					const currentBacking = this._state.composition.frame_design.backing;
+					composition = {
+						...composition,
+						frame_design: {
+							...composition.frame_design,
+							backing: currentBacking
+						}
+					};
 					void this.handleCompositionUpdate(composition).then(applyBackground);
 				}
         
@@ -1353,6 +1363,15 @@ export class ApplicationController {
 		const subcategory = categoryConfig?.subcategories[this._state.ui.activeSubcategory];
 		if (!subcategory) return;
 
+		// Increment render ID to invalidate pending async renders
+		const currentRenderId = ++this._renderId;
+
+		// CRITICAL: Destroy previous component to clean up tooltips/timers
+		if (this._activeRightPanelComponent) {
+			this._activeRightPanelComponent.destroy();
+			this._activeRightPanelComponent = null;
+		}
+
 		// Preserve scroll position from the actual scrollable content area
     const scrollableContent = this._rightMainPanel.querySelector('.panel-content-scrollable') as HTMLElement;
     const scrollTop = scrollableContent?.scrollTop || 0;
@@ -1552,41 +1571,83 @@ export class ApplicationController {
 						const type = subcategoryId as 'paint' | 'accent' | 'rooms';
 						const items = this._backgroundsConfig.categories[type];
 						
-						const thumbnailItems = items.map(item => {
-							if (item.rgb) {
-								// Paint color - render as color swatch
-								return {
+						// Use grouped card layout for paint colors
+						if (type === 'paint') {
+							void import('./components/PaintColorSelector').then(({ PaintColorSelector }) => {
+								const paintColors = items.map(item => ({
 									id: item.id,
-									label: item.name,
-									thumbnailUrl: '',
-									disabled: false,
-									tooltip: item.description,
-									rgb: item.rgb
-								};
-							} else {
-								// Image background
-								return {
+									name: item.name,
+									rgb: item.rgb || [0.5, 0.5, 0.5],
+									description: item.description,
+									group: item.group
+								}));
+								
+								const selector = new PaintColorSelector(
+									paintColors,
+									this._state!.ui.currentBackground.id,
+									(id: string) => this.handleBackgroundSelected(id, 'paint')
+								);
+								
+								panelContent.appendChild(selector.render());
+							}).catch((error: unknown) => {
+								console.error('[Controller] Failed to load PaintColorSelector:', error);
+							});
+						} else if (type === 'rooms') {
+							// Rooms use card layout
+							void import('./components/RoomSelector').then(({ RoomSelector }) => {
+								const rooms = items.map(item => ({
 									id: item.id,
-									label: item.name,
-									thumbnailUrl: item.path || '',
-									disabled: false,
-									tooltip: item.description
-								};
-							}
-						});
-						
-						const tooltipContext = {
-							category: 'backgrounds',
-							subcategory: type
-						};
-						const grid = new ThumbnailGrid(
-							thumbnailItems,
-							(id: string) => this.handleBackgroundSelected(id, type),
-							this._state.ui.currentBackground.id,
-							tooltipContext
-						);
-						
-						panelContent.appendChild(grid.render());
+									name: item.name,
+									path: item.path || '',
+									description: item.description
+								}));
+								
+								const selector = new RoomSelector(
+									rooms,
+									this._state!.ui.currentBackground.id,
+									(id: string) => this.handleBackgroundSelected(id, 'rooms')
+								);
+								
+								panelContent.appendChild(selector.render());
+							}).catch((error: unknown) => {
+								console.error('[Controller] Failed to load RoomSelector:', error);
+							});
+						} else {
+							// Accent uses standard thumbnail grid
+							const thumbnailItems = items.map(item => {
+								if (item.rgb) {
+									return {
+										id: item.id,
+										label: item.name,
+										thumbnailUrl: '',
+										disabled: false,
+										tooltip: item.description,
+										rgb: item.rgb
+									};
+								} else {
+									return {
+										id: item.id,
+										label: item.name,
+										thumbnailUrl: item.path || '',
+										disabled: false,
+										tooltip: item.description
+									};
+								}
+							});
+							
+							const tooltipContext = {
+								category: 'backgrounds',
+								subcategory: type
+							};
+							const grid = new ThumbnailGrid(
+								thumbnailItems,
+								(id: string) => this.handleBackgroundSelected(id, type),
+								this._state.ui.currentBackground.id,
+								tooltipContext
+							);
+							
+							panelContent.appendChild(grid.render());
+						}
 					}
 					break;
 				}
@@ -1677,6 +1738,9 @@ export class ApplicationController {
 
             // Create BackingPanel with grids only
             void import('./components/BackingPanel').then(({ BackingPanel }) => {
+              // Guard: Skip if render is stale
+              if (this._renderId !== currentRenderId) return;
+
               const backingPanel = new BackingPanel(
                 backing.enabled,
                 backing.type,
@@ -1689,6 +1753,7 @@ export class ApplicationController {
                 }
               );
               
+              this._activeRightPanelComponent = backingPanel;
               panelContent.appendChild(backingPanel.render());
             }).catch((error: unknown) => {
               console.error('[Controller] Failed to load BackingPanel:', error);

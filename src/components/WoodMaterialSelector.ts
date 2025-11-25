@@ -45,17 +45,8 @@ export class WoodMaterialSelector implements PanelComponent {
 
     this._container = container;
     
-    // Auto-scroll to selected item after render
-    requestAnimationFrame(() => {
-      const selectedCard = container.querySelector('.species-card.active');
-      if (selectedCard) {
-        selectedCard.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center',
-          inline: 'nearest'
-        });
-      }
-    });
+    // Auto-scroll disabled - causes parent panel to scroll, breaking sticky header
+    // See ThumbnailGrid.ts and PaintColorSelector.ts for same pattern
     
     return container;
   }

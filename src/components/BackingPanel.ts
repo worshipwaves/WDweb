@@ -1,9 +1,7 @@
 // src/components/BackingPanel.ts
 
-import type { PanelComponent, ThumbnailItem } from '../types/PanelTypes';
-import { ThumbnailGrid } from './ThumbnailGrid';
+import type { PanelComponent } from '../types/PanelTypes';
 import { Tooltip } from './Tooltip';
-import { TooltipClassNameFactory } from '../utils/TooltipClassNameFactory';
 
 // Interfaces matching the structure from config/backing_materials.json
 interface BackingMaterial {
@@ -30,8 +28,6 @@ export class BackingPanel implements PanelComponent {
   private backingConfig: BackingConfig | null = null;
   private onOptionSelected: (option: string, value: unknown) => void;
   private tooltip: Tooltip = new Tooltip();
-	private typeGrid: ThumbnailGrid | null = null;
-  private finishGrid: ThumbnailGrid | null = null;
 
   // Internal state for rendering
   private isEnabled: boolean;
@@ -72,6 +68,7 @@ export class BackingPanel implements PanelComponent {
 
   private renderContent(): void {
     if (!this.backingConfig) return;
+    this.tooltip.hide();
 		
 		if (this.typeGrid) {
       this.typeGrid.destroy();
@@ -124,69 +121,139 @@ export class BackingPanel implements PanelComponent {
   }
 
   private createTypeGrid(): HTMLElement {
-    const group = document.createElement('div');
-    const label = document.createElement('label');
-    label.className = 'option-label';
-    label.textContent = 'Material Type';
-    group.appendChild(label);
+    const card = document.createElement('div');
+    card.className = 'color-group-card';
 
-    const typeItems: ThumbnailItem[] = Object.values(this.backingConfig!.material_catalog).map(type => {
+    const label = document.createElement('div');
+    label.className = 'color-group-label';
+    label.textContent = 'Material Type';
+    card.appendChild(label);
+
+    const grid = document.createElement('div');
+    grid.className = 'color-swatch-grid';
+
+    Object.values(this.backingConfig!.material_catalog).forEach(type => {
       const firstMaterial = type.materials[0];
-      return {
-        id: type.type,
-        label: type.display_name,
-        thumbnailUrl: firstMaterial.texture_files?.diffuse, // Use diffuse from first item as preview
-        rgb: firstMaterial.color_rgb, // Fallback to color
-        tooltip: type.display_name,
-      };
+      const swatch = this.createThumbnailSwatch(
+        type.type,
+        type.display_name,
+        firstMaterial.texture_files?.diffuse,
+        firstMaterial.color_rgb,
+        type.display_name,
+        this.currentType === type.type,
+        () => {
+          this.currentType = type.type;
+          this.currentMaterial = this.backingConfig!.material_catalog[type.type].materials[0].id;
+          this.renderContent();
+          this.onOptionSelected('backing_material', { type: this.currentType, material: this.currentMaterial });
+        }
+      );
+      grid.appendChild(swatch);
     });
 
-    this.typeGrid = new ThumbnailGrid(typeItems, (typeId) => {
-      this.currentType = typeId;
-      this.currentMaterial = this.backingConfig!.material_catalog[typeId].materials[0].id;
-      this.renderContent(); 
-      this.onOptionSelected('backing_material', { type: this.currentType, material: this.currentMaterial });
-    }, this.currentType);
-    
-    group.appendChild(this.typeGrid.render());
-    return group;
+    card.appendChild(grid);
+    return card;
   }
 
   private createFinishGrid(typeData: BackingType): HTMLElement {
-    const group = document.createElement('div');
-    const label = document.createElement('label');
-    label.className = 'option-label';
+    const card = document.createElement('div');
+    card.className = 'color-group-card';
+
+    const label = document.createElement('div');
+    label.className = 'color-group-label';
     label.textContent = 'Finish';
-    group.appendChild(label);
-    
-    const finishItems: ThumbnailItem[] = typeData.materials.map(mat => ({
-        id: mat.id,
-        label: mat.display,
-        thumbnailUrl: mat.texture_files?.diffuse,
-        rgb: mat.color_rgb,
-        tooltip: mat.description,
-    }));
+    card.appendChild(label);
 
-    this.finishGrid = new ThumbnailGrid(finishItems, (materialId) => {
-        this.currentMaterial = materialId;
-        this.renderContent();
-        this.onOptionSelected('backing_material', { type: this.currentType, material: this.currentMaterial });
-    }, this.currentMaterial, { subcategory: 'backing_finish' });
+    const grid = document.createElement('div');
+    grid.className = 'color-swatch-grid';
 
-    group.appendChild(this.finishGrid.render());
-    return group;
+    typeData.materials.forEach(mat => {
+      const swatch = this.createThumbnailSwatch(
+        mat.id,
+        mat.display,
+        mat.texture_files?.diffuse,
+        mat.color_rgb,
+        mat.description,
+        this.currentMaterial === mat.id,
+        () => {
+          this.currentMaterial = mat.id;
+          this.renderContent();
+          this.onOptionSelected('backing_material', { type: this.currentType, material: this.currentMaterial });
+        }
+      );
+      grid.appendChild(swatch);
+    });
+
+    card.appendChild(grid);
+    return card;
+  }
+	
+	private createThumbnailSwatch(
+    id: string,
+    label: string,
+    textureUrl: string | undefined,
+    rgb: number[] | undefined,
+    tooltipText: string,
+    isSelected: boolean,
+    onClick: () => void
+  ): HTMLElement {
+    const swatch = document.createElement('div');
+    swatch.className = `color-swatch${isSelected ? ' selected' : ''}`;
+    swatch.dataset.id = id;
+
+    const fill = document.createElement('div');
+    fill.className = 'color-swatch-fill';
+
+    if (textureUrl) {
+      fill.style.backgroundImage = `url(${textureUrl})`;
+      fill.style.backgroundSize = 'cover';
+      fill.style.backgroundPosition = 'center';
+    } else if (rgb) {
+      fill.style.backgroundColor = `rgb(${rgb[0] * 255}, ${rgb[1] * 255}, ${rgb[2] * 255})`;
+    }
+
+    swatch.appendChild(fill);
+
+    // Tooltip on hover
+    swatch.addEventListener('mouseenter', () => {
+      const contentContainer = document.createElement('div');
+      contentContainer.className = 'tooltip-content-wrapper';
+
+      if (textureUrl) {
+        const preview = document.createElement('img');
+        preview.src = textureUrl;
+        preview.alt = label;
+        contentContainer.appendChild(preview);
+      } else if (rgb) {
+        const preview = document.createElement('div');
+        preview.className = 'tooltip-color-swatch';
+        preview.style.backgroundColor = `rgb(${rgb[0] * 255}, ${rgb[1] * 255}, ${rgb[2] * 255})`;
+        contentContainer.appendChild(preview);
+      }
+
+      const description = document.createElement('p');
+      description.className = 'tooltip-description';
+      description.textContent = `${label}\n\n${tooltipText}`;
+      contentContainer.appendChild(description);
+
+      this.tooltip.show(contentContainer, swatch, 'left', 'tooltip-backing', 0, 0, true);
+    });
+
+    swatch.addEventListener('mouseleave', () => {
+      this.tooltip.hide();
+    });
+
+    swatch.addEventListener('click', () => {
+      this.tooltip.hide();
+      onClick();
+    });
+
+    return swatch;
   }
 
   public render(): HTMLElement { return this.container; }
+	
   public destroy(): void {
-    if (this.typeGrid) {
-      this.typeGrid.destroy();
-      this.typeGrid = null;
-    }
-    if (this.finishGrid) {
-      this.finishGrid.destroy();
-      this.finishGrid = null;
-    }
     this.tooltip.destroy();
     this.container.remove();
   }
