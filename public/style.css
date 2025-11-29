@@ -295,9 +295,9 @@ html, body {
 .panel-left-main {
   left: calc(var(--canvas-left) + 8px);
   z-index: 10;
-  width: auto;
-  min-width: 140px; /* Minimum width for touch targets */
-  max-width: 240px; /* Prevent excessive width */
+  width: fit-content;
+  min-width: unset;
+  max-width: none;
 	bottom: auto; /* Allow panel to shrink-wrap its content */
   height: auto;
 }
@@ -331,14 +331,14 @@ html, body {
 }
 
 .panel-left-main .category-button {
-  font-size: 14px;
-  padding: 12px 2px;
+  font-size: 15px;
+  padding: 14px 12px;
   margin: 0 -8px; /* Extend to panel edges */
 }
 
 /* LEFT SECONDARY PANEL: Subcategories (appears when category selected) */
 .panel-left-secondary {
-  left: calc(var(--canvas-left) + 166px); /* 8px offset + 140px width + 2px border + 16px gap */
+  left: calc(var(--canvas-left) + 116px); /* 8px offset + 90px width + 2px border + 16px gap */
   z-index: 11;
   width: auto; /* Let content determine width */
   min-width: 70px; /* Set a reasonable minimum width */
@@ -531,8 +531,8 @@ html, body {
 @media (min-width: 1441px) {
 .panel-left-main {
     left: calc(var(--canvas-left) + 16px);
-    width: auto;
-    min-width: 120px;
+    width: fit-content;
+    min-width: unset;
   }
   
   .panel-left-secondary {
@@ -774,6 +774,10 @@ html, body {
 .category-icon {
   font-size: 20px;
   flex-shrink: 0;
+}
+
+.category-icon:empty {
+  display: none;
 }
 
 .category-label {
@@ -1296,6 +1300,10 @@ html, body {
   .category-icon {
     font-size: 22px;
   }
+	
+	.category-icon:empty {
+		display: none;
+	}
   
   .thumbnail-grid {
     grid-template-columns: 1fr;
@@ -1602,7 +1610,7 @@ html, body {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 0px 0px;
+  padding: 8px;
   /*background: rgba(17, 17, 17, 0.45);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);*/

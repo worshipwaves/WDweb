@@ -152,10 +152,25 @@
         }
       },
       {
-        "id": "living-room-classic",
-        "name": "Classic Living Room",
-        "path": "/assets/backgrounds/rooms/living_room_7.png",
-        "description": "Traditional living area"
+        "id": "japandi",
+        "name": "Japandi",
+        "path": "/assets/backgrounds/rooms/japandi.jpeg",
+        "description": "Japandi living space",
+				"art_placement": {
+          "position": [-3.5, -3, -20],
+          "scale_factor": 0.66,
+          "rotation": [0, 0, 0]
+        },
+        "lighting": {
+          "direction": [-1.0, -0.5, -1.0],
+          "intensity": 2.0,
+          "shadow_enabled": true,
+          "shadow_blur": 20,
+          "shadow_darkness": 0.8,
+          "ambient_boost": 1.5,
+          "shadow_filter_mode": "pcf",
+          "shadow_frustum_size": 60
+        }
       },
       {
         "id": "dining-room",
@@ -195,7 +210,25 @@
         "name": "Stairway",
         "path": "/assets/backgrounds/rooms/stairway.jpg",
         "description": "Architectural staircase"
-      }
+      },
+			{
+				"id": "living-room-colorful",
+				"name": "Colorful Living Room",
+				"path": "/assets/backgrounds/rooms/living_room_base.png",
+				"description": "Living room with yellow couch",
+				"art_placement": {
+					"position": [0, 0, -20],
+					"scale_factor": 0.5,
+					"rotation": [0, 0, 0]
+				},
+				"lighting": {
+					"direction": [-1.0, -0.5, -1.0],
+					"intensity": 2.0,
+					"shadow_enabled": true,
+					"shadow_blur": 20,
+					"shadow_darkness": 0.8
+				}
+			}
     ]
   }
 }

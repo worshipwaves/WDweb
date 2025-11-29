@@ -54,6 +54,9 @@ export class SceneManager {
     private _directionalLight: DirectionalLight | null = null;
     private _shadowGenerator: ShadowGenerator | null = null;
     private _shadowReceiverPlane: Mesh | null = null;		
+		// Debug getters for high-res screenshot capture
+    public get engine(): Engine { return this._engine; }
+    public get scene(): Scene { return this._scene; }
 
     private constructor(canvasId: string, facade: WaveformDesignerFacade, controller: ApplicationController) {
         const canvas = document.getElementById(canvasId) as HTMLCanvasElement;

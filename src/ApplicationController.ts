@@ -195,6 +195,7 @@ export class ApplicationController {
 	private _archetypes: Map<string, Archetype> = new Map();
   
   // Four-panel DOM references
+	private _leftMainPanel: HTMLElement | null = null;
   private _leftSecondaryPanel: HTMLElement | null = null;
   private _rightSecondaryPanel: HTMLElement | null = null;
   private _rightMainPanel: HTMLElement | null = null;
@@ -274,6 +275,7 @@ export class ApplicationController {
       });
 			
 			// Initialize panel references (DOM is ready at this point)
+      this._leftMainPanel = document.getElementById('left-main-panel');
       this._leftSecondaryPanel = document.getElementById('left-secondary-panel');
       this._rightSecondaryPanel = document.getElementById('right-secondary-panel');
       this._rightMainPanel = document.getElementById('right-main-panel');
@@ -281,6 +283,10 @@ export class ApplicationController {
       if (!this._leftSecondaryPanel || !this._rightSecondaryPanel || !this._rightMainPanel) {
         console.warn('[Controller] Four-panel DOM elements not found');
       }
+
+      window.addEventListener('resize', () => {
+        this._updateLeftSecondaryPosition();
+      });
       
       // Load wood materials configuration
       this._woodMaterialsConfig = await fetchAndValidate<WoodMaterialsConfig>(
@@ -1007,6 +1013,21 @@ export class ApplicationController {
   }
 	
 	/**
+   * Update left secondary panel position based on main panel width
+   */
+  private _updateLeftSecondaryPosition(): void {
+    if (!this._leftMainPanel || !this._leftSecondaryPanel) return;
+    
+    // Calculate position based on main panel's actual width
+    const mainRect = this._leftMainPanel.getBoundingClientRect();
+    const gap = 16; 
+    
+    // Determine the gap based on CSS logic (8px initial offset + width + gap)
+    // Here we just use the right edge of the main panel + gap
+    this._leftSecondaryPanel.style.left = `${mainRect.right + gap}px`;
+  }
+	
+	/**
    * Render Left Secondary Panel without dispatching actions
    * Pure rendering method for state restoration
    * @private
@@ -1040,6 +1061,7 @@ export class ApplicationController {
         this._leftSecondaryPanel.appendChild(panel.render());
         this._leftSecondaryPanel.style.display = 'block';
         this._leftSecondaryPanel.classList.add('visible');
+        this._updateLeftSecondaryPosition();
         
         requestAnimationFrame(() => {
           if (this._sceneManager && 'updateCameraOffset' in this._sceneManager) {
@@ -1122,6 +1144,7 @@ export class ApplicationController {
           this._leftSecondaryPanel.appendChild(panel.render());
           this._leftSecondaryPanel.style.display = 'block';
           this._leftSecondaryPanel.classList.add('visible');
+          this._updateLeftSecondaryPosition();
         }
 				
 				// Update camera offset after panel visibility changes
