@@ -81,6 +81,9 @@ export class BackingPanel implements PanelComponent {
 
     this.container.innerHTML = ''; // Clear previous content
 
+    // Add enable toggle at top (sticky)
+    this.container.appendChild(this.createEnableToggle());
+
     const contentWrapper = document.createElement('div');
     contentWrapper.style.padding = '16px';
     contentWrapper.style.opacity = this.isEnabled ? '1' : '0.4';

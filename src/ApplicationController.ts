@@ -38,6 +38,7 @@ import { applyDimensionChange, type DimensionConstraints } from './utils/dimensi
 import { deepMerge } from './utils/mergeUtils';
 import { fetchAndValidate } from './utils/validation';
 import { Action, WaveformDesignerFacade } from './WaveformDesignerFacade';
+import { type CategoriesConfig, type FilterIconGroup, type ThumbnailConfig } from './types/PanelTypes';
 
 
 // Internal facade APIs that aren't exposed in the public interface
@@ -187,6 +188,19 @@ export class ApplicationController {
   }
 	public getConstraintsConfig(): ConstraintsConfig | null {
     return this._constraints;
+  }
+	
+	public getCategories(): import('./types/PanelTypes').CategoryConfig[] {
+    if (!this._categoriesConfig) return [];
+    return Object.entries(this._categoriesConfig)
+      .map(([id, config]) => ({
+        id,
+        label: config.label,
+        icon: '',
+        enabled: Object.keys(config.subcategories).length > 0,
+        order: config.order ?? 99
+      }))
+      .sort((a, b) => a.order - b.order);
   }
 	
 	// Four-panel navigation configuration
@@ -409,6 +423,12 @@ export class ApplicationController {
     
     // Update panels based on new state
     this.handlePanelUpdates(this._state);
+
+    // specific default selection logic
+    if (!this._state.ui.activeCategory) {
+      const defaultCat = CATEGORIES.find(c => c.enabled);
+      if (defaultCat) this.handleCategorySelected(defaultCat.id);
+    }
   }
   
   /**
@@ -1418,39 +1438,7 @@ export class ApplicationController {
 			this._sectionSelectorPanel = null;
 		}
 		
-		// Add header if panel_title is defined in config
-		if (subcategory.panel_title) {
-			const header = document.createElement('div');
-			header.className = 'panel-header';
-			
-			const title = document.createElement('h3');
-			title.textContent = subcategory.panel_title;
-			header.appendChild(title);
-			
-			if (subcategory.panel_help) {
-				const helpButton = document.createElement('button');
-				helpButton.className = 'panel-help-icon';
-				helpButton.innerHTML = '?';
-				helpButton.title = 'Help';
-				
-				const helpContent = subcategory.panel_help;
-				let helpTooltipVisible = false;
-				
-				helpButton.addEventListener('click', () => {
-					if (helpTooltipVisible) {
-						this._helpTooltip?.hide();
-						helpTooltipVisible = false;
-					} else {
-						this._helpTooltip?.show(helpContent, helpButton, 'left', 'tooltip-help', 0, 0, true, 'top');
-						helpTooltipVisible = true;
-					}
-				});
-				
-				header.appendChild(helpButton);
-			}
-			
-			this._rightMainPanel.appendChild(header);
-		}
+		// Panel header removed - help icon now in subcategory bar (LeftSecondaryPanel)
 		
 		// Render filter icon strip if filters exist - OUTSIDE panel-content
 		if (subcategory.filters && Object.keys(subcategory.filters).length > 0) {
@@ -1769,7 +1757,9 @@ export class ApplicationController {
                 backing.type,
                 backing.material,
                 (option: string, value: unknown) => {
-                  if (option === 'backing_material') {
+                  if (option === 'backing_enabled') {
+                    void this._updateBackingEnabled(value as boolean);
+                  } else if (option === 'backing_material') {
                     const { type, material } = value as { type: string; material: string };
                     void this._updateBackingMaterial(type, material);
                   }

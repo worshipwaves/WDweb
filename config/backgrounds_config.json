@@ -181,7 +181,7 @@
 			{
       "id": "bedroom",
         "name": "Bedroom",
-        "path": "/assets/backgrounds/rooms/bedroom.png",
+        "path": "/assets/backgrounds/rooms/bedroom2.jpg",
         "description": "Serene bedroom setting",
         "art_placement": {
           "position": [-2.67, -3, -20],
@@ -202,7 +202,7 @@
       {
         "id": "hallway",
         "name": "Hallway",
-        "path": "/assets/backgrounds/rooms/hallway.jpg",
+        "path": "/assets/backgrounds/rooms/hallway.webp",
         "description": "Gallery-style hallway"
       },
       {

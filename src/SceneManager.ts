@@ -3,7 +3,7 @@
 import {
     Engine, Scene, ArcRotateCamera, HemisphericLight, DirectionalLight,
     Vector3, Color3, Color4, Mesh, MeshBuilder, StandardMaterial,
-    TransformNode, Animation, CubicEase, EasingFunction, Layer, PointerEventTypes, ShadowGenerator, BackgroundMaterial
+    TransformNode, Animation, CubicEase, EasingFunction, Layer, PointerEventTypes, ShadowGenerator, BackgroundMaterial, Texture
 } from '@babylonjs/core';
 import { GLTFFileLoader } from '@babylonjs/loaders/glTF';
 import { ApplicationController } from './ApplicationController';
@@ -65,7 +65,8 @@ export class SceneManager {
         this._facade = facade;
         this._controller = controller; // Store the injected controller
 
-        this._engine = new Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, antialias: true });
+        this._engine = new Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, antialias: true }, true);
+				this._engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
         this._scene = new Scene(this._engine);
 				(window as any).scene = this._scene;
         this._scene.clearColor = new Color4(0, 0, 0, 0);
@@ -212,19 +213,45 @@ export class SceneManager {
 				this._backgroundLayer.color = new Color4(0, 0, 0, 0);
 		}
 	
-    public changeBackground(type: string, id: string, rgb?: number[], path?: string): void {
-        if (this._backgroundLayer) {
-            this._backgroundLayer.dispose();
-            this._backgroundLayer = null;
-        }
-        if (type === 'paint' && rgb) {
-            this._scene.clearColor = new Color3(rgb[0], rgb[1], rgb[2]).toColor4();
-        } else if ((type === 'accent' || type === 'rooms') && path) {
-            this._scene.clearColor = new Color3(0.9, 0.88, 0.86).toColor4();
-            this._backgroundLayer = new Layer('backgroundLayer', path, this._scene, true);
-        }
-    }
-	
+		public changeBackground(type: string, id: string, rgb?: number[], path?: string): void {
+				const canvas = this._engine.getRenderingCanvas();
+				const container = canvas?.parentElement;
+				
+				// Ensure canvas is permanently transparent
+				if (canvas) {
+						canvas.style.backgroundColor = 'transparent';
+						canvas.style.backgroundImage = 'none';
+				}
+				this._scene.clearColor = new Color4(0, 0, 0, 0);
+				
+				// Dispose Babylon layer if it exists
+				if (this._backgroundLayer) {
+						this._backgroundLayer.dispose();
+						this._backgroundLayer = null;
+				}
+				
+				// Apply background to container
+				if (container) {
+						container.style.backgroundColor = 'transparent';
+						container.style.backgroundImage = 'none';
+						
+						if (type === 'paint' && rgb) {
+								container.style.backgroundColor = `rgb(${rgb[0] * 255}, ${rgb[1] * 255}, ${rgb[2] * 255})`;
+						} else if ((type === 'accent' || type === 'rooms') && path) {
+								// Preload image before applying
+								const img = new Image();
+								img.onload = () => {
+										if (container) {
+												container.style.backgroundImage = `url(${path})`;
+												container.style.backgroundSize = 'cover';
+												container.style.backgroundPosition = 'center';
+										}
+								};
+								img.src = path;
+						}
+				}
+		}
+
     private checkLayoutMode(): void {
         const DESKTOP_BREAKPOINT = 768;
         this._isDesktopLayout = window.innerWidth >= DESKTOP_BREAKPOINT;

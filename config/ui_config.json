@@ -142,25 +142,25 @@
       "order": 2,
       "subcategories": {
         "panel": {
-          "label": "Panel",
+          "label": "Style",
           "panel_title": "ART STYLE",
 					"panel_help": "Choose your art style. Each combines a panel shape with a waveform pattern. Use the filter icons above to narrow by shape or pattern type.",
           "filters": {
             "shape": {
               "type": "single",
-              "label": "Shape",
-              "ui_state_path": "ui.active_filters.shape",
+              "label": "Panel Shape",
+              "ui_state_path": "frame_design.shape",
               "options": [
-                { "id": "circular", "label": "Circular", "thumbnail": "shape_circular", "tooltip": "Circular Panel" },
-                { "id": "rectangular", "label": "Rectangular", "thumbnail": "shape_rectangular", "tooltip": "Rectangular Panel" },
+                { "id": "circular", "label": "Circle", "thumbnail": "shape_circle", "tooltip": "Circular Panel" },
+                { "id": "rectangular", "label": "Rectangle", "thumbnail": "shape_rectangle", "tooltip": "Rectangular Panel" },
                 { "id": "diamond", "label": "Diamond", "thumbnail": "shape_diamond", "tooltip": "Diamond Panel" }
               ],
               "default": "circular"
             },
             "slot_pattern": {
               "type": "single",
-              "label": "Slot Pattern",
-              "ui_state_path": "ui.active_filters.slot_pattern",
+              "label": "Waveform Pattern",
+              "ui_state_path": "pattern_settings.slot_style",
               "options": [
                 { "id": "radial", "label": "Radial", "thumbnail": "pattern_radial", "tooltip": "Radial Waveform" },
                 { "id": "linear", "label": "Linear", "thumbnail": "pattern_linear", "tooltip": "Linear Waveform" }
@@ -177,14 +177,6 @@
               "sort_by": "number_sections"
             }
           }
-        },
-        "assembled": {
-          "label": "Assembled",
-					"panel_title": "ASSEMBLED",
-          "panel_help": "View pre-configured multi-panel assemblies. Coming soon.",
-          "note": "",
-          "filters": {},
-          "options": {}
         },
         "wood_species": {
           "label": "Species",
@@ -232,7 +224,7 @@
       }
     },
     "print": {
-      "label": "PRINT",
+      "label": "PRINTS",
       "order": 3,
       "subcategories": {
         "canvas": {
@@ -262,7 +254,7 @@
       }
     },
     "backgrounds": {
-      "label": "BACKGROUNDS",
+      "label": "STAGING",
       "order": 4,
       "subcategories": {
         "paint": {
@@ -336,18 +328,6 @@
           }
         }
       }
-    },
-    "share": {
-      "label": "SHARE",
-      "order": 5,
-      "note": "Share and save your designs coming soon",
-      "subcategories": {}
-    },
-    "order": {
-      "label": "ORDER",
-      "order": 6,
-      "note": "Custom order processing coming soon",
-      "subcategories": {}
     }
   }
 }

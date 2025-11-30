@@ -9,6 +9,7 @@
  */
 
 import type { PanelComponent, SubcategoryConfig } from '../types/PanelTypes';
+import { Tooltip } from './Tooltip';
 
 interface SubcategoryItem {
   id: string;
@@ -20,6 +21,9 @@ export class LeftSecondaryPanel implements PanelComponent {
   private _subcategories: SubcategoryItem[];
   private _currentSelection: string | null;
   private _onSelect: (subcategoryId: string) => void;
+  private _tooltip: Tooltip;
+  private _helpVisible: boolean = false;
+  private _documentClickHandler: ((e: MouseEvent) => void) | null = null;
   
   constructor(
     subcategories: SubcategoryItem[],
@@ -29,6 +33,7 @@ export class LeftSecondaryPanel implements PanelComponent {
     this._subcategories = subcategories;
     this._currentSelection = currentSelection;
     this._onSelect = onSelect;
+    this._tooltip = new Tooltip();
   }
   
   render(): HTMLElement {
@@ -92,11 +97,47 @@ export class LeftSecondaryPanel implements PanelComponent {
     });
     
     container.appendChild(list);
+    
+    // Add help icon outside list (doesn't participate in wrap)
+    const helpButton = document.createElement('button');
+    helpButton.className = 'subcategory-help-icon';
+    helpButton.innerHTML = '?';
+    helpButton.title = 'Help';
+    
+    // Document click handler for click-anywhere-to-close
+    const documentClickHandler = (e: MouseEvent) => {
+      if (!helpButton.contains(e.target as Node)) {
+        this._tooltip.hide();
+        this._helpVisible = false;
+        document.removeEventListener('click', documentClickHandler);
+      }
+    };
+    
+    helpButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const selectedSubcat = this._subcategories.find(s => s.id === this._currentSelection);
+      const helpContent = selectedSubcat?.config.panel_help;
+      
+      if (!helpContent) return;
+      
+      if (this._helpVisible) {
+        this._tooltip.hide();
+        this._helpVisible = false;
+        document.removeEventListener('click', documentClickHandler);
+      } else {
+        this._tooltip.show(helpContent, helpButton, 'left', 'tooltip-help', 0, 0, true, 'top');
+        this._helpVisible = true;
+        document.addEventListener('click', documentClickHandler);
+      }
+    });
+    
+    container.appendChild(helpButton);
     this._container = container;
     return container;
   }
   
   destroy(): void {
+    this._tooltip.hide();
     if (this._container) {
       this._container.remove();
       this._container = null;

@@ -8,14 +8,16 @@
  * - Receives callback for parent coordination
  */
 
-import { CATEGORIES, type CategoryConfig } from '../types/PanelTypes';
+import type { CategoryConfig } from '../types/PanelTypes';
 
 export class LeftPanelRenderer {
   private _container: HTMLElement;
+  private _categories: CategoryConfig[];
   private _onCategoryClick: (categoryId: string) => void;
   
   constructor(
     containerId: string,
+    categories: CategoryConfig[],
     onCategoryClick: (categoryId: string) => void
   ) {
     const container = document.getElementById(containerId);
@@ -23,6 +25,7 @@ export class LeftPanelRenderer {
       throw new Error(`Container with id "${containerId}" not found`);
     }
     this._container = container;
+    this._categories = categories;
     this._onCategoryClick = onCategoryClick;
   }
   
@@ -30,7 +33,7 @@ export class LeftPanelRenderer {
     this._container.innerHTML = `
       <div class="panel-body">
         <div class="category-list">
-          ${CATEGORIES.map(cat => this._renderCategory(cat)).join('')}
+          ${this._categories.map(cat => this._renderCategory(cat)).join('')}
         </div>
       </div>
     `;

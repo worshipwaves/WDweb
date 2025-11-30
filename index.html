@@ -1,7 +1,4 @@
-<!DOCTYPE html><div id="textureLoadingIndicator" class="texture-loading-indicator">
-        <div class="loading-spinner-small"></div>
-        <span class="loading-text">Loading exotic wood species... (<span id="texturesLoaded">0</span> of <span id="texturesTotal">15</span>)</span>
-      </div>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -10,10 +7,20 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <title>WaveDesigner</title>
-  <link rel="stylesheet" href="/style.css">
+  <!-- <link rel="stylesheet" href="/style.css"> -->
+  <link rel="stylesheet" href="/test.css">
 </head>
 <body>
   <div id="root">
+    <!-- Simulated Shopify Header -->
+    <header class="simulated-header">
+      <a href="#" class="header-logo">Worship Waves</a>
+      <nav class="header-nav">
+        <a href="#" class="header-link">Shop</a>
+        <a href="#" class="header-link">About</a>
+        <a href="#" class="header-link">Contact</a>
+      </nav>
+    </header>
     <!-- ========================================
          LAYER 1: CANVAS (Behind Everything)
          z-index: 0
@@ -50,6 +57,12 @@
          z-index: 10+
          ======================================== -->
     <div class="ui-overlay-container">
+      <!-- SIDEBAR HEADER: Back link + Logo -->
+      <div class="sidebar-header">
+        <a href="/" class="back-link">← Back to Shop</a>
+        <span class="sidebar-logo">Worship Waves</span>
+      </div>
+
       <!-- LEFT MAIN PANEL: Categories -->
       <aside id="left-main-panel" class="panel panel-left-main">
         <!-- Populated by JavaScript -->
@@ -69,6 +82,12 @@
       <aside id="right-main-panel" class="panel panel-right-main" style="display: none;">
         <!-- Populated by JavaScript -->
       </aside>
+
+      <!-- SIDEBAR FOOTER: CTA Buttons -->
+      <div class="sidebar-footer">
+        <button class="sidebar-cta sidebar-cta-secondary" id="shareBtn">Share</button>
+        <button class="sidebar-cta sidebar-cta-primary" id="orderBtn">Order</button>
+      </div>
 
       <!-- RIGHT PANEL STACK: Cascading Panels (WOOD category) -->
       <div id="right-panel-stack" class="panel-stack-right">

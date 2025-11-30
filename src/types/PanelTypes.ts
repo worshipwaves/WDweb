@@ -126,18 +126,6 @@ export interface PanelContentConfig {
 }
 
 /**
- * Category definitions for left panel navigation
- */
-export const CATEGORIES: CategoryConfig[] = [
-  { id: 'audio', label: 'AUDIO', icon: '', enabled: true },
-  { id: 'wood', label: 'WOOD', icon: '', enabled: true },
-  { id: 'print', label: 'PRINT', icon: '', enabled: true },	
-  { id: 'backgrounds', label: 'STAGE', icon: '', enabled: true },
-  { id: 'share', label: 'SHARE', icon: '', enabled: false },
-  { id: 'order', label: 'ORDER', icon: '', enabled: false }
-];
-
-/**
  * Base interface for all panel components
  * Architecture: Components are stateless, render based on input, emit events
  */

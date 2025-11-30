@@ -43,7 +43,8 @@ export class UIBootstrapper {
         new ProcessingOverlay('processingOverlay', this.controller);
 
         const { LeftPanelRenderer } = await import('./components/LeftPanelRenderer');
-        const leftPanelRenderer = new LeftPanelRenderer('left-main-panel', (categoryId) => {
+        const categories = this.controller.getCategories();
+        const leftPanelRenderer = new LeftPanelRenderer('left-main-panel', categories, (categoryId) => {
             this.controller.handleCategorySelected(categoryId);
             this.sceneManager.updateCameraOffset(); // Update camera on panel change
         });
