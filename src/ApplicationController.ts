@@ -1582,8 +1582,9 @@ export class ApplicationController {
 						
 						// Use grouped card layout for paint colors
 						if (type === 'paint') {
-							void import('./components/PaintColorSelector').then(({ PaintColorSelector }) => {
-								const paintColors = items.map(item => ({
+								void import('./components/PaintColorSelector').then(({ PaintColorSelector }) => {
+									if (this._renderId !== currentRenderId) return;
+									const paintColors = items.map(item => ({
 									id: item.id,
 									name: item.name,
 									rgb: item.rgb || [0.5, 0.5, 0.5],
@@ -1598,13 +1599,15 @@ export class ApplicationController {
 								);
 								
 								panelContent.appendChild(selector.render());
-							}).catch((error: unknown) => {
-								console.error('[Controller] Failed to load PaintColorSelector:', error);
+									this._scrollToSelectedItem();
+								}).catch((error: unknown) => {
+									console.error('[Controller] Failed to load PaintColorSelector:', error);
 							});
 						} else if (type === 'rooms') {
-							// Rooms use card layout
-							void import('./components/RoomSelector').then(({ RoomSelector }) => {
-								const rooms = items.map(item => ({
+								// Rooms use card layout
+								void import('./components/RoomSelector').then(({ RoomSelector }) => {
+									if (this._renderId !== currentRenderId) return;
+									const rooms = items.map(item => ({
 									id: item.id,
 									name: item.name,
 									path: item.path || '',
@@ -1618,8 +1621,9 @@ export class ApplicationController {
 								);
 								
 								panelContent.appendChild(selector.render());
-							}).catch((error: unknown) => {
-								console.error('[Controller] Failed to load RoomSelector:', error);
+									this._scrollToSelectedItem();
+								}).catch((error: unknown) => {
+									console.error('[Controller] Failed to load RoomSelector:', error);
 							});
 						} else {
 							// Accent uses standard thumbnail grid
@@ -1761,6 +1765,7 @@ export class ApplicationController {
               
               this._activeRightPanelComponent = backingPanel;
               panelContent.appendChild(backingPanel.render());
+              this._scrollToSelectedItem();
             }).catch((error: unknown) => {
               console.error('[Controller] Failed to load BackingPanel:', error);
               panelContent.innerHTML = '<div class="panel-placeholder">Failed to load backing options</div>';
@@ -1780,19 +1785,24 @@ export class ApplicationController {
       requestAnimationFrame(() => {
         const newScrollableContent = this._rightMainPanel?.querySelector('.panel-content-scrollable') as HTMLElement;
       if (newScrollableContent) {
-        const selectedCard = newScrollableContent.querySelector('.thumbnail-card.selected') as HTMLElement;
-        if (selectedCard && optionConfig?.type === 'archetype_grid') {
-          // Scroll to center selected archetype
-          const cardTop = selectedCard.offsetTop;
-          const cardHeight = selectedCard.offsetHeight;
-          const parentHeight = newScrollableContent.clientHeight;
-          newScrollableContent.scrollTop = cardTop - (parentHeight / 2) + (cardHeight / 2);
-        } else {
-          // Restore previous scroll position for non-archetype content
-          newScrollableContent.scrollTop = scrollTop;
+        const selectedCard = newScrollableContent.querySelector('.selected') as HTMLElement;
+        if (selectedCard) {
+          selectedCard.scrollIntoView({ behavior: 'instant', block: 'center' });
         }
       }
       });
+    });
+  }
+
+  /**
+   * Scroll selected item to center of right main panel
+   */
+  private _scrollToSelectedItem(): void {
+    requestAnimationFrame(() => {
+      const selected = this._rightMainPanel?.querySelector('.panel-content-scrollable .selected') as HTMLElement;
+      if (selected) {
+        selected.scrollIntoView({ behavior: 'instant', block: 'center' });
+      }
     });
   }
 	
