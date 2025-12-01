@@ -1281,13 +1281,8 @@ export class ApplicationController {
       
       this._sectionSelectorPanel = selector;
       this._rightSecondaryPanel!.appendChild(selector.render());
-      this._rightSecondaryPanel!.style.display = 'block';
-      this._rightSecondaryPanel!.classList.add('visible');
-			
-			// Force auto-height for section selector panel
-			this._rightSecondaryPanel!.style.height = 'auto';
-			this._rightSecondaryPanel!.style.minHeight = '0';	
-			this._rightSecondaryPanel!.style.bottom = 'auto';
+			this._rightSecondaryPanel!.classList.add('visible');
+			this._rightMainPanel!.classList.add('has-toolbar');
 			
     }).catch((error: unknown) => {
       console.error('[Controller] Failed to load SectionSelectorPanel:', error);
@@ -1423,6 +1418,7 @@ export class ApplicationController {
     this._helpTooltip?.hide();
 
     this._rightMainPanel.innerHTML = '';
+		this._rightMainPanel.classList.remove('has-toolbar');
 		
 		// Clear section selector panel when changing subcategories
 		if (this._rightSecondaryPanel) {
@@ -1457,7 +1453,9 @@ export class ApplicationController {
 					activeFiltersMap,
 					(groupId, iconId) => this._handleIconFilterChange(groupId, iconId)
 				);
-				this._rightMainPanel.appendChild(this._filterIconStrip.render());
+				this._rightSecondaryPanel!.appendChild(this._filterIconStrip.render());
+				this._rightSecondaryPanel!.classList.add('visible');
+				this._rightMainPanel.classList.add('has-toolbar');
 			}
 		}
 		
@@ -1723,29 +1721,24 @@ export class ApplicationController {
               inset: 0.5
             };
 
-            // Add toggle to existing header after title, before help button
-            const existingHeader = this._rightMainPanel.querySelector('.panel-header');
-            if (existingHeader) {
-              const toggleWrapper = document.createElement('label');
-              toggleWrapper.className = 'toggle-switch toggle-switch-small';
-              toggleWrapper.innerHTML = `
-                <input type="checkbox" id="backing-enabled-checkbox" ${backing.enabled ? 'checked' : ''}>
-                <span class="toggle-slider"></span>
-              `;
-              const checkbox = toggleWrapper.querySelector('input')! as HTMLInputElement;
-              checkbox.addEventListener('change', () => {
-                void this._updateBackingEnabled(checkbox.checked);
-              });
-              
-              // Insert after h3, before help button
-              const title = existingHeader.querySelector('h3');
-              const helpButton = existingHeader.querySelector('.panel-help-icon');
-              if (title && helpButton) {
-                title.insertAdjacentElement('afterend', toggleWrapper);
-              } else {
-                existingHeader.appendChild(toggleWrapper);
-              }
-            }
+            // Add toggle to right-secondary-panel toolbar
+						const toggleWrapper = document.createElement('div');
+						toggleWrapper.className = 'backing-toolbar-toggle';
+						toggleWrapper.innerHTML = `
+							<span class="backing-toggle-label">Enable Backing</span>
+							<label class="toggle-switch toggle-switch-small">
+								<input type="checkbox" id="backing-enabled-checkbox" ${backing.enabled ? 'checked' : ''}>
+								<span class="toggle-slider"></span>
+							</label>
+						`;
+						const checkbox = toggleWrapper.querySelector('input')! as HTMLInputElement;
+						checkbox.addEventListener('change', () => {
+							void this._updateBackingEnabled(checkbox.checked);
+						});
+
+						this._rightSecondaryPanel!.appendChild(toggleWrapper);
+						this._rightSecondaryPanel!.classList.add('visible');
+						this._rightMainPanel.classList.add('has-toolbar');
 
             // Create BackingPanel with grids only
             void import('./components/BackingPanel').then(({ BackingPanel }) => {

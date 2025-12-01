@@ -55,7 +55,7 @@ export class SectionSelectorPanel implements PanelComponent {
       id: 'all',
       sectionIndex: null,
       visualOrder: -1,
-      label: 'All Sections'
+      label: 'Select All / Clear All'
     });
     
     // Determine visual order mapping based on shape, slot_style, and number_sections
@@ -147,7 +147,7 @@ export class SectionSelectorPanel implements PanelComponent {
     
     // Tooltip handlers
     button.addEventListener('mouseenter', () => {
-      this._tooltip.show(iconDef.label, button, 'left', 'tooltip-section');
+      this._tooltip.show(iconDef.label, button, 'above', 'tooltip-section');
     });
     button.addEventListener('mouseleave', () => {
       this._tooltip.hide();

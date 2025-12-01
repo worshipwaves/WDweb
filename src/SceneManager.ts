@@ -1404,6 +1404,10 @@ export class SceneManager {
                 // Parent to root node
                 this._shadowReceiverPlane.parent = this._rootNode;
                 
+                // Counteract parent scaling to maintain constant world-space size
+                const parentScale = this._rootNode?.scaling.x ?? 1.0;
+                this._shadowReceiverPlane.scaling = new Vector3(1/parentScale, 1/parentScale, 1/parentScale);
+                
                 // Position close behind artwork in Local Y (maps to World Z depth)
 								if (lighting.shadow_receiver_position) {
 										this._shadowReceiverPlane.position = new Vector3(
@@ -1412,8 +1416,16 @@ export class SceneManager {
 												lighting.shadow_receiver_position[2]
 										);
 								} else {
-										// Default fallback: Push wall back to prevent z-fighting (Matches Golden Value)
-										this._shadowReceiverPlane.position = new Vector3(0, -1.0, 0);
+										// --- FIX: Match depth logic from _createShadowReceiver ---
+										let finalYPos = -1.0;
+										
+										// Use current panel thickness for tight shadow fit (e.g. -0.25 instead of -1.0)
+										if (this._currentCSGData?.csg_data?.panel_config) {
+												const thickness = this._currentCSGData.csg_data.panel_config.thickness;
+												finalYPos = -(thickness / 2) - 0.001;
+										}
+										
+										this._shadowReceiverPlane.position = new Vector3(0, finalYPos, 0);
 								}
                 
                 // --- FIX 2: Restore the Background ---

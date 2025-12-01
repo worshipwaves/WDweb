@@ -269,7 +269,7 @@ body {
     transform: none !important;
     opacity: 1 !important;
     z-index: 29;
-    padding: 0 16px;
+    padding: 0 10px 0 16px;
     align-items: center;
     overflow-x: auto;
     overflow-y: hidden;
@@ -282,11 +282,19 @@ body {
   }
 
   /* Force horizontal layout for subcat buttons */
-  #left-secondary-panel .panel-body,
+  #left-secondary-panel .panel-content {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    width: 100%;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
   #left-secondary-panel .subcategory-list {
     display: flex !important;
     flex-direction: row !important;
-    width: 100%;
+    flex: 1;
     gap: 15px;
     padding: 0 !important;
     margin: 0 !important;
@@ -758,11 +766,22 @@ body {
 }
 
 .backing-toggle-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: rgb(var(--color-foreground));
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.backing-toolbar-toggle .toggle-switch {
+  flex-shrink: 0;
+}
+
+.backing-toolbar-toggle {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
 }
 
 /* Toggle Switch - Minimalista Style */
@@ -862,7 +881,9 @@ input:checked + .toggle-slider:before {
 .tooltip-rooms,
 .tooltip-species,
 .tooltip-backing,
-.tooltip-grid {
+.tooltip-grid,
+.tooltip-section,
+.tooltip-filter {
   position: fixed;
   background: transparent;
   border: none;
@@ -923,6 +944,19 @@ input:checked + .toggle-slider:before {
   color: rgb(var(--color-foreground));
 }
 
+.tooltip-filter,
+.tooltip-section {
+  position: fixed;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 10000;
+  white-space: nowrap;
+  background: rgb(var(--color-foreground));
+  color: rgb(var(--color-background));
+}
+
 .tooltip-help {
   position: fixed;
   z-index: 10000;
@@ -938,38 +972,117 @@ input:checked + .toggle-slider:before {
 }
 
 /* ============================================
+   SLIDERS (Layout controls)
+   ============================================ */
+.slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  padding: 30px;
+  margin-bottom: 16px;
+}
+
+.slider-control {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.slider-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.slider-label-row label {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgb(var(--color-foreground));
+  text-transform: capitalize;
+}
+
+.slider-value {
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 50px;
+  text-align: right;
+}
+
+.slider-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.slider-input {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+  outline: none;
+}
+
+.slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: rgb(var(--color-foreground));
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.slider-input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: rgb(var(--color-foreground));
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* ============================================
    RIGHT SECONDARY PANEL (Section Selector)
    ============================================ */
 #right-secondary-panel,
 .panel-right-secondary {
   position: fixed !important;
-  top: calc(var(--header-height-desktop) + 100px) !important;
-  right: var(--sidebar-width) !important;
+  top: calc(var(--sidebar-header-height) + 90px) !important;
+  right: 0 !important;
   left: auto !important;
-  width: auto !important;
-  height: auto !important;
+  width: var(--sidebar-width) !important;
+  height: 56px !important;
   background: rgb(var(--color-background)) !important;
-  border: 1px solid rgb(var(--color-border));
-  border-right: none;
-  z-index: 25;
+  border-bottom: 1px solid rgb(var(--color-border));
+  border-left: 1px solid rgb(var(--color-border));
+  z-index: 28;
   display: none;
-  padding: 8px;
+  padding: 0 16px;
+  box-sizing: border-box;
 }
 
 #right-secondary-panel.visible,
 .panel-right-secondary.visible {
-  display: block !important;
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
 }
 
 .section-selector-panel {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
 }
 
 .section-icon-column {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 4px;
+  padding: 4px 0;
   align-items: center;
 }
 
@@ -980,8 +1093,8 @@ input:checked + .toggle-slider:before {
 
 .section-icon-button {
   position: relative;
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
   padding: 6px;
   background: transparent;
   border: 1px solid rgb(var(--color-border));
@@ -1018,3 +1131,72 @@ input:checked + .toggle-slider:before {
 .section-icon-label {
   display: none;
 }
+
+/* Right main panel offset when toolbar visible */
+#right-main-panel.has-toolbar {
+  top: calc(var(--sidebar-header-height) + 146px) !important;
+}
+
+/* ============================================
+   FILTER ICON STRIP (Minimalista theme)
+   ============================================ */
+.filter-icon-strip {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.filter-group {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 0px;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgb(var(--color-border));
+}
+
+.filter-group.shape {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.filter-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 6px;
+  background: transparent;
+  border: 1px solid rgb(var(--color-border));
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.filter-icon:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.filter-icon.active {
+  border-color: rgb(var(--color-foreground));
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.filter-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: rgb(var(--color-foreground));
+  opacity: 0.7;
+}
+
+.filter-icon:hover svg {
+  opacity: 1;
+}
+
+.filter-icon.active svg {
+  opacity: 1;
+}
+
+.filter-icon.filter-show-all svg {
+  stroke: rg
