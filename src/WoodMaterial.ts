@@ -114,12 +114,19 @@ export class WoodMaterial extends PBRMaterial {
         const totalRotationDeg = grainAngleDeg + rotationOffset;
         const grainRotationRad = (totalRotationDeg * Math.PI) / 180;
         
-        // DO NOT dispose old textures when using cache - they're shared!
-        // The TextureCacheService manages texture lifecycle
-        // Only set references to null to allow garbage collection of the reference
-        this.albedoMap = null;
-        this.normalMap = null;
-        this.roughnessMap = null;
+				// Dispose old CLONES (not cached originals - clones are unique per material)
+				if (this.albedoMap) {
+						this.albedoMap.dispose();
+						this.albedoMap = null;
+				}
+				if (this.normalMap) {
+						this.normalMap.dispose();
+						this.normalMap = null;
+				}
+				if (this.roughnessMap) {
+						this.roughnessMap.dispose();
+						this.roughnessMap = null;
+				}
         
         // Construct texture paths
         const albedoPath = `${assetRoot}Varnished/${sizeFolder}/Diffuse/wood-${woodNumber}_${species}-varnished-${dimensions}_d.png`;

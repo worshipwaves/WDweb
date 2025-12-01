@@ -60,13 +60,14 @@ export class SceneManager {
 
     private constructor(canvasId: string, facade: WaveformDesignerFacade, controller: ApplicationController) {
         const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+				const maxDPR = Math.min(window.devicePixelRatio, 2);
         if (!canvas) throw new Error(`Canvas with id "${canvasId}" not found`);
         this._canvas = canvas;
         this._facade = facade;
         this._controller = controller; // Store the injected controller
 
-        this._engine = new Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, antialias: true }, true);
-				this._engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
+        this._engine = new Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, antialias: true }, true);				
+				this._engine.setHardwareScalingLevel(1 / maxDPR);
         this._scene = new Scene(this._engine);
 				(window as any).scene = this._scene;
         this._scene.clearColor = new Color4(0, 0, 0, 0);
@@ -314,25 +315,26 @@ export class SceneManager {
         this._camera.target.x = this._cameraOffset;
     }
 
-    public preloadDefaultTextures(config: WoodMaterialsConfig): void {
-        const speciesToPreload = ['walnut-black-american', 'cherry-black', 'maple'];
-        speciesToPreload.forEach(speciesId => {
-            const species = config.species_catalog.find(s => s.id === speciesId);
-            if (!species) return;
-            const sizeInfo = config.texture_config.size_map?.large;
-            if (!sizeInfo) {
-                console.error("Texture size configuration for 'large' is missing.");
-                return;
-            }
-            const basePath = config.texture_config.base_texture_path;
-            const albedoPath = `${basePath}/${species.id}/Varnished/${sizeInfo.folder}/Diffuse/wood-${species.wood_number}_${species.id}-varnished-${sizeInfo.dimensions}_d.png`;
-            const normalPath = `${basePath}/${species.id}/Shared_Maps/${sizeInfo.folder}/Normal/wood-${species.wood_number}_${species.id}-${sizeInfo.dimensions}_n.png`;
-            const roughnessPath = `${basePath}/${species.id}/Shared_Maps/${sizeInfo.folder}/Roughness/wood-${species.wood_number}_${species.id}-${sizeInfo.dimensions}_r.png`;
-            this._textureCache.getTexture(albedoPath);
-            this._textureCache.getTexture(normalPath);
-            this._textureCache.getTexture(roughnessPath);
-        });
-    }
+		public preloadDefaultTextures(config: WoodMaterialsConfig): void {
+				const speciesToPreload = ['walnut-black-american', 'cherry-black', 'maple'];
+				speciesToPreload.forEach(speciesId => {
+						const species = config.species_catalog.find(s => s.id === speciesId);
+						if (!species) return;
+						const sizeInfo = config.texture_config.size_map?.large;
+						if (!sizeInfo) {
+								console.error("Texture size configuration for 'large' is missing.");
+								return;
+						}
+						const basePath = config.texture_config.base_texture_path;
+						const albedoPath = `${basePath}/${species.id}/Varnished/${sizeInfo.folder}/Diffuse/wood-${species.wood_number}_${species.id}-varnished-${sizeInfo.dimensions}_d.png`;
+						const normalPath = `${basePath}/${species.id}/Shared_Maps/${sizeInfo.folder}/Normal/wood-${species.wood_number}_${species.id}-${sizeInfo.dimensions}_n.png`;
+						const roughnessPath = `${basePath}/${species.id}/Shared_Maps/${sizeInfo.folder}/Roughness/wood-${species.wood_number}_${species.id}-${sizeInfo.dimensions}_r.png`;
+						// Warm cache only - don't create clones
+						this._textureCache.ensureCached(albedoPath);
+						this._textureCache.ensureCached(normalPath);
+						this._textureCache.ensureCached(roughnessPath);
+				});
+		}
 
     public renderComposition(csgData: SmartCsgResponse): Promise<void> {
         this._renderQueue = this._renderQueue.then(async () => {

@@ -87,16 +87,16 @@ export class TextureCacheService {
     const normalPath = `${basePath}/${speciesId}/Shared_Maps/${folderName}/Normal/wood-${woodNumber}_${speciesId}-${dimensions}_n.png`;
     const roughnessPath = `${basePath}/${speciesId}/Shared_Maps/${folderName}/Roughness/wood-${woodNumber}_${speciesId}-${dimensions}_r.png`;
     
-    // Load all three textures
-    const albedo = this.getTexture(albedoPath);
-    const normal = this.getTexture(normalPath);
-    const roughness = this.getTexture(roughnessPath);
+    // Cache textures without creating orphan clones
+    this.ensureCached(albedoPath);
+    this.ensureCached(normalPath);
+    this.ensureCached(roughnessPath);
     
     // Wait for all three to finish loading
     await Promise.all([
-      this._waitForTextureReady(albedo),
-      this._waitForTextureReady(normal),
-      this._waitForTextureReady(roughness)
+      this._waitForTextureReady(this._textureCache.get(albedoPath)!),
+      this._waitForTextureReady(this._textureCache.get(normalPath)!),
+      this._waitForTextureReady(this._textureCache.get(roughnessPath)!)
     ]);
   }
   
@@ -133,4 +133,14 @@ export class TextureCacheService {
       paths: Array.from(this._textureCache.keys())
     };
   }
+	
+	/**
+	 * Ensure texture is in cache without returning a clone.
+	 * Use for preloading only.
+	 */
+	ensureCached(path: string): void {
+			if (this._textureCache.has(path)) return;
+			const texture = new Texture(path, this._scene);
+			this._textureCache.set(path, texture);
+	}	
 }
