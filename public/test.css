@@ -15,6 +15,10 @@
   --header-height-desktop: 0px;
   --header-height-mobile: 0px;
   --sidebar-header-height: 40px;
+  --category-bar-height: 60px;
+  --subcategory-bar-height: 50px;
+  --toolbar-height: 56px;
+	--footer-height: 60px;
   --sidebar-width: 400px;
   
   --font-family-base: "Instrument Sans", sans-serif;
@@ -126,7 +130,7 @@ body {
   bottom: 0 !important;
   left: 0 !important;
   width: 100% !important;
-  height: 60px !important;
+  height: var(--footer-height) !important;
   top: auto !important;
   
   background: #ffffff !important;
@@ -140,9 +144,11 @@ body {
 }
 
 #left-main-panel .category-list {
+  display: flex !important;
   flex-direction: row !important;
-  width: 100%;
-  justify-content: space-evenly;
+  width: auto;
+  justify-content: center;
+  gap: 10px;
   padding: 0;
 }
 
@@ -170,7 +176,7 @@ body {
 .panel-right-main {
   position: absolute !important;
   top: calc(var(--header-height-mobile) + 45vh) !important;
-  bottom: 60px !important; /* Above nav bar */
+  bottom: var(--footer-height) !important;
   left: 0 !important;
   width: 100% !important;
   height: auto !important;
@@ -221,9 +227,9 @@ body {
   #right-main-panel, 
   .panel-right-main {
     position: fixed !important;
-    top: calc(var(--sidebar-header-height) + 90px) !important; /* header + cats + subcats */
+    top: calc(var(--sidebar-header-height) + var(--category-bar-height) + var(--subcategory-bar-height)) !important;
     right: 0 !important;
-    bottom: 60px !important; /* Above sticky footer */
+    bottom: var(--footer-height) !important;
     left: auto !important;
     width: var(--sidebar-width) !important;
     height: auto !important;
@@ -242,7 +248,11 @@ body {
     bottom: auto !important;
     left: auto !important;
     width: var(--sidebar-width) !important;
-    height: 50px !important;
+    height: var(--category-bar-height) !important;
+    
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     
     border-top: none;
     border-bottom: 1px solid rgb(var(--color-border));
@@ -256,12 +266,12 @@ body {
   .panel-left-secondary {
     display: flex !important;
     position: fixed !important;
-    top: calc(var(--sidebar-header-height) + 50px) !important; /* Below main tabs */
+    top: calc(var(--sidebar-header-height) + var(--category-bar-height)) !important;
     right: 0 !important;
     bottom: auto !important;
     left: auto !important;
     width: var(--sidebar-width) !important;
-    height: 40px !important;
+    height: var(--subcategory-bar-height) !important;
     
     background: rgb(var(--color-background)) !important;
     border-bottom: 1px solid rgb(var(--color-border));
@@ -302,7 +312,7 @@ body {
 
   #left-secondary-panel .subcategory-button {
     padding: 0 8px !important;
-    height: 40px;
+    height: var(--subcategory-bar-height) !important;
     border: none !important;
     background: transparent !important;
     color: rgb(var(--color-foreground-secondary)) !important;
@@ -357,7 +367,7 @@ body {
     bottom: 0;
     right: 0;
     width: var(--sidebar-width);
-    height: 60px;
+    height: var(--footer-height);
     background: rgb(var(--color-background));
     border-top: 1px solid rgb(var(--color-border));
     border-left: 1px solid rgb(var(--color-border));
@@ -400,22 +410,25 @@ body {
   
   #left-main-panel .category-button {
     flex-direction: row !important;
-    border-top: none !important;
-    border-bottom: 2px solid transparent !important;
-    font-size: 11px !important;
+    height: 36px;
+    padding: 4px 12px !important;
+    font-size: 13px !important;
     font-weight: 500 !important;
     letter-spacing: 0.08em !important;
-    color: rgb(var(--color-foreground-secondary)) !important;
-    padding: 0 12px !important;
+    color: rgb(var(--color-foreground)) !important;
+    background: rgb(244, 244, 244) !important;
+    border: 1px solid rgb(var(--color-border)) !important;
+    border-radius: 4px !important;
+    transition: border-color 250ms;
   }
   
   #left-main-panel .category-button:hover {
-    color: rgb(var(--color-foreground)) !important;
+    border-color: rgb(var(--color-foreground)) !important;
   }
   
   #left-main-panel .category-button.active {
-    border-bottom-color: rgb(var(--color-foreground)) !important;
-    color: rgb(var(--color-foreground)) !important;
+    border-color: rgb(var(--color-foreground)) !important;
+    background: rgb(244, 244, 244) !important;
   }
 }
 
@@ -1051,11 +1064,11 @@ input:checked + .toggle-slider:before {
 #right-secondary-panel,
 .panel-right-secondary {
   position: fixed !important;
-  top: calc(var(--sidebar-header-height) + 90px) !important;
+  top: calc(var(--sidebar-header-height) + var(--category-bar-height) + var(--subcategory-bar-height)) !important;
   right: 0 !important;
   left: auto !important;
   width: var(--sidebar-width) !important;
-  height: 56px !important;
+  height: var(--toolbar-height) !important;
   background: rgb(var(--color-background)) !important;
   border-bottom: 1px solid rgb(var(--color-border));
   border-left: 1px solid rgb(var(--color-border));
@@ -1134,7 +1147,7 @@ input:checked + .toggle-slider:before {
 
 /* Right main panel offset when toolbar visible */
 #right-main-panel.has-toolbar {
-  top: calc(var(--sidebar-header-height) + 146px) !important;
+  top: calc(var(--sidebar-header-height) + var(--category-bar-height) + var(--subcategory-bar-height) + var(--toolbar-height)) !important;
 }
 
 /* ============================================
