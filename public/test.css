@@ -15,7 +15,7 @@
   --header-height-desktop: 0px;
   --header-height-mobile: 0px;
   --sidebar-header-height: 40px;
-  --category-bar-height: 60px;
+  --category-bar-height: 70px;
   --subcategory-bar-height: 50px;
   --toolbar-height: 56px;
 	--footer-height: 60px;
@@ -416,7 +416,7 @@ body {
     font-weight: 500 !important;
     letter-spacing: 0.08em !important;
     color: rgb(var(--color-foreground)) !important;
-    background: rgb(244, 244, 244) !important;
+    transparent !important;
     border: 1px solid rgb(var(--color-border)) !important;
     border-radius: 4px !important;
     transition: border-color 250ms;
@@ -428,7 +428,7 @@ body {
   
   #left-main-panel .category-button.active {
     border-color: rgb(var(--color-foreground)) !important;
-    background: rgb(244, 244, 244) !important;
+    transparent !important;
   }
 }
 
