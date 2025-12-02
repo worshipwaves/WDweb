@@ -355,6 +355,13 @@ export const AudioDataSchema = z.object({
 
 export type AudioData = z.infer<typeof AudioDataSchema>;
 
+// Accordion state schema for navigation
+export const AccordionStateSchema = z.record(z.string(), z.boolean());
+export type AccordionState = z.infer<typeof AccordionStateSchema>;
+
+export const AccordionStateMapSchema = z.record(z.string(), AccordionStateSchema);
+export type AccordionStateMap = z.infer<typeof AccordionStateMapSchema>;
+
 // Hero Forge UI state schema
 export const UIStateSchema = z.object({
   leftPanelVisible: z.boolean(),
@@ -370,6 +377,7 @@ export const UIStateSchema = z.object({
   activeSubcategory: z.string().nullable(),
   subcategoryHistory: z.record(z.string(), z.string()), // category -> last subcategory
   filterSelections: z.record(z.string(), z.record(z.string(), z.array(z.string()))),
+  accordionState: AccordionStateMapSchema.optional().default({}),
   currentBackground: z.object({
     type: z.enum(['paint', 'accent', 'rooms']),
     id: z.string()

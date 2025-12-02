@@ -27,15 +27,18 @@ export class FilterIconStrip implements PanelComponent {
   private _activeFilters: Map<string, Set<string>>;
   private _onChange: (groupId: string, selections: Set<string>) => void;
   private _tooltip: Tooltip = new Tooltip();
+  private _compact: boolean;
   
   constructor(
     groups: FilterIconGroup[],
     initialFilters: Map<string, Set<string>>,
-    onChange: (groupId: string, selections: Set<string>) => void
+    onChange: (groupId: string, selections: Set<string>) => void,
+    compact: boolean = false
   ) {
     this._groups = groups;
     this._activeFilters = new Map(initialFilters);
     this._onChange = onChange;
+    this._compact = compact;
     
     groups.forEach(group => {
       if (!this._activeFilters.has(group.id)) {
@@ -46,7 +49,7 @@ export class FilterIconStrip implements PanelComponent {
   
   render(): HTMLElement {
     this._container = document.createElement('div');
-    this._container.className = 'filter-icon-strip';
+    this._container.className = this._compact ? 'filter-icon-strip compact' : 'filter-icon-strip';
     
     // Wrap show all button in container div to match filter-group structure
     const showAllContainer = document.createElement('div');

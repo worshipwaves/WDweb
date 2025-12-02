@@ -30,13 +30,15 @@ export class SectionSelectorPanel implements PanelComponent {
   private _onSelectionChange: (selectedIndices: Set<number>) => void;
   private _icons: SectionIcon[] = [];
 	private _tooltip: Tooltip;
+  private _inline: boolean;
   
   constructor(
     controller: ApplicationController,
     numberSections: number,
     shape: string,
     selectedSections: Set<number>,
-    onSelectionChange: (selectedIndices: Set<number>) => void
+    onSelectionChange: (selectedIndices: Set<number>) => void,
+    inline: boolean = false
   ) {
     this._controller = controller;
     this._numberSections = numberSections;
@@ -44,6 +46,7 @@ export class SectionSelectorPanel implements PanelComponent {
     this._selectedSections = new Set(selectedSections); // Clone to avoid mutation
     this._onSelectionChange = onSelectionChange;
 		this._tooltip = new Tooltip();
+    this._inline = inline;
     this._buildIconList();
   }
   
@@ -92,6 +95,11 @@ export class SectionSelectorPanel implements PanelComponent {
   }
   
   render(): HTMLElement {
+    // Inline mode: simplified horizontal button group for accordion header
+    if (this._inline) {
+      return this._renderInline();
+    }
+    
     const container = document.createElement('div');
     container.className = 'panel-content section-selector-panel';
     
@@ -112,6 +120,51 @@ export class SectionSelectorPanel implements PanelComponent {
     
     body.appendChild(iconColumn);
     container.appendChild(body);
+    
+    this._container = container;
+    return container;
+  }
+  
+  /**
+   * Render inline mode for accordion header embedding
+   */
+  private _renderInline(): HTMLElement {
+    const container = document.createElement('div');
+    container.className = 'section-selector';
+    
+    // Sort icons by visual order
+    const sortedIcons = [...this._icons].sort((a, b) => a.visualOrder - b.visualOrder);
+    
+    sortedIcons.forEach(iconDef => {
+      const button = document.createElement('button');
+      button.className = 'section-button';
+      button.dataset.iconId = iconDef.id;
+      
+      // Display label: "All" or section number
+      button.textContent = iconDef.sectionIndex === null ? 'All' : String(iconDef.sectionIndex + 1);
+      
+      // Set pressed state
+      const isSelected = this._isIconSelected(iconDef);
+      button.setAttribute('aria-pressed', String(isSelected));
+      if (isSelected) {
+        button.classList.add('selected');
+      }
+      
+      // Tooltip
+      button.addEventListener('mouseenter', () => {
+        this._tooltip.show(iconDef.label, button, 'above', 'tooltip-section');
+      });
+      button.addEventListener('mouseleave', () => {
+        this._tooltip.hide();
+      });
+      
+      // Click handler
+      button.addEventListener('click', (event) => {
+        this._handleIconClick(iconDef, event);
+      });
+      
+      container.appendChild(button);
+    });
     
     this._container = container;
     return container;

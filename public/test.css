@@ -16,8 +16,10 @@
   --header-height-mobile: 0px;
   --sidebar-header-height: 40px;
   --category-bar-height: 70px;
+  /* DEPRECATED: Accordion replaces fixed bars
   --subcategory-bar-height: 50px;
   --toolbar-height: 56px;
+  */
 	--footer-height: 60px;
   --sidebar-width: 400px;
   
@@ -227,7 +229,7 @@ body {
   #right-main-panel, 
   .panel-right-main {
     position: fixed !important;
-    top: calc(var(--sidebar-header-height) + var(--category-bar-height) + var(--subcategory-bar-height)) !important;
+    top: calc(var(--sidebar-header-height) + var(--category-bar-height)) !important;
     right: 0 !important;
     bottom: var(--footer-height) !important;
     left: auto !important;
@@ -261,105 +263,12 @@ body {
     z-index: 30;
   }
 	
-	/* Subcategory Tabs (Secondary Nav) */
+	/* DEPRECATED: Subcategory tabs replaced by accordion
   #left-secondary-panel,
   .panel-left-secondary {
-    display: flex !important;
-    position: fixed !important;
-    top: calc(var(--sidebar-header-height) + var(--category-bar-height)) !important;
-    right: 0 !important;
-    bottom: auto !important;
-    left: auto !important;
-    width: var(--sidebar-width) !important;
-    height: var(--subcategory-bar-height) !important;
-    
-    background: rgb(var(--color-background)) !important;
-    border-bottom: 1px solid rgb(var(--color-border));
-    border-left: 1px solid rgb(var(--color-border));
-    transform: none !important;
-    opacity: 1 !important;
-    z-index: 29;
-    padding: 0 10px 0 16px;
-    align-items: center;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none; /* Firefox */
+    display: none !important;
   }
-
-  #left-secondary-panel::-webkit-scrollbar,
-  .panel-left-secondary::-webkit-scrollbar {
-    display: none; /* Chrome, Safari */
-  }
-
-  /* Force horizontal layout for subcat buttons */
-  #left-secondary-panel .panel-content {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center;
-    width: 100%;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  #left-secondary-panel .subcategory-list {
-    display: flex !important;
-    flex-direction: row !important;
-    flex: 1;
-    gap: 15px;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  #left-secondary-panel .subcategory-button {
-    padding: 0 8px !important;
-    height: var(--subcategory-bar-height) !important;
-    border: none !important;
-    background: transparent !important;
-    color: rgb(var(--color-foreground-secondary)) !important;
-    font-size: 12px !important;
-    font-weight: 400 !important;
-    letter-spacing: 0.02em !important;
-    border-bottom: 2px solid transparent !important;
-    white-space: nowrap;
-    transition: color 0.2s;
-  }
-
-  #left-secondary-panel .subcategory-button:hover {
-    color: rgb(var(--color-foreground)) !important;
-  }
-
-  #left-secondary-panel .subcategory-button.selected {
-    color: rgb(var(--color-foreground)) !important;
-    font-weight: 500 !important;
-    border-bottom-color: rgb(var(--color-foreground)) !important;
-    background: transparent !important;
-    border-left: none !important;
-  }
-  
-  /* Subcategory help icon */
-  .subcategory-help-icon {
-    width: 24px;
-    height: 24px;
-    margin-left: auto;
-    margin-right: 8px;
-    background: transparent;
-    border: 1px solid rgb(var(--color-border));
-    border-radius: 50%;
-    font-size: 12px;
-    font-weight: 500;
-    color: rgb(var(--color-foreground-secondary));
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: border-color 0.2s, color 0.2s;
-  }
-  
-  .subcategory-help-icon:hover {
-    border-color: rgb(var(--color-foreground));
-    color: rgb(var(--color-foreground));
-  }
+  */
 
   /* Sidebar Footer - CTA Buttons */
   .sidebar-footer {
@@ -1058,32 +967,12 @@ input:checked + .toggle-slider:before {
   cursor: pointer;
 }
 
-/* ============================================
-   RIGHT SECONDARY PANEL (Section Selector)
-   ============================================ */
+/* DEPRECATED: Section toolbar embedded in accordion headers
 #right-secondary-panel,
 .panel-right-secondary {
-  position: fixed !important;
-  top: calc(var(--sidebar-header-height) + var(--category-bar-height) + var(--subcategory-bar-height)) !important;
-  right: 0 !important;
-  left: auto !important;
-  width: var(--sidebar-width) !important;
-  height: var(--toolbar-height) !important;
-  background: rgb(var(--color-background)) !important;
-  border-bottom: 1px solid rgb(var(--color-border));
-  border-left: 1px solid rgb(var(--color-border));
-  z-index: 28;
-  display: none;
-  padding: 0 16px;
-  box-sizing: border-box;
+  display: none !important;
 }
-
-#right-secondary-panel.visible,
-.panel-right-secondary.visible {
-  display: flex !important;
-  align-items: center;
-  gap: 8px;
-}
+*/
 
 .section-selector-panel {
   display: flex;
@@ -1145,10 +1034,11 @@ input:checked + .toggle-slider:before {
   display: none;
 }
 
-/* Right main panel offset when toolbar visible */
+/* DEPRECATED: Toolbar embedded in accordion headers
 #right-main-panel.has-toolbar {
-  top: calc(var(--sidebar-header-height) + var(--category-bar-height) + var(--subcategory-bar-height) + var(--toolbar-height)) !important;
+  top: calc(var(--sidebar-header-height) + var(--category-bar-height)) !important;
 }
+*/
 
 /* ============================================
    FILTER ICON STRIP (Minimalista theme)
@@ -1212,4 +1102,531 @@ input:checked + .toggle-slider:before {
 }
 
 .filter-icon.filter-show-all svg {
-  stroke: rg
+  stroke: rgb(var(--color-foreground));
+}
+	
+/* ============================================
+   SUBCATEGORY ACCORDION
+   ============================================ */
+
+.subcategory-accordion {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  border-top: 1px solid rgba(var(--color-foreground), 0.2);
+}
+
+/* Near the top - marker hiding */
+/*.subcategory-item summary {
+  list-style: none;
+}
+
+.subcategory-item summary::-webkit-details-marker {
+  display: none;
+} */
+
+/* Native-style marker via pseudo-element (flex summary breaks native marker) */
+.subcategory-header::before {
+  content: '▶';
+  font-size: 10px;
+  color: rgb(var(--color-foreground-secondary));
+  transition: transform 250ms ease;
+  flex-shrink: 0;
+}
+
+.subcategory-item[open] > .subcategory-header::before {
+  content: '▼';
+}
+
+/* Using native <details> marker */
+.subcategory-item summary {
+  cursor: pointer;
+}
+
+.subcategory-item {
+  border-bottom: 1px solid rgb(var(--color-border));
+}
+
+/* .subcategory-item summary {
+  list-style: none;
+}
+
+.subcategory-item summary::-webkit-details-marker {
+  display: none;
+} */
+
+.subcategory-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 25px;
+  cursor: pointer;
+  transition: opacity var(--duration-default, 250ms);
+  user-select: none;
+}
+
+.subcategory-header:hover {
+  opacity: 0.7;
+}
+
+.subcategory-header:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px rgba(var(--color-foreground), 0.3);
+}
+
+.subcategory-label {
+  font-family: var(--font-family-base);
+  font-size: 14px;
+  font-weight: 500;
+  color: rgb(var(--color-foreground));
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+
+.subcategory-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.subcategory-value {
+  font-size: 12px;
+  font-weight: 400;
+  color: rgb(var(--color-foreground-secondary));
+  margin-left: auto;
+  margin-right: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.subcategory-toolbar + .subcategory-value {
+  margin-left: 0;
+}
+
+.subcategory-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: rgb(var(--color-foreground));
+  transform: rotate(-90deg);
+  transition: transform var(--duration-default, 250ms);
+}
+
+.subcategory-item[open] > summary .subcategory-icon {
+  transform: rotate(0deg);
+}
+
+/* Single-item variant (auto-open, no caret) */
+.subcategory-item--single > .subcategory-header {
+  cursor: default;
+}
+
+.subcategory-item--single > .subcategory-header:hover {
+  opacity: 1;
+}
+
+.subcategory-item--single .subcategory-icon {
+  display: none;
+}
+
+/* Disabled placeholder variant */
+.subcategory-item--disabled > .subcategory-header {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: default;
+}
+
+.subcategory-item--disabled .subcategory-value {
+  font-style: italic;
+}
+
+/* Content area */
+.subcategory-content {
+  padding: 0 0 16px 0;
+}
+
+/* ============================================
+   ACCORDION TOOLBAR CONTROLS
+   ============================================ */
+
+.toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: rgb(var(--color-border));
+}
+
+/* Compact filter icons for accordion header */
+.subcategory-toolbar .filter-group {
+  display: flex;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.subcategory-toolbar .filter-icon {
+  width: 36px;
+  height: 36px;
+  padding: 4px;
+}
+
+/* Section selector buttons for accordion header */
+.subcategory-toolbar .section-selector {
+  display: flex;
+  gap: 4px;
+}
+
+.subcategory-toolbar .section-button {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  font-family: var(--font-family-base);
+  font-size: 11px;
+  font-weight: 500;
+  color: rgb(var(--color-foreground));
+  background: transparent;
+  border: 1px solid rgb(var(--color-border));
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color var(--duration-default, 250ms);
+}
+
+.subcategory-toolbar .section-button:hover {
+  border-color: rgb(var(--color-foreground));
+}
+
+.subcategory-toolbar .section-button[aria-pressed="true"] {
+  border-color: rgb(var(--color-foreground));
+  background: rgba(var(--color-foreground), 0.05);
+}
+
+.subcategory-toolbar .section-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(var(--color-foreground), 0.3);
+}
+
+/* Toggle switch for accordion header (Backing) */
+.subcategory-toolbar .toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+
+.subcategory-toolbar .toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.subcategory-toolbar .toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgb(var(--color-border));
+  transition: var(--duration-default, 250ms);
+  border-radius: 20px;
+}
+
+.subcategory-toolbar .toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: var(--duration-default, 250ms);
+  border-radius: 50%;
+}
+
+.subcategory-toolbar input:checked + .toggle-slider {
+  background-color: rgb(var(--color-foreground));
+}
+
+.subcategory-toolbar input:checked + .toggle-slider:before {
+  transform: translateX(16px);
+}	
+
+/* ============================================
+   HORIZONTAL SCROLL CONTAINER
+   ============================================ */
+
+.scroll-container {
+  position: relative;
+}
+
+.horizontal-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 0 25px 8px;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.wood-species-image-grid.horizontal-scroll {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.horizontal-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Scroll fade indicators */
+.scroll-fade {
+  position: absolute;
+  top: 0;
+  bottom: 8px;
+  width: 40px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--duration-default, 250ms);
+  z-index: 1;
+}
+
+.scroll-fade--left {
+  left: 0;
+  background: linear-gradient(90deg, rgb(var(--color-background)) 0%, transparent 100%);
+}
+
+.scroll-fade--right {
+  right: 0;
+  background: linear-gradient(90deg, transparent 0%, rgb(var(--color-background)) 100%);
+}
+
+.scroll-container.can-scroll-left .scroll-fade--left,
+.scroll-container.can-scroll-right .scroll-fade--right {
+  opacity: 1;
+}
+
+/* ============================================
+   ACCORDION CARD BASE
+   ============================================ */
+
+.accordion-card {
+  flex-shrink: 0;
+  background: rgb(var(--color-background));
+  border: 2px solid rgb(var(--color-border));
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color var(--duration-default, 250ms);
+}
+
+.accordion-card:hover {
+  border-color: rgb(var(--color-foreground));
+}
+
+.accordion-card.selected {
+  border-color: rgb(var(--color-foreground));
+}
+
+.accordion-card:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(var(--color-foreground), 0.3);
+}
+
+/* ============================================
+   STYLE CARDS (Archetypes) - 140px
+   ============================================ */
+
+.style-card {
+  width: 140px;
+}
+
+.style-card-image {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 2px 2px 0 0;
+  display: block;
+}
+
+.style-card-label {
+  padding: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+  color: rgb(var(--color-foreground));
+  border-top: 1px solid rgb(var(--color-border));
+}
+
+/* ============================================
+   SPECIES CARDS - 328px
+   ============================================ */
+
+.accordion-species-card {
+  width: 328px;
+  padding: 12px;
+}
+
+.accordion-species-card .species-card-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgb(var(--color-foreground));
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.accordion-species-card .species-grain-grid {
+  display: flex;
+  gap: 8px;
+}
+
+.accordion-species-card .grain-thumb {
+  width: 70px;
+  height: 70px;
+  border: 2px solid rgb(var(--color-border));
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color var(--duration-default, 250ms);
+}
+
+.accordion-species-card .grain-thumb:hover {
+  border-color: rgb(var(--color-foreground));
+}
+
+.accordion-species-card .grain-thumb.selected {
+  border-color: rgb(var(--color-foreground));
+}
+
+.accordion-species-card .grain-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ============================================
+   BACKING MATERIAL CARDS - 80px
+   ============================================ */
+
+.backing-card {
+  width: 80px;
+}
+
+.backing-card-swatch {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 2px 2px 0 0;
+}
+
+.backing-card-label {
+  padding: 6px 4px;
+  font-size: 10px;
+  font-weight: 500;
+  text-align: center;
+  color: rgb(var(--color-foreground));
+  border-top: 1px solid rgb(var(--color-border));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================
+   PAINT COLOR CARDS - 60px
+   ============================================ */
+
+.paint-card {
+  width: 60px;
+}
+
+.paint-card-swatch {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 2px 2px 0 0;
+}
+
+.paint-card-label {
+  padding: 4px;
+  font-size: 9px;
+  font-weight: 500;
+  text-align: center;
+  color: rgb(var(--color-foreground));
+  border-top: 1px solid rgb(var(--color-border));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================
+   ACCENT WALL CARDS - 100px
+   ============================================ */
+
+.accent-card {
+  width: 100px;
+}
+
+.accent-card-image {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 2px 2px 0 0;
+  display: block;
+}
+
+.accent-card-label {
+  padding: 6px 4px;
+  font-size: 10px;
+  font-weight: 500;
+  text-align: center;
+  color: rgb(var(--color-foreground));
+  border-top: 1px solid rgb(var(--color-border));
+}
+
+/* ============================================
+   ROOM SCENE CARDS - 160px
+   ============================================ */
+
+.room-card {
+  width: 160px;
+}
+
+.room-card-image {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 2px 2px 0 0;
+  display: block;
+}
+
+.room-card-label {
+  padding: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+  color: rgb(var(--color-foreground));
+  border-top: 1px solid rgb(var(--color-border));
+}
+
+/* ============================================
+   SLIDER CARD (Layout subcategory)
+   ============================================ */
+
+.slider-card {
+  margin: 0 25px;
+  padding: 16px;
+  background: rgba(var(--color-foreground), 0.02);
+  border: 1px solid rgb(var(--color-border));
+  border-radius: 4px;
+}
+
+/* ============================================
+   UPLOAD CARD (AUDIO > Custom)
+   ============================================ */
+
+.upload-card {
+  margin: 0 25px;
+}

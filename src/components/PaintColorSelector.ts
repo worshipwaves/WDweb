@@ -21,20 +21,23 @@ export class PaintColorSelector implements PanelComponent {
   private _currentSelection: string;
   private _onSelect: (id: string) => void;
   private _tooltip: Tooltip = new Tooltip();
+  private _horizontal: boolean = false;
 
   constructor(
     colors: PaintColor[],
     currentSelection: string,
-    onSelect: (id: string) => void
+    onSelect: (id: string) => void,
+    horizontal: boolean = false
   ) {
     this._colors = colors;
     this._currentSelection = currentSelection;
     this._onSelect = onSelect;
+    this._horizontal = horizontal;
   }
 
   render(): HTMLElement {
     const container = document.createElement('div');
-    container.className = 'paint-color-selector';
+    container.className = this._horizontal ? 'paint-color-selector horizontal-scroll' : 'paint-color-selector';
 
     // Group colors by their group field
     const groups = this._groupColors();

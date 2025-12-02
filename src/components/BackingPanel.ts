@@ -34,18 +34,55 @@ export class BackingPanel implements PanelComponent {
   private currentType: string;
   private currentMaterial: string;
 
+  private horizontal: boolean = false;
+  
+  /**
+   * Create a standalone toggle element for embedding in accordion header.
+   * Static factory that doesn't require a full BackingPanel instance.
+   */
+  static createEmbeddableToggle(
+    isEnabled: boolean,
+    onChange: (enabled: boolean) => void
+  ): HTMLElement {
+    const toggle = document.createElement('label');
+    toggle.className = 'toggle-switch';
+    toggle.innerHTML = `
+      <input type="checkbox" ${isEnabled ? 'checked' : ''}>
+      <span class="toggle-slider"></span>
+    `;
+    
+    const checkbox = toggle.querySelector('input')!;
+    checkbox.addEventListener('change', () => {
+      onChange(checkbox.checked);
+    });
+    
+    return toggle;
+  }
+  
+  /**
+   * Update an existing embeddable toggle's checked state
+   */
+  static updateToggleState(toggle: HTMLElement, isEnabled: boolean): void {
+    const checkbox = toggle.querySelector('input') as HTMLInputElement;
+    if (checkbox) {
+      checkbox.checked = isEnabled;
+    }
+  }
+
   constructor(
     isEnabled: boolean,
     type: string,
     material: string,
-    onOptionSelected: (option: string, value: unknown) => void
+    onOptionSelected: (option: string, value: unknown) => void,
+    horizontal: boolean = false
   ) {
     this.isEnabled = isEnabled; // Use the passed-in state
     this.currentType = type;
     this.currentMaterial = material;
     this.onOptionSelected = onOptionSelected;
+    this.horizontal = horizontal;
     this.container = document.createElement('div');
-    this.container.className = 'backing-panel-body';
+    this.container.className = horizontal ? 'backing-panel-body horizontal-scroll' : 'backing-panel-body';
 
     // Fetch config and then render
     void this.loadBackingConfig().then(() => {

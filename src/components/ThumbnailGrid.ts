@@ -21,12 +21,14 @@ export class ThumbnailGrid implements PanelComponent {
   private _tooltip: Tooltip = new Tooltip();
 	private _tooltipClassName: string;
 	private _isDestroyed: boolean = false;
+  private _horizontal: boolean = false;
   
   constructor(
     items: ThumbnailItem[],
     onSelect: (id: string) => void,
     currentSelection: string | null = null,
-    tooltipContext?: { category?: string; subcategory?: string; type?: 'archetype' | 'species' }
+    tooltipContext?: { category?: string; subcategory?: string; type?: 'archetype' | 'species' },
+    horizontal: boolean = false
   ) {
     this._items = items;
     this._onSelect = onSelect;
@@ -34,11 +36,12 @@ export class ThumbnailGrid implements PanelComponent {
 		this._tooltipClassName = tooltipContext 
       ? TooltipClassNameFactory.generate(tooltipContext)
       : 'tooltip-grid';
+    this._horizontal = horizontal;
   }
   
   render(): HTMLElement {
     const container = document.createElement('div');
-    container.className = 'thumbnail-grid';
+    container.className = this._horizontal ? 'thumbnail-grid horizontal-scroll' : 'thumbnail-grid';
     
     this._items.forEach(item => {
       const card = document.createElement('button');

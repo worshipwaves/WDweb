@@ -13,11 +13,12 @@ import { PanelStackManager } from './components/PanelStackManager';
 import { RightPanelContentRenderer } from './components/RightPanelContent';
 import { SectionSelectorPanel } from './components/SectionSelectorPanel';
 import { SliderGroup } from './components/SliderGroup';
+import { SubcategoryAccordion, type AccordionItemConfig } from './components/SubcategoryAccordion';
 import { ThumbnailGrid } from './components/ThumbnailGrid';
 import { WoodMaterialSelector } from './components/WoodMaterialSelector';
 import { PerformanceMonitor } from './PerformanceMonitor';
 import { ConstraintResolver } from './services/ConstraintResolver';
-import type { CategoriesConfig, FilterIconGroup, ThumbnailConfig } from './types/PanelTypes';
+import type { CategoriesConfig, FilterIconGroup, PanelComponent, ThumbnailConfig } from './types/PanelTypes';
 import {
   ApplicationState,
   BackgroundsConfigSchema,
@@ -217,7 +218,9 @@ export class ApplicationController {
   private _sectionSelectorPanel: SectionSelectorPanel | null = null;
   private _helpTooltip: Tooltip | null = null;
   private _activeRightPanelComponent: PanelComponent | null = null;
-  private _renderId: number = 0;	
+  private _renderId: number = 0;
+  private _accordion: SubcategoryAccordion | null = null;
+  private _accordionState: Record<string, Record<string, boolean>> = {};
   
   constructor(facade: WaveformDesignerFacade) {
     this._facade = facade;
@@ -262,17 +265,10 @@ export class ApplicationController {
       }
     });
     
-    // 2. Render Left Secondary Panel
-    this._renderLeftSecondaryPanel(activeCategory, activeSubcategory);
+    // 2. Render accordion for the category (replaces Left Secondary Panel)
+    this._renderAccordionForCategory(activeCategory);
     
-    // 3. If subcategory exists, render right panels
-    if (activeSubcategory) {
-      requestAnimationFrame(() => {
-        if (this._state?.ui.activeSubcategory) {
-          this._handleSubcategorySelected(this._state.ui.activeSubcategory);
-        }
-      });
-    }
+    // 3. Subcategory content now handled by accordion's getContent callback
   }
   
   /**
@@ -911,7 +907,8 @@ export class ApplicationController {
     
     void this.dispatch({ type: 'CATEGORY_SELECTED', payload: categoryId });
     
-    this._handleStyleCategorySelected();
+    // Render accordion for the new category
+    this._renderAccordionForCategory(categoryId);
   }
 	
 	/**
@@ -1028,8 +1025,10 @@ export class ApplicationController {
       }
     }
     
-    // Re-render panel to show updated selection
-    this._renderRightMainFiltered();
+    // Re-render panel to show updated selection (skip if accordion handles rendering)
+    if (!this._accordion) {
+      this._renderRightMainFiltered();
+    }
   }
 	
 	/**
@@ -1046,7 +1045,108 @@ export class ApplicationController {
     // Here we just use the right edge of the main panel + gap
     this._leftSecondaryPanel.style.left = `${mainRect.right + gap}px`;
   }
+  
+  /**
+   * Render subcategory accordion for a category
+   * Replaces the horizontal subcategory tab bar with vertical accordion
+   * @private
+   */
+  private _renderAccordionForCategory(categoryId: string): void {
+    if (!this._categoriesConfig || !this._rightMainPanel) return;
+    
+    const categoryConfig = this._categoriesConfig[categoryId as keyof CategoriesConfig];
+    if (!categoryConfig) return;
+    
+    // Destroy previous accordion
+    if (this._accordion) {
+      this._accordion.destroy();
+      this._accordion = null;
+    }
+    
+    // Hide legacy left secondary panel
+    if (this._leftSecondaryPanel) {
+      this._leftSecondaryPanel.style.display = 'none';
+      this._leftSecondaryPanel.classList.remove('visible');
+    }
+    
+    // Build accordion items from subcategories
+    const items = this._buildAccordionItems(categoryId);
+    if (items.length === 0) {
+      this._rightMainPanel.innerHTML = '<div class="panel-placeholder">No options available</div>';
+      return;
+    }
+    
+    // Get initial open state
+    const initialState = this._getInitialAccordionState(categoryId);
+    
+    // Create accordion
+    this._accordion = new SubcategoryAccordion({
+      categoryId,
+      items,
+      initialOpenState: initialState,
+      onToggle: (subcategoryId, isOpen) => this._handleAccordionToggle(categoryId, subcategoryId, isOpen)
+    });
+    
+    // Render into right main panel
+    this._rightMainPanel.innerHTML = '';
+    this._rightMainPanel.appendChild(this._accordion.render());
+    this._rightMainPanel.style.display = 'block';
+    this._rightMainPanel.classList.add('visible');
+    
+    // Auto-select first subcategory if none selected
+    if (!this._state?.ui.activeSubcategory && items.length > 0) {
+      const firstEnabled = items.find(i => !i.isDisabled);
+      if (firstEnabled) {
+        void this.dispatch({ 
+          type: 'SUBCATEGORY_SELECTED', 
+          payload: { category: categoryId, subcategory: firstEnabled.id } 
+        });
+      }
+    }
+  }
 	
+	/**
+   * Build accordion item configurations from category subcategories
+   * @private
+   */
+  private _buildAccordionItems(categoryId: string): AccordionItemConfig[] {
+    if (!this._categoriesConfig) return [];
+    
+    const categoryConfig = this._categoriesConfig[categoryId as keyof CategoriesConfig];
+    if (!categoryConfig) return [];
+    
+    const items: AccordionItemConfig[] = [];
+    
+    // Sort subcategories by order
+    const sortedSubcategories = Object.entries(categoryConfig.subcategories)
+      .map(([id, config]) => ({ id, config }))
+      .sort((a, b) => (a.config.order ?? 99) - (b.config.order ?? 99));
+    
+    for (const { id: subcategoryId, config: subcategory } of sortedSubcategories) {
+      const item: AccordionItemConfig = {
+        id: subcategoryId,
+        label: subcategory.label,
+        getValue: () => this._getSubcategoryDisplayValue(categoryId, subcategoryId),
+        isDisabled: !!subcategory.note, // Placeholder subcategories are disabled
+        isSingle: sortedSubcategories.length === 1,
+        getContent: async () => this._renderSubcategoryContent(categoryId, subcategoryId)
+      };
+      
+      // Add toolbar getter for specific subcategories
+      if (categoryId === 'wood' && subcategoryId === 'panel' && subcategory.filters) {
+        item.getToolbar = () => this._createFilterToolbar(categoryId, subcategoryId, subcategory.filters!);
+      } else if (categoryId === 'wood' && subcategoryId === 'wood_species') {
+        item.getToolbar = () => this._createSectionSelectorToolbar();
+      } else if (categoryId === 'wood' && subcategoryId === 'backing') {
+        item.getToolbar = () => this._createBackingToggleToolbar();
+      }
+      
+      items.push(item);
+    }
+    
+    return items;
+  }
+
 	/**
    * Render Left Secondary Panel without dispatching actions
    * Pure rendering method for state restoration
@@ -1095,10 +1195,727 @@ export class ApplicationController {
   }
   
   /**
+   * Get display value for subcategory header
+   * @private
+   */
+  private _getSubcategoryDisplayValue(categoryId: string, subcategoryId: string): string {
+    if (!this._state) return '';
+    
+    const composition = this._state.composition;
+    const ui = this._state.ui;
+    
+    const key = `${categoryId}:${subcategoryId}`;
+    
+    switch (key) {
+      case 'wood:panel': {
+        const filterKey = `${categoryId}_${subcategoryId}`;
+        const filters = ui.filterSelections[filterKey] || {};
+        const shape = filters.shape?.[0] || 'circular';
+        const pattern = filters.slot_pattern?.[0] || 'radial';
+        return `${this._capitalize(shape)}, ${this._capitalize(pattern)}`;
+      }
+      
+      case 'wood:wood_species': {
+        const mat = composition.section_materials?.[0];
+        if (!mat) return '';
+        const speciesName = this._getSpeciesDisplayName(mat.species);
+        const grain = this._capitalize(mat.grain_direction);
+        return `${speciesName} - ${grain}`;
+      }
+      
+      case 'wood:layout': {
+        const w = composition.frame_design.finish_x;
+        const h = composition.frame_design.finish_y;
+        return w && h ? `${w}" × ${h}"` : '';
+      }
+      
+      case 'wood:backing': {
+        if (!composition.frame_design.backing?.enabled) return 'None';
+        return this._getBackingDisplayName(composition.frame_design.backing.material);
+      }
+      
+      case 'wood:frames':
+        return 'Coming Soon';
+      
+      case 'backgrounds:paint':
+      case 'backgrounds:accent':
+      case 'backgrounds:rooms': {
+        const bg = ui.currentBackground;
+        if (!bg) return '';
+        // subcategoryId is 'paint', 'accent', or 'rooms'
+        if (bg.type !== subcategoryId) return '';
+        return this._getBackgroundDisplayName(bg.type, bg.id);
+      }
+      
+      default:
+        return '';
+    }
+  }
+  
+  /**
+   * Capitalize first letter of string
+   * @private
+   */
+  private _capitalize(str: string): string {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+  
+  /**
+   * Get display name for species
+   * @private
+   */
+  private _getSpeciesDisplayName(speciesId: string): string {
+    if (!this._woodMaterialsConfig) return speciesId;
+    const species = this._woodMaterialsConfig.species_catalog.find(s => s.id === speciesId);
+    return species?.display_name || speciesId;
+  }
+  
+  /**
+   * Get display name for backing material
+   * @private
+   */
+  private _getBackingDisplayName(materialId: string): string {
+    // Simple fallback - could be enhanced with backing config lookup
+    return this._capitalize(materialId.replace(/-/g, ' '));
+  }
+  
+  /**
+   * Get display name for background
+   * @private
+   */
+  private _getBackgroundDisplayName(type: string, id: string): string {
+    if (!this._backgroundsConfig) return id;
+    const category = this._backgroundsConfig.categories[type as keyof typeof this._backgroundsConfig.categories];
+    if (!category) return id;
+    const bg = (category as Array<{ id: string; label?: string }>).find(b => b.id === id);
+    return bg?.label || id;
+  }
+  
+  /**
+   * Handle accordion toggle event
+   * @private
+   */
+  private _handleAccordionToggle(categoryId: string, subcategoryId: string, isOpen: boolean): void {
+    // Persist accordion state to both local cache and UI state
+    if (!this._accordionState[categoryId]) {
+      this._accordionState[categoryId] = {};
+    }
+    this._accordionState[categoryId][subcategoryId] = isOpen;
+    
+    // Persist to UI state for storage
+    if (this._state) {
+      this._state = {
+        ...this._state,
+        ui: {
+          ...this._state.ui,
+          accordionState: { ...this._accordionState }
+        }
+      };
+      this._facade.persistState(this._state);
+    }
+    
+    // Update active subcategory when opened
+    if (isOpen) {
+      void this.dispatch({
+        type: 'SUBCATEGORY_SELECTED',
+        payload: { category: categoryId, subcategory: subcategoryId }
+      });
+      
+      // Enable/disable section interaction for wood species
+      if (this._sceneManager && 'setSectionInteractionEnabled' in this._sceneManager) {
+        const enableInteraction = categoryId === 'wood' && subcategoryId === 'wood_species';
+        (this._sceneManager as { setSectionInteractionEnabled: (enabled: boolean) => void }).setSectionInteractionEnabled(enableInteraction);
+        (this._sceneManager as { setSectionOverlaysVisible: (visible: boolean) => void }).setSectionOverlaysVisible(enableInteraction);
+      }
+    }
+  }
+  
+  /**
+   * Get initial accordion open state for a category
+   * @private
+   */
+  private _getInitialAccordionState(categoryId: string): Record<string, boolean> {
+    // Return persisted state if exists
+    if (this._accordionState[categoryId]) {
+      return { ...this._accordionState[categoryId] };
+    }
+    
+    // Default: first subcategory open
+    if (!this._categoriesConfig) return {};
+    
+    const categoryConfig = this._categoriesConfig[categoryId as keyof CategoriesConfig];
+    if (!categoryConfig) return {};
+    
+    const subcategories = Object.entries(categoryConfig.subcategories)
+      .sort((a, b) => (a[1].order ?? 99) - (b[1].order ?? 99));
+    
+    const state: Record<string, boolean> = {};
+    subcategories.forEach(([id, config], index) => {
+      // First non-placeholder subcategory is open
+      state[id] = index === 0 && !config.note;
+    });
+    
+    return state;
+  }
+  
+  /**
+   * Render subcategory content for accordion
+   * @private
+   */
+  private async _renderSubcategoryContent(categoryId: string, subcategoryId: string): Promise<HTMLElement> {
+    const container = document.createElement("div");
+    container.className = "subcategory-content-inner";
+    
+    // Note: SUBCATEGORY_SELECTED dispatch handled by _handleAccordionToggle
+    
+    // Look up option config from categories config
+    const catConfig = this._categoriesConfig?.[categoryId as keyof typeof this._categoriesConfig];
+    const subConfig = catConfig?.subcategories?.[subcategoryId];
+    const optionConfig = subConfig?.options ? Object.values(subConfig.options)[0] : undefined;
+    
+    await this._renderSubcategoryContentInner(container, categoryId, subcategoryId, optionConfig);
+    return container;
+  }
+  
+  /**
+   * Internal content rendering for subcategory
+   * @private
+   */
+  private async _renderSubcategoryContentInner(
+    container: HTMLElement,
+    categoryId: string,
+    subcategoryId: string
+  ): Promise<void> {
+    if (!this._categoriesConfig || !this._state) return;
+    
+    const categoryConfig = this._categoriesConfig[categoryId as keyof CategoriesConfig];
+    const subcategory = categoryConfig?.subcategories[subcategoryId];
+    if (!subcategory) return;
+    
+    // Handle placeholder subcategories
+    if (subcategory.note) {
+      container.innerHTML = `<div class="panel-placeholder"><p>${subcategory.note}</p></div>`;
+      return;
+    }
+    
+    // Use existing _renderRightMainFiltered logic adapted for accordion
+    // For now, render a simple placeholder - full implementation connects to existing renderers
+    const optionKey = Object.keys(subcategory.options)[0];
+    const optionConfig = subcategory.options[optionKey];
+    
+    if (!optionConfig) {
+      container.innerHTML = '<div class="panel-placeholder">No options configured</div>';
+      return;
+    }
+    
+    // Render based on option type - reuse existing component creation
+    switch (optionConfig.type) {
+      case 'thumbnail_grid':
+        await this._renderThumbnailGridContent(container, categoryId, subcategoryId, optionConfig);
+        break;
+      case 'slider_group':
+        this._renderSliderGroupContent(container);
+        break;
+      case 'species_selector':
+        await this._renderSpeciesSelectorContent(container);
+        break;
+      case 'backing_swatches':
+        await this._renderBackingSwatchesContent(container);
+        break;
+      case 'archetype_grid':
+        await this._renderArchetypeGridContent(container);
+        break;
+      case 'wood_species_image_grid':
+        await this._renderSpeciesGridContent(container);
+        break;
+      case 'backing_selector':
+        await this._renderBackingSelectorContent(container);
+        break;
+      case 'tour_launcher':
+        await this._renderTourLauncherContent(container);
+        break;
+      case 'upload_interface':
+        await this._renderUploadInterfaceContent(container);
+        break;
+      default:
+        container.innerHTML = `<div class="panel-placeholder">Content type: ${optionConfig.type}</div>`;
+    }
+  }
+  
+  /**
+   * Create filter toolbar for accordion header
+   * @private
+   */
+  private _createFilterToolbar(
+    categoryId: string,
+    subcategoryId: string,
+    filters: Record<string, import('./types/PanelTypes').FilterConfig>
+  ): HTMLElement | null {
+    const filterGroups = this._buildFilterIconGroups(filters);
+    if (filterGroups.length === 0) return null;
+    
+    const filterKey = `${categoryId}_${subcategoryId}`;
+    const stateFilters = this._state?.ui.filterSelections[filterKey] || {};
+    const activeFiltersMap = new Map<string, Set<string>>();
+    Object.entries(stateFilters).forEach(([filterId, selections]) => {
+      activeFiltersMap.set(filterId, new Set(selections));
+    });
+    
+    const strip = new FilterIconStrip(
+      filterGroups,
+      activeFiltersMap,
+      (groupId, selections) => this._handleIconFilterChange(groupId, selections),
+      true // compact mode
+    );
+    
+    return strip.render();
+  }
+  
+  /**
+   * Create section selector toolbar for accordion header
+   * @private
+   */
+  private _createSectionSelectorToolbar(): HTMLElement | null {
+    if (!this._state || !this._sceneManager) return null;
+    
+    const numberSections = this._state.composition.frame_design.number_sections;
+    if (numberSections <= 1) return null;
+    
+    const shape = this._state.composition.frame_design.shape;
+    const selectedSections = (this._sceneManager as unknown as { getSelectedSections: () => Set<number> }).getSelectedSections();
+    
+    const selector = new SectionSelectorPanel(
+      this,
+      numberSections,
+      shape,
+      selectedSections,
+      (newSelection) => this._handleSectionSelectionFromUI(newSelection),
+      true // inline mode
+    );
+    
+    return selector.render();
+  }
+  
+  /**
+   * Create backing toggle toolbar for accordion header
+   * @private
+   */
+  private _createBackingToggleToolbar(): HTMLElement | null {
+    if (!this._state) return null;
+    
+    const isEnabled = this._state.composition.frame_design.backing?.enabled ?? false;
+    
+    // Create toggle inline (BackingPanel static method requires async import)
+    const toggle = document.createElement('label');
+    toggle.className = 'toggle-switch';
+    toggle.innerHTML = `
+      <input type="checkbox" ${isEnabled ? 'checked' : ''}>
+      <span class="toggle-slider"></span>
+    `;
+    
+    const checkbox = toggle.querySelector('input')!;
+    checkbox.addEventListener('change', () => {
+      void this._handleBackingToggle(checkbox.checked);
+    });
+    
+    return toggle;
+  }
+  
+  /**
+   * Handle backing toggle from accordion toolbar
+   * @private
+   */
+  private async _handleBackingToggle(enabled: boolean): Promise<void> {
+    if (!this._state) return;
+    
+    const newComposition = {
+      ...this._state.composition,
+      frame_design: {
+        ...this._state.composition.frame_design,
+        backing: {
+          ...this._state.composition.frame_design.backing,
+          enabled
+        }
+      }
+    };
+    
+    await this.handleCompositionUpdate(newComposition);
+    
+    // Update accordion value display
+    if (this._accordion) {
+      this._accordion.updateValue('backing');
+    }
+  }
+	
+	/**
+   * Render tour launcher content for accordion
+   * @private
+   */
+  private async _renderTourLauncherContent(container: HTMLElement): Promise<void> {
+    const { TourLauncherPanel } = await import('./components/TourLauncherPanel');
+    const tourPanel = new TourLauncherPanel(this, this._sceneManager);
+    container.innerHTML = '';
+    container.appendChild(tourPanel.render());
+  }
+
+  /**
+   * Render upload interface content for accordion
+   * @private
+   */
+  private async _renderUploadInterfaceContent(container: HTMLElement): Promise<void> {
+    const { UploadPanel } = await import('./components/UploadPanel');
+    const uploadPanel = new UploadPanel(this, this._audioCache);
+    container.innerHTML = '';
+    container.appendChild(uploadPanel.render());
+  }
+
+  /**
+   * Render collections content for accordion
+   * @private
+   */
+  private async _renderCollectionsContent(container: HTMLElement): Promise<void> {
+    container.innerHTML = '<div class="panel-placeholder"><p>Collections coming soon</p></div>';
+  }
+	
+	/**
+   * Render backing selector content for accordion
+   * @private
+   */
+  private async _renderBackingSelectorContent(container: HTMLElement): Promise<void> {
+    if (!this._state) {
+      container.innerHTML = '<div class="panel-placeholder">Loading backing options...</div>';
+      return;
+    }
+    
+    const backing = this._state.composition.frame_design.backing || {
+      enabled: false,
+      type: 'acrylic',
+      material: 'clear',
+      inset: 0.5
+    };
+    
+    const { BackingPanel } = await import('./components/BackingPanel');
+    
+    const backingPanel = new BackingPanel(
+      backing.enabled,
+      backing.type,
+      backing.material,
+      (option: string, value: unknown) => {
+        if (option === 'backing_enabled') {
+          void this._updateBackingEnabled(value as boolean);
+        } else if (option === 'backing_material') {
+          const { type, material } = value as { type: string; material: string };
+          void this._updateBackingMaterial(type, material);
+        }
+        if (this._accordion) {
+          this._accordion.updateValue('backing');
+        }
+      },
+      true // horizontal
+    );
+    
+    container.innerHTML = '';
+    container.appendChild(backingPanel.render());
+  }
+	
+	/**
+   * Render species grid content for accordion
+   * @private
+   */
+  private async _renderSpeciesGridContent(container: HTMLElement): Promise<void> {
+    if (!this._woodMaterialsConfig || !this._state) {
+      container.innerHTML = '<div class="panel-placeholder">Loading species...</div>';
+      return;
+    }
+    
+    const materials = this._state.composition.frame_design.section_materials || [];
+    const currentSpecies = materials[0]?.species || this._woodMaterialsConfig.default_species;
+    const currentGrain = materials[0]?.grain_direction || this._woodMaterialsConfig.default_grain_direction;
+    
+    const grid = new WoodMaterialSelector(
+      this._woodMaterialsConfig.species_catalog,
+      this._state.composition.frame_design.number_sections,
+      currentSpecies,
+      currentGrain,
+      (update) => {
+        void (async () => {
+          await this._updateWoodMaterial('species', update.species);
+          await this._updateWoodMaterial('grain_direction', update.grain);
+          if (this._accordion) {
+            this._accordion.updateValue('wood_species');
+          }
+        })();
+      },
+      true // horizontal
+    );
+    
+    container.innerHTML = '';
+    container.appendChild(grid.render());
+  }
+	
+	/**
+   * Render archetype grid content for accordion
+   * @private
+   */
+  private async _renderArchetypeGridContent(container: HTMLElement): Promise<void> {
+    if (!this._state || !this._archetypes) {
+      container.innerHTML = '<div class="panel-placeholder">Loading styles...</div>';
+      return;
+    }
+    
+    const filterKey = `${this._state.ui.activeCategory}_${this._state.ui.activeSubcategory}`;
+    const stateFilters = this._state.ui.filterSelections[filterKey] || {};
+    
+    const matchingArchetypes = Array.from(this._archetypes.values())
+      .filter(archetype => {
+        const activeShapes = stateFilters.shape ? new Set(stateFilters.shape) : new Set();
+        if (activeShapes.size > 0 && !activeShapes.has(archetype.shape)) return false;
+        
+        const activePatterns = stateFilters.slot_pattern ? new Set(stateFilters.slot_pattern) : new Set();
+        if (activePatterns.size > 0 && !activePatterns.has(archetype.slot_style)) return false;
+        
+        return true;
+      })
+      .map(archetype => ({
+        id: archetype.id,
+        label: archetype.label,
+        thumbnailUrl: archetype.thumbnail,
+        disabled: false,
+        tooltip: archetype.tooltip
+      }));
+    
+    const activeSelection = this.getActiveArchetypeId();
+    
+    const grid = new ThumbnailGrid(
+      matchingArchetypes,
+      (id) => { void this._handleArchetypeSelected(id); },
+      activeSelection,
+      { type: 'archetype' },
+      true // horizontal
+    );
+    
+    container.innerHTML = '';
+    container.appendChild(grid.render());
+  }
+  
+  /**
+   * Render thumbnail grid content for accordion
+   * @private
+   */
+  private async _renderThumbnailGridContent(
+    container: HTMLElement,
+    categoryId: string,
+    subcategoryId: string,
+    _optionConfig: unknown
+  ): Promise<void> {
+    // Handle backgrounds category
+    if (categoryId === 'backgrounds') {
+      await this._renderBackgroundsContent(container, subcategoryId);
+      return;
+    }
+    
+    // Handle other thumbnail grids (style archetypes, etc.)
+    container.innerHTML = '<div class="panel-placeholder">Content not yet implemented</div>';
+  }
+  
+  /**
+   * Render backgrounds content (paint, accent, rooms)
+   * @private
+   */
+  private async _renderBackgroundsContent(container: HTMLElement, subcategoryId: string): Promise<void> {
+    if (!this._backgroundsConfig) {
+      container.innerHTML = '<div class="panel-placeholder">Loading backgrounds...</div>';
+      return;
+    }
+    
+    const type = subcategoryId as 'paint' | 'accent' | 'rooms';
+    const backgrounds = this._backgroundsConfig.categories[type];
+    
+    if (!backgrounds || backgrounds.length === 0) {
+      container.innerHTML = '<div class="panel-placeholder">No backgrounds available</div>';
+      return;
+    }
+    
+    const currentBg = this._state?.ui.currentBackground;
+    const selectedId = currentBg?.type === type ? currentBg.id : null;
+    
+    // Create horizontal scroll container
+    const scrollWrapper = document.createElement('div');
+    scrollWrapper.className = 'scroll-container';
+    
+    const scrollContent = document.createElement('div');
+    scrollContent.className = 'horizontal-scroll';
+    
+    backgrounds.forEach(bg => {
+      const card = this._createBackgroundCard(bg, type, selectedId === bg.id);
+      scrollContent.appendChild(card);
+    });
+    
+    scrollWrapper.appendChild(scrollContent);
+    
+    // Add fade indicators
+    const fadeLeft = document.createElement('div');
+    fadeLeft.className = 'scroll-fade scroll-fade--left';
+    const fadeRight = document.createElement('div');
+    fadeRight.className = 'scroll-fade scroll-fade--right';
+    scrollWrapper.appendChild(fadeLeft);
+    scrollWrapper.appendChild(fadeRight);
+    
+    // Set up scroll detection
+    this._setupScrollFades(scrollWrapper, scrollContent);
+    
+    container.innerHTML = '';
+    container.appendChild(scrollWrapper);
+  }
+  
+  /**
+   * Create a background card element
+   * @private
+   */
+  private _createBackgroundCard(
+    bg: { id: string; name: string; rgb?: number[]; path?: string },
+    type: 'paint' | 'accent' | 'rooms',
+    isSelected: boolean
+  ): HTMLElement {
+    const card = document.createElement('button');
+    card.className = `accordion-card ${type === 'paint' ? 'paint-card' : type === 'accent' ? 'accent-card' : 'room-card'}`;
+    if (isSelected) card.classList.add('selected');
+    card.dataset.itemId = bg.id;
+    
+    if (type === 'paint') {
+      // Paint: color swatch
+      const swatch = document.createElement('div');
+      swatch.className = 'paint-card-swatch';
+      if (bg.rgb) {
+        const [r, g, b] = bg.rgb.map(v => Math.round(v * 255));
+        swatch.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+      }
+      card.appendChild(swatch);
+      
+      const label = document.createElement('span');
+      label.className = 'paint-card-label';
+      label.textContent = bg.name;
+      card.appendChild(label);
+      
+    } else if (type === 'accent') {
+      // Accent: texture thumbnail
+      const img = document.createElement('img');
+      img.className = 'accent-card-image';
+      img.src = bg.path || '';
+      img.alt = bg.name;
+      img.loading = 'lazy';
+      card.appendChild(img);
+      
+      const label = document.createElement('span');
+      label.className = 'accent-card-label';
+      label.textContent = bg.name;
+      card.appendChild(label);
+      
+    } else {
+      // Rooms: scene thumbnail
+      const img = document.createElement('img');
+      img.className = 'room-card-image';
+      img.src = bg.path || '';
+      img.alt = bg.name;
+      img.loading = 'lazy';
+      card.appendChild(img);
+      
+      const label = document.createElement('span');
+      label.className = 'room-card-label';
+      label.textContent = bg.name;
+      card.appendChild(label);
+    }
+    
+    // Click handler
+    card.addEventListener('click', () => {
+      this.handleBackgroundSelected(bg.id, type);
+      
+      // Update selection visually
+      card.closest('.horizontal-scroll')?.querySelectorAll('.accordion-card').forEach(c => {
+        c.classList.remove('selected');
+      });
+      card.classList.add('selected');
+      
+      // Update accordion value display
+      if (this._accordion) {
+        this._accordion.updateValue(type);
+      }
+    });
+    
+    return card;
+  }
+  
+  /**
+   * Set up scroll fade indicators
+   * @private
+   */
+  private _setupScrollFades(wrapper: HTMLElement, scrollEl: HTMLElement): void {
+    const updateFades = () => {
+      const canScrollLeft = scrollEl.scrollLeft > 1;
+      const canScrollRight = scrollEl.scrollLeft < scrollEl.scrollWidth - scrollEl.clientWidth - 1;
+      wrapper.classList.toggle('can-scroll-left', canScrollLeft);
+      wrapper.classList.toggle('can-scroll-right', canScrollRight);
+    };
+    
+    scrollEl.addEventListener('scroll', updateFades, { passive: true });
+    
+    // Initial check after layout
+    requestAnimationFrame(updateFades);
+  }
+  
+  /**
+   * Render slider group content for accordion
+   * @private
+   */
+  private _renderSliderGroupContent(container: HTMLElement): void {
+    if (!this._state || !this._resolver) return;
+    
+    const archetypeId = this.getActiveArchetypeId();
+    if (!archetypeId) return;
+    
+    const sliderConfigs = this._resolver.resolveSliderConfigs(archetypeId, this._state.composition);
+    
+    const sliderGroup = new SliderGroup(
+      sliderConfigs,
+      (id, value) => void this._updateStateValue(id, value),
+      this._state.composition.frame_design.number_sections
+    );
+    
+    const wrapper = document.createElement('div');
+    wrapper.className = 'slider-card';
+    wrapper.appendChild(sliderGroup.render());
+    container.appendChild(wrapper);
+  }
+  
+  /**
+   * Render species selector content for accordion
+   * @private
+   */
+  private async _renderSpeciesSelectorContent(container: HTMLElement): Promise<void> {
+    // This will be connected to WoodMaterialSelector with horizontal mode
+    container.innerHTML = '<div class="horizontal-scroll"><div class="panel-placeholder">Species selector loading...</div></div>';
+  }
+  
+  /**
+   * Render backing swatches content for accordion
+   * @private
+   */
+  private async _renderBackingSwatchesContent(container: HTMLElement): Promise<void> {
+    // This will be connected to BackingPanel content in horizontal mode
+    container.innerHTML = '<div class="horizontal-scroll"><div class="panel-placeholder">Backing options loading...</div></div>';
+  }
+  
+  /**
    * Handle STYLE category selection (four-panel architecture)
    * @private
    */
 	private _handleStyleCategorySelected(): void {
+    // DEPRECATED: Accordion now handles category rendering via _renderAccordionForCategory
+    // Keeping method signature for backward compatibility during transition
+    return;
+    
+    /* Original implementation preserved for reference:
     if (!this._categoriesConfig || !this._state?.ui.activeCategory || !this._thumbnailConfig) return;
     const categoryConfig = this._categoriesConfig[this._state.ui.activeCategory as keyof CategoriesConfig];
     if (!categoryConfig) return;
@@ -1185,6 +2002,7 @@ export class ApplicationController {
         this._rightMainPanel.style.display = 'block';
       }
     }
+    */
   }
   
   /**
@@ -1192,6 +2010,9 @@ export class ApplicationController {
    * @private
    */
   private _handleSubcategorySelected(subcategoryId: string): void {
+    // Skip legacy rendering when accordion is active
+    if (this._accordion) return;
+    
     if (!this._categoriesConfig || !this._state?.ui.activeCategory) {
       return;
     }
@@ -1339,7 +2160,12 @@ export class ApplicationController {
     });
     
     // Re-render Right Main with new filter combination
-    this._renderRightMainFiltered();
+    if (!this._accordion) {
+      this._renderRightMainFiltered();
+    } else {
+      // Refresh accordion content for the active subcategory
+      this._accordion.refreshContent(this._state.ui.activeSubcategory);
+    }
   }
 	
 	/**
@@ -1948,7 +2774,11 @@ export class ApplicationController {
     await this.handleCompositionUpdate(composition);
 		
 		// Re-render the panel to show updated selection and new slider limits
-    this._renderRightMainFiltered();
+    if (!this._accordion) {
+      this._renderRightMainFiltered();
+    } else {
+      this._accordion.refreshContent('panel');
+    }
     
     // Update art placement
     if (this._sceneManager) {
@@ -1979,9 +2809,6 @@ export class ApplicationController {
 					(this._sceneManager as unknown as { resetArtPlacement: () => void }).resetArtPlacement();
       }
     }
-    
-    // Re-render the panel to show updated selection
-    this._renderRightMainFiltered();
   }
 
   /**
@@ -2147,7 +2974,9 @@ export class ApplicationController {
     this._facade.persistState(this._state);
     
     // Re-render to update UI
-    this._renderRightMainFiltered();
+    if (!this._accordion) {
+      this._renderRightMainFiltered();
+    }
   }
 	
 	/**
@@ -2305,7 +3134,11 @@ export class ApplicationController {
 		}
 		
 		// Re-render panel to update BackingPanel with new enabled state
-		this._renderRightMainFiltered();
+		if (!this._accordion) {
+			this._renderRightMainFiltered();
+		} else {
+			this._accordion.updateValue('backing');
+		}
 	}
 	
 	private async _updateBackingEnabled(enabled: boolean): Promise<void> {
@@ -2347,7 +3180,11 @@ export class ApplicationController {
 		}
 		
 		// Re-render panel to update BackingPanel with new enabled state
-		this._renderRightMainFiltered();
+		if (!this._accordion) {
+			this._renderRightMainFiltered();
+		} else {
+			this._accordion.updateValue('backing');
+		}
 	}
 
   /**

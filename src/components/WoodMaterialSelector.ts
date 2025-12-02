@@ -18,13 +18,15 @@ export class WoodMaterialSelector implements PanelComponent {
   private _onSelect: (update: { species: string; grain: string }) => void;
   private _tooltip: Tooltip = new Tooltip();
 	private _tooltipClassName: string;
+  private _horizontal: boolean = false;
 
   constructor(
     speciesList: SpeciesInfo[],
     numberSections: number,
     currentSpecies: string,
     currentGrain: string,
-    onSelect: (update: { species: string; grain: string }) => void
+    onSelect: (update: { species: string; grain: string }) => void,
+    horizontal: boolean = false
   ) {
     this._speciesList = speciesList;
     this._numberSections = numberSections;
@@ -32,11 +34,12 @@ export class WoodMaterialSelector implements PanelComponent {
     this._currentGrain = currentGrain;
     this._onSelect = onSelect;
     this._tooltipClassName = TooltipClassNameFactory.generate({ type: 'species' });
+    this._horizontal = horizontal;
   }
 
   render(): HTMLElement {
     const container = document.createElement('div');
-    container.className = 'wood-species-image-grid';
+    container.className = this._horizontal ? 'wood-species-image-grid horizontal-scroll' : 'wood-species-image-grid';
 
     this._speciesList.forEach(species => {
       const card = this._createSpeciesCard(species);

@@ -212,6 +212,20 @@ export interface FilterConfig {
 }
 
 /**
+ * Accordion open/close state for a category
+ */
+export interface AccordionState {
+  [subcategoryId: string]: boolean;
+}
+
+/**
+ * Accordion state map for all categories
+ */
+export interface AccordionStateMap {
+  [categoryId: string]: AccordionState;
+}
+
+/**
  * Filter icon group for FilterIconStrip component
  */
 export interface FilterIconGroup {
