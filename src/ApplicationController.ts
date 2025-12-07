@@ -728,8 +728,15 @@ export class ApplicationController {
       const processedBlob = await response.blob();
       const processedFile = new File([processedBlob], 'processed.wav', { type: 'audio/wav' });
       
+      // PARITY FIX: The file is already processed (silence removed).
+      // Update state snapshot to prevent double-processing in the main pipeline.
+      const cleanState = structuredClone(this._state.composition);
+      if (payload.removeSilence) {
+        cleanState.audio_processing.remove_silence = false;
+      }
+
       // Feed into existing upload pipeline
-      await this.handleFileUpload(processedFile, this._state.composition);
+      await this.handleFileUpload(processedFile, cleanState);
       
     } catch (error) {
       console.error('[Controller] Audio commit failed:', error);

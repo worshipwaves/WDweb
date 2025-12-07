@@ -219,6 +219,10 @@ class AudioProcessingService:
         try:
             import librosa
             import soundfile as sf
+            # [INVESTIGATION] Log environment details
+            file_size = os.path.getsize(audio_path)
+            print(f"[ENV-CHECK] Librosa: {librosa.__version__}, SoundFile: {sf.__version__}")
+            print(f"[ENV-CHECK] File on disk: {file_size} bytes (Path: {audio_path})")
         except ImportError:
             raise ValueError("Required libraries not installed")
         
