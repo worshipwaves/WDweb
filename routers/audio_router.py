@@ -22,7 +22,10 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _config_service = ConfigService(PROJECT_ROOT / "config")
 _audio_config = _config_service.get_audio_processing_config()
-_demucs = DemucsService(audio_config=_audio_config)
+_demucs = DemucsService(
+    audio_config=_audio_config,
+    output_dir=PROJECT_ROOT / "temp" / "demucs_output"
+)
 
 
 @router.post("/isolate-vocals")

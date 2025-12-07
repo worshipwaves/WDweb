@@ -1191,34 +1191,9 @@ export class AudioSlicerPanel implements PanelComponent {
     const isolateVocals = this._isolateCheckbox?.checked || false;
     const useSlice = this._markStart !== null && this._markEnd !== null;
     
-    // If we already have processed audio from preview, use it directly
-    if (isolateVocals && (this._processedBuffer || this._rawVocalsBuffer)) {
-      // Use compressed or raw depending on silence toggle
-			// Prefer silence-removed buffer if enabled AND available, else use raw vocals
-      const bufferToUse = (this._silenceEnabled && this._processedBuffer) 
-        ? this._processedBuffer 
-        : this._rawVocalsBuffer;
-      if (!bufferToUse) {
-        console.error('[AudioSlicerPanel] No buffer available');
-        return;
-      }
-      const processedBlob = this._encodeWAV(bufferToUse);
-      void this._controller.dispatch({
-        type: 'AUDIO_COMMIT',
-        payload: {
-          useSlice: false,
-          startTime: null,
-          endTime: null,
-          isolateVocals: false, // Already processed
-          removeSilence: false, // Already applied if enabled
-          silenceThreshold: this._silenceThresh,
-          silenceMinDuration: this._minDuration,
-          sliceBlob: processedBlob,
-          originalFile: undefined
-        }
-      });
-      return;
-    }
+    // PARITY FIX: Always send original file to backend.
+    // We disable the client-side blob optimization here because browser decoding (48k)
+    // creates artifacts compared to Librosa (native).
     
     void this._controller.dispatch({
       type: 'AUDIO_COMMIT',

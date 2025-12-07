@@ -239,7 +239,7 @@ class AudioProcessingService:
             try:
                 audio_data, sample_rate = librosa.load(
                     audio_path, 
-                    sr=44100, 
+                    sr=None, 
                     mono=True,
                     offset=start_time,
                     duration=duration
@@ -256,7 +256,7 @@ class AudioProcessingService:
         else:
             # Load full file
             try:
-                audio_data, sample_rate = librosa.load(working_path, sr=44100, mono=True)
+                audio_data, sample_rate = librosa.load(working_path, sr=None, mono=True)
             except Exception as e:
                 raise ValueError(f"Failed to load audio file: {e}")
                 
@@ -275,7 +275,7 @@ class AudioProcessingService:
             if stem_path:
                 # Load the stem
                 try:
-                    audio_data, sample_rate = librosa.load(stem_path, sr=44100, mono=True)
+                    audio_data, sample_rate = librosa.load(stem_path, sr=None, mono=True)
                     print(f"  Extracted {stem_choice} stem")
                     
                     # Clean up demucs output

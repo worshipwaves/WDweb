@@ -19,39 +19,26 @@ if TYPE_CHECKING:
 class DemucsService:
     """Local GPU-based Demucs processing with desktop-parity silence removal."""
     
-    # Desktop defaults (used if no config provided)
-    DEFAULT_TARGET_SAMPLE_RATE = 44100
-    DEFAULT_SILENCE_THRESHOLD = -40.0
-    DEFAULT_SILENCE_DURATION = 1.0
-    DEFAULT_FRAME_LENGTH = 2048
-    DEFAULT_HOP_LENGTH = 512
-    
     def __init__(
         self, 
-        output_dir: Path | None = None,
-        audio_config: Optional['AudioProcessingDTO'] = None
+        audio_config: 'AudioProcessingDTO',
+        output_dir: Path
     ):
-        self._output_dir = output_dir or Path(__file__).parent.parent / "temp" / "demucs_output"
+        self._output_dir = output_dir
         self._output_dir.mkdir(parents=True, exist_ok=True)
         
-        # Load defaults from DTO or use hardcoded desktop defaults
-        if audio_config:
-            self._target_sample_rate = int(audio_config.target_sample_rate)
-            self._default_threshold = float(audio_config.silence_threshold)
-            self._default_duration = float(audio_config.silence_duration)
-            self._frame_length = int(audio_config.silence_frame_length)
-            self._hop_length = int(audio_config.silence_hop_length)
-        else:
-            self._target_sample_rate = self.DEFAULT_TARGET_SAMPLE_RATE
-            self._default_threshold = self.DEFAULT_SILENCE_THRESHOLD
-            self._default_duration = self.DEFAULT_SILENCE_DURATION
-            self._frame_length = self.DEFAULT_FRAME_LENGTH
-            self._hop_length = self.DEFAULT_HOP_LENGTH
+        # Load configuration (Mandatory DTO injection)
+        tsr = audio_config.target_sample_rate
+        self._target_sample_rate = int(tsr) if tsr is not None else None
+        self._default_threshold = float(audio_config.silence_threshold)
+        self._default_duration = float(audio_config.silence_duration)
+        self._frame_length = int(audio_config.silence_frame_length)
+        self._hop_length = int(audio_config.silence_hop_length)
     
     def separate_vocals(
         self,
         input_path: Path,
-        remove_silence: bool = False
+        remove_silence: bool
     ) -> Path:
         """
         Separate vocals from audio file using Demucs.
@@ -115,13 +102,12 @@ class DemucsService:
     def compress_silence_only(
         self,
         input_path: Path,
-        min_duration: Optional[float] = None,
-        threshold_db: Optional[float] = None
+        min_duration: Optional[float],
+        threshold_db: Optional[float]
     ) -> Path:
         """
         Apply silence compression to any audio file.
         Standalone endpoint for iterative testing.
-        Uses config defaults if params not provided.
         """
         # Use configured sample rate for Desktop parity
         y, sr = librosa.load(str(input_path), sr=self._target_sample_rate, mono=True)
@@ -130,8 +116,8 @@ class DemucsService:
         
         processed_y = self._apply_silence_removal_logic(
             y, sr,
-            threshold_db=threshold_db if threshold_db is not None else self._default_threshold,
-            min_duration=min_duration if min_duration is not None else self._default_duration
+            threshold_db=threshold_db,
+            min_duration=min_duration
         )
         
         compressed_duration = len(processed_y) / sr
@@ -175,16 +161,18 @@ class DemucsService:
                 continue
                 
             if merged_intervals and start - merged_intervals[-1][1] < min_samples:
-                merged_intervals[-1] = (merged_intervals[-1][0], end)
+                # Create new list with updated last element (Immutability: No assignment)
+                last_start = merged_intervals[-1][0]
+                merged_intervals = merged_intervals[:-1] + [(last_start, end)]
             else:
-                merged_intervals.append((start, end))
+                # Create new list with appended element (Immutability: No .append)
+                merged_intervals = merged_intervals + [(start, end)]
                 
         if not merged_intervals:
             return y
             
-        non_silent_parts = []
-        for start, end in merged_intervals:
-            non_silent_parts.append(y[start:end])
+        # List comprehension (Immutability: No .append)
+        non_silent_parts = [y[start:end] for start, end in merged_intervals]
             
         return np.concatenate(non_silent_parts) if non_silent_parts else y
 
