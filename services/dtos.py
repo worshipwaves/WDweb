@@ -148,6 +148,7 @@ class AudioProcessingDTO(BaseModel):
     """Audio processing parameters"""
     model_config = ConfigDict(frozen=True, populate_by_name=True)
     
+    target_sample_rate: int = Field(default=44100, ge=8000, le=96000)
     num_raw_samples: int = Field(ge=50000, le=1000000)
     filter_amount: float = Field(ge=0.0, le=0.5)
     apply_filter: bool
@@ -156,6 +157,8 @@ class AudioProcessingDTO(BaseModel):
     remove_silence: bool
     silence_threshold: int = Field(ge=-80, le=0)
     silence_duration: float = Field(ge=0.1, le=10.0)
+    silence_frame_length: int = Field(default=2048, ge=512, le=8192)
+    silence_hop_length: int = Field(default=512, ge=128, le=2048)
 
 
 # Peak Control DTOs

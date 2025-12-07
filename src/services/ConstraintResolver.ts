@@ -102,7 +102,7 @@ export class ConstraintResolver {
       return 2 * maxSectionWidth + separation;
     } else if (sectionHeight <= tableMaxY) {
       const maxSectionWidth = tableMaxX;
-      return 2 * maxSectionWidth + separation;
+      return 2 * maxSectionWidth;
     } else {
       return minWidth;
     }
@@ -120,7 +120,7 @@ export class ConstraintResolver {
     if (sectionWidth <= tableMaxX) {
       return 2 * tableMaxY + separation;
     } else if (sectionWidth <= tableMaxY) {
-      return 2 * tableMaxX + separation;
+      return 2 * tableMaxX;
     } else {
       return minHeight;
     }
@@ -139,6 +139,74 @@ export class ConstraintResolver {
     };
     
     return knownLimits[numSections] ?? Math.min(maxDim, 30);
+  }
+
+  /**
+   * Calculate maximum slots for linear patterns based on CNC constraints.
+   * Slot width must be at least bit_diameter + 1/16" to avoid tool breakage.
+   * 
+   * For rectangular/diamond n>2: end sections have side_margin, center sections don't.
+   * This results in unequal usable widths requiring per-section calculation.
+   */
+  private calculateMaxSlotsLinear(
+    shape: string,
+    finishX: number,
+    numSections: number,
+    sideMargin: number,
+    xOffset: number,
+    yOffset: number,
+    separation: number,
+    spacer: number,
+    bitDiameter: number,
+    configMax: number
+  ): number {
+    const minSlotWidth = bitDiameter + 0.0625; // bit diameter + 1/16"
+    const slotPlusSpace = minSlotWidth + spacer;
+    
+    let maxTotalSlots: number;
+    
+    if (shape === 'circular') {
+      // Circular linear: symmetric sections
+      let totalUsable: number;
+      if (numSections === 1) {
+        totalUsable = finishX - 2 * (yOffset + sideMargin);
+      } else {
+        // n=2
+        totalUsable = finishX - 2 * (yOffset + sideMargin + xOffset) - separation;
+      }
+      maxTotalSlots = Math.floor((totalUsable + spacer) / slotPlusSpace);
+      
+    } else if ((shape === 'rectangular' || shape === 'diamond') && numSections > 2) {
+      // Rectangular/Diamond linear n>2: unequal section widths
+      // End sections have side_margin, center sections don't
+      const sectionWidth = (finishX - separation * (numSections - 1)) / numSections;
+      const endUsable = sectionWidth - sideMargin - 2 * xOffset;
+      const centerUsable = sectionWidth - 2 * xOffset;
+      
+      const maxEndSlots = Math.floor((endUsable + spacer) / slotPlusSpace);
+      const maxCenterSlots = Math.floor((centerUsable + spacer) / slotPlusSpace);
+      
+      if (numSections === 3) {
+        // [end, center, end]
+        maxTotalSlots = 2 * maxEndSlots + maxCenterSlots;
+      } else {
+        // n=4: [end, center, center, end]
+        maxTotalSlots = 2 * maxEndSlots + 2 * maxCenterSlots;
+      }
+      
+    } else {
+      // Rectangular/Diamond linear n=1 or n=2: symmetric sections
+      let totalUsable: number;
+      if (numSections === 1) {
+        totalUsable = finishX - 2 * sideMargin - 2 * xOffset;
+      } else {
+        // n=2: both sections have side_margin on outer edge
+        totalUsable = finishX - 2 * sideMargin - 2 * xOffset * numSections - separation;
+      }
+      maxTotalSlots = Math.floor((totalUsable + spacer) / slotPlusSpace);
+    }
+    
+    return Math.min(maxTotalSlots, configMax);
   }
 
   /**
@@ -302,15 +370,46 @@ export class ConstraintResolver {
         finalMax = Math.min(sliderConstraint.max, calculatedMax);
       }
 
+      // Apply CNC manufacturing constraints for slots (linear patterns only)
+      if (sliderKey === 'slots' && slotStyle === 'linear') {
+        const sideMargin = state.pattern_settings.side_margin;
+        const slotStyleConstraints = this.constraints.manufacturing?.slot_style?.[slotStyle];
+        if (!slotStyleConstraints) {
+          throw new Error(`Missing manufacturing.slot_style.${slotStyle} in constraints.json`);
+        }
+        const xOffset = slotStyleConstraints.x_offset;
+        const yOffset = state.pattern_settings.y_offset;
+        const spacer = state.pattern_settings.spacer;
+        const bitDiameter = state.pattern_settings.bit_diameter;
+        const calculatedMax = this.calculateMaxSlotsLinear(
+          shape,
+          state.frame_design.finish_x,
+          numSections,
+          sideMargin,
+          xOffset,
+          yOffset,
+          separation,
+          spacer,
+          bitDiameter,
+          sliderConstraint.max
+        );
+        finalMax = Math.min(finalMax, calculatedMax);
+      }
+
       // Clamp the current value against the new dynamic max for display
       const displayValue = Math.max(sliderConstraint.min, Math.min(currentValue, finalMax));
+
+      // Slots step: radial requires divisibility by numSections, linear allows any integer
+      const step = sliderKey === 'slots'
+        ? (slotStyle === 'linear' ? 1 : state.frame_design.number_sections)
+        : (sliderConstraint.step || 1);
 
       return {
         id: sliderKey,
         label: elementConfig.label,
         min: sliderConstraint.min,
         max: finalMax,
-        step: sliderConstraint.step,
+        step,
         value: displayValue,
         unit: sliderKey === 'slots' ? '' : '"',
       };

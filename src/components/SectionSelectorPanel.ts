@@ -140,8 +140,13 @@ export class SectionSelectorPanel implements PanelComponent {
       button.className = 'section-button';
       button.dataset.iconId = iconDef.id;
       
-      // Display label: "All" or section number
-      button.textContent = iconDef.sectionIndex === null ? 'All' : String(iconDef.sectionIndex + 1);
+      // Load and render SVG (same as _createIconButton)
+      const svgContainer = document.createElement('div');
+      svgContainer.className = 'section-icon-svg';
+      if (this._shape === 'circular' || this._shape === 'rectangular' || this._shape === 'diamond') {
+        void this._loadAndColorSVG(iconDef, svgContainer);
+      }
+      button.appendChild(svgContainer);
       
       // Set pressed state
       const isSelected = this._isIconSelected(iconDef);
@@ -552,6 +557,10 @@ export class SectionSelectorPanel implements PanelComponent {
       }
     }
     
+    // Update internal state and UI
+    this._selectedSections = new Set(newSelection);
+    this._updateButtonStates();
+    
     // Emit selection change
     this._onSelectionChange(newSelection);
   }
@@ -561,21 +570,31 @@ export class SectionSelectorPanel implements PanelComponent {
    */
   updateSelection(selectedSections: Set<number>): void {
     this._selectedSections = new Set(selectedSections);
-    
+    this._updateButtonStates();
+  }
+  
+  /**
+   * Update button states and re-color SVGs for current selection
+   * @private
+   */
+  private _updateButtonStates(): void {
     if (!this._container) return;
     
-    // Update icon button states
-    const buttons = this._container.querySelectorAll('.section-icon-button');
+    // Handle both panel mode (.section-icon-button) and inline mode (.section-button)
+    const buttons = this._container.querySelectorAll('.section-icon-button, .section-button');
     buttons.forEach((button) => {
       const iconId = (button as HTMLElement).dataset.iconId;
       const iconDef = this._icons.find(icon => icon.id === iconId);
       
       if (iconDef) {
         const isSelected = this._isIconSelected(iconDef);
-        if (isSelected) {
-          button.classList.add('selected');
-        } else {
-          button.classList.remove('selected');
+        button.classList.toggle('selected', isSelected);
+        button.setAttribute('aria-pressed', String(isSelected));
+        
+        // Re-color SVG if present
+        const svgContainer = button.querySelector('.section-icon-svg');
+        if (svgContainer) {
+          void this._loadAndColorSVG(iconDef, svgContainer as HTMLElement);
         }
       }
     });

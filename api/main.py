@@ -11,6 +11,7 @@ from services.service_facade import WaveformDesignerFacade
 from services.config_service import ConfigService
 from fastapi import Response
 from dev_utils.performance_monitor import performance_monitor
+from routers.audio_router import router as audio_router
 
 # Define project root directory (parent of api directory)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -33,6 +34,9 @@ facade = WaveformDesignerFacade()
 
 # Create ConfigService instance for configuration endpoints
 config_service = ConfigService(PROJECT_ROOT / "config")
+
+# Register routers
+app.include_router(audio_router)
 
 # Pydantic model for the audio processing response
 class AudioProcessResponse(BaseModel):

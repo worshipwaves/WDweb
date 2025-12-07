@@ -7,6 +7,7 @@
     "tooltip": "Circular Design - Radial Waveform\nOne Panel\n\nAvailable size:\n24 to 30 inch diameter.",
     "thumbnail": "/assets/style/thumbnails/circular_radial_n1.png",
     "number_sections": 1,
+		"available_grains": ["vertical", "horizontal"],
     "number_slots": 48,
     "separation": 0
   },
@@ -18,6 +19,7 @@
     "tooltip": "Circular Design - Radial Waveform\nTwo Panels\n\nAvailable size:\n24 to 42 inch diameter",
     "thumbnail": "/assets/style/thumbnails/circular_radial_n2.png",
     "number_sections": 2,
+		"available_grains": ["vertical", "horizontal"],
     "number_slots": 48,
     "separation": 2
   },
@@ -29,6 +31,7 @@
     "tooltip": "Circular Design - Radial Waveform\nThree Panels\n\nAvailable size:\n24 to 54 inch diameter",
     "thumbnail": "/assets/style/thumbnails/circular_radial_n3.png",
     "number_sections": 3,
+		"available_grains": ["vertical", "horizontal", "radiant"],
     "number_slots": 48,
     "separation": 1.5
   },
@@ -40,6 +43,7 @@
     "tooltip": "Circular Design - Radial Waveform\nFour Panels\n\nAvailable size:\n24 to 60 inch diameter",
     "thumbnail": "/assets/style/thumbnails/circular_radial_n4.png",
     "number_sections": 4,
+		"available_grains": ["vertical", "horizontal", "radiant", "diamond"],
     "number_slots": 48,
     "separation": 1
   },
@@ -51,6 +55,7 @@
     "tooltip": "Circular Design - Linear Waveform\nOne Panel\n\nAvailable size:\n24 to 30 inch diameter",
     "thumbnail": "/assets/style/thumbnails/circular_linear_n1.png",
     "number_sections": 1,
+		"available_grains": ["vertical", "horizontal"],
     "number_slots": 24,
     "separation": 0,
     "side_margin": 3
@@ -63,6 +68,7 @@
     "tooltip": "Circular Design - Linear Waveform\nTwo Panels\n\nAvailable size:\n24 to 42 inch diameter",
     "thumbnail": "/assets/style/thumbnails/circular_linear_n2.png",
     "number_sections": 2,
+		"available_grains": ["vertical", "horizontal"],
     "number_slots": 24,
     "separation": 2,
     "side_margin": 3
@@ -75,6 +81,7 @@
     "tooltip": "This is a tooltip",
     "thumbnail": "/assets/style/thumbnails/rectangular_radial_n1.png",
     "number_sections": 1,
+		"available_grains": ["vertical", "horizontal"],
     "number_slots": 48,
     "separation": 0
   },
@@ -86,6 +93,7 @@
     "tooltip": "This is a tooltip",
     "thumbnail": "/assets/style/thumbnails/rectangular_radial_n2.png",
     "number_sections": 2,
+		"available_grains": ["vertical", "horizontal"],
     "number_slots": 48,
     "separation": 2
   },
@@ -97,6 +105,7 @@
     "tooltip": "This is a tooltip",
     "thumbnail": "/assets/style/thumbnails/rectangular_radial_n4.png",
     "number_sections": 4,
+		"available_grains": ["vertical", "horizontal", "radiant", "diamond"],
     "number_slots": 48,
     "separation": 1
   },
@@ -108,6 +117,7 @@
     "tooltip": "This is a tooltip",
     "thumbnail": "/assets/style/thumbnails/rectangular_linear_n1.png",
     "number_sections": 1,
+		"available_grains": ["vertical", "horizontal"],
     "number_slots": 18,
     "separation": 0
   },
@@ -119,6 +129,7 @@
     "tooltip": "This is a tooltip",
     "thumbnail": "/assets/style/thumbnails/rectangular_linear_n2.png",
     "number_sections": 2,
+		"available_grains": ["vertical", "horizontal"],
     "number_slots": 36,
     "separation": 2
   },
@@ -130,6 +141,7 @@
     "tooltip": "This is a tooltip",
     "thumbnail": "/assets/style/thumbnails/rectangular_linear_n3.png",
     "number_sections": 3,
+		"available_grains": ["vertical", "horizontal"],
     "number_slots": 54,
     "separation": 2
   },
@@ -141,6 +153,7 @@
     "tooltip": "This is a tooltip",
     "thumbnail": "/assets/style/thumbnails/rectangular_linear_n4.png",
     "number_sections": 4,
+		"available_grains": ["vertical", "horizontal", "radiant", "diamond"],
     "number_slots": 72,
     "separation": 2
   },
@@ -152,6 +165,7 @@
     "tooltip": "This is a tooltip",
     "thumbnail": "/assets/style/thumbnails/diamond_radial_n1.png",
     "number_sections": 1,
+		"available_grains": ["vertical", "horizontal"],
     "number_slots": 48,
     "separation": 0
   },
@@ -163,6 +177,7 @@
     "tooltip": "This is a tooltip",
     "thumbnail": "/assets/style/thumbnails/diamond_radial_n2.png",
     "number_sections": 2,
+		"available_grains": ["vertical", "horizontal"],
     "number_slots": 48,
     "separation": 1.5
   },
@@ -174,6 +189,7 @@
     "tooltip": "This is a tooltip",
     "thumbnail": "/assets/style/thumbnails/diamond_radial_n4.png",
     "number_sections": 4,
+		"available_grains": ["vertical", "horizontal", "radiant", "diamond"],
     "number_slots": 48,
     "separation": 2
   },
@@ -185,6 +201,7 @@
     "tooltip": "This is a tooltip",
     "thumbnail": "/assets/style/thumbnails/diamond_linear_n1.png",
     "number_sections": 1,
+		"available_grains": ["vertical", "horizontal"],
     "number_slots": 24,
     "separation": 0,
     "side_margin": 5
@@ -197,6 +214,7 @@
     "tooltip": "This is a tooltip",
     "thumbnail": "/assets/style/thumbnails/diamond_linear_n2.png",
     "number_sections": 2,
+		"available_grains": ["vertical", "horizontal"],
     "number_slots": 24,
     "separation": 2,
     "side_margin": 5

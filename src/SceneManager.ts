@@ -501,6 +501,11 @@ export class SceneManager {
                         this.toggleSection(sectionId);
                         this._controller.selectSection(this._selectedSectionIndices);
                         this.updateSectionUI(this._selectedSectionIndices);
+                    } else {
+                        // Clicked on non-section mesh (shadowReceiver, backing, etc.)
+                        this.clearSelection();
+                        this._controller.selectSection(this._selectedSectionIndices);
+                        this.updateSectionUI(this._selectedSectionIndices);
                     }
                 } else {
                     this.clearSelection();
@@ -917,7 +922,7 @@ export class SceneManager {
                     
                     const canvas = this._engine.getRenderingCanvas();
                     const fov = this._camera.fov || 0.8;
-                    const paddingFactor = 1.11;
+                    const paddingFactor = 1.25; // 80% of viewport
                     const halfHeight = Math.tan(fov / 2);
                     const idealRadius = (maxDimension / 2) * paddingFactor / halfHeight;
                     
@@ -1495,7 +1500,7 @@ export class SceneManager {
             const currentDimension = Math.max(width, height);
             
             const fov = this._camera.fov || 0.8;
-            const paddingFactor = 1.11;
+            const paddingFactor = 1.25; // 80% of viewport
             const halfHeight = Math.tan(fov / 2);
             const idealRadius = (currentDimension / 2) * paddingFactor / halfHeight;
             

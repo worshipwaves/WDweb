@@ -20,17 +20,20 @@ export class SliderGroup implements PanelComponent {
   private _sliders: SliderConfig[];
   private _onChange: (id: string, value: number) => void;
 	private _numberSections?: number;
+	private _slotStyle?: string;
 	private _title?: string;
   
   constructor(
     sliders: SliderConfig[],
     onChange: (id: string, value: number) => void,
     numberSections?: number,
+    slotStyle?: string,
     title?: string
   ) {
     this._sliders = sliders;
     this._onChange = onChange;
     this._numberSections = numberSections;
+    this._slotStyle = slotStyle;
     this._title = title;
     
     // Apply dynamic max values based on number of sections
@@ -111,8 +114,8 @@ export class SliderGroup implements PanelComponent {
         const target = e.target as HTMLInputElement;
         let value = parseFloat(target.value);
 
-        // Enforce slot increments based on number of sections
-        if (config.id === 'slots' && this._numberSections && this._numberSections > 0) {
+        // Enforce slot increments based on number of sections (radial only)
+        if (config.id === 'slots' && this._numberSections && this._numberSections > 0 && this._slotStyle === 'radial') {
           const remainder = value % this._numberSections;
           if (remainder !== 0) {
             value = Math.round(value / this._numberSections) * this._numberSections;

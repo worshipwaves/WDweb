@@ -38,6 +38,7 @@ export type Action =
   | { type: 'DEMUCS_COMPLETED'; payload: CompositionStateDTO }
   | { type: 'STATE_RESTORED'; payload: ApplicationState }
   | { type: 'COMPOSITION_UPDATED'; payload: CompositionStateDTO }
+	| { type: 'AUDIO_COMMIT'; payload: { useSlice: boolean; startTime: number | null; endTime: number | null; isolateVocals: boolean; removeSilence: boolean; silenceThreshold: number; silenceMinDuration: number; sliceBlob: Blob | null; originalFile?: File } }
   | { 
       type: 'FILE_PROCESSING_SUCCESS'; 
       payload: { 
@@ -358,6 +359,11 @@ export class WaveformDesignerFacade {
    * Preserves user customizations while adding new schema fields
    */
   mergeStates(freshDefaults: ApplicationState, persisted: ApplicationState): ApplicationState {
+    // Always use fresh backend defaults for system config (not user choices)
+    const systemDefaults = {
+      audio_processing: freshDefaults.composition.audio_processing
+    };
+    
     const merge = (target: unknown, source: unknown): unknown => {
       if (typeof source !== 'object' || source === null || Array.isArray(source)) {
         return source;
@@ -383,8 +389,17 @@ export class WaveformDesignerFacade {
       return result;
     };
     
-    return merge(freshDefaults, persisted) as ApplicationState;
-  }	
+    const merged = merge(freshDefaults, persisted) as ApplicationState;
+    
+    // Restore system defaults that should not come from persisted state
+    return {
+      ...merged,
+      composition: {
+        ...merged.composition,
+        audio_processing: systemDefaults.audio_processing
+      }
+    };
+  }
   
   /**
    * Get available style options from configuration

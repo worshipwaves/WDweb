@@ -183,3 +183,4 @@ cython_debug/
 node_modules/
 combined_files/
 public/assets/textures/wood
+temp/

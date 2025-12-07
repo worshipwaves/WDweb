@@ -6,6 +6,9 @@
  * - Emits FILE_UPLOADED action via controller dispatch
  * - No internal state beyond DOM references
  * - Uses data-demo-id for tour compatibility
+ * 
+ * Design: Matches .slider-card + .slider-group pattern from WOOD > Layout
+ * - Styles defined in test.css (.upload-card, .upload-card-*)
  */
 
 import type { PanelComponent } from '../types/PanelTypes';
@@ -31,73 +34,72 @@ export class UploadPanel implements PanelComponent {
     const container = document.createElement('div');
     container.className = 'panel-content upload-panel';
     
-    // Body with upload controls
-    const body = document.createElement('div');
-    body.className = 'panel-body';
-    body.style.display = 'flex';
-    body.style.flexDirection = 'column';
-    body.style.gap = '16px';
-    body.style.padding = '20px';
-    
-    // Create file input (hidden)
+    // Hidden file input
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = 'audio/*';
     fileInput.style.display = 'none';
     this._fileInput = fileInput;
-    body.appendChild(fileInput);
+    container.appendChild(fileInput);
     
-    // Create upload button
-    const uploadButton = document.createElement('button');
-    uploadButton.className = 'upload-button';
-    uploadButton.dataset.demoId = 'upload_button';
-    uploadButton.style.padding = '16px 24px';
-    uploadButton.style.fontSize = '16px';
-    uploadButton.style.fontWeight = '500';
-    uploadButton.style.background = 'linear-gradient(135deg, #D9A464 0%, #C89550 100%)';
-		uploadButton.style.border = 'none';
-		uploadButton.style.boxShadow = '0 4px 12px rgba(217, 164, 100, 0.3)';
-		uploadButton.style.color = '#1a1a1a';
-    uploadButton.style.borderRadius = '8px';
-    uploadButton.style.color = 'rgba(255, 255, 255, 0.9)';
-    uploadButton.style.cursor = 'pointer';
-    uploadButton.style.transition = 'all 0.2s ease';
-    uploadButton.innerHTML = '📁 Choose Audio File';
+    // Drop zone - uses .upload-card class (matches .slider-card)
+    const dropZone = document.createElement('div');
+    dropZone.className = 'upload-card';
+    dropZone.dataset.demoId = 'upload_dropzone';
+    this._dropZone = dropZone;
     
-    // Upload button hover effects
-    uploadButton.addEventListener('mouseenter', () => {
-			uploadButton.style.boxShadow = '0 6px 16px rgba(217, 164, 100, 0.4)';
-			uploadButton.style.transform = 'translateY(-2px)';
-		});
+    // Inner content wrapper - matches .slider-group padding
+    const content = document.createElement('div');
+    content.className = 'upload-card-content';
     
-		uploadButton.addEventListener('mouseleave', () => {
-			uploadButton.style.boxShadow = '0 4px 12px rgba(217, 164, 100, 0.3)';
-			uploadButton.style.transform = 'translateY(0)';
-		});
+    // Upload icon - Option A style (arrow with tray)
+		const iconContainer = document.createElement('div');
+		iconContainer.className = 'upload-card-icon';
+		iconContainer.innerHTML = `
+			<svg width="60" height="60" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+				<path d="M24 32V16M24 16L18 22M24 16L30 22" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M8 32V36C8 38.2091 9.79086 40 12 40H36C38.2091 40 40 38.2091 40 36V32" stroke-linecap="round"/>
+			</svg>
+		`;
+		content.appendChild(iconContainer);
     
-    uploadButton.addEventListener('click', () => {
+    // Title
+    const title = document.createElement('div');
+    title.className = 'upload-card-title';
+    title.textContent = 'Upload Audio File';
+    content.appendChild(title);
+    
+    // Hint text
+    const hint = document.createElement('div');
+    hint.className = 'upload-card-hint';
+    hint.textContent = 'Drag and drop or click to select';
+    content.appendChild(hint);
+    
+    // Browse button
+    const browseButton = document.createElement('button');
+    browseButton.className = 'upload-card-button';
+    browseButton.dataset.demoId = 'upload_button';
+    browseButton.textContent = 'Browse Files';
+    
+    // Button click triggers file input
+    browseButton.addEventListener('click', (e) => {
+      e.stopPropagation();
       this._fileInput?.click();
     });
+    content.appendChild(browseButton);
     
-    body.appendChild(uploadButton);
+    // Formats text
+    const formats = document.createElement('div');
+    formats.className = 'upload-card-formats';
+    formats.textContent = 'MP3, WAV, FLAC, M4A up to 100MB';
+    content.appendChild(formats);
     
-    // Create drop zone
-    const dropZone = document.createElement('div');
-    dropZone.style.padding = '40px 20px';
-    dropZone.style.border = '2px dashed rgba(255, 255, 255, 0.3)';
-    dropZone.style.borderRadius = '8px';
-    dropZone.style.textAlign = 'center';
-    dropZone.style.color = 'rgba(255, 255, 255, 0.6)';
-    dropZone.style.cursor = 'pointer';
-    dropZone.innerHTML = '<div style="font-size: 48px; margin-bottom: 16px;"></div><div>Or drag and drop your audio file here</div><div style="margin-top: 8px; font-size: 12px; opacity: 0.7;">Supported formats: MP3, WAV, FLAC, M4A</div>';
-    this._dropZone = dropZone;
+    dropZone.appendChild(content);
     
     // Drop zone click triggers file input
     dropZone.addEventListener('click', () => {
       this._fileInput?.click();
     });
-    
-    body.appendChild(dropZone);
     
     // File input change handler
     fileInput.addEventListener('change', (e) => {
@@ -108,32 +110,37 @@ export class UploadPanel implements PanelComponent {
     });
     
     // Drag and drop handlers
-		dropZone.addEventListener('dragover', (e) => {
-			e.preventDefault();
-			e.stopPropagation();
-			dropZone.style.borderColor = 'rgba(217, 164, 100, 0.8)';
-			dropZone.style.backgroundColor = 'rgba(217, 164, 100, 0.1)';
-		});
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add('drag-over');
+    });
     
     dropZone.addEventListener('dragleave', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      dropZone.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-      dropZone.style.backgroundColor = 'transparent';
+      const rect = dropZone.getBoundingClientRect();
+      if (
+        e.clientX <= rect.left ||
+        e.clientX >= rect.right ||
+        e.clientY <= rect.top ||
+        e.clientY >= rect.bottom
+      ) {
+        dropZone.classList.remove('drag-over');
+      }
     });
     
     dropZone.addEventListener('drop', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      dropZone.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-      dropZone.style.backgroundColor = 'transparent';
+      dropZone.classList.remove('drag-over');
       
       if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
         this._handleFileSelected(e.dataTransfer.files[0]);
       }
     });
     
-    container.appendChild(body);
+    container.appendChild(dropZone);
     this._container = container;
     
     return container;

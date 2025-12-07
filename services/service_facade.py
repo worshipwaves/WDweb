@@ -460,7 +460,11 @@ class WaveformDesignerFacade:
         # For now, use max_amplitudes as the primary amplitude array
         # TODO: Update to handle both min and max arrays properly
         normalized_amplitudes = audio_result.get("max_amplitudes", audio_result.get("scaled_amplitudes", []))
-        scaled_amplitudes = [amp * max_amplitude_local for amp in normalized_amplitudes]
+        scaled_amplitudes = AudioProcessingService.scale_and_clamp_amplitudes(
+            normalized_amplitudes,
+            max_amplitude_local,
+            state.pattern_settings.bit_diameter
+        )
         
         # Step 4: Create the final updated state DTO
         updated_state = state.model_copy(update={"processed_amplitudes": scaled_amplitudes})

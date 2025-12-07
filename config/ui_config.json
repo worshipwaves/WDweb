@@ -38,7 +38,7 @@
     "slots": {
       "id": "slots",
       "type": "range",
-      "label": "Slots",
+      "label": "Elements",
       "state_path": "pattern_settings.number_slots",
       "display_value_id": "slotsValue"
     },
@@ -179,7 +179,7 @@
           }
         },
         "wood_species": {
-          "label": "Species",
+          "label": "Wood & Grain",
 					"panel_title": "WOOD & GRAIN",
 					"panel_help": "Select your wood species and grain direction. Each thumbnail shows how the grain pattern will appear on your panel. Click any combination to preview.",
           "filters": {},
@@ -192,7 +192,7 @@
         "layout": {
           "label": "Layout",
 					"panel_title": "LAYOUT",
-					"panel_help": "Adjust physical dimensions and slot count. Size controls overall scale, slots affects waveform detail. Some options may be limited by your chosen art style.",
+					"panel_help": "Adjust physical dimensions and element count. Size controls overall scale, elements affects waveform detail. Some options may be limited by your chosen art style.",
           "filters": {},
           "options": {
             "main": {
@@ -214,7 +214,7 @@
           }
         },
         "frames": {
-          "label": "Frames",
+          "label": "Frames & Shelves",
 					"panel_title": "FRAMES",
           "panel_help": "Add a decorative frame around your panel. Coming soon.",
           "note": "",
@@ -317,13 +317,36 @@
           "options": {}
         },
         "custom": {
-          "label": "Custom",
+          "label": "Your Song",
 					"panel_title": "upload your worship",
           "panel_help": "Upload your own audio file to create a unique waveform design. Supports MP3, WAV, and FLAC formats up to 50MB.",
           "filters": {},
           "options": {
             "file_upload": {
-              "type": "upload_interface"
+              "type": "audio_upload"
+            }
+          }
+        },
+				"slicing": {
+          "label": "Pick Your Moment",
+          "panel_title": "PICK A MOMENT",
+          "panel_help": "Select a section of your audio to use for the waveform design.",
+          "filters": {},
+          "options": {
+            "audio_slicer": {
+              "type": "audio_trimmer"
+            }
+          }
+        },
+				"demucs": {
+          "label": "Make It Beautiful",
+					"panel_title": "Separate music & vocals",
+          "panel_help": "It is often easier to 'visualize' the words in the soundwave when vocals are isolated.",
+					"note":"",
+          "filters": {},
+          "options": {
+            "stem_separation": {
+              "type": "audio_enhance"
             }
           }
         }

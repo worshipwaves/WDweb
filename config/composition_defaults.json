@@ -54,6 +54,7 @@
     "stem_choice": "vocals"
   },
   "audio_processing": {
+		"target_sample_rate": 44100,
     "num_raw_samples": 200000,
     "filter_amount": 0.05,
     "apply_filter": false,
@@ -61,7 +62,9 @@
     "binning_mode": "mean_abs",
     "remove_silence": false,
     "silence_threshold": -20,
-    "silence_duration": 0.5
+    "silence_duration": 0.50,
+    "silence_frame_length": 2048,
+    "silence_hop_length": 512
   },
   "peak_control": {
     "method": "none",

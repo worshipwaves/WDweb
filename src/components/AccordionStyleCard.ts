@@ -1,12 +1,14 @@
 // src/components/AccordionStyleCard.ts
 
 import type { PanelComponent } from '../types/PanelTypes';
+import { Tooltip } from './Tooltip';
 
 export interface StyleCardConfig {
   id: string;
   label: string;
   thumbnailUrl: string;
   disabled?: boolean;
+	tooltip?: string;
 }
 
 export interface AccordionStyleCardProps {
@@ -24,6 +26,7 @@ export class AccordionStyleCard implements PanelComponent {
   private _config: StyleCardConfig;
   private _selected: boolean;
   private _onSelect: (id: string) => void;
+	private _tooltip: Tooltip = new Tooltip();
 
   constructor(props: AccordionStyleCardProps) {
     this._config = props.config;
@@ -53,17 +56,35 @@ export class AccordionStyleCard implements PanelComponent {
     img.loading = 'lazy';
     card.appendChild(img);
 
-    // Label
-    const label = document.createElement('span');
-    label.className = 'style-card-label';
-    label.textContent = this._config.label;
-    card.appendChild(label);
-
     // Click handler
     if (!this._config.disabled) {
       card.addEventListener('click', () => {
+        this._tooltip.hide();
         this._onSelect(this._config.id);
       });
+    }
+
+    // Tooltip on hover
+    if (this._config.tooltip) {
+      card.addEventListener('mouseenter', () => {
+        const content = document.createElement('div');
+        content.className = 'tooltip-content-wrapper';
+        
+        // Optional: Add image to tooltip if desired for consistency
+        const tooltipImg = document.createElement('img');
+        tooltipImg.src = this._config.thumbnailUrl;
+        tooltipImg.alt = this._config.label;
+        content.appendChild(tooltipImg);
+
+        const desc = document.createElement('p');
+        desc.className = 'tooltip-description';
+        desc.textContent = this._config.tooltip!;
+        content.appendChild(desc);
+        
+        // Changed from 'tooltip-style-card' to 'tooltip-archetype' to match CSS
+        this._tooltip.show(content, card, 'left', 'tooltip-archetype', 0, 0, true, 'canvas');
+      });
+      card.addEventListener('mouseleave', () => this._tooltip.hide());
     }
 
     this._container = card;
@@ -71,6 +92,7 @@ export class AccordionStyleCard implements PanelComponent {
   }
 
   destroy(): void {
+    this._tooltip.hide();
     if (this._container) {
       this._container.remove();
       this._container = null;

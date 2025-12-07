@@ -29,6 +29,10 @@
       "width": {"min": 12, "max": 84},
       "height": {"min": 12, "max": 84},
       "reason": "CNC table size and shipping requirements"
+    },
+    "slot_style": {
+      "radial": {"x_offset": 0.75},
+      "linear": {"x_offset": 1.0}
     }
   },
   "archetype_constraints": {
@@ -92,14 +96,14 @@
       "available_sliders": ["width", "height", "slots", "side_margin"],
       "width": {"min": 24, "max": 42, "step": 1},
       "height": {"min": 12, "max": 42, "step": 1},
-      "slots": {"min": 12, "max": 42},
+      "slots": {"min": 12, "max": 200},
       "side_margin": {"min": 0, "max": 12, "step": 1.0}
     },
     "rectangular_linear_n2": {
       "available_sliders": ["width", "height", "slots", "separation", "side_margin"],
       "width": {"min": 36, "max": 84, "step": 1},
       "height": {"min": 12, "max": 84, "step": 1},
-      "slots": {"min": 12, "max": 96},
+      "slots": {"min": 12, "max": 200},
       "separation": {"min": 0.5, "max": 4.0, "step": 0.5},
       "side_margin": {"min": 0, "max": 12, "step": 1.0}
     },
@@ -107,7 +111,7 @@
       "available_sliders": ["width", "height", "slots", "separation", "side_margin"],
       "width": {"min": 12, "max": 84, "step": 1},
       "height": {"min": 12, "max": 42, "step": 1},
-      "slots": {"min": 12, "max": 60},
+      "slots": {"min": 12, "max": 200},
       "separation": {"min": 0.5, "max": 4.0, "step": 0.5},
       "side_margin": {"min": 0, "max": 12, "step": 1.0}
     },
@@ -115,7 +119,7 @@
       "available_sliders": ["width", "height", "slots", "separation", "side_margin"],
       "width": {"min": 12, "max": 84, "step": 1},
       "height": {"min": 12, "max": 84, "step": 1},
-      "slots": {"min": 12, "max": 96},
+      "slots": {"min": 12, "max": 200},
       "separation": {"min": 0.5, "max": 4.0, "step": 0.5},
       "side_margin": {"min": 0, "max": 12, "step": 1.0}
     },

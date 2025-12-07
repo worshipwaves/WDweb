@@ -35,7 +35,7 @@ export class BackingPanel implements PanelComponent {
   private currentMaterial: string;
 
   private horizontal: boolean = false;
-  
+	
   /**
    * Create a standalone toggle element for embedding in accordion header.
    * Static factory that doesn't require a full BackingPanel instance.
@@ -82,7 +82,7 @@ export class BackingPanel implements PanelComponent {
     this.onOptionSelected = onOptionSelected;
     this.horizontal = horizontal;
     this.container = document.createElement('div');
-    this.container.className = horizontal ? 'backing-panel-body horizontal-scroll' : 'backing-panel-body';
+    this.container.className = horizontal ? 'backing-panel-horizontal' : 'backing-panel-body';
 
     // Fetch config and then render
     void this.loadBackingConfig().then(() => {
@@ -106,19 +106,19 @@ export class BackingPanel implements PanelComponent {
   private renderContent(): void {
     if (!this.backingConfig) return;
     this.tooltip.hide();
-		
-		if (this.typeGrid) {
-      this.typeGrid.destroy();
-      this.typeGrid = null;
-    }
-    if (this.finishGrid) {
-      this.finishGrid.destroy();
-      this.finishGrid = null;
-    }
 
-    this.container.innerHTML = ''; // Clear previous content
+    this.container.innerHTML = '';
 
-    // Add enable toggle at top (sticky)
+    if (this.horizontal) {
+      this.renderHorizontalContent();
+    } else {
+      this.renderVerticalContent();
+    }
+  }
+
+  private renderVerticalContent(): void {
+    if (!this.backingConfig) return;
+
     const contentWrapper = document.createElement('div');
     contentWrapper.style.padding = '16px';
     contentWrapper.style.opacity = this.isEnabled ? '1' : '0.4';
@@ -127,16 +127,102 @@ export class BackingPanel implements PanelComponent {
     contentWrapper.style.flexDirection = 'column';
     contentWrapper.style.gap = '24px';
 
-    // 2. Material Type Grid
     contentWrapper.appendChild(this.createTypeGrid());
 
-    // 3. Finish Grid
     const selectedTypeData = this.backingConfig.material_catalog[this.currentType];
     if (selectedTypeData) {
       contentWrapper.appendChild(this.createFinishGrid(selectedTypeData));
     }
 
     this.container.appendChild(contentWrapper);
+  }
+
+  private renderHorizontalContent(): void {
+    if (!this.backingConfig) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'backing-content-wrapper';
+
+    // --- Material Row ---
+    const materialLabel = document.createElement('div');
+    materialLabel.className = 'backing-row-label';
+    materialLabel.textContent = 'Material';
+    wrapper.appendChild(materialLabel);
+
+    const materialScroll = document.createElement('div');
+    materialScroll.className = 'horizontal-scroll';
+
+    // "None" card
+    materialScroll.appendChild(this.createHorizontalCard('none', 'None', undefined, undefined, !this.isEnabled, () => {
+      this.isEnabled = false;
+      this.onOptionSelected('backing_enabled', false);
+      this.renderContent();
+    }));
+
+    // Material type cards
+    Object.values(this.backingConfig.material_catalog).forEach(typeData => {
+      const firstMat = typeData.materials[0];
+      materialScroll.appendChild(this.createHorizontalCard(
+        typeData.type,
+        typeData.display_name,
+        firstMat.texture_files?.diffuse,
+        firstMat.color_rgb,
+        this.isEnabled && this.currentType === typeData.type,
+        () => {
+          this.isEnabled = true;
+          this.currentType = typeData.type;
+          this.currentMaterial = typeData.materials[0].id;
+          this.onOptionSelected('backing_enabled', true);
+          this.onOptionSelected('backing_material', { type: this.currentType, material: this.currentMaterial });
+          this.renderContent();
+        },
+        `${typeData.display_name} backing material`
+      ));
+    });
+
+    wrapper.appendChild(materialScroll);
+
+    // --- Finish Row ---
+    const finishLabel = document.createElement('div');
+    finishLabel.className = 'backing-row-label';
+    finishLabel.textContent = 'Finish';
+    wrapper.appendChild(finishLabel);
+
+    const finishScroll = document.createElement('div');
+    finishScroll.className = 'horizontal-scroll';
+    if (!this.isEnabled) {
+      finishScroll.style.opacity = '0.4';
+      finishScroll.style.pointerEvents = 'none';
+    }
+
+    const selectedTypeData = this.backingConfig.material_catalog[this.currentType];
+    if (selectedTypeData) {
+      selectedTypeData.materials.forEach(mat => {
+        finishScroll.appendChild(this.createHorizontalCard(
+          mat.id,
+          mat.display,
+          mat.texture_files?.diffuse,
+          mat.color_rgb,
+          this.isEnabled && this.currentMaterial === mat.id,
+          () => {
+            this.currentMaterial = mat.id;
+            this.onOptionSelected('backing_material', { type: this.currentType, material: this.currentMaterial });
+            this.renderContent();
+          },
+          mat.description
+        ));
+      });
+    }
+
+    wrapper.appendChild(finishScroll);
+
+    this.container.appendChild(wrapper);
+
+    // Scroll to selected
+    this.scrollToSelected(materialScroll);
+    if (this.isEnabled) {
+      this.scrollToSelected(finishScroll);
+    }
   }
 
   private createEnableToggle(): HTMLElement {
@@ -287,6 +373,115 @@ export class BackingPanel implements PanelComponent {
     });
 
     return swatch;
+  }
+
+  private scrollToSelected(scrollContainer: HTMLElement): void {
+    requestAnimationFrame(() => {
+      const selected = scrollContainer.querySelector('.selected') as HTMLElement;
+      if (!selected) return;
+
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const selectedRect = selected.getBoundingClientRect();
+      const scrollLeft = scrollContainer.scrollLeft;
+
+      const targetScroll = scrollLeft +
+        (selectedRect.left - containerRect.left) -
+        (containerRect.width / 2) +
+        (selectedRect.width / 2);
+
+      scrollContainer.scrollTo({
+        left: Math.max(0, targetScroll),
+        behavior: 'instant'
+      });
+    });
+  }
+	
+	private createHorizontalCard(
+    id: string,
+    label: string,
+    textureUrl: string | undefined,
+    rgb: number[] | undefined,
+    isSelected: boolean,
+    onClick: () => void,
+    tooltipText?: string
+  ): HTMLElement {
+    const card = document.createElement('button');
+    card.className = 'accordion-card backing-material-card';
+    card.dataset.itemId = id;
+
+    if (isSelected) {
+      card.classList.add('selected');
+    }
+
+    const swatch = document.createElement('div');
+    swatch.className = 'backing-material-swatch';
+
+    if (id === 'none') {
+      swatch.innerHTML = `<svg class="none-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <line x1="4" y1="4" x2="20" y2="20"/>
+        <line x1="20" y1="4" x2="4" y2="20"/>
+      </svg>`;
+    } else {
+      const fill = document.createElement('div');
+      fill.className = 'backing-material-fill';
+
+      if (textureUrl) {
+        fill.style.backgroundImage = `url(${textureUrl})`;
+        fill.style.backgroundSize = 'cover';
+        fill.style.backgroundPosition = 'center';
+      } else if (rgb) {
+        const scale = rgb[0] <= 1 && rgb[1] <= 1 && rgb[2] <= 1 ? 255 : 1;
+        fill.style.backgroundColor = `rgb(${rgb[0] * scale}, ${rgb[1] * scale}, ${rgb[2] * scale})`;
+      }
+
+      swatch.appendChild(fill);
+    }
+
+    card.appendChild(swatch);
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'backing-material-label';
+    labelEl.textContent = label;
+    card.appendChild(labelEl);
+
+    // Tooltip on hover
+    if (tooltipText) {
+      card.addEventListener('mouseenter', () => {
+        const contentContainer = document.createElement('div');
+        contentContainer.className = 'tooltip-content-wrapper';
+
+        if (textureUrl) {
+          const preview = document.createElement('img');
+          preview.src = textureUrl;
+          preview.alt = label;
+          contentContainer.appendChild(preview);
+        } else if (rgb) {
+          const preview = document.createElement('div');
+          preview.className = 'tooltip-color-swatch';
+          const scale = rgb[0] <= 1 && rgb[1] <= 1 && rgb[2] <= 1 ? 255 : 1;
+          preview.style.backgroundColor = `rgb(${rgb[0] * scale}, ${rgb[1] * scale}, ${rgb[2] * scale})`;
+          contentContainer.appendChild(preview);
+        }
+
+        const description = document.createElement('p');
+        description.className = 'tooltip-description';
+        description.textContent = `${label}\n\n${tooltipText}`;
+        contentContainer.appendChild(description);
+
+        this.tooltip.show(contentContainer, card, 'left', 'tooltip-backing', 0, 0, true, 'canvas');
+      });
+
+      card.addEventListener('mouseleave', () => {
+        this.tooltip.hide();
+      });
+    }
+
+    card.addEventListener('click', () => {
+      this.tooltip.hide();
+      onClick();
+    });
+
+    return card;
   }
 
   public render(): HTMLElement { return this.container; }

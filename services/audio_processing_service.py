@@ -35,6 +35,26 @@ class AudioProcessingService:
         pass
     
     @staticmethod
+    def scale_and_clamp_amplitudes(
+        normalized_amps: List[float],
+        max_amplitude: float,
+        bit_diameter: float
+    ) -> List[float]:
+        """
+        Scale normalized amplitudes to physical dimensions with floor clamp.
+        
+        Args:
+            normalized_amps: 0-1 normalized amplitude values
+            max_amplitude: Maximum physical amplitude (inches)
+            bit_diameter: CNC bit diameter for floor calculation
+            
+        Returns:
+            Scaled amplitudes with minimum floor of bit_diameter * 2.0
+        """
+        floor = bit_diameter * 2.0
+        return [max(amp * max_amplitude, floor) for amp in normalized_amps]
+    
+    @staticmethod
     def extract_amplitudes(y: np.ndarray, num_amplitudes: int) -> np.ndarray:
         """
         Port of PyQt's _extract_amplitudes from core/algorithms/audio_processing.py.
@@ -219,7 +239,7 @@ class AudioProcessingService:
             try:
                 audio_data, sample_rate = librosa.load(
                     audio_path, 
-                    sr=None, 
+                    sr=44100, 
                     mono=True,
                     offset=start_time,
                     duration=duration
@@ -236,7 +256,7 @@ class AudioProcessingService:
         else:
             # Load full file
             try:
-                audio_data, sample_rate = librosa.load(working_path, sr=None, mono=True)
+                audio_data, sample_rate = librosa.load(working_path, sr=44100, mono=True)
             except Exception as e:
                 raise ValueError(f"Failed to load audio file: {e}")
                 
@@ -255,9 +275,7 @@ class AudioProcessingService:
             if stem_path:
                 # Load the stem
                 try:
-                    audio_data, sample_rate = sf.read(stem_path, dtype='float32')
-                    if audio_data.ndim > 1:
-                        audio_data = np.mean(audio_data, axis=1)
+                    audio_data, sample_rate = librosa.load(stem_path, sr=44100, mono=True)
                     print(f"  Extracted {stem_choice} stem")
                     
                     # Clean up demucs output
@@ -335,6 +353,30 @@ class AudioProcessingService:
         else:
             min_normalized = min_binned
             max_normalized = max_binned
+            
+        # --- DIAGNOSTIC DUMP START ---
+        print(f"\n[DIAGNOSTIC] Web Audio Pipeline Data Dump")
+        print(f"1. Audio Data (After Silence Removal):")
+        print(f"   - Length: {len(audio_data)}")
+        print(f"   - Sample Rate: {sample_rate}")
+        print(f"   - Duration: {len(audio_data)/sample_rate:.4f}s")
+        print(f"   - First 5 samples: {audio_data[:5].tolist()}")
+        print(f"   - Last 5 samples: {audio_data[-5:].tolist()}")
+        print(f"2. Extracted Samples (200k resampled):")
+        print(f"   - Length: {len(samples)}")
+        print(f"   - First 5: {samples[:5].tolist()}")
+        print(f"   - Last 5: {samples[-5:].tolist()}")
+        print(f"3. Binning Config:")
+        print(f"   - Mode: {binning_mode}")
+        print(f"   - Num Slots: {num_slots}")
+        print(f"   - Exponent: {exponent}")
+        print(f"4. Binned (Normalized) - max_normalized:")
+        print(f"   - Length: {len(max_normalized)}")
+        print(f"   - All values: {[round(float(x), 6) for x in max_normalized]}")
+        print(f"   - Min: {float(np.min(max_normalized)):.6f}")
+        print(f"   - Max: {float(np.max(max_normalized)):.6f}")
+        print(f"[DIAGNOSTIC] End Dump\n")
+        # --- DIAGNOSTIC DUMP END ---    
             
         performance_monitor.end('amplitude_extraction_and_binning')   
         

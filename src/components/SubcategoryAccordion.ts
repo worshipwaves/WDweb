@@ -28,9 +28,9 @@ export interface SubcategoryAccordionProps {
 /**
  * Caret icon SVG markup
  */
-/* const CARET_SVG = `<svg class="subcategory-icon" width="16" height="16" viewBox="0 0 10 6" fill="none">
+const CARET_SVG = `<svg class="subcategory-icon" width="16" height="16" viewBox="0 0 10 6" fill="none">
   <path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`; */
+</svg>`;
 
 /**
  * SubcategoryAccordion - Manages accordion UI for subcategory navigation.
@@ -73,8 +73,8 @@ export class SubcategoryAccordion implements PanelComponent {
     container.className = 'subcategory-accordion';
     container.dataset.categoryId = this._categoryId;
 
-    this._items.forEach(item => {
-      const details = this._createAccordionItem(item);
+    this._items.forEach((item, index) => {
+      const details = this._createAccordionItem(item, index + 1);
       container.appendChild(details);
     });
 
@@ -137,7 +137,6 @@ export class SubcategoryAccordion implements PanelComponent {
   destroy(): void {
     this._detailsElements.clear();
     this._valueElements.clear();
-    this._toolbarElements.clear();
     this._contentElements.clear();
     this._contentLoaded.clear();
     this._contentLoading.clear();
@@ -152,7 +151,7 @@ export class SubcategoryAccordion implements PanelComponent {
   /**
    * Create a single accordion item
    */
-  private _createAccordionItem(item: AccordionItemConfig): HTMLDetailsElement {
+  private _createAccordionItem(item: AccordionItemConfig, stepNumber: number): HTMLDetailsElement {
     const details = document.createElement('details');
     details.className = 'subcategory-item';
     details.dataset.subcategoryId = item.id;
@@ -173,7 +172,7 @@ export class SubcategoryAccordion implements PanelComponent {
     }
 
     // Create summary (header)
-    const summary = this._createSummary(item);
+    const summary = this._createSummary(item, stepNumber);
     details.appendChild(summary);
 
     // Create content container
@@ -203,30 +202,15 @@ export class SubcategoryAccordion implements PanelComponent {
   /**
    * Create the summary (clickable header) element
    */
-  private _createSummary(item: AccordionItemConfig): HTMLElement {
+  private _createSummary(item: AccordionItemConfig, stepNumber: number): HTMLElement {
     const summary = document.createElement('summary');
     summary.className = 'subcategory-header';
 
-    // Label
+    // Label (numbered only for wood category)
     const label = document.createElement('span');
     label.className = 'subcategory-label';
-    label.textContent = item.label;
+    label.textContent = this._categoryId === 'wood' ? `${stepNumber}. ${item.label}` : item.label;
     summary.appendChild(label);
-
-    // Toolbar container (if applicable)
-    if (item.getToolbar && !item.isDisabled) {
-      const toolbarContainer = document.createElement('span');
-      toolbarContainer.className = 'subcategory-toolbar';
-      
-      const toolbar = item.getToolbar();
-      if (toolbar) {
-        this._attachToolbarEvents(toolbar);
-        toolbarContainer.appendChild(toolbar);
-      }
-      
-      this._toolbarElements.set(item.id, toolbarContainer);
-      summary.appendChild(toolbarContainer);
-    }
 
     // Value display
     const value = document.createElement('span');
@@ -235,13 +219,13 @@ export class SubcategoryAccordion implements PanelComponent {
     this._valueElements.set(item.id, value);
     summary.appendChild(value);
 
-    // Caret icon (hidden for single-item and disabled)
-/*     if (!item.isSingle) {
+    // Caret icon (hidden for single-item)
+    if (!item.isSingle) {
       const iconWrapper = document.createElement('span');
       iconWrapper.innerHTML = CARET_SVG;
       summary.appendChild(iconWrapper.firstElementChild!);
-    } */
-
+    }
+		
     return summary;
   }
 
@@ -273,6 +257,14 @@ export class SubcategoryAccordion implements PanelComponent {
     this._onToggle(subcategoryId, isOpen);
 
     if (isOpen) {
+      // Single-open: close all other sections
+      this._detailsElements.forEach((details, id) => {
+        if (id !== subcategoryId && details.open) {
+          details.open = false;
+          this._openState[id] = false;
+          this._onToggle(id, false);
+        }
+      });
       this._ensureContentLoaded(subcategoryId);
     }
   }
@@ -339,6 +331,13 @@ export class SubcategoryAccordion implements PanelComponent {
    */
   getOpenState(): Record<string, boolean> {
     return { ...this._openState };
+  }
+
+  /**
+   * Get the content element for a subcategory
+   */
+  getContentElement(subcategoryId: string): HTMLElement | null {
+    return this._contentElements.get(subcategoryId) || null;
   }
 
   /**

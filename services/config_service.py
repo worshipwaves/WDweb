@@ -94,6 +94,14 @@ class ConfigService:
         """
         return self._default_state.model_dump()
         
+    def get_audio_processing_config(self) -> 'AudioProcessingDTO':
+        """Return audio processing DTO for silence removal config.
+        
+        Returns:
+            AudioProcessingDTO with processing parameters.
+        """
+        return self._default_state.audio_processing    
+        
     def get_backgrounds_config(self) -> dict:
         """Return backgrounds configuration.
         

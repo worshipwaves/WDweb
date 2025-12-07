@@ -1,11 +1,18 @@
+/**
+ * TourLauncherPanel.ts
+ * Tour launcher panel component - renders button to start interactive tour
+ * 
+ * Architecture: Stateless component
+ * - Launches DemoPlayer on button click
+ * - Uses data-demo-id for tour compatibility
+ * 
+ * Design: Matches .upload-card / .slider-card pattern
+ * - Styles defined in test.css (.tour-card, .tour-card-*)
+ */
+
 import type { PanelComponent } from '../types/PanelTypes';
-import { TourModal } from './TourModal';
 import type { ApplicationController } from '../ApplicationController';
 
-/**
- * Tour launcher panel component
- * Renders a prominent button to start the interactive tour
- */
 export class TourLauncherPanel implements PanelComponent {
   private _container: HTMLElement | null = null;
   private _controller: ApplicationController;
@@ -29,21 +36,35 @@ export class TourLauncherPanel implements PanelComponent {
     const container = document.createElement('div');
     container.className = 'panel-content tour-launcher-panel';
     
-    const body = document.createElement('div');
-    body.className = 'panel-body';
+    // Tour card - uses .tour-card class (matches .slider-card / .upload-card)
+    const card = document.createElement('div');
+    card.className = 'tour-card';
     
-    const description = document.createElement('p');
-    description.className = 'tour-description';
-    description.textContent = 'Experience WaveDesigner with a guided 60-second tour using Amazing Grace. See how audio becomes art.';
+    // Inner content wrapper
+    const content = document.createElement('div');
+    content.className = 'tour-card-content';
     
+    // Title
+    const title = document.createElement('div');
+    title.className = 'tour-card-title';
+    title.textContent = 'Amazing Grace - Song to Art';
+    content.appendChild(title);
+    
+    // Description
+    const description = document.createElement('div');
+    description.className = 'tour-card-description';
+    description.textContent = 'Experience WaveDesigner through a guided 60-second tour. See how audio becomes art.';
+    content.appendChild(description);
+    
+    // Launch button
     const button = document.createElement('button');
-    button.className = 'tour-launch-button';
-    button.textContent = '🎬 Begin Tour Experience';
+    button.className = 'tour-card-button';
+    button.textContent = 'Enjoy the Tour';
     button.addEventListener('click', () => this._launchTour());
+    content.appendChild(button);
     
-    body.appendChild(description);
-    body.appendChild(button);
-    container.appendChild(body);
+    card.appendChild(content);
+    container.appendChild(card);
     
     this._container = container;
     return container;

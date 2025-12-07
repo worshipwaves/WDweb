@@ -591,29 +591,4 @@ export class UIEngine {
       (controlGroup as HTMLElement).style.display = shouldShow ? '' : 'none';
     });
   }
-	
-	/**
-   * Checks if a specific grain direction is available for a given number of sections,
-   * based on the 'show_when' rules in the UI configuration.
-   */
-  public isGrainDirectionAvailable(grain: string, numberSections: number): boolean {
-    const grainConfig = this.getElementConfig('grainDirection');
-    if (!grainConfig || !grainConfig.options) {
-      // Fallback if config is missing
-      return grain === 'horizontal' || grain === 'vertical';
-    }
-
-    const option = grainConfig.options.find(opt => opt.value === grain);
-    if (!option) {
-      return false; // Grain option does not exist
-    }
-
-    // If there's no 'show_when', it's always available
-    if (!option.show_when || !option.show_when.number_sections) {
-      return true;
-    }
-
-    // Check if the current number of sections is in the allowed list
-    return option.show_when.number_sections.includes(numberSections);
-  }
 }

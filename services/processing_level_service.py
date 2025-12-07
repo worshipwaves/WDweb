@@ -1,6 +1,7 @@
 """Processing level service to handle parameter changes efficiently"""
 from typing import List, Dict, Any, Optional
-from services.dtos import CompositionStateDTO, GeometryResultDTO
+from services.dtos import CompositionStateDTO
+from services.audio_processing_service import AudioProcessingService
 from services.geometry_service import GeometryService
 from services.config_service import ConfigService
 
@@ -26,6 +27,7 @@ class ProcessingLevelService:
         "slot_style": "slots",
         "bit_diameter": "slots",
         "spacer": "slots",
+        "side_margin": "slots",
         "lead_overlap": "slots",
         "lead_radius": "slots",
 
@@ -128,7 +130,11 @@ class ProcessingLevelService:
                 max_amp = max(abs(a) for a in state.processed_amplitudes)
                 if max_amp > 0 and max_amp <= 1.5:
                     print(f"[PROCESSING DIAGNOSTIC] Detected normalized amplitudes (max={max_amp:.4f}), applying physical scaling")
-                    scaled_amplitudes = [amp * current_max for amp in state.processed_amplitudes]
+                    scaled_amplitudes = AudioProcessingService.scale_and_clamp_amplitudes(
+                        state.processed_amplitudes,
+                        current_max,
+                        state.pattern_settings.bit_diameter
+                    )
                     state = state.model_copy(update={"processed_amplitudes": scaled_amplitudes})
                     print(f"[PROCESSING DIAGNOSTIC] Scaled to physical space: max={max(scaled_amplitudes):.4f}")
                 else:
@@ -182,7 +188,11 @@ class ProcessingLevelService:
                 normalized_amplitudes = [a / max_val for a in normalized_amplitudes]
             
             # Apply new scaling to normalized values
-            scaled_amplitudes = [norm_amp * new_max_amplitude for norm_amp in normalized_amplitudes]
+            scaled_amplitudes = AudioProcessingService.scale_and_clamp_amplitudes(
+                normalized_amplitudes,
+                new_max_amplitude,
+                state.pattern_settings.bit_diameter
+            )
             
             print(f"[PROCESSING DIAGNOSTIC] Scaled {len(scaled_amplitudes)} amplitudes")
             print(f"[PROCESSING DIAGNOSTIC] Sample values: first={scaled_amplitudes[0]:.4f}, max={max(scaled_amplitudes):.4f}")
@@ -217,7 +227,11 @@ class ProcessingLevelService:
 
         # 3. Scale the normalized amplitudes to their final physical size.
         if state.processed_amplitudes and new_max_amplitude > 1e-9:
-            scaled_amplitudes = [amp * new_max_amplitude for amp in state.processed_amplitudes]
+            scaled_amplitudes = AudioProcessingService.scale_and_clamp_amplitudes(
+                state.processed_amplitudes,
+                new_max_amplitude,
+                state.pattern_settings.bit_diameter
+            )
             updated_state = state.model_copy(update={"processed_amplitudes": scaled_amplitudes})
             if state.frame_design and self._incoming_section_materials:
                 updated_frame = updated_state.frame_design.model_copy(

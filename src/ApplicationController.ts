@@ -15,6 +15,8 @@ import { SectionSelectorPanel } from './components/SectionSelectorPanel';
 import { SliderGroup } from './components/SliderGroup';
 import { SubcategoryAccordion, type AccordionItemConfig } from './components/SubcategoryAccordion';
 import { ThumbnailGrid } from './components/ThumbnailGrid';
+import { AccordionStyleCard } from './components/AccordionStyleCard';
+import { AccordionSpeciesCard } from './components/AccordionSpeciesCard';
 import { WoodMaterialSelector } from './components/WoodMaterialSelector';
 import { PerformanceMonitor } from './PerformanceMonitor';
 import { ConstraintResolver } from './services/ConstraintResolver';
@@ -90,7 +92,6 @@ interface ElementConfig {
 interface UIEngine {
   getElementConfig: (key: string) => ElementConfig | undefined;
   getStateValue: (composition: CompositionStateDTO, path: string) => unknown;
-  isGrainDirectionAvailable: (grain: string, numberSections: number) => boolean;
   config?: { dimension_constraints?: Record<string, { allow_aspect_lock?: boolean; min_dimension?: number; max_dimension?: number }> };
 }
 
@@ -102,22 +103,6 @@ declare global {
 
 // Subscriber callback type
 type StateSubscriber = (state: ApplicationState) => void;
-
-
-/**
- * Check if a grain direction is available for a given number of sections.
- */
-function isGrainAvailableForN(grain: string, n: number): boolean {
-  // Defer to the UIEngine, which reads from the configuration file.
-  if (window.uiEngine && typeof window.uiEngine.isGrainDirectionAvailable === 'function') {
-    return window.uiEngine.isGrainDirectionAvailable(grain, n);
-  }
-
-  // Fallback for safety, though UIEngine should always be available.
-  if (grain === 'diamond') return n === 4;
-  if (grain === 'radiant') return n >= 3;
-  return true;
-}
 
 /**
  * Initialize section_materials array when number_sections changes.
@@ -144,8 +129,11 @@ function initializeSectionMaterials(
   let intendedGrain = allSameGrain ? uiCapturedMaterials[0].grain_direction : config.default_grain_direction;
 
   // Step 2: Validate intended grain against NEW number of sections
-  if (!isGrainAvailableForN(intendedGrain, newN)) {
-    intendedGrain = 'vertical';
+  const archetypeId = window.controller?.getActiveArchetypeId();
+  const archetype = archetypeId ? window.controller?.getArchetype(archetypeId) : null;
+  const availableGrains = (archetype as { available_grains?: string[] })?.available_grains ?? ['vertical', 'horizontal'];
+  if (!availableGrains.includes(intendedGrain)) {
+    intendedGrain = config.default_grain_direction;
   }
 
   // Step 3: Build new materials array from scratch to correct size (newN)
@@ -221,6 +209,7 @@ export class ApplicationController {
   private _renderId: number = 0;
   private _accordion: SubcategoryAccordion | null = null;
   private _accordionState: Record<string, Record<string, boolean>> = {};
+	private _audioSlicerPanel: import('./components/AudioSlicerPanel').AudioSlicerPanel | null = null;
   
   constructor(facade: WaveformDesignerFacade) {
     this._facade = facade;
@@ -241,6 +230,31 @@ export class ApplicationController {
     if (this._sectionSelectorPanel) {
       this._sectionSelectorPanel.updateSelection(indices);
     }
+  }
+	
+	public updateAudioSourceState(updates: Partial<{
+    source_file: string | null;
+    start_time: number;
+    end_time: number;
+    use_stems: boolean;
+  }>): void {
+    if (!this._state) return;
+    this._state.composition.audio_source = {
+      ...this._state.composition.audio_source,
+      ...updates
+    };
+    this._facade.persistState(this._state);
+  }
+
+  public updateAudioProcessingState(updates: Partial<{
+    remove_silence: boolean;
+  }>): void {
+    if (!this._state) return;
+    this._state.composition.audio_processing = {
+      ...this._state.composition.audio_processing,
+      ...updates
+    };
+    this._facade.persistState(this._state);
   }
 	
 	/**
@@ -422,8 +436,8 @@ export class ApplicationController {
 
     // specific default selection logic
     if (!this._state.ui.activeCategory) {
-      const defaultCat = CATEGORIES.find(c => c.enabled);
-      if (defaultCat) this.handleCategorySelected(defaultCat.id);
+      const categoryIds = Object.keys(this._categoriesConfig || {});
+      if (categoryIds.length > 0) this.handleCategorySelected(categoryIds[0]);
     }
   }
   
@@ -461,6 +475,12 @@ export class ApplicationController {
     // Special handling for file upload
     if (action.type === 'FILE_UPLOADED') {
       await this.handleFileUpload(action.payload.file, action.payload.uiSnapshot);
+      return;
+    }
+		
+		// Special handling for audio commit (slice/vocals)
+    if (action.type === 'AUDIO_COMMIT') {
+      await this._handleAudioCommit(action.payload);
       return;
     }
     
@@ -641,6 +661,92 @@ export class ApplicationController {
 			}, 5000);
 		});
 	}
+	
+	/**
+   * Handle committed audio (slice and/or vocal isolation)
+   * Sends to backend, receives processed audio, triggers art generation
+   */
+  private async _handleAudioCommit(payload: {
+    useSlice: boolean;
+    startTime: number | null;
+    endTime: number | null;
+    isolateVocals: boolean;
+    sliceBlob: Blob | null;
+    originalFile?: File;
+  }): Promise<void> {
+    if (!this._state) return;
+    
+    // SMART BYPASS: If blob provided and no further processing needed, skip backend
+    if (payload.sliceBlob && !payload.isolateVocals && !payload.removeSilence) {
+      console.log('[Controller] Client-side processing complete. Bypassing backend.');
+      const finalFile = new File([payload.sliceBlob], 'processed.wav', { type: 'audio/wav' });
+      await this.handleFileUpload(finalFile, this._state.composition);
+      return;
+    }
+    
+    // Determine source audio
+    const audioFile = payload.sliceBlob 
+      ? new File([payload.sliceBlob], 'slice.wav', { type: 'audio/wav' })
+      : payload.originalFile;
+    
+    if (!audioFile) {
+      console.error('[Controller] No audio file for commit');
+      return;
+    }
+    
+    // Show processing state
+    if (payload.isolateVocals) {
+      await this.dispatch({
+        type: 'PROCESSING_UPDATE',
+        payload: { stage: 'demucs', progress: 0 }
+      });
+    } else {
+      await this.dispatch({
+        type: 'PROCESSING_UPDATE',
+        payload: { stage: 'uploading', progress: 0 }
+      });
+    }
+    
+    try {
+      // Build form data
+      const formData = new FormData();
+      formData.append('file', audioFile);
+      formData.append('isolate_vocals', String(payload.isolateVocals));
+      formData.append('remove_silence', String(payload.removeSilence));
+      formData.append('silence_threshold', String(payload.silenceThreshold));
+      formData.append('silence_min_duration', String(payload.silenceMinDuration));
+      // Only send timing if we're NOT sending pre-sliced blob
+      // (backend should slice original file, not re-slice an already sliced blob)
+      if (!payload.sliceBlob && payload.useSlice && payload.startTime !== null && payload.endTime !== null) {
+        formData.append('start_time', String(payload.startTime));
+        formData.append('end_time', String(payload.endTime));
+      }
+      
+      // Call backend
+      const response = await fetch('/api/audio/process-commit', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Audio processing failed: ${response.status}`);
+      }
+      
+      // Get processed audio blob
+      const processedBlob = await response.blob();
+      const processedFile = new File([processedBlob], 'processed.wav', { type: 'audio/wav' });
+      
+      // Feed into existing upload pipeline
+      await this.handleFileUpload(processedFile, this._state.composition);
+      
+    } catch (error) {
+      console.error('[Controller] Audio commit failed:', error);
+      await this.dispatch({
+        type: 'PROCESSING_UPDATE',
+        payload: { stage: 'idle', progress: 0 }
+      });
+    }
+  }
   
   /**
    * Handle file upload with backend processing
@@ -1132,15 +1238,6 @@ export class ApplicationController {
         getContent: async () => this._renderSubcategoryContent(categoryId, subcategoryId)
       };
       
-      // Add toolbar getter for specific subcategories
-      if (categoryId === 'wood' && subcategoryId === 'panel' && subcategory.filters) {
-        item.getToolbar = () => this._createFilterToolbar(categoryId, subcategoryId, subcategory.filters!);
-      } else if (categoryId === 'wood' && subcategoryId === 'wood_species') {
-        item.getToolbar = () => this._createSectionSelectorToolbar();
-      } else if (categoryId === 'wood' && subcategoryId === 'backing') {
-        item.getToolbar = () => this._createBackingToggleToolbar();
-      }
-      
       items.push(item);
     }
     
@@ -1208,34 +1305,61 @@ export class ApplicationController {
     
     switch (key) {
       case 'wood:panel': {
-        const filterKey = `${categoryId}_${subcategoryId}`;
-        const filters = ui.filterSelections[filterKey] || {};
-        const shape = filters.shape?.[0] || 'circular';
-        const pattern = filters.slot_pattern?.[0] || 'radial';
-        return `${this._capitalize(shape)}, ${this._capitalize(pattern)}`;
+        const shape = composition.frame_design.shape || 'circular';
+        const numSections = composition.frame_design.number_sections || 1;
+        const pattern = composition.pattern_settings.slot_style || 'radial';
+        return `${this._capitalize(shape)}, ${numSections} panel${numSections > 1 ? 's' : ''}, ${this._capitalize(pattern)}`;
       }
       
       case 'wood:wood_species': {
-        const mat = composition.section_materials?.[0];
+        const mat = composition.frame_design.section_materials?.[0];
         if (!mat) return '';
         const speciesName = this._getSpeciesDisplayName(mat.species);
         const grain = this._capitalize(mat.grain_direction);
-        return `${speciesName} - ${grain}`;
+        return `${speciesName}, ${grain}`;
       }
       
       case 'wood:layout': {
         const w = composition.frame_design.finish_x;
         const h = composition.frame_design.finish_y;
-        return w && h ? `${w}" × ${h}"` : '';
+        const slots = composition.pattern_settings.number_slots;
+        return w && h ? `${w}" × ${h}", ${slots} Elements` : '';
       }
       
       case 'wood:backing': {
         if (!composition.frame_design.backing?.enabled) return 'None';
-        return this._getBackingDisplayName(composition.frame_design.backing.material);
+        const backing = composition.frame_design.backing;
+        const typeLabel = this._capitalize(backing.type);
+        const finishLabel = this._capitalize(backing.material);
+        return `${typeLabel}, ${finishLabel}`;
       }
       
       case 'wood:frames':
         return 'Coming Soon';
+				
+			case 'audio:custom': {
+        if (this._audioSlicerPanel) {
+          const filename = this._audioSlicerPanel.getLoadedFilename();
+          if (filename) return filename;
+        }
+        return 'Choose audio file';
+      }
+      
+      case 'audio:slicing': {
+        if (this._audioSlicerPanel) {
+          const selection = this._audioSlicerPanel.getSelectionDisplay();
+          if (selection) return selection;
+        }
+        return 'Optional';
+      }
+      
+      case 'audio:demucs': {
+        if (this._audioSlicerPanel) {
+          const enhancements = this._audioSlicerPanel.getEnhancementsDisplay();
+          if (enhancements) return enhancements;
+        }
+        return 'Optional';
+      }	
       
       case 'backgrounds:paint':
       case 'backgrounds:accent':
@@ -1268,7 +1392,7 @@ export class ApplicationController {
   private _getSpeciesDisplayName(speciesId: string): string {
     if (!this._woodMaterialsConfig) return speciesId;
     const species = this._woodMaterialsConfig.species_catalog.find(s => s.id === speciesId);
-    return species?.display_name || speciesId;
+    return species?.display || speciesId;
   }
   
   /**
@@ -1328,6 +1452,15 @@ export class ApplicationController {
         (this._sceneManager as { setSectionInteractionEnabled: (enabled: boolean) => void }).setSectionInteractionEnabled(enableInteraction);
         (this._sceneManager as { setSectionOverlaysVisible: (visible: boolean) => void }).setSectionOverlaysVisible(enableInteraction);
       }
+      
+      // Scroll to selected item in horizontal scroll container
+      requestAnimationFrame(() => {
+        const content = this._accordion?.getContentElement(subcategoryId);
+        const scrollContainer = content?.querySelector('.horizontal-scroll') as HTMLElement;
+        if (scrollContainer) {
+          this._scrollToSelectedInContainer(scrollContainer);
+        }
+      });
     }
   }
   
@@ -1351,9 +1484,9 @@ export class ApplicationController {
       .sort((a, b) => (a[1].order ?? 99) - (b[1].order ?? 99));
     
     const state: Record<string, boolean> = {};
-    subcategories.forEach(([id, config], index) => {
-      // First non-placeholder subcategory is open
-      state[id] = index === 0 && !config.note;
+    subcategories.forEach(([id]) => {
+      // All subcategories closed by default
+      state[id] = false;
     });
     
     return state;
@@ -1375,6 +1508,16 @@ export class ApplicationController {
     const optionConfig = subConfig?.options ? Object.values(subConfig.options)[0] : undefined;
     
     await this._renderSubcategoryContentInner(container, categoryId, subcategoryId, optionConfig);
+    
+    // Render sticky toolbar AFTER content (prepend to preserve position)
+    const toolbar = this._getSubcategoryToolbar(categoryId, subcategoryId);
+    if (toolbar) {
+      const toolbarWrapper = document.createElement('div');
+      toolbarWrapper.className = 'subcategory-toolbar--sticky';
+      toolbarWrapper.appendChild(toolbar);
+      container.insertBefore(toolbarWrapper, container.firstChild);
+    }
+    
     return container;
   }
   
@@ -1424,7 +1567,7 @@ export class ApplicationController {
         await this._renderBackingSwatchesContent(container);
         break;
       case 'archetype_grid':
-        await this._renderArchetypeGridContent(container);
+        await this._renderArchetypeGridContent(container, categoryId, subcategoryId);
         break;
       case 'wood_species_image_grid':
         await this._renderSpeciesGridContent(container);
@@ -1435,12 +1578,38 @@ export class ApplicationController {
       case 'tour_launcher':
         await this._renderTourLauncherContent(container);
         break;
-      case 'upload_interface':
-        await this._renderUploadInterfaceContent(container);
+      case 'audio_upload':
+        await this._renderAudioUploadContent(container);
+        break;
+			case 'audio_trimmer':
+        await this._renderAudioTrimmerContent(container);
+        break;
+      case 'audio_enhance':
+        await this._renderAudioEnhanceContent(container);
         break;
       default:
         container.innerHTML = `<div class="panel-placeholder">Content type: ${optionConfig.type}</div>`;
     }
+  }
+	
+	/**
+   * Get toolbar element for a subcategory (rendered inside content area)
+   * @private
+   */
+  private _getSubcategoryToolbar(categoryId: string, subcategoryId: string): HTMLElement | null {
+    if (!this._categoriesConfig) return null;
+    
+    const categoryConfig = this._categoriesConfig[categoryId as keyof CategoriesConfig];
+    const subcategory = categoryConfig?.subcategories[subcategoryId];
+    if (!subcategory) return null;
+    
+    if (categoryId === 'wood' && subcategoryId === 'panel' && subcategory.filters) {
+      return this._createFilterToolbar(categoryId, subcategoryId, subcategory.filters);
+    } else if (categoryId === 'wood' && subcategoryId === 'wood_species') {
+      return this._createSectionSelectorToolbar();
+    }
+    
+    return null;
   }
   
   /**
@@ -1465,7 +1634,7 @@ export class ApplicationController {
     const strip = new FilterIconStrip(
       filterGroups,
       activeFiltersMap,
-      (groupId, selections) => this._handleIconFilterChange(groupId, selections),
+      (groupId, selections) => this._handleFilterSelected(groupId, selections, categoryId, subcategoryId),
       true // compact mode
     );
     
@@ -1485,6 +1654,11 @@ export class ApplicationController {
     const shape = this._state.composition.frame_design.shape;
     const selectedSections = (this._sceneManager as unknown as { getSelectedSections: () => Set<number> }).getSelectedSections();
     
+    // Destroy previous selector if exists
+    if (this._sectionSelectorPanel) {
+      this._sectionSelectorPanel.destroy();
+    }
+    
     const selector = new SectionSelectorPanel(
       this,
       numberSections,
@@ -1493,6 +1667,9 @@ export class ApplicationController {
       (newSelection) => this._handleSectionSelectionFromUI(newSelection),
       true // inline mode
     );
+    
+    // Store reference for external updates (e.g., canvas click-to-clear)
+    this._sectionSelectorPanel = selector;
     
     return selector.render();
   }
@@ -1557,6 +1734,66 @@ export class ApplicationController {
     const tourPanel = new TourLauncherPanel(this, this._sceneManager);
     container.innerHTML = '';
     container.appendChild(tourPanel.render());
+  }
+	
+	/**
+   * Render audio slicer content for accordion
+   * @private
+   */
+  private async _ensureAudioSlicerPanel(): Promise<void> {
+    if (!this._audioSlicerPanel && this._state) {
+      const { AudioSlicerPanel } = await import('./components/AudioSlicerPanel');
+      this._audioSlicerPanel = new AudioSlicerPanel(this, {
+        silenceThreshold: this._state.composition.audio_processing.silence_threshold,
+        silenceDuration: this._state.composition.audio_processing.silence_duration,
+        removeSilence: this._state.composition.audio_processing.remove_silence
+      });
+    }
+  }
+
+  private async _renderAudioTrimmerContent(container: HTMLElement): Promise<void> {
+    await this._ensureAudioSlicerPanel();
+    if (!this._audioSlicerPanel) return;
+    container.innerHTML = '';
+    container.appendChild(this._audioSlicerPanel.renderTrimmerSection());
+  }
+	
+	private async _renderAudioUploadContent(container: HTMLElement): Promise<void> {
+    await this._ensureAudioSlicerPanel();
+    if (!this._audioSlicerPanel) return;
+    container.innerHTML = '';
+    container.appendChild(this._audioSlicerPanel.renderUploadSection());
+  }
+	
+	/**
+   * Update audio accordion header value (called from AudioSlicerPanel)
+   */
+  public updateAudioAccordionValue(subcategoryId: string): void {
+    if (this._accordion) {
+      this._accordion.updateValue(subcategoryId);
+    }
+  }
+
+	/**
+   * Open next audio accordion (called from AudioSlicerPanel CTA buttons)
+   */
+  public openNextAudioAccordion(currentSubcategory: string): void {
+    const nextMap: Record<string, string> = {
+      'custom': 'slicing',
+      'slicing': 'demucs'
+    };
+    const next = nextMap[currentSubcategory];
+    if (next && this._accordion) {
+      this._accordion.setOpen(currentSubcategory, false);
+      this._accordion.setOpen(next, true);
+    }
+  }
+	
+	private async _renderAudioEnhanceContent(container: HTMLElement): Promise<void> {
+    await this._ensureAudioSlicerPanel();
+    if (!this._audioSlicerPanel) return;
+    container.innerHTML = '';
+    container.appendChild(this._audioSlicerPanel.renderEnhanceSection());
   }
 
   /**
@@ -1633,38 +1870,64 @@ export class ApplicationController {
     const currentSpecies = materials[0]?.species || this._woodMaterialsConfig.default_species;
     const currentGrain = materials[0]?.grain_direction || this._woodMaterialsConfig.default_grain_direction;
     
-    const grid = new WoodMaterialSelector(
-      this._woodMaterialsConfig.species_catalog,
-      this._state.composition.frame_design.number_sections,
-      currentSpecies,
-      currentGrain,
-      (update) => {
-        void (async () => {
-          await this._updateWoodMaterial('species', update.species);
-          await this._updateWoodMaterial('grain_direction', update.grain);
-          if (this._accordion) {
-            this._accordion.updateValue('wood_species');
-          }
-        })();
-      },
-      true // horizontal
-    );
+    const scrollWrapper = document.createElement('div');
+    scrollWrapper.className = 'horizontal-scroll';
+    
+    const shape = this._state.composition.frame_design.shape;
+    const numSections = this._state.composition.frame_design.number_sections;
+    
+    const allGrainDefs = [
+      { id: 'n1_vertical', direction: 'vertical' },
+      { id: 'n1_horizontal', direction: 'horizontal' },
+      { id: 'n4_radiant', direction: 'radiant' },
+      { id: 'n4_diamond', direction: 'diamond' }
+    ];
+    const archetypeId = this.getActiveArchetypeId();
+    const archetype = archetypeId ? this._archetypes.get(archetypeId) : null;
+    const availableGrains = (archetype as { available_grains?: string[] })?.available_grains ?? ['vertical', 'horizontal'];
+    const grainDefs = allGrainDefs.filter(g => availableGrains.includes(g.direction));
+    
+    this._woodMaterialsConfig.species_catalog.forEach(species => {
+      const grains = grainDefs.map(g => ({
+        id: g.id,
+        direction: g.direction,
+        thumbnailUrl: `/wood_thumbnails_small/${species.id}_${g.id}.png`,
+        largeThumbnailUrl: `/wood_thumbnails_large/${species.id}_${g.id}.png`
+      }));
+      
+      const card = new AccordionSpeciesCard({
+				config: { id: species.id, label: species.display, grains },
+				selectedSpecies: currentSpecies,
+				selectedGrain: currentGrain,
+        onSelect: (speciesId, grainDir) => {
+          void (async () => {
+            await this._updateWoodMaterial('species', speciesId);
+            await this._updateWoodMaterial('grain_direction', grainDir);
+            if (this._accordion) this._accordion.updateValue('wood_species');
+          })();
+        }
+      });
+      scrollWrapper.appendChild(card.render());
+    });
     
     container.innerHTML = '';
-    container.appendChild(grid.render());
+    container.appendChild(scrollWrapper);
+    this._scrollToSelectedInContainer(scrollWrapper);
   }
 	
 	/**
    * Render archetype grid content for accordion
    * @private
    */
-  private async _renderArchetypeGridContent(container: HTMLElement): Promise<void> {
+  private async _renderArchetypeGridContent(container: HTMLElement, categoryId?: string, subcategoryId?: string): Promise<void> {
     if (!this._state || !this._archetypes) {
       container.innerHTML = '<div class="panel-placeholder">Loading styles...</div>';
       return;
     }
     
-    const filterKey = `${this._state.ui.activeCategory}_${this._state.ui.activeSubcategory}`;
+    const effectiveCategory = categoryId ?? this._state.ui.activeCategory;
+    const effectiveSubcategory = subcategoryId ?? this._state.ui.activeSubcategory;
+    const filterKey = `${effectiveCategory}_${effectiveSubcategory}`;
     const stateFilters = this._state.ui.filterSelections[filterKey] || {};
     
     const matchingArchetypes = Array.from(this._archetypes.values())
@@ -1687,16 +1950,52 @@ export class ApplicationController {
     
     const activeSelection = this.getActiveArchetypeId();
     
-    const grid = new ThumbnailGrid(
-      matchingArchetypes,
-      (id) => { void this._handleArchetypeSelected(id); },
-      activeSelection,
-      { type: 'archetype' },
-      true // horizontal
-    );
+    const scrollWrapper = document.createElement('div');
+    scrollWrapper.className = 'horizontal-scroll';
+    
+    matchingArchetypes.forEach(arch => {
+      const card = new AccordionStyleCard({
+        config: {
+          id: arch.id,
+          label: arch.label,
+          thumbnailUrl: arch.thumbnailUrl,
+          disabled: arch.disabled,
+          tooltip: arch.tooltip
+        },
+        selected: arch.id === activeSelection,
+        onSelect: (id) => { void this._handleArchetypeSelected(id); }
+      });
+      scrollWrapper.appendChild(card.render());
+    });
     
     container.innerHTML = '';
-    container.appendChild(grid.render());
+    container.appendChild(scrollWrapper);
+    this._scrollToSelectedInContainer(scrollWrapper);
+  }
+	
+	/**
+   * Scroll horizontal container to center the selected item
+   * @private
+   */
+  private _scrollToSelectedInContainer(scrollContainer: HTMLElement): void {
+    requestAnimationFrame(() => {
+      const selected = scrollContainer.querySelector('.selected') as HTMLElement;
+      if (!selected) return;
+      
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const selectedRect = selected.getBoundingClientRect();
+      const scrollLeft = scrollContainer.scrollLeft;
+      
+      const targetScroll = scrollLeft +
+        (selectedRect.left - containerRect.left) -
+        (containerRect.width / 2) +
+        (selectedRect.width / 2);
+      
+      scrollContainer.scrollTo({
+        left: Math.max(0, targetScroll),
+        behavior: 'instant'
+      });
+    });
   }
   
   /**
@@ -1753,17 +2052,6 @@ export class ApplicationController {
     });
     
     scrollWrapper.appendChild(scrollContent);
-    
-    // Add fade indicators
-    const fadeLeft = document.createElement('div');
-    fadeLeft.className = 'scroll-fade scroll-fade--left';
-    const fadeRight = document.createElement('div');
-    fadeRight.className = 'scroll-fade scroll-fade--right';
-    scrollWrapper.appendChild(fadeLeft);
-    scrollWrapper.appendChild(fadeRight);
-    
-    // Set up scroll detection
-    this._setupScrollFades(scrollWrapper, scrollContent);
     
     container.innerHTML = '';
     container.appendChild(scrollWrapper);
@@ -1827,8 +2115,35 @@ export class ApplicationController {
       card.appendChild(label);
     }
     
+    // Tooltip on hover
+    card.addEventListener('mouseenter', () => {
+      if (!this._helpTooltip) return;
+      const content = document.createElement('div');
+      content.className = 'tooltip-content-wrapper';
+      if (bg.path && type !== 'paint') {
+        const preview = document.createElement('img');
+        preview.src = bg.path;
+        preview.alt = bg.name;
+        content.appendChild(preview);
+      } else if (bg.rgb) {
+        const swatch = document.createElement('div');
+        swatch.className = 'tooltip-color-swatch';
+        const [r, g, b] = bg.rgb.map(v => Math.round(v * 255));
+        swatch.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+        content.appendChild(swatch);
+      }
+      const desc = document.createElement('p');
+      desc.className = 'tooltip-description';
+      desc.textContent = bg.name;
+      content.appendChild(desc);
+      const tooltipClass = type === 'paint' ? 'tooltip-paint' : type === 'accent' ? 'tooltip-accent' : 'tooltip-rooms';
+      this._helpTooltip.show(content, card, 'left', tooltipClass, 0, 0, true, 'canvas');
+    });
+    card.addEventListener('mouseleave', () => this._helpTooltip?.hide());
+
     // Click handler
     card.addEventListener('click', () => {
+      this._helpTooltip?.hide();
       this.handleBackgroundSelected(bg.id, type);
       
       // Update selection visually
@@ -1879,7 +2194,8 @@ export class ApplicationController {
     const sliderGroup = new SliderGroup(
       sliderConfigs,
       (id, value) => void this._updateStateValue(id, value),
-      this._state.composition.frame_design.number_sections
+      this._state.composition.frame_design.number_sections,
+      this._state.composition.pattern_settings.slot_style
     );
     
     const wrapper = document.createElement('div');
@@ -2145,15 +2461,17 @@ export class ApplicationController {
    * CRITICAL: Does NOT update composition state
    * @private
    */
-  private _handleFilterSelected(filterId: string, selections: Set<string>): void {
-    if (!this._state?.ui.activeSubcategory || !this._state.ui.activeCategory) return;
+  private _handleFilterSelected(filterId: string, selections: Set<string>, categoryId?: string, subcategoryId?: string): void {
+    const effectiveCategory = categoryId ?? this._state?.ui.activeCategory;
+    const effectiveSubcategory = subcategoryId ?? this._state?.ui.activeSubcategory;
+    if (!effectiveSubcategory || !effectiveCategory) return;
     
     // Dispatch filter change
     void this.dispatch({ 
       type: 'FILTER_CHANGED', 
       payload: { 
-        category: this._state.ui.activeCategory,
-        subcategory: this._state.ui.activeSubcategory,
+        category: effectiveCategory,
+        subcategory: effectiveSubcategory,
         filterId,
         selections: Array.from(selections)
       }
@@ -2163,8 +2481,8 @@ export class ApplicationController {
     if (!this._accordion) {
       this._renderRightMainFiltered();
     } else {
-      // Refresh accordion content for the active subcategory
-      this._accordion.refreshContent(this._state.ui.activeSubcategory);
+      // Refresh accordion content for the filter's owning subcategory
+      this._accordion.refreshContent(effectiveSubcategory);
     }
   }
 	
@@ -2325,7 +2643,8 @@ export class ApplicationController {
             (id, value) => {
               void this._updateStateValue(id, value);
             },
-            this._state.composition.frame_design.number_sections
+            this._state.composition.frame_design.number_sections,
+            this._state.composition.pattern_settings.slot_style
           );
           panelContent.appendChild(sliderGroup.render());
           
@@ -2355,32 +2674,40 @@ export class ApplicationController {
 						const materials = this._state.composition.frame_design.section_materials || [];
 						const currentSpecies = materials[0]?.species || this._woodMaterialsConfig.default_species;
 						const currentGrain = materials[0]?.grain_direction || this._woodMaterialsConfig.default_grain_direction;
-						const grid = new WoodMaterialSelector(
-							this._woodMaterialsConfig.species_catalog,
-							this._state.composition.frame_design.number_sections,
-							currentSpecies,
-							currentGrain,
-							(update) => {
+						const scrollWrapper = document.createElement('div');
+					scrollWrapper.className = 'horizontal-scroll';
+					
+					const grainDefs = [
+						{ id: 'n1_vertical', direction: 'vertical' },
+						{ id: 'n1_horizontal', direction: 'horizontal' },
+						{ id: 'n4_radiant', direction: 'radiant' },
+						{ id: 'n4_diamond', direction: 'diamond' }
+					];
+					
+					this._woodMaterialsConfig.species_catalog.forEach(species => {
+						const grains = grainDefs.map(g => ({
+							id: g.id,
+							direction: g.direction,
+							thumbnailUrl: `/wood_thumbnails_small/${species.id}_${g.id}.png`,
+							largeThumbnailUrl: `/wood_thumbnails_large/${species.id}_${g.id}.png`
+						}));
+						
+						const card = new AccordionSpeciesCard({
+              config: { id: species.id, label: species.display, grains },
+              selectedSpecies: currentSpecies,
+              selectedGrain: currentGrain,
+							onSelect: (speciesId, grainDir) => {
 								void (async () => {
-									// Capture scroll position from current .panel-body before re-render
-								const oldBody = document.querySelector('.panel-right-main .panel-body') as HTMLElement;
-								const scrollTop = oldBody?.scrollTop || 0;
+									await this._updateWoodMaterial('species', speciesId);
+									await this._updateWoodMaterial('grain_direction', grainDir);
+									if (this._accordion) this._accordion.updateValue('wood_species');
+								})();
+							}
+						});
+						scrollWrapper.appendChild(card.render());
+					});
 
-								await this._updateWoodMaterial('species', update.species);
-								await this._updateWoodMaterial('grain_direction', update.grain);
-								this._renderRightMainFiltered();
-
-								// Restore scroll position to new .panel-body after re-render
-								requestAnimationFrame(() => {
-									const newBody = document.querySelector('.panel-right-main .panel-body') as HTMLElement;
-									if (newBody) {
-										newBody.scrollTop = scrollTop;
-									}
-								});
-							})();
-						}
-					);
-					body.appendChild(grid.render());
+					body.appendChild(scrollWrapper);
 					panelContent.appendChild(body);
 					
 					// Render section selector in Right Secondary (for n > 1)
@@ -2632,6 +2959,10 @@ export class ApplicationController {
     });
   }
 	
+	getArchetype(id: string): Archetype | undefined {
+    return this._archetypes.get(id);
+  }
+	
 	/**
    * Get the current archetype ID from application state
    */
@@ -2721,6 +3052,13 @@ export class ApplicationController {
       if (archetype.side_margin !== undefined) {
         composition.pattern_settings.side_margin = archetype.side_margin;
       }
+      
+      // Set x_offset from constraints.json based on slot_style (single source of truth)
+      const slotStyleConstraints = this._constraints?.manufacturing?.slot_style?.[archetype.slot_style];
+      if (!slotStyleConstraints?.x_offset) {
+        throw new Error(`Missing manufacturing.slot_style.${archetype.slot_style}.x_offset in constraints.json`);
+      }
+      composition.pattern_settings.x_offset = slotStyleConstraints.x_offset;
 			
 			// Clamp width/height to new archetype constraints
       if (this._resolver && (archetype.shape === 'rectangular' || archetype.shape === 'diamond')) {
@@ -2778,6 +3116,11 @@ export class ApplicationController {
       this._renderRightMainFiltered();
     } else {
       this._accordion.refreshContent('panel');
+      this._accordion.updateValue('panel');
+      this._accordion.refreshContent('wood_species');
+      this._accordion.updateValue('wood_species');
+      this._accordion.refreshContent('layout');
+      this._accordion.updateValue('layout');
     }
     
     // Update art placement
@@ -2904,6 +3247,11 @@ export class ApplicationController {
     // Single update through facade
     await this.handleCompositionUpdate(newComposition);
     
+    // Update accordion header value
+    if (this._accordion) {
+      this._accordion.updateValue('layout');
+    }
+    
     // Update the OTHER slider's max value directly without re-rendering
 		const archetypeId = this.getActiveArchetypeId();
 		if (archetypeId && this._resolver && this._state) {
@@ -2946,9 +3294,24 @@ export class ApplicationController {
 					}
 				}
 			}
+			
+			// Update slots slider max (dimensions affect available slot space)
+			const slotsConfig = sliderConfigs.find(s => s.id === 'slots');
+			if (slotsConfig) {
+				const slotsSlider = document.getElementById('slots') as HTMLInputElement;
+				if (slotsSlider) {
+					slotsSlider.max = String(slotsConfig.max);
+					if (parseFloat(slotsSlider.value) > slotsConfig.max) {
+						slotsSlider.value = String(slotsConfig.max);
+						const valueDisplay = document.getElementById('slots-value');
+						if (valueDisplay) {
+							valueDisplay.textContent = String(slotsConfig.max);
+						}
+					}
+				}
+			}
 		}
 	}	
-
 	/**
    * Handle aspect ratio lock toggle
    * Captures current ratio when locked, clears when unlocked
@@ -3017,6 +3380,28 @@ export class ApplicationController {
 
 		// Trigger composition update
 		await this.handleCompositionUpdate(newComposition);
+		
+		// Update slots slider max when separation or side_margin changes
+		if (option === 'separation' || option === 'side_margin') {
+			const archetypeId = this.getActiveArchetypeId();
+			if (archetypeId && this._resolver && this._state) {
+				const sliderConfigs = this._resolver.resolveSliderConfigs(archetypeId, this._state.composition);
+				const slotsConfig = sliderConfigs.find(s => s.id === 'slots');
+				if (slotsConfig) {
+					const slotsSlider = document.getElementById('slots') as HTMLInputElement;
+					if (slotsSlider) {
+						slotsSlider.max = String(slotsConfig.max);
+						if (parseFloat(slotsSlider.value) > slotsConfig.max) {
+							slotsSlider.value = String(slotsConfig.max);
+							const valueDisplay = document.getElementById('slots-value');
+							if (valueDisplay) {
+								valueDisplay.textContent = String(slotsConfig.max);
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 	
 	/**
@@ -3089,6 +3474,11 @@ export class ApplicationController {
 
     // Trigger the rendering pipeline with the updated composition
     await this.handleCompositionUpdate(newComposition);
+    
+    // Update accordion header value
+    if (this._accordion) {
+      this._accordion.updateValue('wood_species');
+    }
   }
   
 	/**
@@ -3563,8 +3953,20 @@ export class ApplicationController {
         // Finally, notify all other UI components that the state has changed.
         this.notifySubscribers();
 
-      } catch (error: unknown) {
-        // Optionally dispatch an error state to the UI
+			} catch (error: unknown) {
+        console.error('[Controller] CSG generation failed, updating state locally:', error);
+        
+        // CRITICAL: Even if API fails, update local state so UI reflects user's selection
+        this._state = {
+          ...this._state,
+          composition: newComposition
+        };
+        
+        // Persist state even on API failure
+        this._facade.persistState(this._state);
+        
+        // Notify subscribers so UI updates
+        this.notifySubscribers();
       }
     } finally {
       this._isUpdatingComposition = false;

@@ -100,10 +100,10 @@ export class FilterIconStrip implements PanelComponent {
       button.classList.add('active');
     }
     
-    // Create filter funnel SVG inline (three horizontal lines forming funnel)
+    // Create X icon SVG for clear filters
     button.innerHTML = `
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M4 6 L20 6 M6 12 L18 12 M9 18 L15 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+        <path d="M6 6 L18 18 M18 6 L6 18" stroke="currentColor" stroke-width="1" stroke-linecap="round" fill="none"/>
       </svg>
     `;
     

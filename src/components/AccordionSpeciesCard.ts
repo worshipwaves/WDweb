@@ -1,11 +1,13 @@
 // src/components/AccordionSpeciesCard.ts
 
 import type { PanelComponent } from '../types/PanelTypes';
+import { Tooltip } from './Tooltip';
 
 export interface GrainOption {
   id: string;
   direction: string;
   thumbnailUrl: string;
+  largeThumbnailUrl?: string;
 }
 
 export interface SpeciesCardConfig {
@@ -31,6 +33,7 @@ export class AccordionSpeciesCard implements PanelComponent {
   private _selectedSpecies: string | null;
   private _selectedGrain: string | null;
   private _onSelect: (speciesId: string, grainDirection: string) => void;
+	private _tooltip: Tooltip = new Tooltip();
 
   constructor(props: AccordionSpeciesCardProps) {
     this._config = props.config;
@@ -77,8 +80,41 @@ export class AccordionSpeciesCard implements PanelComponent {
 
       thumb.addEventListener('click', (e) => {
         e.stopPropagation();
+        this._tooltip.hide();
+        
+        // Update visual selection across all species cards
+        const scrollContainer = card.closest('.horizontal-scroll');
+        if (scrollContainer) {
+          // Remove selected from all cards and grain thumbs
+          scrollContainer.querySelectorAll('.accordion-species-card').forEach(c => {
+            c.classList.remove('selected');
+            c.querySelectorAll('.grain-thumb').forEach(t => t.classList.remove('selected'));
+          });
+        }
+        
+        // Mark this card and grain as selected
+        card.classList.add('selected');
+        thumb.classList.add('selected');
+        
         this._onSelect(this._config.id, grain.direction);
       });
+
+      thumb.addEventListener('mouseenter', () => {
+        const content = document.createElement('div');
+        content.className = 'tooltip-content-wrapper';
+        if (grain.largeThumbnailUrl) {
+          const largeImg = document.createElement('img');
+          largeImg.src = grain.largeThumbnailUrl;
+          largeImg.alt = `${this._config.label} - ${grain.direction}`;
+          content.appendChild(largeImg);
+        }
+        const desc = document.createElement('p');
+        desc.className = 'tooltip-description';
+        desc.textContent = `${this._config.label} with ${grain.direction} grain pattern.`;
+        content.appendChild(desc);
+        this._tooltip.show(content, thumb, 'left', 'tooltip-species', 0, 0, true, 'canvas');
+      });
+      thumb.addEventListener('mouseleave', () => this._tooltip.hide());
 
       grainGrid.appendChild(thumb);
     });
@@ -90,6 +126,7 @@ export class AccordionSpeciesCard implements PanelComponent {
   }
 
   destroy(): void {
+    this._tooltip.hide();
     if (this._container) {
       this._container.remove();
       this._container = null;
