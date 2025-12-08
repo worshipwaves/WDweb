@@ -1929,9 +1929,10 @@ SPECIES CARDS - 140px
 
 .slicer-waveform-wrap {
   position: relative;
+  flex: 1;
+  min-width: 0;
   background: rgb(var(--color-background-secondary));
   border-radius: 4px;
-  margin-bottom: 12px;
   overflow: hidden;
 }
 
@@ -1961,11 +1962,46 @@ SPECIES CARDS - 140px
   position: absolute;
   top: 0;
   height: 64px;
-  background: rgba(var(--color-foreground), 0.15);
-  border-left: 2px solid rgb(var(--color-foreground));
-  border-right: 2px solid rgb(var(--color-foreground));
+  background: rgba(var(--color-foreground), 0.1);
+  border-left: 3px solid rgb(76, 175, 80);
+  border-right: 3px solid rgb(239, 83, 80);
   pointer-events: none;
   display: none;
+}
+
+.slicer-handle {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 32px;
+  background: rgb(var(--color-background));
+  border: 2px solid;
+  border-radius: 3px;
+  cursor: ew-resize;
+  pointer-events: auto;
+  z-index: 2;
+}
+.slicer-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 12px;
+  background: currentColor;
+  opacity: 0.5;
+}
+.slicer-handle-start {
+  left: -8px;
+  border-color: rgb(76, 175, 80);
+  color: rgb(76, 175, 80);
+}
+.slicer-handle-end {
+  right: -8px;
+  border-color: rgb(239, 83, 80);
+  color: rgb(239, 83, 80);
 }
 
 .slicer-selection.visible {
@@ -2126,7 +2162,7 @@ SPECIES CARDS - 140px
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .slicer-skip-btn {
@@ -2223,6 +2259,30 @@ SPECIES CARDS - 140px
 .slicer-mark-btn.marked {
   border-color: rgb(var(--color-foreground));
   border-width: 2px;
+}
+
+.slicer-btn-mark-start {
+  border-color: rgba(76, 175, 80, 0.4);
+}
+.slicer-btn-mark-start:hover {
+  border-color: rgba(76, 175, 80, 0.7);
+  background: rgba(76, 175, 80, 0.05);
+}
+.slicer-btn-mark-start.marked {
+  border-color: rgb(76, 175, 80);
+  background: rgba(76, 175, 80, 0.08);
+}
+
+.slicer-btn-mark-end {
+  border-color: rgba(239, 83, 80, 0.4);
+}
+.slicer-btn-mark-end:hover {
+  border-color: rgba(239, 83, 80, 0.7);
+  background: rgba(239, 83, 80, 0.05);
+}
+.slicer-btn-mark-end.marked {
+  border-color: rgb(239, 83, 80);
+  background: rgba(239, 83, 80, 0.08);
 }
 
 .slicer-mark-btn svg {

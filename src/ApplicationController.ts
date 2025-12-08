@@ -264,6 +264,11 @@ export class ApplicationController {
   restoreUIFromState(): void {
     if (!this._state) return;
     
+    // Restore accordion state from persisted state
+    if (this._state.ui.accordionState) {
+      this._accordionState = { ...this._state.ui.accordionState };
+    }
+    
     const { activeCategory, activeSubcategory } = this._state.ui;
     
     if (!activeCategory) return;
@@ -1341,13 +1346,18 @@ export class ApplicationController {
           const filename = this._audioSlicerPanel.getLoadedFilename();
           if (filename) return filename;
         }
-        return 'Choose audio file';
+        return composition.audio_source?.source_file || 'Choose audio file';
       }
       
       case 'audio:slicing': {
         if (this._audioSlicerPanel) {
           const selection = this._audioSlicerPanel.getSelectionDisplay();
           if (selection) return selection;
+        }
+        const src = composition.audio_source;
+        if (src?.start_time > 0 || src?.end_time > 0) {
+          const fmt = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+          return `${fmt(src.start_time)} → ${fmt(src.end_time)}`;
         }
         return 'Optional';
       }
@@ -1357,7 +1367,10 @@ export class ApplicationController {
           const enhancements = this._audioSlicerPanel.getEnhancementsDisplay();
           if (enhancements) return enhancements;
         }
-        return 'Optional';
+        const parts: string[] = [];
+        if (composition.audio_source?.use_stems) parts.push('Vocals');
+        if (composition.audio_processing?.remove_silence) parts.push('Cleaned');
+        return parts.length > 0 ? parts.join(', ') : 'Optional';
       }	
       
       case 'backgrounds:paint':

@@ -81,6 +81,9 @@ export class AudioSlicerPanel implements PanelComponent {
   private _silenceThresh!: number;
   private _silenceEnabled!: boolean;
   private _isolateVocals: boolean = false;
+
+  // Persisted state
+  private _persistedFileName: string | null = null;
   
   // Section references (refreshed on each render)
   private _uploadSection: HTMLElement | null = null;
@@ -126,9 +129,35 @@ export class AudioSlicerPanel implements PanelComponent {
         this._markEnd = src.end_time;
       }
       this._isolateVocals = src.use_stems || false;
+      this._persistedFileName = src.source_file || null;
     }
     if (state?.composition?.audio_processing) {
       this._silenceEnabled = state.composition.audio_processing.remove_silence || false;
+    }
+  }
+  
+  /**
+   * Restore Upload Section UI based on persisted state
+   */
+  private _restoreUploadState(): void {
+    const fileName = this._originalFile?.name || this._persistedFileName;
+    const isLoaded = !!this._audioBuffer || !!this._persistedFileName;
+
+    if (isLoaded && fileName) {
+      this._dropZone?.classList.add('hidden');
+      this._songLoaded?.classList.add('visible');
+      
+      if (this._songNameEl) this._songNameEl.textContent = fileName;
+      
+      if (this._songDurationEl) {
+        const durationText = this._audioBuffer 
+          ? this._formatTime(this._audioBuffer.duration) 
+          : '--:--';
+        this._songDurationEl.textContent = `${durationText} · ${this._audioBuffer ? 'Ready' : 'Re-upload to Edit'}`;
+      }
+      
+      const footer = this._dropZone?.closest('.audio-slicer-upload-section')?.querySelector('.slicer-upload-footer') as HTMLElement;
+      if (footer) footer.style.display = 'flex';
     }
   }
 
@@ -250,7 +279,10 @@ export class AudioSlicerPanel implements PanelComponent {
         <div class="slicer-waveform-wrap">
           <canvas class="slicer-waveform"></canvas>
           <div class="slicer-playhead"></div>
-          <div class="slicer-selection"></div>
+          <div class="slicer-selection">
+            <div class="slicer-handle slicer-handle-start"></div>
+            <div class="slicer-handle slicer-handle-end"></div>
+          </div>
         </div>
         
         <button class="slicer-skip-btn slicer-btn-forward" title="Forward 5 seconds">
@@ -391,6 +423,7 @@ export class AudioSlicerPanel implements PanelComponent {
   }
 
   private _attachTrimmerListeners(section: HTMLElement): void {
+    this._attachHandleDrag(section);
     section.querySelector('.slicer-play-btn')?.addEventListener('click', () => this._togglePlayback());
     section.querySelector('.slicer-btn-rewind')?.addEventListener('click', () => this._seek(-5));
     section.querySelector('.slicer-btn-forward')?.addEventListener('click', () => this._seek(5));
@@ -409,8 +442,8 @@ export class AudioSlicerPanel implements PanelComponent {
    * Get enhancements summary for accordion header display
    */
   public getEnhancementsDisplay(): string | null {
-    const vocals = this._isolateCheckbox?.checked || false;
-    const silence = this._silenceEnabled || false;
+    const vocals = this._isolateVocals;
+    const silence = this._silenceEnabled;
     
     if (!vocals && !silence) return null;
     
@@ -434,7 +467,7 @@ export class AudioSlicerPanel implements PanelComponent {
    * Get loaded filename for accordion header display
    */
   public getLoadedFilename(): string | null {
-    return this._originalFile?.name || null;
+    return this._originalFile?.name || this._persistedFileName;
   }
 
   private _attachEnhanceListeners(section: HTMLElement): void {
@@ -547,6 +580,52 @@ export class AudioSlicerPanel implements PanelComponent {
   private _handleResize = (): void => {
     if (this._audioBuffer) this._drawWaveform();
   };
+	
+	private _attachHandleDrag(section: HTMLElement): void {
+    const wrap = section.querySelector('.slicer-waveform-wrap') as HTMLElement;
+    const startHandle = section.querySelector('.slicer-handle-start') as HTMLElement;
+    const endHandle = section.querySelector('.slicer-handle-end') as HTMLElement;
+    if (!wrap || !startHandle || !endHandle) return;
+
+    const onDrag = (e: MouseEvent | TouchEvent, isStart: boolean) => {
+      if (!this._audioBuffer) return;
+      const rect = wrap.getBoundingClientRect();
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const time = pct * this._audioBuffer.duration;
+      if (isStart) {
+        this._markStart = time;
+      } else {
+        this._markEnd = time;
+      }
+      this._updateSelection();
+      this._updateMarkButtonsV2();
+      this._updateSelectionSummary();
+    };
+
+    const attach = (handle: HTMLElement, isStart: boolean) => {
+      const onMove = (e: MouseEvent | TouchEvent) => onDrag(e, isStart);
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onUp);
+        this._persistTrimState();
+      };
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+      handle.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        document.addEventListener('touchmove', onMove);
+        document.addEventListener('touchend', onUp);
+      });
+    };
+    attach(startHandle, true);
+    attach(endHandle, false);
+  }
   
   private _initAudioContext(): void {
     if (!this._audioContext) {
@@ -901,7 +980,6 @@ export class AudioSlicerPanel implements PanelComponent {
       if (previewBtn) previewBtn.textContent = '▶ Preview';
     };
   }
-  
   private async _previewWithProcessing(previewBtn: HTMLButtonElement | null): Promise<void> {
     if (!this._audioBuffer || !this._originalFile) return;
     
@@ -951,10 +1029,25 @@ export class AudioSlicerPanel implements PanelComponent {
       
       this._isPreviewing = true;
       this._isProcessing = false;
+      this._pausedAt = 0;
+      this._playStartedAt = this._audioContext!.currentTime;
       if (previewBtn) previewBtn.textContent = '❚❚ Pause';
+      
+      // Start highlight animation loop
+      const duration = this._processedBuffer!.duration;
+      const updatePreviewHighlight = () => {
+        if (!this._isPreviewing) return;
+        const currentTime = this._audioContext!.currentTime - this._playStartedAt;
+        this._updateSlotHighlight(currentTime);
+        if (currentTime < duration) {
+          requestAnimationFrame(updatePreviewHighlight);
+        }
+      };
+      requestAnimationFrame(updatePreviewHighlight);
       
       this._sourceNode.onended = () => {
         this._isPreviewing = false;
+        this._controller.highlightSlot(null);
         if (previewBtn) previewBtn.textContent = '▶ Preview';
       };
       

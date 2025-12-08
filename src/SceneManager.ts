@@ -53,8 +53,8 @@ export class SceneManager {
 		private _hemisphericLight: HemisphericLight | null = null;
     private _directionalLight: DirectionalLight | null = null;
     private _shadowGenerator: ShadowGenerator | null = null;
-    private _shadowReceiverPlane: Mesh | null = null;		
-		// Debug getters for high-res screenshot capture
+    private _shadowReceiverPlane: Mesh | null = null;
+		// Debug getters
     public get engine(): Engine { return this._engine; }
     public get scene(): Scene { return this._scene; }
 
@@ -461,8 +461,8 @@ export class SceneManager {
         this._selectedSectionIndices.clear();
         this.disposeBacking();
     }
-  
-    public getCurrentCSGData(): SmartCsgResponse | null {
+		
+		public getCurrentCSGData(): SmartCsgResponse | null {
         return this._currentCSGData ?? null;
     }
 	
