@@ -127,6 +127,9 @@ export class SceneManager {
         });
 
         this._engine.runRenderLoop(() => this._scene.render());
+				
+				// DEBUG: Expose for ShadowDebugPanel console tool
+        (window as any).__sceneManager = this;
     }
 
     public static create(canvasId: string, facade: WaveformDesignerFacade, controller: ApplicationController): SceneManager {
@@ -1067,7 +1070,13 @@ export class SceneManager {
         } else {
             finalYPos = -1.0;
         }
-        this._shadowReceiverPlane.position = new Vector3(0, finalYPos, 0);
+        // Use config position if provided, otherwise auto-calculated
+        if (background?.lighting?.shadow_receiver_position) {
+            const pos = background.lighting.shadow_receiver_position;
+            this._shadowReceiverPlane.position = new Vector3(pos[0], pos[1], pos[2]);
+        } else {
+            this._shadowReceiverPlane.position = new Vector3(0, finalYPos, 0);
+        }
         
         const shadowMat = new BackgroundMaterial("shadowReceiverMat", this._scene);
         shadowMat.shadowLevel = shadowDarkness;
@@ -1244,8 +1253,19 @@ export class SceneManager {
             }
             
             // Set position AFTER reparenting (prevents coordinate space corruption)
-            // Always centered at [0, 0] relative to artwork (X and Z), only Y varies based on backing/panel
-            this._shadowReceiverPlane.position = new Vector3(0, finalYPos, 0);
+            // Use config position if provided, otherwise auto-calculated
+						
+						console.log('[applyArtPlacement] bgState.id:', bgState.id);
+            console.log('[applyArtPlacement] background found:', !!background);
+            console.log('[applyArtPlacement] background.lighting:', background?.lighting);
+            console.log('[applyArtPlacement] shadow_receiver_position:', background?.lighting?.shadow_receiver_position);
+            
+            if (background?.lighting?.shadow_receiver_position) {
+                const pos = background.lighting.shadow_receiver_position;
+                this._shadowReceiverPlane.position = new Vector3(pos[0], pos[1], pos[2]);
+            } else {
+                this._shadowReceiverPlane.position = new Vector3(0, finalYPos, 0);
+            }
             this._shadowReceiverPlane.rotation = Vector3.Zero();
             
             // Counteract parent scaling to maintain constant world-space size
@@ -1310,7 +1330,7 @@ export class SceneManager {
             lighting.direction[2]
         ).normalize();
         this._directionalLight.direction = lightDirection;
-        this._directionalLight.intensity = lighting.intensity;
+        this._directionalLight.intensity = lighting.intensity ?? 2.0;
         
         // Move light back along its vector so shadows don't get clipped
         const artworkPosition = this._rootNode?.position || Vector3.Zero();
@@ -1340,18 +1360,36 @@ export class SceneManager {
 
         // Ambient boost
         this._hemisphericLight.intensity = 1.0 + (lighting.ambient_boost ?? 0);
+        
+        // Sky color (light from above)
+        if (lighting.hemispheric_sky_color) {
+            this._hemisphericLight.diffuse = new Color3(
+                lighting.hemispheric_sky_color[0],
+                lighting.hemispheric_sky_color[1],
+                lighting.hemispheric_sky_color[2]
+            );
+        }
+        
+        // Ground color (bounce light from floor)
+        if (lighting.ambient_ground_color) {
+            this._hemisphericLight.groundColor = new Color3(
+                lighting.ambient_ground_color[0],
+                lighting.ambient_ground_color[1],
+                lighting.ambient_ground_color[2]
+            );
+        }
 
         // 2. SHADOW CONFIGURATION
         if (lighting.shadow_enabled) {
-            // SHADOW FIX: Upgrade to 4096 resolution for crisp waveform slot detail during close-up examination
+            const shadowResolution = lighting.shadow_map_resolution ?? 4096;
             if (!this._shadowGenerator) {
-                this._shadowGenerator = new ShadowGenerator(4096, this._directionalLight);
+                this._shadowGenerator = new ShadowGenerator(shadowResolution, this._directionalLight);
             } else {
                 // Enforce resolution if generator already exists
                 const currentMap = this._shadowGenerator.getShadowMap();
-                if (currentMap && currentMap.getSize().width !== 4096) {
+                if (currentMap && currentMap.getSize().width !== shadowResolution) {
                     this._shadowGenerator.dispose();
-                    this._shadowGenerator = new ShadowGenerator(4096, this._directionalLight);
+                    this._shadowGenerator = new ShadowGenerator(shadowResolution, this._directionalLight);
                 }
             }
             

@@ -59,7 +59,7 @@ export type ArtPlacement = z.infer<typeof ArtPlacementSchema>;
 
 export const LightingConfigSchema = z.object({
   direction: z.tuple([z.number(), z.number(), z.number()]),
-  intensity: z.number(),
+  intensity: z.number().optional(),
   shadow_enabled: z.boolean(),
   shadow_blur: z.number().optional(),
   shadow_darkness: z.number().optional(),
@@ -67,7 +67,11 @@ export const LightingConfigSchema = z.object({
   shadow_receiver_position: z.tuple([z.number(), z.number(), z.number()]).optional(),
   shadow_filter_mode: z.enum(['exponential', 'pcf', 'contact_hardening']).optional(),
   shadow_receiver_size: z.number().optional(),
+	shadow_map_resolution: z.number().optional(),
   shadow_frustum_size: z.number().optional(),
+  shadow_map_resolution: z.number().optional(),
+  hemispheric_sky_color: z.tuple([z.number(), z.number(), z.number()]).optional(),
+  ambient_ground_color: z.tuple([z.number(), z.number(), z.number()]).optional(),
 }).strict();
 
 export type LightingConfig = z.infer<typeof LightingConfigSchema>;

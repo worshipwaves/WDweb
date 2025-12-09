@@ -11,6 +11,8 @@ import { calculateGrainAngle } from './utils/materialUtils';
 import { TourModal } from './components/TourModal';
 import { DemoPlayer } from './demo/DemoPlayer';
 import { SmartCsgResponse } from './types/schemas';
+import { ShadowDebugPanel, DEBUG_SHADOW_PANEL } from './ShadowDebugPanel';
+import { PlacementDebugPanel, DEBUG_PLACEMENT_PANEL } from './PlacementDebugPanel';
 
 // Expose Babylon core for console diagnostics
 (window as Window & { BJS_CORE?: typeof BABYLON }).BJS_CORE = BABYLON;
@@ -56,6 +58,16 @@ document.addEventListener('DOMContentLoaded', () => {
       // 3. Initialize Controller and Register SceneManager
       await controller.initialize();
       controller.registerSceneManager(sceneManager);
+			
+			// Shadow Debug Panel - toggle with Ctrl+Shift+D
+			if (DEBUG_SHADOW_PANEL) {
+				ShadowDebugPanel.init(sceneManager);
+			}
+			
+			// Placement Debug Panel - toggle with Ctrl+Shift+P
+			if (DEBUG_PLACEMENT_PANEL) {
+				PlacementDebugPanel.init(sceneManager);
+			}
 
       // 4. Bootstrap the UI
       const bootstrapper = new UIBootstrapper(uiEngine, controller, sceneManager);
