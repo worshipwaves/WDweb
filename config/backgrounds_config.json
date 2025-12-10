@@ -183,19 +183,19 @@
         "path": "/assets/backgrounds/rooms/bedroom2.webp",
         "description": "Serene bedroom setting",
         "art_placement": {
-          "position": [0, 5, -20],
+          "position": [0.55, 5, -20],
           "scale_factor": 0.675,
           "rotation": [0, 0, 0]
         },
-        "lighting": {
-          "direction": [1.0, -0.5, -1.0],
-          "intensity": 2.0,
+				"lighting": {
+          "direction": [-0.66, -0.25, -0.71],
           "shadow_enabled": true,
-          "shadow_blur": 20,
-          "shadow_darkness": 0.8,
+          "intensity": 0.5,
+          "shadow_darkness": 0.9,
+          "shadow_map_resolution": 2048,
           "ambient_boost": 1.5,
-          "shadow_filter_mode": "pcf",
-          "shadow_frustum_size": 60
+          "shadow_receiver_position": [0, -0.4, 0],
+          "hemispheric_sky_color": [1, 1, 0.95]
         }
       },
       {

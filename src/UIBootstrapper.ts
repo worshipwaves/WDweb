@@ -100,6 +100,7 @@ export class UIBootstrapper {
             fullscreenBtn.addEventListener('click', () => {
                 if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(err => console.error(err));
                 else if (document.exitFullscreen) document.exitFullscreen();
+                setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
             });
             fullscreenBtn.addEventListener('mouseenter', () => tooltip.show('Fullscreen', fullscreenBtn, 'right', 'tooltip-filter'));
             fullscreenBtn.addEventListener('mouseleave', () => tooltip.hide());

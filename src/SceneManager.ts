@@ -48,10 +48,12 @@ export class SceneManager {
     private _idealCameraRadius: number = 50;
 		private _archetypeIdealRadius: Map<string, number> = new Map();
     private _currentArchetypeId: string | null = null;
+		private _currentImageAspectRatio: number = 1.5; // Default 3:2
 		private _baselineAspectRatio: number = 1.0;
 		private _baseRadiusBeforeAspect: number = 50;
 		private _hemisphericLight: HemisphericLight | null = null;
     private _directionalLight: DirectionalLight | null = null;
+		private _resizeObserver: ResizeObserver | null = null;
     private _shadowGenerator: ShadowGenerator | null = null;
     private _shadowReceiverPlane: Mesh | null = null;
 		// Debug getters
@@ -81,55 +83,42 @@ export class SceneManager {
 
         GLTFFileLoader; // Reference to prevent tree-shaking
 
-        window.addEventListener('resize', () => {
-            this._engine.resize();
-            this.checkLayoutMode();
-            this.updateCameraOffset();
-						this.updateCanvasBoundaries();
-            
-            // ============================================================================
-            // CRITICAL: MAINTAIN CONSTANT HORIZONTAL FIELD OF VIEW ON RESIZE
-            // ============================================================================
-            // PROBLEM: Background images are width-constrained (fill viewport width, grow
-            // vertically). When entering fullscreen, background only grows vertically but
-            // 3D scene was growing both horizontally AND vertically, causing artwork to
-            // appear wider than the background reference (e.g., bedroom headboard).
-            //
-            // SOLUTION: Adjust vertical FOV to maintain constant horizontal FOV, matching
-            // the background's width-constrained scaling behavior.
-            //
-            // FAILED APPROACHES (DO NOT REVERT TO):
-            // - Adjusting camera radius: Changes both H and V FOV, doesn't maintain width
-            // - Using _baseRadiusBeforeAspect: Still allows horizontal growth
-            // - Removing adjustment entirely: Makes horizontal growth even worse
-            //
-            // MATHEMATICAL RELATIONSHIP:
-            // hFOV = 2 * atan(tan(vFOV/2) * aspectRatio)
-            // To keep hFOV constant when aspectRatio changes:
-            // tan(vFOV_new/2) = tan(vFOV_base/2) * (baselineAspect / currentAspect)
-            //
-            // DO NOT MODIFY THIS LOGIC WITHOUT TESTING:
-            // 1. Load bedroom scene (80" artwork over headboard)
-            // 2. Note artwork width matches headboard exactly (80")
-            // 3. Enter fullscreen
-            // 4. VERIFY: Artwork still matches headboard width (grows only vertically)
-            // ============================================================================
-            const canvas = this._engine.getRenderingCanvas();
-            if (canvas && canvas.width > 0 && canvas.height > 0) {
-                const currentAspect = canvas.width / canvas.height;
-                const aspectRatio = this._baselineAspectRatio / currentAspect;
-                
-                const baseFov = 0.8; // Standard vertical FOV (radians)
-                const halfBaseFov = baseFov / 2;
-                const newHalfFov = Math.atan(Math.tan(halfBaseFov) * aspectRatio);
-                this._camera.fov = newHalfFov * 2;
-            }
+        this._resizeObserver = new ResizeObserver(() => {
+            window.requestAnimationFrame(() => {
+                if (!this._engine || this._engine.isDisposed) return;
+                this._engine.resize();
+                this.checkLayoutMode();
+                this.updateCameraOffset();
+                this.updateCanvasBoundaries();
+                this.syncFovWithBackground();
+            });
         });
+        this._resizeObserver.observe(this._canvas);
 
         this._engine.runRenderLoop(() => this._scene.render());
 				
 				// DEBUG: Expose for ShadowDebugPanel console tool
         (window as any).__sceneManager = this;
+    }
+		
+		private syncFovWithBackground(): void {
+        const canvas = this._engine.getRenderingCanvas();
+        if (!canvas || canvas.width === 0 || canvas.height === 0) return;
+
+        const screenAspect = canvas.width / canvas.height;
+        const imageAspect = this._currentImageAspectRatio;
+        const baseFov = 0.8; // Standard vertical FOV (radians)
+
+        if (screenAspect < imageAspect) {
+            // Screen is taller/narrower than image: Background fills height.
+            // Keep vertical FOV constant.
+            this._camera.fov = baseFov;
+        } else {
+            // Screen is wider/shorter than image: Background fills width (crops vertical).
+            // Adjust vertical FOV to maintain fixed horizontal coverage.
+            const newHalfFov = Math.atan(Math.tan(baseFov / 2) * (imageAspect / screenAspect));
+            this._camera.fov = newHalfFov * 2;
+        }
     }
 
     public static create(canvasId: string, facade: WaveformDesignerFacade, controller: ApplicationController): SceneManager {
@@ -243,15 +232,17 @@ export class SceneManager {
 								container.style.backgroundColor = `rgb(${rgb[0] * 255}, ${rgb[1] * 255}, ${rgb[2] * 255})`;
 						} else if ((type === 'accent' || type === 'rooms') && path) {
 								// Preload image before applying
-								const img = new Image();
-								img.onload = () => {
-										if (container) {
-												container.style.backgroundImage = `url(${path})`;
-												container.style.backgroundSize = 'cover';
-												container.style.backgroundPosition = 'center';
-										}
-								};
-								img.src = path;
+                const img = new Image();
+                img.onload = () => {
+                    if (container) {
+                        this._currentImageAspectRatio = img.width / img.height;
+                        container.style.backgroundImage = `url(${path})`;
+                        container.style.backgroundSize = 'cover';
+                        container.style.backgroundPosition = 'center';
+                        this.syncFovWithBackground();
+                    }
+                };
+                img.src = path;
 						}
 				}
 		}
@@ -866,6 +857,10 @@ export class SceneManager {
     }
 
     public dispose(): void {
+        if (this._resizeObserver) {
+            this._resizeObserver.disconnect();
+            this._resizeObserver = null;
+        }
         this._sectionMeshes.forEach(mesh => mesh.dispose());
         this._sectionMaterials.forEach(mat => mat.dispose());
         this._sectionMeshes = [];
