@@ -6,7 +6,7 @@
  */
 
 import { Vector3, Color3, ShadowGenerator } from '@babylonjs/core';
-import type { SceneManager } from './SceneManager';
+import type { SceneManager } from '../src/SceneManager';
 
 // Configuration flag - set to true to enable the debug panel
 export const DEBUG_SHADOW_PANEL = true;

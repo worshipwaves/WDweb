@@ -522,7 +522,9 @@ export class ApplicationController {
     if (this._woodMaterialsConfig) {
       const textureCache = (this._sceneManager as unknown as SceneManagerInternal)._textureCache;
       if (textureCache && typeof textureCache.preloadAllTextures === 'function') {
-        void textureCache.preloadAllTextures(this._woodMaterialsConfig).then((idleLoader) => {
+        const selectedSpecies = this._state?.composition?.frame_design?.section_materials?.[0]?.species 
+          || this._woodMaterialsConfig.default_species;
+        void textureCache.preloadAllTextures(this._woodMaterialsConfig, selectedSpecies).then((idleLoader) => {
           this._idleTextureLoader = idleLoader;
           
           const indicator = document.getElementById('textureLoadingIndicator');

@@ -12,7 +12,7 @@
  */
 
 import { Vector3, PickingInfo } from '@babylonjs/core';
-import type { SceneManager } from './SceneManager';
+import type { SceneManager } from '../src/SceneManager';
 
 // Configuration flag - set to true to enable the debug panel
 export const DEBUG_PLACEMENT_PANEL = true;

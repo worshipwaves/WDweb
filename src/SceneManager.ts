@@ -367,6 +367,8 @@ export class SceneManager {
 								this._rootNode = new TransformNode("root", this._scene);
 								this._rootNode.rotation.x = Math.PI / 2;
 						}
+						// Hide rootNode until all meshes and textures are ready (prevents staged reveal)
+						this._rootNode.setEnabled(false);
 						this._sectionMeshes = meshes;
             
             // SHADOW FIX: Prevent self-shadowing artifacts ("paint drips") on flat wood panels
@@ -424,6 +426,18 @@ export class SceneManager {
             
             // Regenerate shadow receiver (same lifecycle as backing)
             this._createShadowReceiver(csgData);
+            
+            // Wait only for current section textures (not all preloaded textures)
+            const texturePromises: Promise<void>[] = [];
+            for (const mat of this._sectionMaterials) {
+                if (mat.albedoMap && !mat.albedoMap.isReady()) {
+                    texturePromises.push(new Promise(resolve => mat.albedoMap!.onLoadObservable.addOnce(resolve)));
+                }
+            }
+            if (texturePromises.length > 0) {
+                await Promise.all(texturePromises);
+            }
+            this._rootNode?.setEnabled(true);
             
             document.dispatchEvent(new CustomEvent('demo:renderComplete'));
             PerformanceMonitor.end('render_internal_total');

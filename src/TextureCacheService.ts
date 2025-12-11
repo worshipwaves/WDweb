@@ -48,15 +48,22 @@ export class TextureCacheService {
    * Phase 2: Cherry & Maple (high priority background)
    * Phase 3: Remaining species (low priority background)
    */
-  async preloadAllTextures(config: WoodMaterialsConfig): Promise<IdleTextureLoader> {
+  async preloadAllTextures(config: WoodMaterialsConfig, prioritySpeciesId?: string): Promise<IdleTextureLoader> {
     const textureConfig = config.texture_config;
     const basePath = textureConfig.base_texture_path;
     const sizeInfo = textureConfig.size_map.large;
     const folderName = sizeInfo.folder;
     
-    // Load first 3 species immediately (walnut, cherry, maple)
-    for (let i = 0; i < Math.min(3, config.species_catalog.length); i++) {
-      const species = config.species_catalog[i];
+    // Load priority species first (selected or default)
+    const priorityId = prioritySpeciesId || config.default_species;
+    const prioritySpecies = config.species_catalog.find(s => s.id === priorityId);
+    if (prioritySpecies) {
+      await this._preloadSpeciesTexturesAsync(prioritySpecies, basePath, folderName, sizeInfo.dimensions);
+    }
+    
+    // Load remaining top species (skip priority if already loaded)
+    const remaining = config.species_catalog.filter(s => s.id !== priorityId).slice(0, 2);
+    for (const species of remaining) {
       await this._preloadSpeciesTexturesAsync(species, basePath, folderName, sizeInfo.dimensions);
     }
     

@@ -11,8 +11,8 @@ import { calculateGrainAngle } from './utils/materialUtils';
 import { TourModal } from './components/TourModal';
 import { DemoPlayer } from './demo/DemoPlayer';
 import { SmartCsgResponse } from './types/schemas';
-import { ShadowDebugPanel, DEBUG_SHADOW_PANEL } from './ShadowDebugPanel';
-import { PlacementDebugPanel, DEBUG_PLACEMENT_PANEL } from './PlacementDebugPanel';
+import { ShadowDebugPanel, DEBUG_SHADOW_PANEL } from '../dev_utils/ShadowDebugPanel';
+import { PlacementDebugPanel, DEBUG_PLACEMENT_PANEL } from '../dev_utils/PlacementDebugPanel';
 
 // Expose Babylon core for console diagnostics
 (window as Window & { BJS_CORE?: typeof BABYLON }).BJS_CORE = BABYLON;
