@@ -1,0 +1,41 @@
+{
+  "wall_color_rgb": [
+    225,
+    87,
+    143
+  ],
+  "rooms": [
+    {
+      "id": "living-room",
+      "name": "Living-room",
+      "foreground": "living_room_foreground.png",
+      "shadow": "living_room_shadow.png",
+      "width": 4500,
+      "height": 3000
+    },
+    {
+      "id": "family-room",
+      "name": "Family room",
+      "foreground": "family_room_foreground.png",
+      "shadow": "family_room_shadow.png",
+      "width": 4500,
+      "height": 3000
+    },
+    {
+      "id": "home-library",
+      "name": "Home library",
+      "foreground": "home_library_foreground.png",
+      "shadow": "home_library_shadow.png",
+      "width": 4500,
+      "height": 3000
+    },
+    {
+      "id": "bedroom",
+      "name": "Bedroom",
+      "foreground": "bedroom_foreground.png",
+      "shadow": "bedroom_shadow.png",
+      "width": 4500,
+      "height": 3000
+    }
+  ]
+}

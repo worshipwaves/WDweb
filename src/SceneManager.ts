@@ -49,6 +49,7 @@ export class SceneManager {
 		private _archetypeIdealRadius: Map<string, number> = new Map();
     private _currentArchetypeId: string | null = null;
 		private _currentImageAspectRatio: number = 1.5; // Default 3:2
+		private _currentPaintColor: number[] | null = null;
 		private _baselineAspectRatio: number = 1.0;
 		private _baseRadiusBeforeAspect: number = 50;
 		private _hemisphericLight: HemisphericLight | null = null;
@@ -206,7 +207,7 @@ export class SceneManager {
 				this._backgroundLayer.color = new Color4(0, 0, 0, 0);
 		}
 	
-		public changeBackground(type: string, id: string, rgb?: number[], path?: string): void {
+		public changeBackground(type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string): void {
 				const canvas = this._engine.getRenderingCanvas();
 				const container = canvas?.parentElement;
 				
@@ -229,20 +230,48 @@ export class SceneManager {
 						container.style.backgroundImage = 'none';
 						
 						if (type === 'paint' && rgb) {
+								this._currentPaintColor = rgb;
 								container.style.backgroundColor = `rgb(${rgb[0] * 255}, ${rgb[1] * 255}, ${rgb[2] * 255})`;
 						} else if ((type === 'accent' || type === 'rooms') && path) {
-								// Preload image before applying
-                const img = new Image();
-                img.onload = () => {
-                    if (container) {
-                        this._currentImageAspectRatio = img.width / img.height;
-                        container.style.backgroundImage = `url(${path})`;
-                        container.style.backgroundSize = 'cover';
-                        container.style.backgroundPosition = 'center';
-                        this.syncFovWithBackground();
-                    }
-                };
-                img.src = path;
+								// Remove existing overlays
+								container.querySelector('.room-foreground-overlay')?.remove();
+								container.querySelector('.room-shadow-overlay')?.remove();
+								
+								if (foregroundPath) {
+										// Colorizable room: use current paint color as background
+										const paintRgb = this._currentPaintColor || [0.816, 0.804, 0.784];
+										container.style.backgroundColor = `rgb(${paintRgb[0] * 255}, ${paintRgb[1] * 255}, ${paintRgb[2] * 255})`;
+										// Load foreground overlay
+										const fgImg = new Image();
+										fgImg.onload = () => {
+												this._currentImageAspectRatio = fgImg.width / fgImg.height;
+												// Shadow overlay with multiply blend (must be first/behind)
+												const shadowPath = foregroundPath.replace('_foreground.png', '_shadow.png');
+												const shadowOverlay = document.createElement('div');
+												shadowOverlay.className = 'room-shadow-overlay';
+												shadowOverlay.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;background-image:url(${shadowPath});background-size:cover;background-position:center;pointer-events:none;z-index:0;mix-blend-mode:multiply;`;
+												container.insertBefore(shadowOverlay, container.firstChild);
+												
+												// Foreground overlay (furniture)
+												const overlay = document.createElement('div');
+												overlay.className = 'room-foreground-overlay';
+												overlay.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;background-image:url(${foregroundPath});background-size:cover;background-position:center;pointer-events:none;z-index:1;`;
+												container.insertBefore(overlay, container.firstChild);
+												this.syncFovWithBackground();
+										};
+										fgImg.src = foregroundPath;
+								} else {
+										// Standard room: single background image
+										const img = new Image();
+										img.onload = () => {
+												this._currentImageAspectRatio = img.width / img.height;
+												container.style.backgroundImage = `url(${path})`;
+												container.style.backgroundSize = 'cover';
+												container.style.backgroundPosition = 'center';
+												this.syncFovWithBackground();
+										};
+										img.src = path;
+								}
 						}
 				}
 		}
@@ -1183,10 +1212,16 @@ export class SceneManager {
         const state = this._controller.getState();
         const frameDesign = state?.composition?.frame_design;
 
-        // This offset calculation is the key. It finds the SCALED half-height of the artwork.
-        const yOffset = (frameDesign ? (frameDesign.shape === 'circular' ? Math.min(frameDesign.finish_x, frameDesign.finish_y) / 2 : frameDesign.finish_y / 2) : 0) * placement.scale_factor;
+        // Determine Y offset based on anchor mode (default: bottom for backward compatibility)
+        const anchorMode = (placement as { anchor?: string }).anchor || 'bottom';
+        let yOffset = 0;
         
-        // The final Y position is the anchor point from your config PLUS half the art's height.
+        if (anchorMode === 'bottom') {
+            // Bottom anchor: position is bottom edge, add half-height to get center
+            yOffset = (frameDesign ? (frameDesign.shape === 'circular' ? Math.min(frameDesign.finish_x, frameDesign.finish_y) / 2 : frameDesign.finish_y / 2) : 0) * placement.scale_factor;
+        }
+        // Center anchor: position IS center, no offset needed
+        
         this._rootNode.position = new Vector3(
             placement.position[0],
             placement.position[1] + yOffset,

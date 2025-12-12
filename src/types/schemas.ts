@@ -53,6 +53,7 @@ export const ArtPlacementSchema = z.object({
   position: z.tuple([z.number(), z.number(), z.number()]),
   scale_factor: z.number(),
   rotation: z.tuple([z.number(), z.number(), z.number()]),
+  anchor: z.enum(['bottom', 'center']).optional(),
 }).strict();
 
 export type ArtPlacement = z.infer<typeof ArtPlacementSchema>;
@@ -84,7 +85,8 @@ export const BackgroundItemSchema = z.object({
   description: z.string(),
   group: z.string().optional(),
   art_placement: ArtPlacementSchema.optional(),
-  lighting: LightingConfigSchema.optional()
+  lighting: LightingConfigSchema.optional(),
+  foreground_path: z.string().optional()
 }).strict();
 
 export const BackgroundsConfigSchema = z.object({

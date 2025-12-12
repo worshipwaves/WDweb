@@ -198,6 +198,29 @@
           "hemispheric_sky_color": [1, 1, 0.95]
         }
       },
+			{
+      "id": "bedroom3",
+        "name": "Bedroom3",
+        "path": "/assets/backgrounds/rooms/thumbnails/bedroom_thumb.jpg",
+        "foreground_path": "/assets/backgrounds/rooms/bedroom_foreground.png",
+        "description": "Serene bedroom setting",
+        "art_placement": {
+					"anchor": "center",
+          "position": [0, 15, -20],
+          "scale_factor": 0.675,
+          "rotation": [0, 0, 0]
+        },
+				"lighting": {
+          "direction": [-0.66, -0.25, -0.71],
+          "shadow_enabled": true,
+          "intensity": 0.5,
+          "shadow_darkness": 0.90,
+          "shadow_map_resolution": 2048,
+          "ambient_boost": 1.6,
+          "shadow_receiver_position": [0, -0.4, 0],
+          "hemispheric_sky_color": [1, 1, 0.95]
+        }				
+      },
       {
         "id": "hallway",
         "name": "Hallway",
@@ -245,7 +268,25 @@
           "shadow_receiver_position": [0, -0.4, 0],
           "hemispheric_sky_color": [1, 1, 0.95]
         }
-			}
+			},
+      {
+        "id": "home-library-colorizable",
+        "name": "Home Library (Colorizable)",
+        "path": "/assets/backgrounds/rooms/thumbnails/home_library_thumb.png",
+        "foreground_path": "/assets/backgrounds/rooms/home_library_foreground.png",
+        "description": "Home library with customizable wall color",
+        "art_placement": {
+          "position": [0, -2, -20],
+          "scale_factor": 0.5,
+          "rotation": [0, 0, 0]
+        },
+        "lighting": {
+          "direction": [-0.66, -0.25, -0.71],
+          "shadow_enabled": true,
+          "shadow_darkness": 0.8,
+          "ambient_boost": 1.2
+        }
+      }
     ]
   }
 }

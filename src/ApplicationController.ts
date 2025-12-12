@@ -1053,8 +1053,8 @@ export class ApplicationController {
     // Apply to scene (deferred until after composition update to prevent flash of wrong size)
 		const applyBackground = () => {
 			if ('changeBackground' in this._sceneManager) {
-				(this._sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string) => void })
-					.changeBackground(type, backgroundId, background.rgb, background.path);
+				(this._sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string) => void })
+					.changeBackground(type, backgroundId, background.rgb, background.path, (background as { foreground_path?: string }).foreground_path);
 			}
 		};
     
