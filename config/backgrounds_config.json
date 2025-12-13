@@ -3,6 +3,8 @@
     "type": "paint",
     "id": "warm-gray"
   },
+  "default_room": "blank_wall",
+  "default_wall_finish": "warm-beige",
   "categories": {
     "paint": [
       {
@@ -74,47 +76,70 @@
         "rgb": [0.227, 0.231, 0.235],
         "description": "Deep, rich black",
         "group": "Darks"
-      }
-    ],
-    "accent": [
-      {
-        "id": "brick-wall-white",
-        "name": "White Brick Wall",
-        "path": "/assets/backgrounds/accent/brick_wall_white.jpg",
-        "description": "Painted exposed brick"
       },
-			{
-        "id": "brick-wall-red",
-        "name": "Red Brick Wall",
+      {
+        "id": "brick-white",
+        "name": "White Brick",
+        "path": "/assets/backgrounds/accent/brick_wall_white.jpg",
+        "description": "Painted exposed brick",
+        "group": "Textures"
+      },
+      {
+        "id": "brick-red",
+        "name": "Red Brick",
         "path": "/assets/backgrounds/accent/brick_wall_red.jpg",
-        "description": "Rustic exposed brick"
+        "description": "Rustic exposed brick",
+        "group": "Textures"
       },
       {
         "id": "wood-planks",
         "name": "Wood Planks",
         "path": "/assets/backgrounds/accent/wood_planks.jpg",
-        "description": "Warm wooden accent"
+        "description": "Warm wooden accent",
+        "group": "Textures"
       },
       {
         "id": "concrete",
         "name": "Concrete",
         "path": "/assets/backgrounds/accent/concrete.jpg",
-        "description": "Modern industrial look"
+        "description": "Modern industrial look",
+        "group": "Textures"
       },
       {
         "id": "stucco",
         "name": "Stucco",
         "path": "/assets/backgrounds/accent/stucco.png",
-        "description": "Textured plaster finish"
+        "description": "Textured plaster finish",
+        "group": "Textures"
       }
     ],
     "rooms": [
+      {
+        "id": "blank_wall",
+        "name": "Blank Wall",
+        "path": "/assets/backgrounds/rooms/thumbnails/blank_wall_thumb.jpg",
+        "foreground_path": "/assets/backgrounds/rooms/blank_wall_foreground.png",
+        "wall_compensation": 1.0,
+        "description": "Simple wall with no furniture",
+        "art_placement": {
+          "anchor": "center",
+          "position": [0, 0, -20],
+          "scale_factor": 0.8,
+          "rotation": [0, 0, 0]
+        },
+        "lighting": {
+          "direction": [-0.66, -0.25, -0.71],
+          "shadow_enabled": true,
+          "shadow_darkness": 0.8,
+          "ambient_boost": 0.5
+        }
+      },
       {
         "id": "living-room-modern",
         "name": "Modern Living Room",
         "path": "/assets/backgrounds/rooms/living_room_8.jpeg",
         "description": "Contemporary living space",
-				"art_placement": {
+        "art_placement": {
           "position": [-9.97, -3.32, -20.00],
           "scale_factor": 0.42,
           "rotation": [0, 0, 0]
@@ -129,17 +154,17 @@
           "hemispheric_sky_color": [1, 1, 0.95]
         }
       },
-			{
+      {
         "id": "living-room-fireplace",
         "name": "Modern Living Room Fireplace",
         "path": "/assets/backgrounds/rooms/living_modern_fireplace.png",
         "description": "Contemporary living space with fireplace",
-				"art_placement": {
+        "art_placement": {
           "position": [-1.3, -4, -20],
           "scale_factor": 0.67,
           "rotation": [0, 0, 0]
         },
-				"lighting": {
+        "lighting": {
           "direction": [0.6, 0, -1.0],
           "intensity": 2.0,
           "shadow_enabled": true,
@@ -155,7 +180,7 @@
         "name": "Japandi",
         "path": "/assets/backgrounds/rooms/japandi.jpeg",
         "description": "Japandi living space",
-				"art_placement": {
+        "art_placement": {
           "position": [-3.5, -3, -20],
           "scale_factor": 0.66,
           "rotation": [0, 0, 0]
@@ -177,40 +202,20 @@
         "path": "/assets/backgrounds/rooms/dining.jpg",
         "description": "Elegant dining space"
       },
-			{
-      "id": "bedroom",
+      {
+        "id": "minimalist_home_bedroom",
         "name": "Bedroom",
-        "path": "/assets/backgrounds/rooms/bedroom2.webp",
-        "description": "Serene bedroom setting",
-        "art_placement": {
-          "position": [0.55, 5, -20],
-          "scale_factor": 0.675,
-          "rotation": [0, 0, 0]
-        },
-				"lighting": {
-          "direction": [-0.66, -0.25, -0.71],
-          "shadow_enabled": true,
-          "intensity": 0.5,
-          "shadow_darkness": 0.9,
-          "shadow_map_resolution": 2048,
-          "ambient_boost": 1.5,
-          "shadow_receiver_position": [0, -0.4, 0],
-          "hemispheric_sky_color": [1, 1, 0.95]
-        }
-      },
-			{
-      "id": "bedroom3",
-        "name": "Bedroom3",
-        "path": "/assets/backgrounds/rooms/thumbnails/bedroom_thumb.jpg",
+        "path": "/assets/backgrounds/rooms/thumbnails/minimalist_home_bedroom_thumb.jpg",
         "foreground_path": "/assets/backgrounds/rooms/bedroom_foreground.png",
+        "wall_compensation": 1.058,
         "description": "Serene bedroom setting",
         "art_placement": {
-					"anchor": "center",
+          "anchor": "center",
           "position": [0, 15, -20],
           "scale_factor": 0.675,
           "rotation": [0, 0, 0]
         },
-				"lighting": {
+        "lighting": {
           "direction": [-0.66, -0.25, -0.71],
           "shadow_enabled": true,
           "intensity": 0.5,
@@ -219,65 +224,40 @@
           "ambient_boost": 1.6,
           "shadow_receiver_position": [0, -0.4, 0],
           "hemispheric_sky_color": [1, 1, 0.95]
-        }				
+        }
       },
       {
         "id": "hallway",
         "name": "Hallway",
         "path": "/assets/backgrounds/rooms/hallway.webp",
         "description": "Gallery-style hallway",
-				"art_placement": {
-          "position": [0, -2, -20],
-          "scale_factor": 0.675,
-          "rotation": [0, 0, 0]
-        },
-				"lighting": {
-          "direction": [-0.66, -0.25, -0.71],
-          "shadow_enabled": true,
-          "intensity": 0.5,
-          "shadow_darkness": 0.9,
-          "shadow_map_resolution": 2048,
-          "ambient_boost": 1.5,
-          "shadow_receiver_position": [0, -0.4, 0],
-          "hemispheric_sky_color": [1, 1, 0.95]
-        }
-      },
-      {
-        "id": "stairway",
-        "name": "Stairway",
-        "path": "/assets/backgrounds/rooms/stairway.jpg",
-        "description": "Architectural staircase"
-      },
-			{
-				"id": "living-room-colorful",
-				"name": "Colorful Living Room",
-				"path": "/assets/backgrounds/rooms/living_room_base.png",
-				"description": "Living room with yellow couch",
-				"art_placement": {
-          "position": [0, -2, -20],
-          "scale_factor": 0.675,
-          "rotation": [0, 0, 0]
-        },
-				"lighting": {
-          "direction": [-0.66, -0.25, -0.71],
-          "shadow_enabled": true,
-          "intensity": 0.5,
-          "shadow_darkness": 0.9,
-          "shadow_map_resolution": 2048,
-          "ambient_boost": 1.5,
-          "shadow_receiver_position": [0, -0.4, 0],
-          "hemispheric_sky_color": [1, 1, 0.95]
-        }
-			},
-      {
-        "id": "home-library-colorizable",
-        "name": "Home Library (Colorizable)",
-        "path": "/assets/backgrounds/rooms/thumbnails/home_library_thumb.png",
-        "foreground_path": "/assets/backgrounds/rooms/home_library_foreground.png",
-        "description": "Home library with customizable wall color",
         "art_placement": {
           "position": [0, -2, -20],
-          "scale_factor": 0.5,
+          "scale_factor": 0.675,
+          "rotation": [0, 0, 0]
+        },
+        "lighting": {
+          "direction": [-0.66, -0.25, -0.71],
+          "shadow_enabled": true,
+          "intensity": 0.5,
+          "shadow_darkness": 0.9,
+          "shadow_map_resolution": 2048,
+          "ambient_boost": 1.5,
+          "shadow_receiver_position": [0, -0.4, 0],
+          "hemispheric_sky_color": [1, 1, 0.95]
+        }
+      },
+      {
+        "id": "minimalist_home_library",
+        "name": "Home Library",
+        "path": "/assets/backgrounds/rooms/thumbnails/minimalist_home_library_thumb.jpg",
+        "foreground_path": "/assets/backgrounds/rooms/home_library_foreground.png",
+        "wall_compensation": 1.058,
+        "description": "Home library with customizable wall color",
+        "art_placement": {
+          "anchor": "center",
+          "position": [4.5, 10, -20],
+          "scale_factor": 0.675,
           "rotation": [0, 0, 0]
         },
         "lighting": {
@@ -285,6 +265,46 @@
           "shadow_enabled": true,
           "shadow_darkness": 0.8,
           "ambient_boost": 1.2
+        }
+      },
+      {
+        "id": "minimalist_home_living_room",
+        "name": "Living Room",
+        "path": "/assets/backgrounds/rooms/thumbnails/minimalist_home_living_room_thumb.jpg",
+        "foreground_path": "/assets/backgrounds/rooms/living_room_foreground.png",
+        "wall_compensation": 1.058,
+        "description": "Living room with customizable wall color.",
+        "art_placement": {
+          "anchor": "center",
+          "position": [1.5, 17, -20],
+          "scale_factor": 0.675,
+          "rotation": [0, 0, 0]
+        },
+        "lighting": {
+          "direction": [-0.66, -0.25, -0.71],
+          "shadow_enabled": true,
+          "shadow_darkness": 0.8,
+          "ambient_boost": 1.2
+        }
+      },
+      {
+        "id": "minimalist_home_family_room",
+        "name": "Family Room",
+        "path": "/assets/backgrounds/rooms/thumbnails/minimalist_home_family_room_thumb.jpg",
+        "foreground_path": "/assets/backgrounds/rooms/family_room_foreground.png",
+        "wall_compensation": 1.058,
+        "description": "Family room with customizable wall color.",
+        "art_placement": {
+          "anchor": "center",
+          "position": [0, 15, -20],
+          "scale_factor": 0.675,
+          "rotation": [0, 0, 0]
+        },
+        "lighting": {
+          "direction": [-0.66, -0.25, -0.71],
+          "shadow_enabled": true,
+          "shadow_darkness": 0.8,
+          "ambient_boost": 0.6
         }
       }
     ]

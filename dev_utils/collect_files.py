@@ -44,6 +44,9 @@ USAGE EXAMPLES:
    # OR using --files option:
    python collect_project_files.py --files file1.py file2.py --output "C:/path/to/output.md"
 
+10. Exclude specific files (directory search mode):
+    python collect_project_files.py --exclude-files package-lock.json some_file.txt
+
 
 WHAT THIS SCRIPT DOES:
 ---------------------
@@ -58,6 +61,7 @@ COMMAND LINE OPTIONS:
 --files, -f       Specify exact file paths to include (takes priority over directory search).
 --no-subfolders   Do not include subfolders (directory search only).
 --exclude         Directories to exclude (directory search only, case-insensitive).
+--exclude-files   Files to exclude by name (directory search only, case-insensitive).
 --format          Output format: 'markdown' or 'text' (default: markdown).
 --output          Custom output filename or directory (if ends with / or \).
 --extensions      Specific file extensions for directory search (without dot, ignored if --files used).
@@ -121,6 +125,16 @@ ALWAYS_EXCLUDED_DIRS = [
     "uploads",
     "svg-dxf uploads",
     "docs",
+    "tests",
+]
+
+# =========================================================================
+# HARD-CODED EXCLUDED FILES (for directory search mode only)
+# Add any files you never want to include in your collection here
+# These will be excluded in addition to any files specified via --exclude-files
+# =========================================================================
+ALWAYS_EXCLUDED_FILES = [
+    "package-lock.json",
 ]
 # =========================================================================
 
@@ -283,7 +297,7 @@ def clean_path(path):
 
 # --- Renamed original collect_files function ---
 def collect_files_from_dirs(
-    root_dirs, include_subfolders=True, extensions=None, excluded_dirs=None
+    root_dirs, include_subfolders=True, extensions=None, excluded_dirs=None, excluded_files=None
 ):
     """
     Collect files with specified extensions from root directories and optionally their subfolders.
@@ -294,6 +308,7 @@ def collect_files_from_dirs(
         include_subfolders (bool): Whether to include subfolders in the search
         extensions (list): List of file extensions (with dots) to collect
         excluded_dirs (list): List of directory names to exclude from search
+        excluded_files (list): List of file names to exclude from collection
 
     Returns:
         list: List of tuples containing (relative_path, full_path) for each file
@@ -305,8 +320,14 @@ def collect_files_from_dirs(
     # Combine always excluded dirs with user-specified excluded dirs
     all_excluded_dirs = ALWAYS_EXCLUDED_DIRS + (excluded_dirs or [])
 
+    # Combine always excluded files with user-specified excluded files
+    all_excluded_files = ALWAYS_EXCLUDED_FILES + (excluded_files or [])
+
     # Convert excluded_dirs to lowercase set for efficient case-insensitive comparison
     excluded_dirs_lower = {d.lower() for d in all_excluded_dirs}
+
+    # Convert excluded_files to lowercase set for efficient case-insensitive comparison
+    excluded_files_lower = {f.lower() for f in all_excluded_files}
 
     collected = []
     processed_dirs = (
@@ -337,6 +358,10 @@ def collect_files_from_dirs(
                 ]  # Also skip hidden dirs
 
                 for filename in filenames:
+                    # Skip excluded files
+                    if filename.lower() in excluded_files_lower:
+                        continue
+
                     # Check if file extension matches or if specific filename is in the extensions list
                     file_ext = os.path.splitext(filename)[1].lower()
                     # Allow matching by extension OR by full filename (for files like Dockerfile)
@@ -356,6 +381,10 @@ def collect_files_from_dirs(
                 for filename in os.listdir(abs_root_dir):
                     full_path = os.path.join(abs_root_dir, filename)
                     if os.path.isfile(full_path):  # Ensure it's a file
+                        # Skip excluded files
+                        if filename.lower() in excluded_files_lower:
+                            continue
+
                         file_ext = os.path.splitext(filename)[1].lower()
                         # Allow matching by extension OR by full filename
                         if file_ext in extensions or filename.lower() in [
@@ -594,6 +623,12 @@ def main():
         help="Directories to exclude (directory search mode only, case-insensitive)",
     )
     parser.add_argument(
+        "--exclude-files",
+        nargs="+",
+        default=[],
+        help="Files to exclude by name (directory search mode only, case-insensitive)",
+    )
+    parser.add_argument(
         "--extensions",
         nargs="+",
         default=None,
@@ -640,6 +675,8 @@ def main():
             print("Warning: --extensions option ignored because --files was used.")
         if args.exclude:
             print("Warning: --exclude option ignored because --files was used.")
+        if args.exclude_files:
+            print("Warning: --exclude-files option ignored because --files was used.")
         if args.no_subfolders:
             print("Warning: --no-subfolders option ignored because --files was used.")
 
@@ -674,7 +711,9 @@ def main():
         if args.no_subfolders:
             source_info += " (non-recursive)"
         if args.exclude:
-            source_info += f", Excluded: {', '.join(args.exclude)}"
+            source_info += f", Excluded dirs: {', '.join(args.exclude)}"
+        if args.exclude_files:
+            source_info += f", Excluded files: {', '.join(args.exclude_files)}"
 
         # Process extensions for directory search
         extensions_to_use = get_valid_extensions(args.extensions)
@@ -691,7 +730,7 @@ def main():
 
         # Call the directory search function
         collected_files = collect_files_from_dirs(
-            search_dirs, not args.no_subfolders, extensions_to_use, args.exclude
+            search_dirs, not args.no_subfolders, extensions_to_use, args.exclude, args.exclude_files
         )
 
     # --- Process output file path ---

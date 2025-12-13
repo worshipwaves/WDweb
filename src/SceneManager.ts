@@ -50,6 +50,7 @@ export class SceneManager {
     private _currentArchetypeId: string | null = null;
 		private _currentImageAspectRatio: number = 1.5; // Default 3:2
 		private _currentPaintColor: number[] | null = null;
+		private _currentWallTexturePath: string | undefined = undefined;
 		private _baselineAspectRatio: number = 1.0;
 		private _baseRadiusBeforeAspect: number = 50;
 		private _hemisphericLight: HemisphericLight | null = null;
@@ -207,7 +208,7 @@ export class SceneManager {
 				this._backgroundLayer.color = new Color4(0, 0, 0, 0);
 		}
 	
-		public changeBackground(type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string): void {
+		public changeBackground(type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string, wallCompensation?: number): void {
 				const canvas = this._engine.getRenderingCanvas();
 				const container = canvas?.parentElement;
 				
@@ -229,18 +230,33 @@ export class SceneManager {
 						container.style.backgroundColor = 'transparent';
 						container.style.backgroundImage = 'none';
 						
-						if (type === 'paint' && rgb) {
-								this._currentPaintColor = rgb;
-								container.style.backgroundColor = `rgb(${rgb[0] * 255}, ${rgb[1] * 255}, ${rgb[2] * 255})`;
-						} else if ((type === 'accent' || type === 'rooms') && path) {
+						if (type === 'paint') {
+								// Store wall finish preference only - room will apply it
+								if (rgb) {
+										this._currentPaintColor = rgb;
+										this._currentWallTexturePath = undefined;
+								} else if (path) {
+										this._currentWallTexturePath = path;
+										this._currentPaintColor = undefined;
+								}
+								return; // Paint selection alone doesn't change display
+						} else if (type === 'rooms' && path) {
 								// Remove existing overlays
 								container.querySelector('.room-foreground-overlay')?.remove();
 								container.querySelector('.room-shadow-overlay')?.remove();
 								
 								if (foregroundPath) {
-										// Colorizable room: use current paint color as background
-										const paintRgb = this._currentPaintColor || [0.816, 0.804, 0.784];
-										container.style.backgroundColor = `rgb(${paintRgb[0] * 255}, ${paintRgb[1] * 255}, ${paintRgb[2] * 255})`;
+										// Colorizable room: use current wall finish as background
+										if (this._currentWallTexturePath) {
+												container.style.backgroundImage = `url(${this._currentWallTexturePath})`;
+												container.style.backgroundSize = 'cover';
+												container.style.backgroundPosition = 'center';
+										} else {
+												const paintRgb = this._currentPaintColor || [0.816, 0.804, 0.784];
+												const comp = wallCompensation ?? 1.0;
+												const wallRgb = paintRgb.map(c => Math.min(1.0, c * comp));
+												container.style.backgroundColor = `rgb(${wallRgb[0] * 255}, ${wallRgb[1] * 255}, ${wallRgb[2] * 255})`;
+										}
 										// Load foreground overlay
 										const fgImg = new Image();
 										fgImg.onload = () => {

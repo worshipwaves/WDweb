@@ -257,35 +257,24 @@
       "label": "STAGING",
       "order": 4,
       "subcategories": {
-        "paint": {
-          "label": "Paint Colors",
-					"panel_title": "PAINT COLORS",
-          "panel_help": "Choose a wall color to see how your panel will look against different backgrounds. Colors are grouped by tone for easy browsing.",
-          "filters": {},
-          "options": {
-            "paint_grid": {
-              "type": "thumbnail_grid"
-            }
-          }
-        },
-        "accent": {
-          "label": "Accent Walls",
-					"panel_title": "ACCENT WALLS",
-          "panel_help": "Add texture to your wall with accent materials like brick, stone, or wood paneling. Great for visualizing your art in different room styles.",
-          "filters": {},
-          "options": {
-            "accent_grid": {
-              "type": "thumbnail_grid"
-            }
-          }
-        },
-        "rooms": {
+				"rooms": {
           "label": "Room Settings",
 					"panel_title": "ROOM SETTINGS",
           "panel_help": "Preview your panel in realistic room environments. Each scene includes appropriate lighting and positioning to show how the art will look in your space.",
           "filters": {},
           "options": {
             "rooms_grid": {
+              "type": "thumbnail_grid"
+            }
+          }
+        },
+        "paint": {
+          "label": "Wall Finish",
+					"panel_title": "PAINT COLORS",
+          "panel_help": "Choose a wall color to see how your panel will look against different backgrounds. Colors are grouped by tone for easy browsing.",
+          "filters": {},
+          "options": {
+            "paint_grid": {
               "type": "thumbnail_grid"
             }
           }

@@ -166,6 +166,8 @@ export class ApplicationController {
   private _woodMaterialsConfig: WoodMaterialsConfig | null = null;
   private _selectedSectionIndices: Set<number> = new Set();
 	private _backgroundsConfig: BackgroundsConfig | null = null;
+	private _currentRoomId: string | null = null;
+	private _currentWallFinishId: string | null = null;
   private _idleTextureLoader: unknown = null; // IdleTextureLoader instance
 	private _placementDefaults: PlacementDefaults | null = null;
 	private _constraints: ConstraintsConfig | null = null;
@@ -354,6 +356,8 @@ export class ApplicationController {
 			// Store configs
 			this._woodMaterialsConfig = woodMaterials;
 			this._backgroundsConfig = backgrounds;
+			this._currentRoomId = (backgrounds as { default_room?: string }).default_room || 'blank_wall';
+			this._currentWallFinishId = (backgrounds as { default_wall_finish?: string }).default_wall_finish || 'warm-beige';
 			this._placementDefaults = placementDefaults;
 			this._constraints = constraints;
 			this._resolver = new ConstraintResolver(constraints, placementDefaults);
@@ -558,8 +562,8 @@ export class ApplicationController {
       const background = category.find(bg => bg.id === bgState.id);
       
       if (background) {
-        (sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string) => void })
-          .changeBackground(bgState.type, bgState.id, background.rgb, background.path);
+        (sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string, wallCompensation?: number) => void })
+          .changeBackground(bgState.type, bgState.id, background.rgb, background.path, (background as { foreground_path?: string }).foreground_path, (background as { wall_compensation?: number }).wall_compensation);
         
         // Apply lighting config on initial load
         if (background.lighting && 'applyLighting' in sceneManager) {
@@ -1030,11 +1034,39 @@ export class ApplicationController {
     if (!this._backgroundsConfig || !this._sceneManager) return;
     
     const category = this._backgroundsConfig.categories[type];
-    const background = category.find(bg => bg.id === backgroundId);
+    const background = category?.find(bg => bg.id === backgroundId);
     
     if (!background) {
       console.error(`[Controller] Background not found: ${backgroundId}`);
       return;
+    }
+    
+    // Handle paint/texture as wall finish update (applies to current room)
+    if (type === 'paint') {
+      this._currentWallFinishId = backgroundId;
+      
+      // Store wall finish in SceneManager
+      if ('changeBackground' in this._sceneManager) {
+        (this._sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string, wallCompensation?: number) => void })
+          .changeBackground('paint', backgroundId, background.rgb, background.path);
+      }
+      
+      // Re-apply current room with new wall finish
+      if (this._currentRoomId) {
+        const room = this._backgroundsConfig.categories.rooms.find(r => r.id === this._currentRoomId);
+        if (room?.foreground_path) {
+          (this._sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string, wallCompensation?: number) => void })
+            .changeBackground('rooms', this._currentRoomId, undefined, room.path, room.foreground_path, (room as { wall_compensation?: number }).wall_compensation);
+        }
+      }
+      
+      this.notifySubscribers();
+      return;
+    }
+    
+    // Handle room selection
+    if (type === 'rooms') {
+      this._currentRoomId = backgroundId;
     }
     
     // Update state
@@ -1053,8 +1085,8 @@ export class ApplicationController {
     // Apply to scene (deferred until after composition update to prevent flash of wrong size)
 		const applyBackground = () => {
 			if ('changeBackground' in this._sceneManager) {
-				(this._sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string) => void })
-					.changeBackground(type, backgroundId, background.rgb, background.path, (background as { foreground_path?: string }).foreground_path);
+				(this._sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string, wallCompensation?: number) => void })
+					.changeBackground(type, backgroundId, background.rgb, background.path, (background as { foreground_path?: string }).foreground_path, (background as { wall_compensation?: number }).wall_compensation);
 			}
 		};
     

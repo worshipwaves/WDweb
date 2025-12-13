@@ -86,7 +86,8 @@ export const BackgroundItemSchema = z.object({
   group: z.string().optional(),
   art_placement: ArtPlacementSchema.optional(),
   lighting: LightingConfigSchema.optional(),
-  foreground_path: z.string().optional()
+  foreground_path: z.string().optional(),
+  wall_compensation: z.number().optional()
 }).strict();
 
 export const BackgroundsConfigSchema = z.object({
@@ -94,9 +95,11 @@ export const BackgroundsConfigSchema = z.object({
     type: z.enum(['paint', 'accent', 'rooms']),
     id: z.string()
   }),
+  default_room: z.string().optional(),
+  default_wall_finish: z.string().optional(),
   categories: z.object({
     paint: z.array(BackgroundItemSchema),
-    accent: z.array(BackgroundItemSchema),
+    accent: z.array(BackgroundItemSchema).optional(),
     rooms: z.array(BackgroundItemSchema)
   })
 }).strict();
