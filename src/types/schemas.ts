@@ -91,12 +91,8 @@ export const BackgroundItemSchema = z.object({
 }).strict();
 
 export const BackgroundsConfigSchema = z.object({
-  default_background: z.object({
-    type: z.enum(['paint', 'accent', 'rooms']),
-    id: z.string()
-  }),
-  default_room: z.string().optional(),
-  default_wall_finish: z.string().optional(),
+  default_room: z.string(),
+  default_wall_finish: z.string(),
   categories: z.object({
     paint: z.array(BackgroundItemSchema),
     accent: z.array(BackgroundItemSchema).optional(),
@@ -391,6 +387,7 @@ export const UIStateSchema = z.object({
     type: z.enum(['paint', 'accent', 'rooms']),
     id: z.string()
   }),
+  currentWallFinish: z.string(),
 	aspectRatioLocked: z.boolean().optional().default(false),
   lockedAspectRatio: z.number().nullable().optional().default(null)
 });

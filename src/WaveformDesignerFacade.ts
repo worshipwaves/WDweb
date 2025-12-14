@@ -19,11 +19,13 @@ import {
   AudioProcessResponseSchema,
   SmartCsgResponseSchema,
   ApplicationStateSchema,
+  BackgroundsConfigSchema,
   type CompositionStateDTO,
   type AudioProcessResponse,
   type SmartCsgResponse,
   type StylePreset,
-  type ApplicationState
+  type ApplicationState,
+	type BackgroundsConfig
 } from './types/schemas';
 import { fetchAndValidate, parseStoredData } from './utils/validation';
 
@@ -124,40 +126,47 @@ export class WaveformDesignerFacade {
    * Create initial application state
    */
   async createInitialState(): Promise<ApplicationState> {
-    const composition: CompositionStateDTO = await this.getDefaultState();
-    
-    return {
-      phase: 'upload',
-      composition,
-      audio: {
-        rawSamples: null,
-        previousMaxAmplitude: null,
-        audioSessionId: null,
+  const [composition, backgroundsConfig] = await Promise.all([
+    this.getDefaultState(),
+    fetchAndValidate<BackgroundsConfig>(
+      `${this.apiBase}/api/config/backgrounds`,
+      BackgroundsConfigSchema
+    )
+  ]);
+  
+  return {
+    phase: 'upload',
+    composition,
+    audio: {
+      rawSamples: null,
+      previousMaxAmplitude: null,
+      audioSessionId: null,
+    },
+    ui: {
+      leftPanelVisible: true,
+      rightPanelVisible: true,
+      selectedCategory: null,
+      selectedOption: null,
+      currentStyleIndex: 0,
+      isAutoPlaying: false,
+      showHint: false,
+      renderQuality: 'medium',
+      activeCategory: null,
+      activeSubcategory: null,
+      subcategoryHistory: {},
+      filterSelections: {},
+      currentBackground: {
+        type: 'rooms',
+        id: backgroundsConfig.default_room
       },
-			ui: {
-				leftPanelVisible: true,
-				rightPanelVisible: true,
-				selectedCategory: null,
-				selectedOption: null,
-				currentStyleIndex: 0,
-				isAutoPlaying: false,
-				showHint: false,
-				renderQuality: 'medium',
-				activeCategory: null,
-        activeSubcategory: null,
-        subcategoryHistory: {},
-        filterSelections: {},
-        currentBackground: {
-          type: 'paint',
-          id: 'agreeable-gray'
-        }
-			},
-      processing: {
-        stage: 'idle',
-        progress: 0
-      }
-    };
-  }
+      currentWallFinish: backgroundsConfig.default_wall_finish
+    },
+    processing: {
+      stage: 'idle',
+      progress: 0
+    }
+  };
+}
   
   /**
    * Process state transitions (pure function)

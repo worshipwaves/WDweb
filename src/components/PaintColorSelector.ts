@@ -1,5 +1,7 @@
 // src/components/PaintColorSelector.ts
+// src/components/PaintColorSelector.ts
 import type { PanelComponent } from '../types/PanelTypes';
+import { HorizontalScrollContainer } from './HorizontalScrollContainer';
 import { Tooltip } from './Tooltip';
 
 interface PaintColor {
@@ -22,6 +24,7 @@ export class PaintColorSelector implements PanelComponent {
   private _onSelect: (id: string) => void;
   private _tooltip: Tooltip = new Tooltip();
   private _horizontal: boolean = false;
+  private _scrollContainer: HorizontalScrollContainer | null = null;
 
   constructor(
     colors: PaintColor[],
@@ -36,22 +39,33 @@ export class PaintColorSelector implements PanelComponent {
   }
 
   render(): HTMLElement {
+    if (this._horizontal) {
+      this._scrollContainer = new HorizontalScrollContainer();
+      const wrapper = this._scrollContainer.render();
+      const scrollElement = this._scrollContainer.getScrollElement()!;
+      scrollElement.classList.add('paint-color-selector');
+
+      const groups = this._groupColors();
+      groups.forEach(group => {
+        const card = this._createGroupCard(group);
+        scrollElement.appendChild(card);
+      });
+
+      this._container = wrapper;
+      this._scrollContainer.scrollToSelected();
+      return wrapper;
+    }
+
     const container = document.createElement('div');
-    container.className = this._horizontal ? 'paint-color-selector horizontal-scroll' : 'paint-color-selector';
+    container.className = 'paint-color-selector';
 
-    // Group colors by their group field
     const groups = this._groupColors();
-
     groups.forEach(group => {
       const card = this._createGroupCard(group);
       container.appendChild(card);
     });
 
     this._container = container;
-
-    // Auto-scroll disabled - causes parent panel to scroll, breaking sticky header
-    // See ThumbnailGrid.ts for same pattern
-
     return container;
   }
 

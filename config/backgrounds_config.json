@@ -1,8 +1,4 @@
 {
-  "default_background": {
-    "type": "paint",
-    "id": "warm-gray"
-  },
   "default_room": "blank_wall",
   "default_wall_finish": "warm-beige",
   "categories": {
@@ -80,7 +76,7 @@
       {
         "id": "brick-white",
         "name": "White Brick",
-        "path": "/assets/backgrounds/accent/brick_wall_white.jpg",
+        "path": "/assets/backgrounds/accent/white_brick.jpg",
         "description": "Painted exposed brick",
         "group": "Textures"
       },
@@ -156,7 +152,7 @@
       },
       {
         "id": "living-room-fireplace",
-        "name": "Modern Living Room Fireplace",
+        "name": "Fireplace",
         "path": "/assets/backgrounds/rooms/living_modern_fireplace.png",
         "description": "Contemporary living space with fireplace",
         "art_placement": {
@@ -226,13 +222,15 @@
           "hemispheric_sky_color": [1, 1, 0.95]
         }
       },
-      {
+			{
         "id": "hallway",
         "name": "Hallway",
-        "path": "/assets/backgrounds/rooms/hallway.webp",
-        "description": "Gallery-style hallway",
+        "path": "/assets/backgrounds/rooms/thumbnails/hallway_thumb.jpg",
+        "foreground_path": "/assets/backgrounds/rooms/hallway_foreground.png",
+        "wall_compensation": 1.058,
+        "description": "Hallway",
         "art_placement": {
-          "position": [0, -2, -20],
+          "position": [0, -4, -20],
           "scale_factor": 0.675,
           "rotation": [0, 0, 0]
         },
@@ -240,9 +238,9 @@
           "direction": [-0.66, -0.25, -0.71],
           "shadow_enabled": true,
           "intensity": 0.5,
-          "shadow_darkness": 0.9,
+          "shadow_darkness": 0.90,
           "shadow_map_resolution": 2048,
-          "ambient_boost": 1.5,
+          "ambient_boost": 1.6,
           "shadow_receiver_position": [0, -0.4, 0],
           "hemispheric_sky_color": [1, 1, 0.95]
         }

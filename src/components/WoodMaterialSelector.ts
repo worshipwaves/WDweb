@@ -1,8 +1,8 @@
 // src/components/WoodMaterialSelector.ts
 import type { PanelComponent } from '../types/PanelTypes';
-
-import { TooltipClassNameFactory } from '../utils/TooltipClassNameFactory';
+import { HorizontalScrollContainer } from './HorizontalScrollContainer';
 import { Tooltip } from './Tooltip';
+import { TooltipClassNameFactory } from '../utils/TooltipClassNameFactory';
 
 interface SpeciesInfo {
   id: string;
@@ -19,6 +19,7 @@ export class WoodMaterialSelector implements PanelComponent {
   private _tooltip: Tooltip = new Tooltip();
 	private _tooltipClassName: string;
   private _horizontal: boolean = false;
+  private _scrollContainer: HorizontalScrollContainer | null = null;
 
   constructor(
     speciesList: SpeciesInfo[],
@@ -38,8 +39,24 @@ export class WoodMaterialSelector implements PanelComponent {
   }
 
   render(): HTMLElement {
+    if (this._horizontal) {
+      this._scrollContainer = new HorizontalScrollContainer();
+      const wrapper = this._scrollContainer.render();
+      const scrollElement = this._scrollContainer.getScrollElement()!;
+      scrollElement.classList.add('wood-species-image-grid');
+
+      this._speciesList.forEach(species => {
+        const card = this._createSpeciesCard(species);
+        scrollElement.appendChild(card);
+      });
+
+      this._container = wrapper;
+      this._scrollContainer.scrollToSelected();
+      return wrapper;
+    }
+
     const container = document.createElement('div');
-    container.className = this._horizontal ? 'wood-species-image-grid horizontal-scroll' : 'wood-species-image-grid';
+    container.className = 'wood-species-image-grid';
 
     this._speciesList.forEach(species => {
       const card = this._createSpeciesCard(species);
@@ -47,10 +64,6 @@ export class WoodMaterialSelector implements PanelComponent {
     });
 
     this._container = container;
-    
-    // Auto-scroll disabled - causes parent panel to scroll, breaking sticky header
-    // See ThumbnailGrid.ts and PaintColorSelector.ts for same pattern
-    
     return container;
   }
 

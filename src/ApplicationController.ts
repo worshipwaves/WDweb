@@ -17,6 +17,7 @@ import { SubcategoryAccordion, type AccordionItemConfig } from './components/Sub
 import { ThumbnailGrid } from './components/ThumbnailGrid';
 import { AccordionStyleCard } from './components/AccordionStyleCard';
 import { AccordionSpeciesCard } from './components/AccordionSpeciesCard';
+import { HorizontalScrollContainer } from './components/HorizontalScrollContainer';
 import { WoodMaterialSelector } from './components/WoodMaterialSelector';
 import { PerformanceMonitor } from './PerformanceMonitor';
 import { ConstraintResolver } from './services/ConstraintResolver';
@@ -571,6 +572,9 @@ export class ApplicationController {
         } else if ('resetLighting' in sceneManager) {
           (sceneManager as unknown as { resetLighting: () => void }).resetLighting();
         }
+        
+        // Set initial body class for blank wall controls visibility
+        document.body.classList.toggle('room-blank-wall', bgState.id === 'blank_wall');
       }
     }
   }	
@@ -792,6 +796,15 @@ export class ApplicationController {
 			
 			// Clear composition cache on new audio upload
       this._compositionCache.clear();
+
+      // Sync CSS container with default background
+      const defaultRoom = this._backgroundsConfig?.categories.rooms.find(
+        r => r.id === this._backgroundsConfig?.default_room
+      );
+      if (defaultRoom && this._sceneManager && 'changeBackground' in this._sceneManager) {
+        await (this._sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string, wallCompensation?: number) => Promise<void> })
+          .changeBackground('rooms', defaultRoom.id, undefined, defaultRoom.path, (defaultRoom as { foreground_path?: string }).foreground_path, (defaultRoom as { wall_compensation?: number }).wall_compensation);
+      }
 
       // Process audio through facade
       const audioResponse: AudioProcessResponse = await this._facade.processAudio(
@@ -1045,20 +1058,33 @@ export class ApplicationController {
     if (type === 'paint') {
       this._currentWallFinishId = backgroundId;
       
+      // Update state
+      if (this._state) {
+        this._state = {
+          ...this._state,
+          ui: {
+            ...this._state.ui,
+            currentWallFinish: backgroundId
+          }
+        };
+        this._facade.persistState(this._state);
+      }
+      
       // Store wall finish in SceneManager
       if ('changeBackground' in this._sceneManager) {
         (this._sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string, wallCompensation?: number) => void })
           .changeBackground('paint', backgroundId, background.rgb, background.path);
       }
       
-      // Re-apply current room with new wall finish
-      if (this._currentRoomId) {
-        const room = this._backgroundsConfig.categories.rooms.find(r => r.id === this._currentRoomId);
-        if (room?.foreground_path) {
-          (this._sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string, wallCompensation?: number) => void })
-            .changeBackground('rooms', this._currentRoomId, undefined, room.path, room.foreground_path, (room as { wall_compensation?: number }).wall_compensation);
-        }
-      }
+			// Re-apply current room with new wall finish (use state, not _currentRoomId which may be stale)
+			const currentBg = this._state?.ui.currentBackground;
+			if (currentBg?.type === 'rooms') {
+				const room = this._backgroundsConfig.categories.rooms.find(r => r.id === currentBg.id);
+				if (room?.foreground_path) {
+					(this._sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string, wallCompensation?: number) => void })
+						.changeBackground('rooms', currentBg.id, undefined, room.path, room.foreground_path, (room as { wall_compensation?: number }).wall_compensation);
+				}
+			}
       
       this.notifySubscribers();
       return;
@@ -1067,6 +1093,9 @@ export class ApplicationController {
     // Handle room selection
     if (type === 'rooms') {
       this._currentRoomId = backgroundId;
+      
+      // Toggle body class for blank wall controls visibility
+      document.body.classList.toggle('room-blank-wall', backgroundId === 'blank_wall');
     }
     
     // Update state
@@ -1083,11 +1112,12 @@ export class ApplicationController {
     }
     
     // Apply to scene (deferred until after composition update to prevent flash of wrong size)
-		const applyBackground = () => {
+		const applyBackground = (): Promise<void> => {
 			if ('changeBackground' in this._sceneManager) {
-				(this._sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string, wallCompensation?: number) => void })
+				return (this._sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string, wallCompensation?: number) => Promise<void> })
 					.changeBackground(type, backgroundId, background.rgb, background.path, (background as { foreground_path?: string }).foreground_path, (background as { wall_compensation?: number }).wall_compensation);
 			}
+			return Promise.resolve();
 		};
     
     // Apply placement defaults and caching if archetype is selected
@@ -1117,9 +1147,6 @@ export class ApplicationController {
           
           // Cache the current state as-is to preserve user modifications
           this._compositionCache.set(cacheKey, composition);
-          
-          // Apply composition (no changes needed, just ensures scene updates)
-          void this.handleCompositionUpdate(composition).then(applyBackground);
 				} else {
 					// Cache hit: restore cached composition but preserve current backing state
 					const currentBacking = this._state.composition.frame_design.backing;
@@ -1130,10 +1157,8 @@ export class ApplicationController {
 							backing: currentBacking
 						}
 					};
-					void this.handleCompositionUpdate(composition).then(applyBackground);
 				}
-        
-        // Apply art placement
+
 				let artPlacement: ArtPlacement | undefined;
 				
 				// 1. Check placement_defaults for archetype-specific override
@@ -1154,18 +1179,20 @@ export class ApplicationController {
 					}
 				}
 
-				if (artPlacement && 'applyArtPlacement' in this._sceneManager) {
-					(this._sceneManager as unknown as { applyArtPlacement: (placement: ArtPlacement) => void }).applyArtPlacement(artPlacement);
-				} else if ('resetArtPlacement' in this._sceneManager) {
-					(this._sceneManager as unknown as { resetArtPlacement: () => void }).resetArtPlacement();
-				}
+				const applyArtAndLighting = () => {
+						if (artPlacement && 'applyArtPlacement' in this._sceneManager) {
+							(this._sceneManager as unknown as { applyArtPlacement: (placement: ArtPlacement) => void }).applyArtPlacement(artPlacement);
+						} else if ('resetArtPlacement' in this._sceneManager) {
+							(this._sceneManager as unknown as { resetArtPlacement: () => void }).resetArtPlacement();
+						}
 
-				// Apply lighting config if present
-				if (background?.lighting && 'applyLighting' in this._sceneManager) {
-					(this._sceneManager as unknown as { applyLighting: (lighting: unknown) => void }).applyLighting(background.lighting);
-				} else if ('resetLighting' in this._sceneManager) {
-					(this._sceneManager as unknown as { resetLighting: () => void }).resetLighting();
-				}
+						if (background?.lighting && 'applyLighting' in this._sceneManager) {
+							(this._sceneManager as unknown as { applyLighting: (lighting: unknown) => void }).applyLighting(background.lighting);
+						} else if ('resetLighting' in this._sceneManager) {
+							(this._sceneManager as unknown as { resetLighting: () => void }).resetLighting();
+						}
+					};
+				void this.handleCompositionUpdate(composition).then(applyBackground).then(applyArtAndLighting);
       }
     }
     
@@ -1407,12 +1434,16 @@ export class ApplicationController {
         return parts.length > 0 ? parts.join(', ') : 'Optional';
       }	
       
-      case 'backgrounds:paint':
+      case 'backgrounds:paint': {
+        const wallFinishId = ui.currentWallFinish;
+        if (!wallFinishId) return '';
+        return this._getBackgroundDisplayName('paint', wallFinishId);
+      }
+      
       case 'backgrounds:accent':
       case 'backgrounds:rooms': {
         const bg = ui.currentBackground;
         if (!bg) return '';
-        // subcategoryId is 'paint', 'accent', or 'rooms'
         if (bg.type !== subcategoryId) return '';
         return this._getBackgroundDisplayName(bg.type, bg.id);
       }
@@ -1458,8 +1489,8 @@ export class ApplicationController {
     if (!this._backgroundsConfig) return id;
     const category = this._backgroundsConfig.categories[type as keyof typeof this._backgroundsConfig.categories];
     if (!category) return id;
-    const bg = (category as Array<{ id: string; label?: string }>).find(b => b.id === id);
-    return bg?.label || id;
+    const bg = (category as Array<{ id: string; name?: string; label?: string }>).find(b => b.id === id);
+    return bg?.name || bg?.label || id;
   }
   
   /**
@@ -1916,8 +1947,9 @@ export class ApplicationController {
     const currentSpecies = materials[0]?.species || this._woodMaterialsConfig.default_species;
     const currentGrain = materials[0]?.grain_direction || this._woodMaterialsConfig.default_grain_direction;
     
-    const scrollWrapper = document.createElement('div');
-    scrollWrapper.className = 'horizontal-scroll';
+    const scrollContainer = new HorizontalScrollContainer();
+    const scrollWrapper = scrollContainer.render();
+    const scrollElement = scrollContainer.getScrollElement()!;
     
     const shape = this._state.composition.frame_design.shape;
     const numSections = this._state.composition.frame_design.number_sections;
@@ -1953,12 +1985,12 @@ export class ApplicationController {
           })();
         }
       });
-      scrollWrapper.appendChild(card.render());
+      scrollElement.appendChild(card.render());
     });
     
     container.innerHTML = '';
     container.appendChild(scrollWrapper);
-    this._scrollToSelectedInContainer(scrollWrapper);
+    scrollContainer.scrollToSelected();
   }
 	
 	/**
@@ -1996,8 +2028,9 @@ export class ApplicationController {
     
     const activeSelection = this.getActiveArchetypeId();
     
-    const scrollWrapper = document.createElement('div');
-    scrollWrapper.className = 'horizontal-scroll';
+    const scrollContainer = new HorizontalScrollContainer();
+    const scrollWrapper = scrollContainer.render();
+    const scrollElement = scrollContainer.getScrollElement()!;
     
     matchingArchetypes.forEach(arch => {
       const card = new AccordionStyleCard({
@@ -2011,12 +2044,12 @@ export class ApplicationController {
         selected: arch.id === activeSelection,
         onSelect: (id) => { void this._handleArchetypeSelected(id); }
       });
-      scrollWrapper.appendChild(card.render());
+      scrollElement.appendChild(card.render());
     });
     
     container.innerHTML = '';
     container.appendChild(scrollWrapper);
-    this._scrollToSelectedInContainer(scrollWrapper);
+    scrollContainer.scrollToSelected();
   }
 	
 	/**
@@ -2083,24 +2116,26 @@ export class ApplicationController {
     }
     
     const currentBg = this._state?.ui.currentBackground;
-    const selectedId = currentBg?.type === type ? currentBg.id : null;
+    let selectedId: string | null = null;
+    if (type === 'paint') {
+      selectedId = this._state?.ui.currentWallFinish || this._backgroundsConfig.default_wall_finish;
+    } else if (currentBg?.type === type) {
+      selectedId = currentBg.id;
+    }
     
     // Create horizontal scroll container
-    const scrollWrapper = document.createElement('div');
-    scrollWrapper.className = 'scroll-container';
-    
-    const scrollContent = document.createElement('div');
-    scrollContent.className = 'horizontal-scroll';
+    const scrollContainer = new HorizontalScrollContainer();
+    const scrollWrapper = scrollContainer.render();
+    const scrollElement = scrollContainer.getScrollElement()!;
     
     backgrounds.forEach(bg => {
       const card = this._createBackgroundCard(bg, type, selectedId === bg.id);
-      scrollContent.appendChild(card);
+      scrollElement.appendChild(card);
     });
-    
-    scrollWrapper.appendChild(scrollContent);
     
     container.innerHTML = '';
     container.appendChild(scrollWrapper);
+    scrollContainer.scrollToSelected();
   }
   
   /**

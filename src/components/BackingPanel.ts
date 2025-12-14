@@ -1,6 +1,7 @@
 // src/components/BackingPanel.ts
 
 import type { PanelComponent } from '../types/PanelTypes';
+import { HorizontalScrollContainer } from './HorizontalScrollContainer';
 import { Tooltip } from './Tooltip';
 
 // Interfaces matching the structure from config/backing_materials.json
@@ -35,6 +36,8 @@ export class BackingPanel implements PanelComponent {
   private currentMaterial: string;
 
   private horizontal: boolean = false;
+  private _materialScrollContainer: HorizontalScrollContainer | null = null;
+  private _finishScrollContainer: HorizontalScrollContainer | null = null;
 	
   /**
    * Create a standalone toggle element for embedding in accordion header.
@@ -149,8 +152,9 @@ export class BackingPanel implements PanelComponent {
     materialLabel.textContent = 'Material';
     wrapper.appendChild(materialLabel);
 
-    const materialScroll = document.createElement('div');
-    materialScroll.className = 'horizontal-scroll';
+    this._materialScrollContainer = new HorizontalScrollContainer();
+    const materialScrollWrapper = this._materialScrollContainer.render();
+    const materialScroll = this._materialScrollContainer.getScrollElement()!;
 
     // "None" card
     materialScroll.appendChild(this.createHorizontalCard('none', 'None', undefined, undefined, !this.isEnabled, () => {
@@ -180,7 +184,7 @@ export class BackingPanel implements PanelComponent {
       ));
     });
 
-    wrapper.appendChild(materialScroll);
+    wrapper.appendChild(materialScrollWrapper);
 
     // --- Finish Row ---
     const finishLabel = document.createElement('div');
@@ -188,11 +192,12 @@ export class BackingPanel implements PanelComponent {
     finishLabel.textContent = 'Finish';
     wrapper.appendChild(finishLabel);
 
-    const finishScroll = document.createElement('div');
-    finishScroll.className = 'horizontal-scroll';
+    this._finishScrollContainer = new HorizontalScrollContainer();
+    const finishScrollWrapper = this._finishScrollContainer.render();
+    const finishScroll = this._finishScrollContainer.getScrollElement()!;
     if (!this.isEnabled) {
-      finishScroll.style.opacity = '0.4';
-      finishScroll.style.pointerEvents = 'none';
+      finishScrollWrapper.style.opacity = '0.4';
+      finishScrollWrapper.style.pointerEvents = 'none';
     }
 
     const selectedTypeData = this.backingConfig.material_catalog[this.currentType];
@@ -214,14 +219,14 @@ export class BackingPanel implements PanelComponent {
       });
     }
 
-    wrapper.appendChild(finishScroll);
+    wrapper.appendChild(finishScrollWrapper);
 
     this.container.appendChild(wrapper);
 
     // Scroll to selected
-    this.scrollToSelected(materialScroll);
+    this._materialScrollContainer.scrollToSelected();
     if (this.isEnabled) {
-      this.scrollToSelected(finishScroll);
+      this._finishScrollContainer.scrollToSelected();
     }
   }
 

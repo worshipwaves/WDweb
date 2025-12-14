@@ -1158,7 +1158,7 @@ input:checked + .toggle-slider:before {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 1.8rem .5rem 1.8rem 1.4rem;
+  padding: 2rem .5rem 2rem 1.4rem;
   cursor: pointer;
   transition: opacity var(--duration-default, 250ms);
   user-select: none;
@@ -1402,16 +1402,21 @@ input:checked + .toggle-slider:before {
 
 .scroll-container {
   position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0 36px;
 }
 
 .horizontal-scroll {
   display: flex;
   gap: 15px;
   overflow-x: auto;
-  padding: 0 25px 8px;
+  padding: 4px 0 8px;
   scroll-behavior: smooth;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  flex: 1;
+  min-width: 0;
 }
 
 .wood-species-image-grid.horizontal-scroll {
@@ -1431,31 +1436,43 @@ input:checked + .toggle-slider:before {
   }
 }
 
-/* Scroll fade indicators */
-.scroll-fade {
+/* Scroll arrow buttons */
+.scroll-arrow {
   position: absolute;
-  top: 0;
-  bottom: 8px;
-  width: 40px;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--duration-default, 250ms);
-  z-index: 1;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  display: none; /* Hidden by default, shown via JS */
+  align-items: center;
+  justify-content: center;
+  background: rgb(var(--color-background));
+  border: 1px solid rgb(var(--color-border));
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 2;
+  color: rgb(var(--color-foreground));
+  transition: background-color var(--duration-default, 250ms), 
+              border-color var(--duration-default, 250ms);
 }
 
-.scroll-fade--left {
-  left: 0;
-  background: linear-gradient(90deg, rgb(var(--color-background)) 0%, transparent 100%);
+.scroll-arrow:hover {
+  background: rgb(var(--color-background-input));
+  border-color: rgb(var(--color-foreground));
 }
 
-.scroll-fade--right {
-  right: 0;
-  background: linear-gradient(90deg, transparent 0%, rgb(var(--color-background)) 100%);
+.scroll-arrow--left {
+  left: 4px;
 }
 
-.scroll-container.can-scroll-left .scroll-fade--left,
-.scroll-container.can-scroll-right .scroll-fade--right {
-  opacity: 1;
+.scroll-arrow--right {
+  right: 4px;
+}
+
+.scroll-arrow svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 /* ============================================
@@ -1615,7 +1632,7 @@ SPECIES CARDS - 140px
    BACKING MATERIAL CARDS - 56px
    ============================================ */
 
-.backing-card {
+/* .backing-card {
   width: 56px;
 }
 
@@ -1635,14 +1652,14 @@ SPECIES CARDS - 140px
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
+} */
 
 /* ============================================
    PAINT COLOR CARDS - 56px
    ============================================ */
 
 .paint-card {
-  width: 56px;
+  width: 100px;
 }
 
 .paint-card-swatch {
@@ -1864,6 +1881,7 @@ SPECIES CARDS - 140px
 .audio-slicer-trimmer-section,
 .audio-slicer-enhance-section {
   display: block;
+	margin: 0 25px;
 }
 
 .upload-icon {
@@ -2590,4 +2608,77 @@ SPECIES CARDS - 140px
 .slicer-cta-footer .slicer-btn-primary svg {
   width: 14px;
   height: 14px;
+}
+
+/* ============================================
+   CANVAS CONTROLS (Zoom, Reset, Fullscreen)
+   Only visible for Blank Wall room
+   ============================================ */
+
+.bottom-controls {
+  position: absolute !important;
+  bottom: 32px;
+  left: 16px;
+  z-index: 100;
+  
+  display: none; /* Hidden by default */
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  
+  background: rgb(var(--color-background));
+  border: 1px solid rgb(var(--color-border));
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  
+  pointer-events: auto;
+}
+
+/* Show only when blank wall is active */
+body.room-blank-wall .bottom-controls {
+  display: flex;
+}
+
+.control-button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  background: rgb(var(--color-background));
+  border: 1px solid rgb(var(--color-border));
+  border-radius: 50%;
+  color: rgb(var(--color-foreground));
+  
+  cursor: pointer;
+  transition: background-color var(--duration-default, 250ms),
+              border-color var(--duration-default, 250ms);
+  
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.control-button:hover {
+  background: rgb(var(--color-background-input));
+  border-color: rgb(var(--color-foreground));
+}
+
+.control-button:active {
+  transform: scale(0.95);
+}
+
+/* Hide panels when menus-hidden class is on body */
+body.menus-hidden .panel,
+body.menus-hidden .sidebar {
+  opacity: 0;
+  pointer-events: none;
+}
+
+body.menus-hidden .bottom-controls {
+  display: flex; /* Override hidden when menus hidden but blank wall */
+}
+
+body.menus-hidden:not(.room-blank-wall) .bottom-controls {
+  display: none;
 }

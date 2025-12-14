@@ -51,6 +51,7 @@ export class SceneManager {
 		private _currentImageAspectRatio: number = 1.5; // Default 3:2
 		private _currentPaintColor: number[] | null = null;
 		private _currentWallTexturePath: string | undefined = undefined;
+		private _currentDisplayedRoomId: string | null = null;
 		private _baselineAspectRatio: number = 1.0;
 		private _baseRadiusBeforeAspect: number = 50;
 		private _hemisphericLight: HemisphericLight | null = null;
@@ -208,7 +209,8 @@ export class SceneManager {
 				this._backgroundLayer.color = new Color4(0, 0, 0, 0);
 		}
 	
-		public changeBackground(type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string, wallCompensation?: number): void {
+		public changeBackground(type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string, wallCompensation?: number): Promise<void> {
+		return new Promise<void>((resolve) => {
 				const canvas = this._engine.getRenderingCanvas();
 				const container = canvas?.parentElement;
 				
@@ -225,28 +227,28 @@ export class SceneManager {
 						this._backgroundLayer = null;
 				}
 				
-				// Apply background to container
+				// Handle paint type BEFORE clearing container (paint just stores preference)
+				if (type === 'paint') {
+						if (rgb) {
+								this._currentPaintColor = rgb;
+								this._currentWallTexturePath = undefined;
+						} else if (path) {
+								this._currentWallTexturePath = path;
+								this._currentPaintColor = undefined;
+						}
+						resolve();
+						return; // Paint selection alone doesn't change display
+				}
+
+				// Apply background to container (only for non-paint types)
 				if (container) {
-						container.style.backgroundColor = 'transparent';
-						container.style.backgroundImage = 'none';
+						// Do NOT clear container here - causes flash
+						// Background is set inside async callbacks after images load
 						
-						if (type === 'paint') {
-								// Store wall finish preference only - room will apply it
-								if (rgb) {
-										this._currentPaintColor = rgb;
-										this._currentWallTexturePath = undefined;
-								} else if (path) {
-										this._currentWallTexturePath = path;
-										this._currentPaintColor = undefined;
-								}
-								return; // Paint selection alone doesn't change display
-						} else if (type === 'rooms' && path) {
-								// Remove existing overlays
-								container.querySelector('.room-foreground-overlay')?.remove();
-								container.querySelector('.room-shadow-overlay')?.remove();
-								
-								if (foregroundPath) {
-										// Colorizable room: use current wall finish as background
+						if (type === 'rooms' && path) {
+								// Check if same room - just update wall color without reloading overlays
+								if (foregroundPath && this._currentDisplayedRoomId === id) {
+										// Same room, just update background color
 										if (this._currentWallTexturePath) {
 												container.style.backgroundImage = `url(${this._currentWallTexturePath})`;
 												container.style.backgroundSize = 'cover';
@@ -256,28 +258,81 @@ export class SceneManager {
 												const comp = wallCompensation ?? 1.0;
 												const wallRgb = paintRgb.map(c => Math.min(1.0, c * comp));
 												container.style.backgroundColor = `rgb(${wallRgb[0] * 255}, ${wallRgb[1] * 255}, ${wallRgb[2] * 255})`;
+												container.style.backgroundImage = 'none';
 										}
-										// Load foreground overlay
+										resolve();
+										return; // Skip overlay reload
+								}
+								
+								// Different room - full reload
+								this._currentDisplayedRoomId = id;
+								
+								if (foregroundPath) {
+										// Preload both images before swapping to prevent flash
 										const fgImg = new Image();
-										fgImg.onload = () => {
+										const shadowPath = foregroundPath.replace('_foreground.png', '_shadow.png');
+										const shadowImg = new Image();
+										let loadedCount = 0;
+										
+										const onBothLoaded = async () => {
+												loadedCount++;
+												if (loadedCount < 2) return;
+												
+												// Decode images before DOM swap to prevent flash
+												await Promise.all([
+														fgImg.decode().catch(() => {}),
+														shadowImg.decode().catch(() => {})
+												]);
+												
 												this._currentImageAspectRatio = fgImg.width / fgImg.height;
-												// Shadow overlay with multiply blend (must be first/behind)
-												const shadowPath = foregroundPath.replace('_foreground.png', '_shadow.png');
+												
+												// Update background color
+												if (this._currentWallTexturePath) {
+														container.style.backgroundImage = `url(${this._currentWallTexturePath})`;
+														container.style.backgroundSize = 'cover';
+														container.style.backgroundPosition = 'center';
+												} else {
+														const paintRgb = this._currentPaintColor || [0.816, 0.804, 0.784];
+														const comp = wallCompensation ?? 1.0;
+														const wallRgb = paintRgb.map(c => Math.min(1.0, c * comp));
+													container.style.backgroundColor = `rgb(${wallRgb[0] * 255}, ${wallRgb[1] * 255}, ${wallRgb[2] * 255})`;
+													container.style.backgroundImage = 'none';
+											}
+											
+											// Capture old overlay references BEFORE adding new ones
+												const oldFg = container.querySelector('.room-foreground-overlay');
+												const oldShadow = container.querySelector('.room-shadow-overlay');
+												
+												// Shadow overlay (add new FIRST)
 												const shadowOverlay = document.createElement('div');
 												shadowOverlay.className = 'room-shadow-overlay';
 												shadowOverlay.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;background-image:url(${shadowPath});background-size:cover;background-position:center;pointer-events:none;z-index:0;mix-blend-mode:multiply;`;
 												container.insertBefore(shadowOverlay, container.firstChild);
 												
-												// Foreground overlay (furniture)
+												// Foreground overlay
 												const overlay = document.createElement('div');
 												overlay.className = 'room-foreground-overlay';
 												overlay.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;background-image:url(${foregroundPath});background-size:cover;background-position:center;pointer-events:none;z-index:1;`;
 												container.insertBefore(overlay, container.firstChild);
+												
+												// Remove old overlays AFTER new ones are in DOM
+												oldFg?.remove();
+												oldShadow?.remove();
+												
 												this.syncFovWithBackground();
+												resolve();
 										};
+										
+										fgImg.onload = () => void onBothLoaded();
+										shadowImg.onload = () => void onBothLoaded();
+										shadowImg.onerror = onBothLoaded; // Handle missing shadow
+										
 										fgImg.src = foregroundPath;
+										shadowImg.src = shadowPath;
 								} else {
-										// Standard room: single background image
+										// Standard room (non-colorizable): remove overlays and set background
+										container.querySelector('.room-foreground-overlay')?.remove();
+										container.querySelector('.room-shadow-overlay')?.remove();
 										const img = new Image();
 										img.onload = () => {
 												this._currentImageAspectRatio = img.width / img.height;
@@ -285,11 +340,13 @@ export class SceneManager {
 												container.style.backgroundSize = 'cover';
 												container.style.backgroundPosition = 'center';
 												this.syncFovWithBackground();
+												resolve();
 										};
 										img.src = path;
-								}
-						}
-				}
+									}
+							}
+					}
+			});
 		}
 
     private checkLayoutMode(): void {

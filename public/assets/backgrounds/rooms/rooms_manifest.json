@@ -14,18 +14,10 @@
       "height": 3000
     },
     {
-      "id": "family-room",
-      "name": "Family room",
-      "foreground": "family_room_foreground.png",
-      "shadow": "family_room_shadow.png",
-      "width": 4500,
-      "height": 3000
-    },
-    {
-      "id": "home-library",
-      "name": "Home library",
-      "foreground": "home_library_foreground.png",
-      "shadow": "home_library_shadow.png",
+      "id": "hallway",
+      "name": "Hallway",
+      "foreground": "hallway_foreground.png",
+      "shadow": "hallway_shadow.png",
       "width": 4500,
       "height": 3000
     },
