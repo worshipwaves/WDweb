@@ -155,9 +155,6 @@ export class AudioSlicerPanel implements PanelComponent {
           : '--:--';
         this._songDurationEl.textContent = `${durationText} · ${this._audioBuffer ? 'Ready' : 'Re-upload to Edit'}`;
       }
-      
-      const footer = this._dropZone?.closest('.audio-slicer-upload-section')?.querySelector('.slicer-upload-footer') as HTMLElement;
-      if (footer) footer.style.display = 'flex';
     }
   }
 
@@ -333,14 +330,34 @@ export class AudioSlicerPanel implements PanelComponent {
       
       <button class="slicer-use-full"><span>or use the full song</span></button>
       
-      <div class="slicer-cta-footer">
-        <button class="slicer-btn-secondary" data-action="next-accordion">Make It Beautiful →</button>
-        <button class="slicer-btn-primary slicer-btn-commit" data-demo-id="slicer_commit">
+      <div class="slicer-toggle-card" id="toggle-vocals">
+        <div class="slicer-toggle-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
           </svg>
-          Create My Art
+        </div>
+        <div class="slicer-toggle-text">
+          <div class="slicer-toggle-title">Just the Singing Voice</div>
+          <div class="slicer-toggle-desc">Removes background music</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" class="slicer-isolate-checkbox" ${this._isolateVocals ? 'checked' : ''}>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      
+      <input type="hidden" class="slicer-min-duration" value="${this._minDuration}">
+      <input type="hidden" class="slicer-silence-thresh" value="${this._silenceThresh}">
+      
+      <div class="slicer-cta-footer">
+        <button class="slicer-btn-primary slicer-btn-preview-final" data-demo-id="slicer_preview_final">
+          <svg class="slicer-play-icon" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+          <svg class="slicer-pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          <span class="slicer-preview-label">Preview</span>
         </button>
+        <button class="slicer-btn-secondary slicer-btn-reset">Reset</button>
       </div>
     `;
     this._cacheTrimmerElements(section);
@@ -377,16 +394,6 @@ export class AudioSlicerPanel implements PanelComponent {
         </div>
         <button class="slicer-song-change">Change</button>
       </div>
-      
-      <div class="slicer-cta-footer slicer-upload-footer">
-        <button class="slicer-btn-secondary" data-action="next-accordion">Pick Your Moment →</button>
-        <button class="slicer-btn-primary slicer-btn-commit" data-demo-id="slicer_commit">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-          </svg>
-          Create My Art
-        </button>
-      </div>
     `;
     this._cacheUploadElements(section);
     this._attachUploadListeners(section);
@@ -416,10 +423,6 @@ export class AudioSlicerPanel implements PanelComponent {
     section.querySelector('.slicer-song-change')?.addEventListener('click', () => {
       this._resetToUpload();
     });
-    section.querySelector('[data-action="next-accordion"]')?.addEventListener('click', () => {
-      this._controller.openNextAudioAccordion('custom');
-    });
-    section.querySelector('.slicer-btn-commit')?.addEventListener('click', () => this._handleCommit());
   }
 
   private _attachTrimmerListeners(section: HTMLElement): void {
@@ -434,7 +437,14 @@ export class AudioSlicerPanel implements PanelComponent {
     section.querySelector('[data-action="next-accordion"]')?.addEventListener('click', () => {
       this._controller.openNextAudioAccordion('slicing');
     });
-    section.querySelector('.slicer-btn-commit')?.addEventListener('click', () => this._handleCommit());
+    section.querySelector('#toggle-vocals .toggle-switch input')?.addEventListener('change', (e) => {
+      const checked = (e.target as HTMLInputElement).checked;
+      this._isolateVocals = checked;
+      section.querySelector('#toggle-vocals')?.classList.toggle('active', checked);
+      this._persistToggleState();
+    });
+    section.querySelector('.slicer-btn-preview-final')?.addEventListener('click', () => this._handlePreviewFinal());
+    section.querySelector('.slicer-btn-reset')?.addEventListener('click', () => this._resetTrimmer());
     window.addEventListener('resize', this._handleResize);
   }
 	
@@ -564,8 +574,6 @@ export class AudioSlicerPanel implements PanelComponent {
       this._songLoaded?.classList.add('visible');
       if (this._songNameEl) this._songNameEl.textContent = this._originalFile.name;
       if (this._songDurationEl) this._songDurationEl.textContent = `${this._formatTime(this._audioBuffer.duration)} · Ready`;
-      const footer = this._dropZone?.closest('.audio-slicer-upload-section')?.querySelector('.slicer-upload-footer') as HTMLElement;
-      if (footer) footer.style.display = 'flex';
     }
   }
 	
@@ -670,6 +678,9 @@ export class AudioSlicerPanel implements PanelComponent {
         start_time: 0,
         end_time: this._audioBuffer!.duration
       });
+      
+      // Auto-commit: immediately process audio after upload
+      this._handleCommit();
       
     } catch (err) {
       console.error('[AudioSlicerPanel] Decode error:', err);
@@ -1281,8 +1292,9 @@ export class AudioSlicerPanel implements PanelComponent {
   }
 	
 	private _handleCommit(): void {
-    const isolateVocals = this._isolateCheckbox?.checked || false;
+    const isolateVocals = this._isolateVocals || this._isolateCheckbox?.checked || false;
     const useSlice = this._markStart !== null && this._markEnd !== null;
+    const removeSilence = isolateVocals ? true : this._silenceEnabled;
     
     // PARITY FIX: Always send original file to backend.
     // We disable the client-side blob optimization here because browser decoding (48k)
@@ -1295,7 +1307,7 @@ export class AudioSlicerPanel implements PanelComponent {
         startTime: this._markStart,
         endTime: this._markEnd,
         isolateVocals,
-        removeSilence: this._silenceEnabled,
+        removeSilence,
         silenceThreshold: parseFloat((this._container?.querySelector('.slicer-silence-thresh') as HTMLInputElement)?.value || '-40'),
         silenceMinDuration: parseFloat((this._container?.querySelector('.slicer-min-duration') as HTMLInputElement)?.value || '1.0'),
         sliceBlob: useSlice ? this._createSliceBlob() : null,
@@ -1481,6 +1493,55 @@ export class AudioSlicerPanel implements PanelComponent {
     this._updateSelection();
     this._controller.updateAudioAccordionValue('slicing');
   }
+  
+  private _handlePreviewFinal(): void {
+    const btn = this._trimmerSection?.querySelector('.slicer-btn-preview-final');
+    const playIcon = btn?.querySelector('.slicer-play-icon') as HTMLElement;
+    const pauseIcon = btn?.querySelector('.slicer-pause-icon') as HTMLElement;
+    const label = btn?.querySelector('.slicer-preview-label');
+    
+    if (this._isPreviewing) {
+      this._stopAll();
+      this._isPreviewing = false;
+      if (playIcon) playIcon.style.display = '';
+      if (pauseIcon) pauseIcon.style.display = 'none';
+      if (label) label.textContent = 'Preview';
+    } else {
+      this._handleCommit();
+    }
+  }
+  
+  private _resetTrimmer(): void {
+    this._stopAll();
+    this._markStart = null;
+    this._markEnd = null;
+    this._isolateVocals = false;
+    this._isPreviewing = false;
+    this._pausedAt = 0;
+    
+    // Reset UI
+    this._updateMarkButtonsV2();
+    this._updateSelection();
+    this._updateSelectionSummary();
+    
+    // Reset vocals toggle
+    const vocalsCard = this._trimmerSection?.querySelector('#toggle-vocals');
+    const vocalsCheckbox = this._trimmerSection?.querySelector('.slicer-isolate-checkbox') as HTMLInputElement;
+    vocalsCard?.classList.remove('active');
+    if (vocalsCheckbox) vocalsCheckbox.checked = false;
+    
+    // Reset preview button
+    const btn = this._trimmerSection?.querySelector('.slicer-btn-preview-final');
+    const playIcon = btn?.querySelector('.slicer-play-icon') as HTMLElement;
+    const pauseIcon = btn?.querySelector('.slicer-pause-icon') as HTMLElement;
+    const label = btn?.querySelector('.slicer-preview-label');
+    if (playIcon) playIcon.style.display = '';
+    if (pauseIcon) pauseIcon.style.display = 'none';
+    if (label) label.textContent = 'Preview';
+    
+    this._persistToggleState();
+    this._persistTrimState();
+  }  
   
   private _updateMarkButtonsV2(): void {
     if (!this._trimmerSection) return;

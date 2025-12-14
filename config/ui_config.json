@@ -326,18 +326,6 @@
               "type": "audio_trimmer"
             }
           }
-        },
-				"demucs": {
-          "label": "Make It Beautiful",
-					"panel_title": "Separate music & vocals",
-          "panel_help": "It is often easier to 'visualize' the words in the soundwave when vocals are isolated.",
-					"note":"",
-          "filters": {},
-          "options": {
-            "stem_separation": {
-              "type": "audio_enhance"
-            }
-          }
         }
       }
     }

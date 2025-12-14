@@ -1423,17 +1423,6 @@ export class ApplicationController {
         return 'Optional';
       }
       
-      case 'audio:demucs': {
-        if (this._audioSlicerPanel) {
-          const enhancements = this._audioSlicerPanel.getEnhancementsDisplay();
-          if (enhancements) return enhancements;
-        }
-        const parts: string[] = [];
-        if (composition.audio_source?.use_stems) parts.push('Vocals');
-        if (composition.audio_processing?.remove_silence) parts.push('Cleaned');
-        return parts.length > 0 ? parts.join(', ') : 'Optional';
-      }	
-      
       case 'backgrounds:paint': {
         const wallFinishId = ui.currentWallFinish;
         if (!wallFinishId) return '';
@@ -1661,9 +1650,6 @@ export class ApplicationController {
 			case 'audio_trimmer':
         await this._renderAudioTrimmerContent(container);
         break;
-      case 'audio_enhance':
-        await this._renderAudioEnhanceContent(container);
-        break;
       default:
         container.innerHTML = `<div class="panel-placeholder">Content type: ${optionConfig.type}</div>`;
     }
@@ -1856,8 +1842,7 @@ export class ApplicationController {
    */
   public openNextAudioAccordion(currentSubcategory: string): void {
     const nextMap: Record<string, string> = {
-      'custom': 'slicing',
-      'slicing': 'demucs'
+      'custom': 'slicing'
     };
     const next = nextMap[currentSubcategory];
     if (next && this._accordion) {
