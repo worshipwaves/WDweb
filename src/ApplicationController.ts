@@ -1850,13 +1850,6 @@ export class ApplicationController {
       this._accordion.setOpen(next, true);
     }
   }
-	
-	private async _renderAudioEnhanceContent(container: HTMLElement): Promise<void> {
-    await this._ensureAudioSlicerPanel();
-    if (!this._audioSlicerPanel) return;
-    container.innerHTML = '';
-    container.appendChild(this._audioSlicerPanel.renderEnhanceSection());
-  }
 
   /**
    * Render upload interface content for accordion

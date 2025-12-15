@@ -62,7 +62,7 @@
     "binning_mode": "mean_abs",
     "remove_silence": false,
     "silence_threshold": -20,
-    "silence_duration": 0.50,
+    "silence_duration": 0.5,
     "silence_frame_length": 2048,
     "silence_hop_length": 512
   },

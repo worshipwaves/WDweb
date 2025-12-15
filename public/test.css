@@ -2174,6 +2174,103 @@ SPECIES CARDS - 140px
   color: rgb(var(--color-foreground));
 }
 
+/* Section header (numbered sections) */
+.slicer-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(var(--color-foreground), 0.03);
+  border: 1px solid rgb(var(--color-border));
+  margin-bottom: 16px;
+}
+
+.slicer-section-header:last-of-type {
+  margin-bottom: 16px;
+}
+
+.slicer-section-number {
+  width: 22px;
+  height: 22px;
+  background: rgb(var(--color-foreground));
+  color: rgb(var(--color-background));
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.slicer-section-text {
+  flex: 1;
+}
+
+.slicer-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--color-foreground));
+}
+
+.slicer-section-desc {
+  font-size: 12px;
+  color: rgb(var(--color-foreground-secondary));
+  margin-top: 2px;
+}
+
+/* Controls row (play, start, end, reset) */
+.slicer-controls-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 32px;
+}
+
+.slicer-controls-row .slicer-play-btn {
+  width: 44px;
+  height: auto;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.slicer-controls-row .slicer-mark-btn {
+  flex: 1;
+  flex-direction: row;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.slicer-controls-row .slicer-mark-btn-label {
+  font-size: 11px;
+}
+
+.slicer-controls-row .slicer-mark-btn-time {
+  font-size: 11px;
+}
+
+.slicer-btn-reset {
+  padding: 10px 14px;
+  background: transparent;
+  border: 1px solid rgb(var(--color-border));
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgb(var(--color-foreground-secondary));
+  cursor: pointer;
+  transition: border-color 250ms, color 250ms;
+  flex-shrink: 0;
+}
+
+.slicer-btn-reset:hover {
+  border-color: rgb(var(--color-foreground));
+  color: rgb(var(--color-foreground));
+}
+
 /* Waveform with skip buttons */
 .slicer-waveform-row {
   display: flex;
@@ -2599,6 +2696,13 @@ SPECIES CARDS - 140px
   background: rgb(var(--color-foreground));
   border: none;
   color: rgb(var(--color-background));
+}
+
+.slicer-cta-footer .slicer-btn-primary:disabled {
+  background: rgb(var(--color-border));
+  color: rgb(var(--color-foreground-secondary));
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .slicer-cta-footer .slicer-btn-primary:hover {
