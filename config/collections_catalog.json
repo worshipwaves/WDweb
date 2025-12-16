@@ -1,5 +1,39 @@
 {
   "version": "1.0",
+  "artists": {
+    "artist-sarah-johnson": {
+      "name": "Sarah Johnson",
+      "thumbnail": "/assets/collections/artists/sarah-johnson.jpg"
+    },
+    "artist-grace-chapel-choir": {
+      "name": "Grace Chapel Choir",
+      "thumbnail": "/assets/collections/artists/grace-chapel-choir.jpg"
+    },
+    "artist-instrumental": {
+      "name": "Instrumental",
+      "thumbnail": "/assets/collections/artists/instrumental.jpg"
+    },
+    "artist-david-miller": {
+      "name": "David Miller",
+      "thumbnail": "/assets/collections/artists/david-miller.jpg"
+    },
+    "artist-worship-ensemble": {
+      "name": "Worship Ensemble",
+      "thumbnail": "/assets/collections/artists/worship-ensemble.jpg"
+    },
+    "artist-james-earl": {
+      "name": "James Earl",
+      "thumbnail": "/assets/collections/artists/james-earl.jpg"
+    },
+    "artist-spoken-word": {
+      "name": "Spoken Word",
+      "thumbnail": "/assets/collections/artists/spoken-word.jpg"
+    },
+    "artist-gregorian-chant": {
+      "name": "Gregorian Chant",
+      "thumbnail": "/assets/collections/artists/gregorian-chant.jpg"
+    }
+  },
   "categories": [
     { "id": "hymn", "label": "Hymns" },
     { "id": "bible", "label": "Bible Passages" },

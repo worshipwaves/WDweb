@@ -303,7 +303,21 @@
 					"panel_title": "COLLECTIONS",
           "panel_help": "Browse pre-made designs from popular hymns and worship songs. Select one to use as a starting point for your custom piece.",
           "note": "",
-          "filters": {},
+          "filters": {
+            "collection_type": {
+              "type": "single",
+              "label": "Browse By",
+              "ui_state_path": "ui.collectionFilter",
+              "options": [
+                { "id": "hymn", "label": "Hymns", "thumbnail": "", "tooltip": "Traditional Hymns" },
+                { "id": "bible", "label": "Scripture", "thumbnail": "", "tooltip": "Bible Passages" },
+                { "id": "prayer", "label": "Prayers", "thumbnail": "", "tooltip": "Prayers & Litanies" },
+                { "id": "original", "label": "Original", "thumbnail": "", "tooltip": "Original Works" },
+                { "id": "artist", "label": "Artists", "thumbnail": "", "tooltip": "Browse by Artist" }
+              ],
+              "default": "hymn"
+            }
+          },
           "options": {
             "collections_browser": {
               "type": "collections_browser"

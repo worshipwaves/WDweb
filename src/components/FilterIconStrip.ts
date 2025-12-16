@@ -9,7 +9,7 @@ import { Tooltip } from './Tooltip';
 
 export interface FilterIconGroup {
   id: string;
-  type: 'shape' | 'waveform';
+  type: 'shape' | 'waveform' | 'category';
   label: string;
   icons: FilterIconDefinition[];
 }
@@ -17,6 +17,7 @@ export interface FilterIconGroup {
 export interface FilterIconDefinition {
   id: string;
   svgPath: string;
+	label?: string;
   tooltip: string;
   stateValue: string;
 }

@@ -1041,7 +1041,7 @@ input:checked + .toggle-slider:before {
 
 .filter-group {
   display: flex;
-  gap: 4px;
+  gap: 8px;
   padding: 6px 8px;
   border-radius: 0px;
   background: rgba(0, 0, 0, 0.04);
@@ -1052,6 +1052,23 @@ input:checked + .toggle-slider:before {
   background: transparent;
   border: none;
   padding: 0;
+}
+
+/* Category group - same as shape group */
+.filter-group.category {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+/* Artist card - circular thumbnail */
+.collection-card.artist-card .collection-card-visual {
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.collection-card.artist-card .collection-card-visual img {
+  object-fit: cover;
 }
 
 .filter-icon {
@@ -1074,6 +1091,27 @@ input:checked + .toggle-slider:before {
 .filter-icon.active {
   border-color: rgb(var(--color-foreground));
   background: rgba(0, 0, 0, 0.04);
+}
+
+/* Text-mode category filter buttons */
+.filter-icon.text-mode {
+  min-width: auto;
+  max-width: none;
+  aspect-ratio: auto;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.filter-icon.text-mode:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.filter-icon.text-mode.active {
+  color: #fff;
 }
 
 .filter-icon svg {

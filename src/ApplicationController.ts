@@ -1686,13 +1686,17 @@ export class ApplicationController {
     const subcategory = categoryConfig?.subcategories[subcategoryId];
     if (!subcategory) return null;
     
-    if (categoryId === 'wood' && subcategoryId === 'panel' && subcategory.filters) {
-      return this._createFilterToolbar(categoryId, subcategoryId, subcategory.filters);
-    } else if (categoryId === 'wood' && subcategoryId === 'wood_species') {
-      return this._createSectionSelectorToolbar();
-    }
-    
-    return null;
+    // Section selector toolbar for wood species
+		if (categoryId === 'wood' && subcategoryId === 'wood_species') {
+			return this._createSectionSelectorToolbar();
+		}
+		
+		// Filter toolbar for any subcategory with filters
+		if (subcategory.filters && Object.keys(subcategory.filters).length > 0) {
+			return this._createFilterToolbar(categoryId, subcategoryId, subcategory.filters);
+		}
+			
+		return null;
   }
   
   /**
@@ -1901,7 +1905,21 @@ export class ApplicationController {
       }
     }
 
-    const collections = this._collectionsCatalog.collections;
+    // Get active category filter
+    const filterKey = `${this._state.ui.activeCategory}_${this._state.ui.activeSubcategory}`;
+    const stateFilters = this._state.ui.filterSelections[filterKey] || {};
+    const activeFilter = stateFilters['collection_type']?.[0] || null;
+    
+    // Route to artist view if selected
+    if (activeFilter === 'artist') {
+      await this._renderArtistCollections(container);
+      return;
+    }
+    
+    // Filter collections by category (show all if no filter active)
+    const collections = activeFilter
+      ? this._collectionsCatalog.collections.filter(c => c.category === activeFilter)
+      : this._collectionsCatalog.collections;
     const selectedId = this._state?.ui.selectedCollectionId || null;
     const selectedRecId = this._state?.ui.selectedRecordingId || null;
 
@@ -1949,6 +1967,130 @@ export class ApplicationController {
       variantArea.innerHTML = '<div class="variant-selector-empty">Select a track above</div>';
     }
     
+    container.appendChild(variantArea);
+    scrollContainer.scrollToSelected();
+  }
+
+	/**
+   * Render artist-centric collection view
+   * Groups recordings by artist, cards are artists, chips are songs
+   * @private
+   */
+  private async _renderArtistCollections(container: HTMLElement): Promise<void> {
+    if (!this._collectionsCatalog || !this._state) return;
+
+    const catalog = this._collectionsCatalog;
+    const artistMap = new Map<string, {
+      id: string;
+      name: string;
+      thumbnail: string;
+      songs: Array<{ collectionId: string; title: string; recordingUrl: string }>;
+    }>();
+
+    // Group recordings by artist
+    catalog.collections.forEach(collection => {
+      collection.recordings.forEach(recording => {
+        const artistId = recording.artistId;
+        if (!artistId) return;
+
+        if (!artistMap.has(artistId)) {
+          const artistMeta = catalog.artists?.[artistId];
+          artistMap.set(artistId, {
+            id: artistId,
+            name: artistMeta?.name || recording.artist,
+            thumbnail: artistMeta?.thumbnail || '',
+            songs: []
+          });
+        }
+        artistMap.get(artistId)!.songs.push({
+          collectionId: collection.id,
+          title: collection.title,
+          recordingUrl: recording.url
+        });
+      });
+    });
+
+    const selectedArtistId = this._state.ui.selectedCollectionId || null;
+
+    // Create scroll container for artist cards
+    const scrollContainer = new HorizontalScrollContainer();
+    const scrollWrapper = scrollContainer.render();
+    const scrollElement = scrollContainer.getScrollElement()!;
+
+    artistMap.forEach(artist => {
+      const card = document.createElement('button');
+      card.className = 'accordion-card collection-card artist-card';
+      card.dataset.collectionId = artist.id;
+      if (artist.id === selectedArtistId) {
+        card.classList.add('selected');
+      }
+
+      const visual = document.createElement('div');
+      visual.className = 'collection-card-visual artist-visual';
+      if (artist.thumbnail) {
+        const img = document.createElement('img');
+        img.src = artist.thumbnail;
+        img.alt = artist.name;
+        img.loading = 'lazy';
+        visual.appendChild(img);
+      }
+      card.appendChild(visual);
+
+      const info = document.createElement('div');
+      info.className = 'collection-card-info';
+      const title = document.createElement('div');
+      title.className = 'collection-card-title';
+      title.textContent = artist.name;
+      info.appendChild(title);
+      const meta = document.createElement('div');
+      meta.className = 'collection-card-meta';
+      meta.textContent = `${artist.songs.length} song${artist.songs.length > 1 ? 's' : ''}`;
+      info.appendChild(meta);
+      card.appendChild(info);
+
+      card.addEventListener('click', () => {
+        this._handleArtistSelected(artist.id);
+      });
+
+      scrollElement.appendChild(card);
+    });
+
+    container.innerHTML = '';
+    container.appendChild(scrollWrapper);
+
+    // Variant area for song chips
+    const variantArea = document.createElement('div');
+    variantArea.className = 'collection-variant-area';
+
+    if (this._collectionVariantSelector) {
+      this._collectionVariantSelector.destroy();
+      this._collectionVariantSelector = null;
+    }
+
+    const selectedArtist = selectedArtistId ? artistMap.get(selectedArtistId) : null;
+    if (selectedArtist && selectedArtist.songs.length > 0) {
+      const songChips = document.createElement('div');
+      songChips.className = 'variant-chip-container';
+      
+      const label = document.createElement('span');
+      label.className = 'variant-selector-label';
+      label.textContent = 'song:';
+      variantArea.appendChild(label);
+
+      selectedArtist.songs.forEach(song => {
+        const chip = document.createElement('button');
+        chip.className = 'variant-chip';
+        chip.textContent = song.title;
+        chip.addEventListener('click', () => {
+          void this._loadCollectionAudio(song.recordingUrl, song.title);
+        });
+        songChips.appendChild(chip);
+      });
+      variantArea.appendChild(songChips);
+    } else {
+      variantArea.innerHTML = '<div class="variant-selector-empty">Select an artist above</div>';
+    }
+
     container.appendChild(variantArea);
     scrollContainer.scrollToSelected();
   }
@@ -2052,6 +2194,34 @@ export class ApplicationController {
     // Update accordion header
     if (this._accordion) {
       this._accordion.updateValue('collections');
+    }
+  }
+
+	/**
+   * Handle artist card selection in artist view
+   * @private
+   */
+  private _handleArtistSelected(artistId: string): void {
+    if (!this._state) return;
+
+    this._state = {
+      ...this._state,
+      ui: {
+        ...this._state.ui,
+        selectedCollectionId: artistId,
+        selectedRecordingId: null
+      }
+    };
+
+    // Update card selection visually
+    const scrollContainer = document.querySelector('.subcategory-content-inner .horizontal-scroll');
+    scrollContainer?.querySelectorAll('.collection-card').forEach(card => {
+      card.classList.toggle('selected', (card as HTMLElement).dataset.collectionId === artistId);
+    });
+
+    // Refresh content to show song chips
+    if (this._accordion) {
+      this._accordion.refreshContent('collections');
     }
   }
 
@@ -2882,6 +3052,21 @@ export class ApplicationController {
 					tooltip: opt.tooltip || `${opt.label} Waveform`,
 					stateValue: opt.id
 				}))
+      });
+    }
+    
+    // Build collection_type filter group (Category buttons)
+    if (filters.collection_type) {
+      groups.push({
+        id: 'collection_type',
+        type: 'category',
+        label: filters.collection_type.label,
+        icons: filters.collection_type.options.map(opt => ({
+          id: opt.id,
+          svgPath: `/assets/icons/${opt.id}.svg`,
+          tooltip: opt.tooltip || opt.label,
+          stateValue: opt.id
+        }))
       });
     }
     

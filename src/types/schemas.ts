@@ -415,8 +415,14 @@ export const CollectionItemSchema = z.object({
   recordings: z.array(CollectionRecordingSchema)
 });
 
+export const ArtistMetadataSchema = z.object({
+  name: z.string(),
+  thumbnail: z.string()
+});
+
 export const CollectionsCatalogSchema = z.object({
   version: z.string(),
+  artists: z.record(z.string(), ArtistMetadataSchema).optional(),
   categories: z.array(z.object({
     id: z.string(),
     label: z.string(),

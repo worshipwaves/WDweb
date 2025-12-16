@@ -12,6 +12,13 @@ export default defineConfig({
     host: true,
     port: 5173,
     open: true,
+    headers: {
+      'Cache-Control': 'public, max-age=31536000, immutable'
+    },
+    hmr: {
+      host: 'localhost',
+      port: 5173
+    },
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',
