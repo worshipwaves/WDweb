@@ -1,5 +1,5 @@
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, File, UploadFile
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
@@ -226,7 +226,7 @@ def get_backing_parameters(state: CompositionStateDTO) -> Dict[str, Any]:
 @app.post("/audio/process", response_model=AudioProcessResponse)
 async def process_audio(
     file: UploadFile = File(...),
-    state: str = None
+    state: str = Form(None)
 ) -> Dict[str, Any]:
     """
     Process an uploaded audio file to extract amplitudes.

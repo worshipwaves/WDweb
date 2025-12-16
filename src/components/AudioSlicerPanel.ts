@@ -234,18 +234,13 @@ export class AudioSlicerPanel implements PanelComponent {
         const checkbox = this._trimmerSection?.querySelector('.slicer-isolate-checkbox') as HTMLInputElement;
         if (checkbox) checkbox.checked = needsVocals;
         
-        // Re-sync global state with restored values
-        this._persistToggleState();
-        this._persistTrimState();
+        // Do NOT auto-process vocals on restore.
+        // Composition is already valid from localStorage - artwork already rendered.
+        // Demucs is expensive (30+ seconds); only run when user explicitly requests.
         
-        // Auto-process vocals if it was enabled
-        if (needsVocals && this._audioBuffer && this._originalFile) {
-          console.log('[AudioSlicerPanel] Auto-reprocessing vocals on slice after restore');
-          await this._processVocals();
-        }
-        
-        // Now commit with restored state
-        this._handleCommit();
+        // Do NOT call _handleCommit() here.
+        // Global state is already correct from localStorage.
+        // Committing would trigger backend processing that resets section_materials.
         return;
       } else {
         // Stale data, clear it

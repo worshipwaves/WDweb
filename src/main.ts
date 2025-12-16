@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // 3. Initialize Controller and Register SceneManager
       await controller.initialize();
       controller.registerSceneManager(sceneManager);
+			(window as any).__wavedesigner_controller__ = controller;
 			
 			// Shadow Debug Panel - toggle with Ctrl+Shift+D
 			if (DEBUG_SHADOW_PANEL) {

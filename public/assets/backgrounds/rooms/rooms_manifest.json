@@ -14,14 +14,6 @@
       "height": 3000
     },
     {
-      "id": "hallway",
-      "name": "Hallway",
-      "foreground": "hallway_foreground.png",
-      "shadow": "hallway_shadow.png",
-      "width": 4500,
-      "height": 3000
-    },
-    {
       "id": "bedroom",
       "name": "Bedroom",
       "foreground": "bedroom_foreground.png",

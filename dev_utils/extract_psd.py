@@ -11,7 +11,7 @@ import numpy as np
 import json
 
 # ================= CONFIGURATION =================
-PSD_PATH = Path(r"C:\Users\paulj\OneDrive\Desktop\ColorfulHome\Colorful Home.psd")
+PSD_PATH = Path(r"C:\Users\paulj\OneDrive\Desktop\Minimalist Home\Minimalist Home.psd")
 OUTPUT_DIR = Path(r"C:\Users\paulj\WDweb\public\assets\backgrounds\rooms")
 WALL_COLOR = (225, 87, 143) # Pink in segmentation mask
 

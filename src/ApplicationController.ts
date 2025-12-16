@@ -791,10 +791,6 @@ export class ApplicationController {
 			
       PerformanceMonitor.start('backend_audio_processing');
 			
-      // Force a complete state reset on new file upload
-      const freshState = await this._facade.createInitialState();
-      this._state = freshState;
-      
       // Clear the audio cache
       this._audioCache.clearAll();
 			
@@ -813,7 +809,7 @@ export class ApplicationController {
       // Process audio through facade
       const audioResponse: AudioProcessResponse = await this._facade.processAudio(
         file,
-        this._state.composition
+        uiSnapshot
       );
       PerformanceMonitor.end('backend_audio_processing');
 
@@ -825,11 +821,22 @@ export class ApplicationController {
       );
       PerformanceMonitor.end('cache_raw_samples');
       
-      // Dispatch the backend response (subscribers will sync UI to backend defaults)
+      // Preserve section_materials from uiSnapshot (user's wood customizations)
+      // Backend may return defaults; frontend owns material selections
+      const preservedComposition = {
+        ...audioResponse.updated_state,
+        frame_design: {
+          ...audioResponse.updated_state.frame_design,
+          section_materials: uiSnapshot.frame_design?.section_materials 
+            ?? audioResponse.updated_state.frame_design.section_materials
+        }
+      };
+      
+      // Dispatch the backend response with preserved materials
       await this.dispatch({
         type: 'FILE_PROCESSING_SUCCESS',
         payload: {
-          composition: audioResponse.updated_state,
+          composition: preservedComposition,
           maxAmplitudeLocal: audioResponse.max_amplitude_local,
           rawSamplesForCache: audioResponse.raw_samples_for_cache,
           audioSessionId: sessionId,
@@ -854,7 +861,7 @@ export class ApplicationController {
       } else {
         // UI matched defaults, trigger initial render
         const response = await this._facade.getSmartCSGData(
-          audioResponse.updated_state,
+          preservedComposition,
           [],
           null
         );
