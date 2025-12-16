@@ -83,11 +83,13 @@ export class AccordionCollectionCard implements PanelComponent {
 
     card.appendChild(info);
 
-    // Click handler - select default recording
+    // Click handler - select collection, auto-select recording only for single-recording items
     this._clickHandler = () => {
-      const defaultRec = this._config.recordings.find(r => r.isDefault) || this._config.recordings[0];
-      if (defaultRec) {
-        this._onSelect(this._config.id, defaultRec.id);
+      if (this._config.recordings.length === 1) {
+        this._onSelect(this._config.id, this._config.recordings[0].id);
+      } else {
+        // Multi-recording: select collection only, user must choose recording
+        this._onSelect(this._config.id, '');
       }
     };
     card.addEventListener('click', this._clickHandler);

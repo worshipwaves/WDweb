@@ -1963,7 +1963,48 @@ export class ApplicationController {
     const collection = this._collectionsCatalog.collections.find(c => c.id === collectionId);
     if (!collection) return;
 
-    const recording = collection.recordings.find(r => r.id === recordingId);
+    const recording = recordingId ? collection.recordings.find(r => r.id === recordingId) : null;
+    
+    // Multi-recording with no selection: update UI state but don't load audio
+    if (!recording && collection.recordings.length > 1) {
+      this._state = {
+        ...this._state,
+        ui: {
+          ...this._state.ui,
+          selectedCollectionId: collectionId,
+          selectedRecordingId: null
+        }
+      };
+      
+      // Update variant selector
+      const variantArea = document.querySelector('.collection-variant-area');
+      if (variantArea) {
+        if (this._collectionVariantSelector) {
+          this._collectionVariantSelector.destroy();
+        }
+        this._collectionVariantSelector = new CollectionVariantSelector({
+          recordings: collection.recordings,
+          selectedRecordingId: null,
+          onSelect: (recId) => {
+            void this._handleCollectionRecordingSelected(collectionId, recId);
+          }
+        });
+        variantArea.innerHTML = '';
+        variantArea.appendChild(this._collectionVariantSelector.render());
+      }
+      
+      // Update card selection visually
+      const scrollContainer = document.querySelector('.subcategory-content-inner .horizontal-scroll');
+      scrollContainer?.querySelectorAll('.collection-card').forEach(card => {
+        card.classList.toggle('selected', (card as HTMLElement).dataset.collectionId === collectionId);
+      });
+      
+      if (this._accordion) {
+        this._accordion.updateValue('collections');
+      }
+      return;
+    }
+    
     if (!recording) return;
 
     // Update UI state
