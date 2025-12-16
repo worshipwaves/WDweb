@@ -17,6 +17,8 @@ import { SubcategoryAccordion, type AccordionItemConfig } from './components/Sub
 import { ThumbnailGrid } from './components/ThumbnailGrid';
 import { AccordionStyleCard } from './components/AccordionStyleCard';
 import { AccordionSpeciesCard } from './components/AccordionSpeciesCard';
+import { AccordionCollectionCard, type CollectionCardConfig } from './components/AccordionCollectionCard';
+import { CollectionVariantSelector } from './components/CollectionVariantSelector';
 import { HorizontalScrollContainer } from './components/HorizontalScrollContainer';
 import { WoodMaterialSelector } from './components/WoodMaterialSelector';
 import { PerformanceMonitor } from './PerformanceMonitor';
@@ -167,6 +169,8 @@ export class ApplicationController {
   private _woodMaterialsConfig: WoodMaterialsConfig | null = null;
   private _selectedSectionIndices: Set<number> = new Set();
 	private _backgroundsConfig: BackgroundsConfig | null = null;
+  private _collectionsCatalog: import('./types/schemas').CollectionsCatalog | null = null;
+  private _collectionVariantSelector: CollectionVariantSelector | null = null;
 	private _currentRoomId: string | null = null;
 	private _currentWallFinishId: string | null = null;
   private _idleTextureLoader: unknown = null; // IdleTextureLoader instance
@@ -1422,6 +1426,16 @@ export class ApplicationController {
         }
         return 'Optional';
       }
+
+      case 'audio:collections': {
+        const collId = ui.selectedCollectionId;
+        const recId = ui.selectedRecordingId;
+        if (!collId || !this._collectionsCatalog) return 'Browse catalog';
+        const coll = this._collectionsCatalog.collections.find(c => c.id === collId);
+        if (!coll) return 'Browse catalog';
+        const rec = coll.recordings.find(r => r.id === recId);
+        return rec ? `${coll.title} - ${rec.artist}` : coll.title;
+      }
       
       case 'backgrounds:paint': {
         const wallFinishId = ui.currentWallFinish;
@@ -1512,11 +1526,14 @@ export class ApplicationController {
         payload: { category: categoryId, subcategory: subcategoryId }
       });
       
-      // Enable/disable section interaction for wood species
+      // Enable/disable section interaction based on config
       if (this._sceneManager && 'setSectionInteractionEnabled' in this._sceneManager) {
-        const enableInteraction = categoryId === 'wood' && subcategoryId === 'wood_species';
+        const enableInteraction = this._isSectionSelectionEnabled(categoryId, subcategoryId);
         (this._sceneManager as { setSectionInteractionEnabled: (enabled: boolean) => void }).setSectionInteractionEnabled(enableInteraction);
         (this._sceneManager as { setSectionOverlaysVisible: (visible: boolean) => void }).setSectionOverlaysVisible(enableInteraction);
+        if (!enableInteraction) {
+          (this._sceneManager as { clearSelection: () => void }).clearSelection();
+        }
       }
       
       // Scroll to selected item in horizontal scroll container
@@ -1649,6 +1666,9 @@ export class ApplicationController {
         break;
 			case 'audio_trimmer':
         await this._renderAudioTrimmerContent(container);
+        break;
+      case 'collections_browser':
+        await this._renderCollectionsContent(container);
         break;
       default:
         container.innerHTML = `<div class="panel-placeholder">Content type: ${optionConfig.type}</div>`;
@@ -1867,9 +1887,208 @@ export class ApplicationController {
    * @private
    */
   private async _renderCollectionsContent(container: HTMLElement): Promise<void> {
-    container.innerHTML = '<div class="panel-placeholder"><p>Collections coming soon</p></div>';
+    // Load catalog if not cached
+    if (!this._collectionsCatalog) {
+      try {
+        const { CollectionsCatalogSchema } = await import('./types/schemas');
+        const response = await fetch('/config/collections_catalog.json');
+        const data = await response.json();
+        this._collectionsCatalog = CollectionsCatalogSchema.parse(data);
+      } catch (error) {
+        console.error('[Controller] Failed to load collections catalog:', error);
+        container.innerHTML = '<div class="panel-placeholder"><p>Failed to load collections</p></div>';
+        return;
+      }
+    }
+
+    const collections = this._collectionsCatalog.collections;
+    const selectedId = this._state?.ui.selectedCollectionId || null;
+    const selectedRecId = this._state?.ui.selectedRecordingId || null;
+
+    // Create scroll container for cards
+    const scrollContainer = new HorizontalScrollContainer();
+    const scrollWrapper = scrollContainer.render();
+    const scrollElement = scrollContainer.getScrollElement()!;
+
+    collections.forEach(item => {
+      const card = new AccordionCollectionCard({
+        config: item as CollectionCardConfig,
+        selected: item.id === selectedId,
+        onSelect: (collectionId, recordingId) => {
+          void this._handleCollectionSelected(collectionId, recordingId);
+        }
+      });
+      scrollElement.appendChild(card.render());
+    });
+
+    container.innerHTML = '';
+    container.appendChild(scrollWrapper);
+
+    // Render variant selector area (persistent)
+    const variantArea = document.createElement('div');
+    variantArea.className = 'collection-variant-area';
+
+		// Clean up previous variant selector
+    if (this._collectionVariantSelector) {
+      this._collectionVariantSelector.destroy();
+      this._collectionVariantSelector = null;
+    }
+    
+    const selectedCollection = collections.find(c => c.id === selectedId);
+    if (selectedCollection && selectedCollection.recordings.length > 1) {
+      const capturedCollectionId = selectedId!;
+      this._collectionVariantSelector = new CollectionVariantSelector({
+        recordings: selectedCollection.recordings,
+        selectedRecordingId: selectedRecId,
+        onSelect: (recordingId) => {
+          void this._handleCollectionRecordingSelected(capturedCollectionId, recordingId);
+        }
+      });
+      variantArea.appendChild(this._collectionVariantSelector.render());
+    } else {
+      variantArea.innerHTML = '<div class="variant-selector-empty">Select a track above</div>';
+    }
+    
+    container.appendChild(variantArea);
+    scrollContainer.scrollToSelected();
   }
 	
+	/**
+   * Handle collection track selection
+   * @private
+   */
+  private async _handleCollectionSelected(collectionId: string, recordingId: string): Promise<void> {
+    if (!this._state || !this._collectionsCatalog) return;
+
+    const collection = this._collectionsCatalog.collections.find(c => c.id === collectionId);
+    if (!collection) return;
+
+    const recording = collection.recordings.find(r => r.id === recordingId);
+    if (!recording) return;
+
+    // Update UI state
+    this._state = {
+      ...this._state,
+      ui: {
+        ...this._state.ui,
+        selectedCollectionId: collectionId,
+        selectedRecordingId: recordingId
+      }
+    };
+
+    // Update variant selector (always recreate to capture correct collectionId in callback)
+    const variantArea = document.querySelector('.collection-variant-area');
+    if (variantArea && collection.recordings.length > 1) {
+      if (this._collectionVariantSelector) {
+        this._collectionVariantSelector.destroy();
+      }
+      this._collectionVariantSelector = new CollectionVariantSelector({
+        recordings: collection.recordings,
+        selectedRecordingId: recordingId,
+        onSelect: (recId) => {
+          void this._handleCollectionRecordingSelected(collectionId, recId);
+        }
+      });
+      variantArea.innerHTML = '';
+      variantArea.appendChild(this._collectionVariantSelector.render());
+    } else if (variantArea && collection.recordings.length === 1) {
+      if (this._collectionVariantSelector) {
+        this._collectionVariantSelector.destroy();
+      }
+      variantArea.innerHTML = '<div class="variant-selector-empty">Single recording</div>';
+      this._collectionVariantSelector = null;
+    }
+
+    // Update card selection visually
+    const scrollContainer = document.querySelector('.subcategory-content-inner .horizontal-scroll');
+    scrollContainer?.querySelectorAll('.collection-card').forEach(card => {
+      card.classList.toggle('selected', (card as HTMLElement).dataset.collectionId === collectionId);
+    });
+
+    // Load audio file
+    await this._loadCollectionAudio(recording.url, collection.title);
+
+    // Update accordion header
+    if (this._accordion) {
+      this._accordion.updateValue('collections');
+    }
+  }
+
+  /**
+   * Handle recording variant selection
+   * @private
+   */
+  private async _handleCollectionRecordingSelected(collectionId: string, recordingId: string): Promise<void> {
+    if (!this._state || !this._collectionsCatalog) return;
+
+    const collection = this._collectionsCatalog.collections.find(c => c.id === collectionId);
+    if (!collection) return;
+
+    const recording = collection.recordings.find(r => r.id === recordingId);
+    if (!recording) return;
+
+    // Update state
+    this._state = {
+      ...this._state,
+      ui: {
+        ...this._state.ui,
+        selectedRecordingId: recordingId
+      }
+    };
+
+    // Load the new recording
+    await this._loadCollectionAudio(recording.url, collection.title);
+    
+    // Update accordion header
+    if (this._accordion) {
+      this._accordion.updateValue('collections');
+    }
+  }
+
+  /**
+   * Load audio from collection URL
+   * @private
+   */
+  private async _loadCollectionAudio(url: string, title: string): Promise<void> {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const blob = await response.blob();
+      const filename = url.split('/').pop() || `${title}.mp3`;
+      const ext = filename.split('.').pop()?.toLowerCase();
+      const mimeMap: Record<string, string> = {
+        'mp3': 'audio/mpeg',
+        'wav': 'audio/wav',
+        'flac': 'audio/flac',
+        'ogg': 'audio/ogg'
+      };
+      const mimeType = blob.type || mimeMap[ext || ''] || 'audio/mpeg';
+      const file = new File([blob], filename, { type: mimeType });
+      
+      // Ensure AudioSlicerPanel exists
+      await this._ensureAudioSlicerPanel();
+      
+      // Use existing AudioSlicerPanel to load
+      if (this._audioSlicerPanel) {
+        this._audioSlicerPanel.loadAudioFile(file);
+      }
+    } catch (error) {
+      console.error('[Controller] Failed to load collection audio:', error);
+      // Show error without replacing variant selector
+      const variantArea = document.querySelector('.collection-variant-area');
+      if (variantArea) {
+        const existingError = variantArea.querySelector('.collection-load-error');
+        if (existingError) existingError.remove();
+        const msg = document.createElement('div');
+        msg.className = 'collection-load-error';
+        msg.style.cssText = 'color: #c0392b; font-size: 11px; margin-top: 8px;';
+        msg.textContent = `Audio not found: ${url}`;
+        variantArea.appendChild(msg);
+      }
+    }
+  }
+
 	/**
    * Render backing selector content for accordion
    * @private
@@ -2483,6 +2702,49 @@ export class ApplicationController {
     }).catch((error: unknown) => {
       console.error('[Controller] Failed to load SectionSelectorPanel:', error);
     });
+  }
+
+	/**
+   * Enable/disable section interaction based on current navigation
+   * Only enabled for WOOD > Wood & Grain
+   * @private
+   */
+  private _updateSectionInteractionState(): void {
+    if (!this._sceneManager) return;
+    
+    const sm = this._sceneManager as unknown as {
+      setSectionInteractionEnabled: (enabled: boolean) => void;
+      setSectionOverlaysVisible: (visible: boolean) => void;
+      clearSelection: () => void;
+    };
+    
+    const enableInteraction = this._isSectionSelectionEnabled();
+    
+    sm.setSectionInteractionEnabled(isWoodSpecies);
+    
+    if (!isWoodSpecies) {
+      sm.setSectionOverlaysVisible(false);
+      sm.clearSelection();
+    }
+  }
+
+	/**
+   * Check if subcategory enables section selection
+   * @private
+   */
+  private _isSectionSelectionEnabled(categoryId?: string, subcategoryId?: string): boolean {
+    if (!this._categoriesConfig) return false;
+    
+    const catId = categoryId ?? this._state?.ui.activeCategory;
+    const subId = subcategoryId ?? this._state?.ui.activeSubcategory;
+    
+    if (!catId || !subId) return false;
+    
+    const category = this._categoriesConfig[catId as keyof CategoriesConfig];
+    if (!category) return false;
+    
+    const subcategory = category.subcategories[subId];
+    return subcategory?.enables_section_selection === true;
   }
   
   /**

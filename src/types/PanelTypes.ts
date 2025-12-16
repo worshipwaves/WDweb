@@ -274,6 +274,7 @@ export interface SubcategoryConfig {
   panel_title?: string;
   panel_help?: string;
   note?: string;
+	enables_section_selection?: boolean;
   filters: Record<string, FilterConfig>;
   options: Record<string, OptionsConfig>;
 }

@@ -389,10 +389,45 @@ export const UIStateSchema = z.object({
   }),
   currentWallFinish: z.string(),
 	aspectRatioLocked: z.boolean().optional().default(false),
-  lockedAspectRatio: z.number().nullable().optional().default(null)
+  lockedAspectRatio: z.number().nullable().optional().default(null),
+  selectedCollectionId: z.string().nullable().optional().default(null),
+  selectedRecordingId: z.string().nullable().optional().default(null)
 });
 
 export type UIState = z.infer<typeof UIStateSchema>;
+
+// Collections catalog schemas
+export const CollectionRecordingSchema = z.object({
+  id: z.string(),
+  artist: z.string(),
+  artistId: z.string().optional(),
+  duration: z.number(),
+  url: z.string(),
+  isDefault: z.boolean().optional()
+});
+
+export const CollectionItemSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  subtitle: z.string().optional(),
+  category: z.string(),
+  waveformThumbnail: z.string().optional(),
+  recordings: z.array(CollectionRecordingSchema)
+});
+
+export const CollectionsCatalogSchema = z.object({
+  version: z.string(),
+  categories: z.array(z.object({
+    id: z.string(),
+    label: z.string(),
+    icon: z.string().optional()
+  })).optional(),
+  collections: z.array(CollectionItemSchema)
+});
+
+export type CollectionRecording = z.infer<typeof CollectionRecordingSchema>;
+export type CollectionItem = z.infer<typeof CollectionItemSchema>;
+export type CollectionsCatalog = z.infer<typeof CollectionsCatalogSchema>;
 
 // ============================================================================
 // FOUR-PANEL ARCHITECTURE SCHEMAS (STYLE Category Config)

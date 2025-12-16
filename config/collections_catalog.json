@@ -1,0 +1,124 @@
+{
+  "version": "1.0",
+  "categories": [
+    { "id": "hymn", "label": "Hymns" },
+    { "id": "bible", "label": "Bible Passages" },
+    { "id": "prayer", "label": "Prayers" },
+    { "id": "original", "label": "Original Works" }
+  ],
+  "collections": [
+    {
+      "id": "hymn-amazing-grace",
+      "title": "Amazing Grace",
+      "subtitle": "Traditional Hymn",
+      "category": "hymn",
+      "waveformThumbnail": "/assets/collections/thumbnails/amazing-grace.png",
+      "recordings": [
+        {
+          "id": "rec-ag-sarah",
+          "artist": "Sarah Johnson",
+          "artistId": "artist-sarah-johnson",
+          "duration": 234,
+          "url": "/assets/collections/audio/amazing-grace-sarah.mp3",
+          "isDefault": true
+        },
+        {
+          "id": "rec-ag-choir",
+          "artist": "Grace Chapel Choir",
+          "artistId": "artist-grace-chapel-choir",
+          "duration": 312,
+          "url": "/assets/collections/audio/amazing-grace-choir.mp3"
+        },
+        {
+          "id": "rec-ag-instrumental",
+          "artist": "Instrumental",
+          "artistId": "artist-instrumental",
+          "duration": 198,
+          "url": "/assets/collections/audio/amazing-grace-instrumental.mp3"
+        }
+      ]
+    },
+    {
+      "id": "hymn-how-great",
+      "title": "How Great Thou Art",
+      "subtitle": "Traditional Hymn",
+      "category": "hymn",
+      "waveformThumbnail": "/assets/collections/thumbnails/how-great.png",
+      "recordings": [
+        {
+          "id": "rec-hg-david",
+          "artist": "David Miller",
+          "artistId": "artist-david-miller",
+          "duration": 276,
+          "url": "/assets/collections/audio/how-great-david.mp3",
+          "isDefault": true
+        },
+        {
+          "id": "rec-hg-ensemble",
+          "artist": "Worship Ensemble",
+          "artistId": "artist-worship-ensemble",
+          "duration": 298,
+          "url": "/assets/collections/audio/how-great-ensemble.mp3"
+        }
+      ]
+    },
+    {
+      "id": "bible-psalm-23",
+      "title": "Psalm 23",
+      "subtitle": "The Lord is My Shepherd",
+      "category": "bible",
+      "waveformThumbnail": "/assets/collections/thumbnails/psalm-23.png",
+      "recordings": [
+        {
+          "id": "rec-p23-narrator",
+          "artist": "James Earl",
+          "artistId": "artist-james-earl",
+          "duration": 142,
+          "url": "/assets/collections/audio/psalm-23-narrator.mp3",
+          "isDefault": true
+        }
+      ]
+    },
+    {
+      "id": "prayer-lords-prayer",
+      "title": "The Lord's Prayer",
+      "subtitle": "Traditional Prayer",
+      "category": "prayer",
+      "waveformThumbnail": "/assets/collections/thumbnails/lords-prayer.png",
+      "recordings": [
+        {
+          "id": "rec-lp-spoken",
+          "artist": "Spoken Word",
+          "artistId": "artist-spoken-word",
+          "duration": 98,
+          "url": "/assets/collections/audio/lords-prayer-spoken.mp3",
+          "isDefault": true
+        },
+        {
+          "id": "rec-lp-chanted",
+          "artist": "Gregorian Chant",
+          "artistId": "artist-gregorian-chant",
+          "duration": 187,
+          "url": "/assets/collections/audio/lords-prayer-chant.mp3"
+        }
+      ]
+    },
+    {
+      "id": "original-morning-light",
+      "title": "Morning Light",
+      "subtitle": "Original Composition",
+      "category": "original",
+      "waveformThumbnail": "/assets/collections/thumbnails/morning-light.png",
+      "recordings": [
+        {
+          "id": "rec-ml-sarah",
+          "artist": "Sarah Johnson",
+          "artistId": "artist-sarah-johnson",
+          "duration": 267,
+          "url": "/assets/collections/audio/morning-light-sarah.mp3",
+          "isDefault": true
+        }
+      ]
+    }
+  ]
+}

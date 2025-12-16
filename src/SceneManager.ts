@@ -489,6 +489,14 @@ export class SceneManager {
             //this.pulseAllSections();
 						//this._camera.radius = this.calculateIdealRadius();
 						this.setupSectionInteraction();
+            
+            // Disable section picking unless UI is on a subcategory that enables it
+            const uiState = this._controller.getState()?.ui;
+            const catConfig = (this._controller as any)._categoriesConfig;
+            const subConfig = catConfig?.[uiState?.activeCategory]?.subcategories?.[uiState?.activeSubcategory];
+            if (!subConfig?.enables_section_selection) {
+                this.setSectionInteractionEnabled(false);
+            }
 
             const sectionIndicator = document.getElementById('sectionIndicator');
             if (this._sectionMeshes.length > 1) {
