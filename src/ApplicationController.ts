@@ -115,7 +115,8 @@ function initializeSectionMaterials(
   oldN: number,
   newN: number,
   uiCapturedMaterials: SectionMaterial[],
-  config: WoodMaterialsConfig
+  config: WoodMaterialsConfig,
+  availableGrains: string[]
 ): SectionMaterial[] {
   // If N is unchanged, do nothing
   if (newN === oldN) {
@@ -131,10 +132,7 @@ function initializeSectionMaterials(
   const intendedSpecies = allSameSpecies ? uiCapturedMaterials[0].species : config.default_species;
   let intendedGrain = allSameGrain ? uiCapturedMaterials[0].grain_direction : config.default_grain_direction;
 
-  // Step 2: Validate intended grain against NEW number of sections
-  const archetypeId = window.controller?.getActiveArchetypeId();
-  const archetype = archetypeId ? window.controller?.getArchetype(archetypeId) : null;
-  const availableGrains = (archetype as { available_grains?: string[] })?.available_grains ?? ['vertical', 'horizontal'];
+	// Step 2: Validate intended grain against NEW number of sections
   if (!availableGrains.includes(intendedGrain)) {
     intendedGrain = config.default_grain_direction;
   }
@@ -4313,11 +4311,19 @@ export class ApplicationController {
       // CRITICAL: Use materials from UI snapshot, NOT old state
       const uiCapturedMaterials = newComposition.frame_design.section_materials || [];
       if (this._woodMaterialsConfig) { // Ensure config is loaded
+        const targetArchetype = Array.from(this._archetypes.values()).find(a => 
+          a.shape === newComposition.frame_design.shape && 
+          a.slot_style === newComposition.pattern_settings.slot_style && 
+          a.number_sections === newN
+        );
+        const validGrains = (targetArchetype as { available_grains?: string[] })?.available_grains ?? ['vertical', 'horizontal'];
+
         const initializedMaterials = initializeSectionMaterials(
           oldN,
           newN,
           uiCapturedMaterials,
-          this._woodMaterialsConfig
+          this._woodMaterialsConfig,
+          validGrains
         );
         
         newComposition = {
