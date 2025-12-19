@@ -237,14 +237,29 @@ export class SubcategoryAccordion implements PanelComponent {
       
       // Isolate from accordion toggle
       helpBtn.addEventListener('mousedown', (e) => e.stopPropagation());
+      
+      // Document click handler for click-anywhere-to-close
+      const documentClickHandler = (e: MouseEvent) => {
+        if (!helpBtn.contains(e.target as Node)) {
+          this._tooltip.hide();
+          this._activeHelpId = null;
+          document.removeEventListener('click', documentClickHandler);
+        }
+      };
+      
       helpBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (this._activeHelpId === item.id) {
           this._tooltip.hide();
           this._activeHelpId = null;
+          document.removeEventListener('click', documentClickHandler);
         } else {
           this._tooltip.show(item.helpText!, helpBtn, 'left', 'tooltip-help', 0, 0, true, 'canvas');
           this._activeHelpId = item.id;
+          // Defer listener attachment to avoid immediate trigger from this click
+          requestAnimationFrame(() => {
+            document.addEventListener('click', documentClickHandler);
+          });
         }
       });
       

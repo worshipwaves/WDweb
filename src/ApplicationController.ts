@@ -1100,6 +1100,12 @@ export class ApplicationController {
   handleCategorySelected(categoryId: string): void {
     if (!this._panelStack || !this._state) return;
     
+    // Clear accordion state for the category being left
+    const previousCategory = this._state.ui.activeCategory;
+    if (previousCategory && previousCategory !== categoryId) {
+      delete this._accordionState[previousCategory];
+    }
+    
     // Clear section selector when leaving WOOD category
     if (this._sectionSelectorPanel) {
       this._sectionSelectorPanel.destroy();
@@ -1186,7 +1192,7 @@ export class ApplicationController {
         }
       };
       this._facade.persistState(this._state);
-      this.notifySubscribers();
+      // NOTE: notifySubscribers called by handleCompositionUpdate below
     }
     
     // Apply to scene (deferred until after composition update to prevent flash of wrong size)
@@ -1271,6 +1277,10 @@ export class ApplicationController {
 						}
 					};
 				void this.handleCompositionUpdate(composition).then(applyBackground).then(applyArtAndLighting);
+      } else {
+        // No archetype: apply background directly and notify
+        void applyBackground();
+        this.notifySubscribers();
       }
     }
     
@@ -4604,39 +4614,7 @@ export class ApplicationController {
         // Now, trigger the render directly with the received CSG data.
         if (this._sceneManager) {
           await this._sceneManager.renderComposition(response);
-          
-          // Re-apply art placement after rendering
-          const archetypeId = this.getActiveArchetypeId();
-          if (archetypeId) {
-            const backgroundKey = this._getBackgroundKeyForCache(this._state.ui.currentBackground);
-            let artPlacement: ArtPlacement | undefined;
-            
-            // 1. Check placement_defaults for archetype-specific override
-            if (this._placementDefaults) {
-              const placementData = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.[backgroundKey];
-              artPlacement = placementData?.art_placement;
-              
-              if (!artPlacement && backgroundKey !== 'paint_and_accent') {
-                artPlacement = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.['paint_and_accent']?.art_placement;
-              }
-            }
-            
-            // 2. Fallback to background's default art_placement
-            if (!artPlacement && this._backgroundsConfig && this._state) {
-              const bgType = this._state.ui.currentBackground.type;
-              if (bgType === 'rooms') {
-                const bgId = this._state.ui.currentBackground.id;
-                const background = this._backgroundsConfig.categories.rooms.find(bg => bg.id === bgId);
-                artPlacement = background?.art_placement;
-              }
-            }
-
-            if (artPlacement && 'applyArtPlacement' in this._sceneManager) {
-              (this._sceneManager as unknown as { applyArtPlacement: (placement: ArtPlacement) => void }).applyArtPlacement(artPlacement);
-            } else if ('resetArtPlacement' in this._sceneManager) {
-              (this._sceneManager as unknown as { resetArtPlacement: () => void }).resetArtPlacement();
-            }
-          }
+          // Art placement applied internally by _renderCompositionInternal
         }
         
         // Update cache with user's customization

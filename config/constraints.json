@@ -1,6 +1,7 @@
 {
   "version": "2.0.0",
   "description": "Complete operational constraints including archetype-specific limits",
+  "valid_shapes": ["circular", "rectangular", "diamond"],
   "manufacturing": {
     "cnc_table": {
       "max_x": 30,

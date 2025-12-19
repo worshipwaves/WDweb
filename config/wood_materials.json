@@ -1,4 +1,5 @@
 {
+  "valid_grain_directions": ["horizontal", "vertical", "radiant", "diamond"],
   "default_species": "walnut-black-american",
   "default_grain_direction": "vertical",
   "species_catalog": [

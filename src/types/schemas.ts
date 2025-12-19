@@ -18,8 +18,9 @@ export const BackingConfigSchema = z.object({
 export type BackingConfig = z.infer<typeof BackingConfigSchema>;
 
 export const WoodMaterialsConfigSchema = z.object({
+  valid_grain_directions: z.array(z.string()),
   default_species: z.string(),
-  default_grain_direction: z.enum(['horizontal', 'vertical', 'radiant']),
+  default_grain_direction: z.string(),
   species_catalog: z.array(z.object({
     id: z.string(),
     display: z.string(),
@@ -649,6 +650,7 @@ const SceneConstraintSchema = z.object({
 export const ConstraintsConfigSchema = z.object({
   version: z.string(),
   description: z.string(),
+  valid_shapes: z.array(z.string()),
   manufacturing: z.object({
     cnc_table: z.object({
       max_x: z.number(),

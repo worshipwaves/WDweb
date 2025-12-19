@@ -78,12 +78,81 @@ class WaveformDesignerFacade:
         """
         Validate a composition state for correctness and feasibility.
         
+        Validates business-configurable string fields against config,
+        then delegates to composition service for structural validation.
+        
         Args:
             state: The composition state to validate
             
         Returns:
             Validation results dictionary with 'valid', 'errors', and 'warnings'
         """
+        errors: List[str] = []
+        
+        # Validate shape against config
+        constraints_config = self._config_service.get_constraints_config()
+        valid_shapes = constraints_config.get('valid_shapes', [])
+        if state.frame_design.shape not in valid_shapes:
+            errors = errors + [f"Invalid shape: '{state.frame_design.shape}'. Valid: {valid_shapes}"]
+        
+        # Validate grain directions against config
+        wood_config = self._config_service.get_wood_materials_config()
+        valid_grains = wood_config.get('valid_grain_directions', [])
+        for section in state.frame_design.section_materials:
+            if section.grain_direction not in valid_grains:
+                errors = errors + [
+                    f"Invalid grain_direction for section {section.section_id}: "
+                    f"'{section.grain_direction}'. Valid: {valid_grains}"
+                ]
+        
+        # Validate species against catalog
+        valid_species = [s['id'] for s in wood_config.get('species_catalog', [])]
+        if state.frame_design.species not in valid_species:
+            errors = errors + [f"Invalid species: '{state.frame_design.species}'. Valid: {valid_species}"]
+        for section in state.frame_design.section_materials:
+            if section.species not in valid_species:
+                errors = errors + [
+                    f"Invalid species for section {section.section_id}: "
+                    f"'{section.species}'. Valid: {valid_species}"
+                ]
+        
+        # Validate backing type and material against config
+        if state.frame_design.backing and state.frame_design.backing.enabled:
+            backing_config = self._config_service.get_backing_materials_config()
+            valid_backing_types = list(backing_config.get('material_catalog', {}).keys())
+            backing_type = state.frame_design.backing.type
+            if backing_type not in valid_backing_types:
+                errors = errors + [
+                    f"Invalid backing type: '{backing_type}'. Valid: {valid_backing_types}"
+                ]
+            else:
+                # Validate material within type
+                type_config = backing_config['material_catalog'][backing_type]
+                valid_materials = [m['id'] for m in type_config.get('materials', [])]
+                if state.frame_design.backing.material not in valid_materials:
+                    errors = errors + [
+                        f"Invalid backing material: '{state.frame_design.backing.material}'. "
+                        f"Valid for {backing_type}: {valid_materials}"
+                    ]
+        
+        # Validate color_palette against available palettes
+        default_state = self._config_service.get_default_state()
+        valid_palettes = list(default_state.artistic_rendering.color_palettes.keys())
+        if state.artistic_rendering.color_palette not in valid_palettes:
+            errors = errors + [
+                f"Invalid color_palette: '{state.artistic_rendering.color_palette}'. "
+                f"Valid: {valid_palettes}"
+            ]
+        
+        # If config validation failed, return early
+        if errors:
+            return {
+                'valid': False,
+                'errors': errors,
+                'warnings': []
+            }
+        
+        # Delegate to composition service for structural validation
         return self._composition_service.validate_composition(state)
     
     def get_panel_parameters(self, state: CompositionStateDTO) -> Dict[str, Any]:
