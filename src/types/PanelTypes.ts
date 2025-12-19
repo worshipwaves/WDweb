@@ -164,6 +164,9 @@ export interface SliderConfig {
   step: number;
   value: number;
   unit?: string;
+  displayOffset?: number;  // Offset added to display value (e.g., 1 shows "1" when value is 0)
+  discretePresets?: import('./schemas').MarginPreset[];  // For discrete side_margin selection
+  selectedPresetNEnd?: number;  // Currently selected preset's n_end value
 }
 
 /**

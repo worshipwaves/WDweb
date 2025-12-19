@@ -16,34 +16,34 @@ class ConfigService:
         self._constraints: dict
         
         # Load composition defaults for DTO
-        with open(config_dir / 'composition_defaults.json', 'r') as f:
+        with open(config_dir / 'composition_defaults.json', 'r', encoding='utf-8') as f:
             composition_data = json.load(f)
         self._default_state = CompositionStateDTO(**composition_data)
         
         # Load other configs
-        with open(config_dir / 'wood_materials.json', 'r') as f:
+        with open(config_dir / 'wood_materials.json', 'r', encoding='utf-8') as f:
             self._wood_materials = json.load(f)
         
-        with open(config_dir / 'archetypes.json', 'r') as f:
+        with open(config_dir / 'archetypes.json', 'r', encoding='utf-8') as f:
             self._archetypes = json.load(f)
         
-        with open(config_dir / 'ui_config.json', 'r') as f:
+        with open(config_dir / 'ui_config.json', 'r', encoding='utf-8') as f:
             self._ui_config = json.load(f)
             
-        with open(config_dir / 'backgrounds_config.json', 'r') as f:
+        with open(config_dir / 'backgrounds_config.json', 'r', encoding='utf-8') as f:
             self._backgrounds = json.load(f)
         
-        with open(config_dir / 'backing_materials.json', 'r') as f:
+        with open(config_dir / 'backing_materials.json', 'r', encoding='utf-8') as f:
             self._backing_materials = json.load(f) 
 
-        with open(config_dir / 'placement_defaults.json', 'r') as f:
+        with open(config_dir / 'placement_defaults.json', 'r', encoding='utf-8') as f:
             placement_data = json.load(f)
         self._placement_defaults = PlacementDefaultsDTO(**placement_data)
         
         constraints_path = config_dir / 'constraints.json'
         if not constraints_path.exists():
             raise FileNotFoundError(f"CRITICAL: constraints.json not found at {constraints_path}")
-        with open(constraints_path, 'r') as f:
+        with open(constraints_path, 'r', encoding='utf-8') as f:
             self._constraints = json.load(f)
     
     def get_default_state(self) -> CompositionStateDTO:

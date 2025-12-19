@@ -158,6 +158,7 @@ export const PatternSettingsSchema = z.object({
   x_offset: z.number(),
   y_offset: z.number(),
   side_margin: z.number(),
+  symmetric_n_end: z.number().nullable().optional(),
   scale_center_point: z.number(),
   amplitude_exponent: z.number(),
   orientation: z.string(),
@@ -302,6 +303,20 @@ export const CompositionStateDTOSchema = z.object({
 
 export type CompositionStateDTO = z.infer<typeof CompositionStateDTOSchema>;
 
+// Margin preset types for discrete side_margin selection
+export interface MarginPreset {
+  n_end: number;
+  n_center: number;
+  side_margin: number;
+  slot_width: number;
+  label: string;
+}
+
+export interface MarginPresetsResponse {
+  presets: MarginPreset[];
+  applicable: boolean;
+}
+
 export const CSGDataResponseSchema = z.object({
   panel_config: z.object({
     finish_x: z.number(),
@@ -391,7 +406,8 @@ export const UIStateSchema = z.object({
 	aspectRatioLocked: z.boolean().optional().default(false),
   lockedAspectRatio: z.number().nullable().optional().default(null),
   selectedCollectionId: z.string().nullable().optional().default(null),
-  selectedRecordingId: z.string().nullable().optional().default(null)
+  selectedRecordingId: z.string().nullable().optional().default(null),
+  selectedArchetypeId: z.string().nullable().optional().default(null)
 });
 
 export type UIState = z.infer<typeof UIStateSchema>;

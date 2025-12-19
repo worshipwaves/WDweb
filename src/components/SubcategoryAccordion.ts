@@ -1,6 +1,7 @@
 // src/components/SubcategoryAccordion.ts
 
 import type { PanelComponent } from '../types/PanelTypes';
+import { Tooltip } from './Tooltip';
 
 /**
  * Configuration for a single accordion item (subcategory)
@@ -13,6 +14,7 @@ export interface AccordionItemConfig {
   getContent: () => Promise<HTMLElement>;
   isSingle?: boolean;
   isDisabled?: boolean;
+  helpText?: string;
 }
 
 /**
@@ -60,6 +62,10 @@ export class SubcategoryAccordion implements PanelComponent {
   
   // Render ID guards for async content
   private _contentRenderId: Map<string, number> = new Map();
+  
+  // Tooltip for help icons
+  private _tooltip: Tooltip = new Tooltip();
+  private _activeHelpId: string | null = null;
 
   constructor(props: SubcategoryAccordionProps) {
     this._categoryId = props.categoryId;
@@ -135,6 +141,7 @@ export class SubcategoryAccordion implements PanelComponent {
   }
 
   destroy(): void {
+    this._tooltip.hide();
     this._detailsElements.clear();
     this._valueElements.clear();
     this._contentElements.clear();
@@ -206,25 +213,60 @@ export class SubcategoryAccordion implements PanelComponent {
     const summary = document.createElement('summary');
     summary.className = 'subcategory-header';
 
+    // Top row: label + help + caret
+    const topRow = document.createElement('div');
+    topRow.className = 'subcategory-header-top';
+
     // Label (numbered only for wood category)
     const label = document.createElement('span');
     label.className = 'subcategory-label';
     label.textContent = this._categoryId === 'wood' ? `${stepNumber}. ${item.label}` : item.label;
-    summary.appendChild(label);
+    topRow.appendChild(label);
 
-    // Value display
-    const value = document.createElement('span');
-    value.className = 'subcategory-value';
-    value.textContent = item.getValue();
-    this._valueElements.set(item.id, value);
-    summary.appendChild(value);
+    // Actions container (help + caret)
+    const actions = document.createElement('div');
+    actions.className = 'subcategory-header-actions';
+
+    // Help icon (if helpText provided)
+    if (item.helpText) {
+      const helpBtn = document.createElement('button');
+      helpBtn.className = 'accordion-help-icon';
+      helpBtn.type = 'button';
+      helpBtn.textContent = '?';
+      helpBtn.title = 'Help';
+      
+      // Isolate from accordion toggle
+      helpBtn.addEventListener('mousedown', (e) => e.stopPropagation());
+      helpBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this._activeHelpId === item.id) {
+          this._tooltip.hide();
+          this._activeHelpId = null;
+        } else {
+          this._tooltip.show(item.helpText!, helpBtn, 'left', 'tooltip-help', 0, 0, true, 'canvas');
+          this._activeHelpId = item.id;
+        }
+      });
+      
+      actions.appendChild(helpBtn);
+    }
 
     // Caret icon (hidden for single-item)
     if (!item.isSingle) {
       const iconWrapper = document.createElement('span');
       iconWrapper.innerHTML = CARET_SVG;
-      summary.appendChild(iconWrapper.firstElementChild!);
+      actions.appendChild(iconWrapper.firstElementChild!);
     }
+
+    topRow.appendChild(actions);
+    summary.appendChild(topRow);
+
+    // Value display (second line)
+    const value = document.createElement('span');
+    value.className = 'subcategory-value';
+    value.textContent = item.getValue();
+    this._valueElements.set(item.id, value);
+    summary.appendChild(value);
 		
     return summary;
   }

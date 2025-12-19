@@ -144,7 +144,7 @@
         "panel": {
           "label": "Style",
           "panel_title": "ART STYLE",
-					"panel_help": "Choose your art style. Each combines a panel shape with a waveform pattern. Use the filter icons above to narrow by shape or pattern type.",
+					"panel_help": "Choose the overall design for your wood panel. Each style combines a panel shape with a waveform pattern.\n\nFILTERING: Use the filter icons to narrow by shape (circle, rectangle, diamond) or pattern (radial, linear).\n\nSELECTING: Click any card to preview it. Hover to see the name and description.",
           "filters": {
             "shape": {
               "type": "single",
@@ -181,7 +181,7 @@
         "wood_species": {
           "label": "Wood & Grain",
 					"panel_title": "WOOD & GRAIN",
-					"panel_help": "Select your wood species and grain direction. Each thumbnail shows how the grain pattern will appear on your panel. Click any combination to preview.",
+					"panel_help": "Select wood species and grain direction for your panel.\n\nCHOOSING WOOD: Click a species card to select it. Thumbnails below show grain direction options.\n\nMULTI-PANEL DESIGNS: Use the section buttons above to apply different woods to each section. Click \"All\" to apply the same wood everywhere.",
 					"enables_section_selection": true,
           "filters": {},
           "options": {
@@ -193,7 +193,7 @@
         "layout": {
           "label": "Layout",
 					"panel_title": "LAYOUT",
-					"panel_help": "Adjust physical dimensions and element count. Size controls overall scale, elements affects waveform detail. Some options may be limited by your chosen art style.",
+					"panel_help": "Adjust the physical dimensions and detail level of your artwork.\n\nCONTROLS:\n• Size – overall scale of your piece\n• Elements – number of waveform bars (more = finer detail)\n• Separation – spacing between sections\n\nDrag any slider to adjust. Changes preview in real-time.\n\nNOTE: Some options may be limited by your chosen style.",
           "filters": {},
           "options": {
             "main": {
@@ -205,7 +205,7 @@
         "backing": {
           "label": "Backing",
 					"panel_title": "BACKING",
-					"panel_help": "Add an optional backing material behind your panel. Backings add depth and color contrast, making the waveform pattern more visible.",
+					"panel_help": "Add an optional backing material behind your panel for depth and contrast.\n\nCHOOSE MATERIAL: When enabled, scroll through color options. Materials include acrylic and painted finishes. Click any swatch to preview.",
           "note": "",
           "filters": {},
           "options": {
@@ -217,7 +217,7 @@
         "frames": {
           "label": "Frames & Shelves",
 					"panel_title": "FRAMES",
-          "panel_help": "Add a decorative frame around your panel. Coming soon.",
+          "panel_help": "Add a decorative frame or mounting shelf around your panel.\n\nComing soon.",
           "note": "",
           "filters": {},
           "options": {}
@@ -231,7 +231,7 @@
         "canvas": {
           "label": "Canvas",
 					"panel_title": "CANVAS",
-          "panel_help": "Print your waveform design on gallery-wrapped canvas. Coming soon.",
+          "panel_help": "Print your waveform design on gallery-wrapped canvas.\n\nComing soon.",
           "note": "",
           "filters": {},
           "options": {}
@@ -239,7 +239,7 @@
         "fine_art_paper": {
           "label": "Fine Art Paper",
 					"panel_title": "FINE ART PAPER",
-          "panel_help": "Print your waveform design on archival fine art paper. Coming soon.",
+          "panel_help": "Print your waveform design on archival fine art paper, ready for custom framing.\n\nComing soon.",
           "note": "",
           "filters": {},
           "options": {}
@@ -247,7 +247,7 @@
         "metal": {
           "label": "Metal",
 					"panel_title": "METAL",
-          "panel_help": "Print your waveform design on brushed aluminum for a modern look. Coming soon.",
+          "panel_help": "Print your waveform design on brushed aluminum for a modern, vibrant look.\n\nComing soon.",
           "note": "",
           "filters": {},
           "options": {}
@@ -261,7 +261,7 @@
 				"rooms": {
           "label": "Room Settings",
 					"panel_title": "ROOM SETTINGS",
-          "panel_help": "Preview your panel in realistic room environments. Each scene includes appropriate lighting and positioning to show how the art will look in your space.",
+          "panel_help": "Preview your panel in realistic room environments.\n\nSELECTING: Click any room thumbnail to place your artwork in that scene. Each environment includes appropriate lighting and wall positioning.",
           "filters": {},
           "options": {
             "rooms_grid": {
@@ -272,7 +272,7 @@
         "paint": {
           "label": "Wall Finish",
 					"panel_title": "PAINT COLORS",
-          "panel_help": "Choose a wall color to see how your panel will look against different backgrounds. Colors are grouped by tone for easy browsing.",
+          "panel_help": "Choose a wall color to see how your panel contrasts against different backgrounds.\n\nCOLORS: Organized by tone (warm, cool, neutral). Scroll horizontally to browse.\n\nSELECTING: Click any swatch to apply. The preview updates immediately.",
           "filters": {},
           "options": {
             "paint_grid": {
@@ -289,7 +289,7 @@
         "tour": {
           "label": "Take the Tour",
 					"panel_title": "take the tour",
-          "panel_help": "Take a guided tour to see how WaveDesigner transforms audio into art. Perfect for first-time visitors.",
+          "panel_help": "Watch a 60-second guided tour showing how WaveDesigner transforms audio into custom wood art.\n\n• Click the \"Enjoy the Tour\" button to begin\n• The tour auto-advances through key features\n• Click \"Skip Tour\" in the corner to exit anytime",
           "note": "",
           "filters": {},
           "options": {
@@ -301,7 +301,7 @@
         "collections": {
           "label": "View Our Collections",
 					"panel_title": "COLLECTIONS",
-          "panel_help": "Browse pre-made designs from popular hymns and worship songs. Select one to use as a starting point for your custom piece.",
+          "panel_help": "Browse our curated collection of hymns, scripture, prayers, and original works.\n\nFILTERING: Use the category buttons (Hymns, Scripture, Prayers, Original, Artists) to filter what's shown.\n\nBROWSING: Scroll left/right through cards using the < > arrows or drag. Click any card to select it.\n\nVARIANTS: Some tracks have multiple artist recordings. When available, artist chips appear below the cards—click to switch versions.",
           "note": "",
           "filters": {
             "collection_type": {
@@ -327,7 +327,7 @@
         "custom": {
           "label": "Upload Your Song",
 					"panel_title": "upload your worship",
-          "panel_help": "Upload your own audio file to create a unique waveform design. Supports MP3, WAV, and FLAC formats up to 50MB.",
+          "panel_help": "Browse our curated collection of hymns, scripture, prayers, and original works.\n\nFILTERING: Use the category buttons (Hymns, Scripture, Prayers, Original, Artists) to filter what's shown.\n\nBROWSING: Scroll left/right through cards using the < > arrows or drag. Click any card to select it.\n\nVARIANTS: Some tracks have multiple artist recordings. When available, artist chips appear below the cards—click to switch versions.",
           "filters": {},
           "options": {
             "file_upload": {
@@ -338,7 +338,7 @@
 				"slicing": {
           "label": "Optional Audio Tuning",
           "panel_title": "PICK A MOMENT",
-          "panel_help": "Select a section of your audio to use for the waveform design.",
+          "panel_help": "Focus on a specific part of your audio—like a chorus—to change how your waveform art looks.\n\nWAVEFORM: The shaded area shows your selection. Drag the green handle (start) or red handle (end) to adjust.\n\nPLAYBACK:\n• [◀◀ 5s] Skip back 5 seconds\n• [5s ▶▶] Skip forward 5 seconds\n• [▶] Play or pause\n\nMARKING:\n• \"Start Here\" – marks where selection begins\n• \"End Here\" – marks where selection ends\n• \"Reset\" – clears selection, uses full track\n\nVOCAL ISOLATION: Toggle the switch to remove background music and keep only vocals. Processing takes a few moments.",
           "filters": {},
           "options": {
             "audio_slicer": {

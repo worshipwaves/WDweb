@@ -53,7 +53,13 @@ export class Tooltip {
 										const canvas = document.getElementById('renderCanvas');
 										if (canvas) {
 											const canvasRect = canvas.getBoundingClientRect();
-											tooltip.style.top = `${canvasRect.top + (canvasRect.height / 2) - (tooltip.offsetHeight / 2) + offsetY}px`;
+											const maxHeight = canvasRect.height * 0.9;
+											const naturalHeight = tooltip.offsetHeight;
+											const displayHeight = Math.min(naturalHeight, maxHeight);
+											if (naturalHeight > maxHeight) {
+												tooltip.style.maxHeight = `${maxHeight}px`;
+											}
+											tooltip.style.top = `${canvasRect.top + (canvasRect.height / 2) - (displayHeight / 2) + offsetY}px`;
 										} else {
 											tooltip.style.top = `${rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2) + offsetY}px`;
 										}

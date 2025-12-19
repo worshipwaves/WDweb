@@ -126,6 +126,7 @@ class SlotGenerationService:
         
         side_margin = pattern.side_margin
         x_offset = pattern.x_offset
+        target_exterior_margin = x_offset + side_margin  # Physical position for exterior edges
         y_offset = pattern.y_offset
         spacer = pattern.spacer
         bit_diameter = pattern.bit_diameter
@@ -143,28 +144,52 @@ class SlotGenerationService:
             slots_per_section = total_slots // n_sections
             
             if n_sections == 1:
-                # Single panel: side_margin on both sides
-                usable = panel_width - 2 * side_margin
+                # Single panel: target_exterior_margin on both sides
+                usable = panel_width - 2 * target_exterior_margin
                 slot_width = (usable - (slots_per_section - 1) * spacer) / slots_per_section
-                left_margin_list = [side_margin]
+                left_margin_list = [target_exterior_margin]
             else:
-                # n=2: side_margin outer, x_offset inner
-                # Section 0: L=side_margin, R=x_offset
-                # Section 1: L=x_offset, R=side_margin
-                usable = panel_width - side_margin - x_offset
+                # n=2: target_exterior_margin outer, x_offset inner
+                # Section 0: L=target_exterior_margin, R=x_offset
+                # Section 1: L=x_offset, R=target_exterior_margin
+                usable = panel_width - target_exterior_margin - x_offset
                 slot_width = (usable - (slots_per_section - 1) * spacer) / slots_per_section
-                left_margin_list = [side_margin, x_offset]
+                left_margin_list = [target_exterior_margin, x_offset]
             
             slots_per_section_list = [slots_per_section] * n_sections
             
         else:
-            # n>2: Find symmetric distribution with adjusted side_margin
-            n_end, n_center, adjusted_side_margin, slot_width = self._find_symmetric_distribution(
-                total_slots, n_sections, panel_width, x_offset, side_margin, spacer, bit_diameter
-            )
+            # n>2: Use symmetric_n_end if provided, otherwise fall back to solver
+            if pattern.symmetric_n_end is not None:
+                n_end = pattern.symmetric_n_end
+                num_center_sections = n_sections - 2
+                remaining = total_slots - 2 * n_end
+                
+                if remaining >= num_center_sections and remaining % num_center_sections == 0:
+                    n_center = remaining // num_center_sections
+                    center_usable = panel_width - 2 * x_offset
+                    slot_width = (center_usable - (n_center - 1) * spacer) / n_center
+                    min_slot_width = bit_diameter + 0.0625
+                    end_span = n_end * slot_width + (n_end - 1) * spacer
+                    adjusted_side_margin = panel_width - x_offset - end_span
+                    
+                    if slot_width < min_slot_width or adjusted_side_margin < x_offset:
+                        print(f"[SlotGeneration] symmetric_n_end={n_end} violates physical constraints, using solver")
+                        n_end, n_center, adjusted_side_margin, slot_width = self._find_symmetric_distribution(
+                            total_slots, n_sections, panel_width, x_offset, side_margin, spacer, bit_diameter
+                        )
+                else:
+                    print(f"[SlotGeneration] symmetric_n_end={n_end} invalid for total_slots={total_slots}, using solver")
+                    n_end, n_center, adjusted_side_margin, slot_width = self._find_symmetric_distribution(
+                        total_slots, n_sections, panel_width, x_offset, side_margin, spacer, bit_diameter
+                    )
+            else:
+                n_end, n_center, adjusted_side_margin, slot_width = self._find_symmetric_distribution(
+                    total_slots, n_sections, panel_width, x_offset, side_margin, spacer, bit_diameter
+                )
             
-            if abs(adjusted_side_margin - side_margin) > 0.001:
-                print(f"[SlotGeneration] Side margin adjusted from {side_margin:.3f}\" to {adjusted_side_margin:.3f}\" for symmetry")
+            if pattern.symmetric_n_end is None and abs(adjusted_side_margin - target_exterior_margin) > 0.001:
+                print(f"[SlotGeneration] Side margin adjusted from {target_exterior_margin:.3f}\" to {adjusted_side_margin:.3f}\" for symmetry")
             
             # Build per-section lists
             # Section 0: left_margin = adjusted_side_margin
@@ -369,7 +394,125 @@ class SlotGenerationService:
             if margin_diff <= max_adjustment:
                 return (n_end, n_center, adjusted_side_margin, slot_width)
         
-        return None    
+        return None
+        
+    def compute_valid_slot_counts(
+        self,
+        n_sections: int,
+        panel_width: float,
+        side_margin: float,
+        x_offset: float,
+        spacer: float,
+        bit_diameter: float
+    ) -> List[Dict[str, int]]:
+        """
+        Enumerate all valid total_slots values that produce symmetric distribution
+        for the given geometry and side_margin.
+        
+        Returns list of {total_slots, n_end} dicts for frontend to set symmetric_n_end.
+        """
+        if n_sections < 3:
+            return []
+        
+        center_usable = panel_width - 2 * x_offset
+        end_usable = panel_width - side_margin - x_offset
+        num_center_sections = n_sections - 2
+        min_slot_width = bit_diameter + 0.0625
+        
+        valid_configs: List[Dict[str, int]] = []
+        seen_totals: set = set()
+        
+        # Iterate n_center from 1 upward until slot_width becomes too small
+        n_center = 1
+        while True:
+            slot_width = (center_usable - (n_center - 1) * spacer) / n_center
+            
+            if slot_width < min_slot_width:
+                break
+            
+            # Calculate n_end that fits in end_usable with this slot_width
+            n_end_float = (end_usable + spacer) / (slot_width + spacer)
+            n_end = int(n_end_float)
+            
+            if n_end >= 1:
+                total_slots = 2 * n_end + num_center_sections * n_center
+                if total_slots not in seen_totals:
+                    seen_totals = seen_totals | {total_slots}
+                    valid_configs = valid_configs + [{'total_slots': total_slots, 'n_end': n_end}]
+            
+            n_center += 1
+        
+        return sorted(valid_configs, key=lambda x: x['total_slots'])   
+    
+    def compute_margin_presets(
+        self,
+        total_slots: int,
+        n_sections: int,
+        panel_width: float,
+        x_offset: float,
+        spacer: float,
+        bit_diameter: float
+    ) -> List[Dict[str, Any]]:
+        """
+        Enumerate all valid (n_end, n_center, side_margin) configurations
+        for rectangular linear n>=3.
+        """
+        if n_sections < 3:
+            return []
+        
+        center_usable = panel_width - 2 * x_offset
+        num_center_sections = n_sections - 2
+        min_slot_width = bit_diameter + 0.0625
+        
+        valid_configs: List[Dict[str, Any]] = []
+        
+        for n_end in range(1, total_slots // 2 + 1):
+            remaining = total_slots - 2 * n_end
+            
+            if remaining < num_center_sections:
+                continue
+            if remaining % num_center_sections != 0:
+                continue
+            
+            n_center = remaining // num_center_sections
+            slot_width = (center_usable - (n_center - 1) * spacer) / n_center
+            
+            if slot_width < min_slot_width:
+                continue
+            
+            end_span = n_end * slot_width + (n_end - 1) * spacer
+            side_margin = panel_width - x_offset - end_span
+            
+            if side_margin < x_offset:
+                continue
+            
+            valid_configs = valid_configs + [{
+                'n_end': n_end,
+                'n_center': n_center,
+                'side_margin': round(side_margin, 3),
+                'slot_width': round(slot_width, 4)
+            }]
+        
+        valid_configs = sorted(valid_configs, key=lambda x: x['side_margin'])
+        
+        n = len(valid_configs)
+        for i, config in enumerate(valid_configs):
+            if i == 0:
+                config['label'] = 'Minimum'
+            elif i == n - 1:
+                config['label'] = 'Maximum'
+            elif n >= 5:
+                pct = i / (n - 1)
+                if pct < 0.33:
+                    config['label'] = 'Small'
+                elif pct < 0.66:
+                    config['label'] = 'Medium'
+                else:
+                    config['label'] = 'Large'
+            else:
+                config['label'] = f'{config["side_margin"]}"'
+        
+        return valid_configs
     
     def _generate_radial_slots(
         self, 

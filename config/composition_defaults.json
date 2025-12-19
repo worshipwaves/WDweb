@@ -30,7 +30,7 @@
     "spacer": 0.5,
     "x_offset": 0.75,
     "y_offset": 1.5,
-    "side_margin": 1.0,
+    "side_margin": 0,
     "scale_center_point": 1.0,
     "amplitude_exponent": 1.0,
     "orientation": "auto",

@@ -6,6 +6,7 @@ import type { ArchetypeConstraint, CompositionStateDTO, ConstraintsConfig } from
 interface WindowWithController extends Window {
   controller?: {
     getState: () => { ui?: { currentBackground?: { type: string; id: string } } };
+    getMarginPresets: (state: import('../types/schemas').CompositionStateDTO) => import('../types/schemas').MarginPreset[];
   };
 }
 
@@ -169,10 +170,10 @@ export class ConstraintResolver {
       // Circular linear: symmetric sections
       let totalUsable: number;
       if (numSections === 1) {
-        totalUsable = finishX - 2 * (yOffset + sideMargin);
+        totalUsable = Math.max(0, finishX - 2 * (yOffset + sideMargin));
       } else {
         // n=2
-        totalUsable = finishX - 2 * (yOffset + sideMargin + xOffset) - separation;
+        totalUsable = Math.max(0, finishX - 2 * (yOffset + sideMargin + xOffset) - separation);
       }
       maxTotalSlots = Math.floor((totalUsable + spacer) / slotPlusSpace);
       
@@ -205,6 +206,9 @@ export class ConstraintResolver {
       }
       maxTotalSlots = Math.floor((totalUsable + spacer) / slotPlusSpace);
     }
+    
+    // Ensure valid positive integer (side_margin can consume all width)
+    maxTotalSlots = Math.max(1, maxTotalSlots);
     
     return Math.min(maxTotalSlots, configMax);
   }
@@ -396,12 +400,17 @@ export class ConstraintResolver {
         finalMax = Math.min(finalMax, calculatedMax);
       }
 
+      // Ensure slots max is divisible by step (numSections for multi-panel)
+      if (sliderKey === 'slots' && numSections > 1) {
+        finalMax = Math.floor(finalMax / numSections) * numSections;
+      }
+
       // Clamp the current value against the new dynamic max for display
       const displayValue = Math.max(sliderConstraint.min, Math.min(currentValue, finalMax));
 
-      // Slots step: radial requires divisibility by numSections, linear allows any integer
+      // Slots step: require divisibility by numSections for radial OR linear with n>1
       const step = sliderKey === 'slots'
-        ? (slotStyle === 'linear' ? 1 : state.frame_design.number_sections)
+        ? (slotStyle === 'radial' || numSections > 1 ? numSections : 1)
         : (sliderConstraint.step || 1);
 
       return {
@@ -412,11 +421,19 @@ export class ConstraintResolver {
         step,
         value: displayValue,
         unit: sliderKey === 'slots' ? '' : '"',
+        displayOffset: sliderKey === 'side_margin' ? 1 : undefined,
       };
     });
 
     // Filter out any nulls that may have occurred from missing configs
-    return sliderConfigs.filter((s): s is SliderConfig => s !== null);
+    let filteredConfigs = sliderConfigs.filter((s): s is SliderConfig => s !== null);
+    
+    // Hide side_margin for rectangular archetypes (backend handles symmetric distribution)
+    if (state.frame_design.shape === 'rectangular') {
+      filteredConfigs = filteredConfigs.filter(c => c.id !== 'side_margin');
+    }
+    
+    return filteredConfigs;
   }
 	
 	/**

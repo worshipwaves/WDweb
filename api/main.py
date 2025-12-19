@@ -56,6 +56,47 @@ class CsgDataResponse(BaseModel):
     max_amplitude_local: float
     backing_parameters: Optional[Dict[str, Any]] = None
 
+class MarginPresetDTO(BaseModel):
+    n_end: int
+    n_center: int
+    side_margin: float
+    slot_width: float
+    label: str
+
+class MarginPresetsRequest(BaseModel):
+    finish_x: float
+    separation: float
+    number_sections: int
+    number_slots: int
+    x_offset: float
+    spacer: float
+    bit_diameter: float
+    shape: str
+    slot_style: str
+
+class MarginPresetsResponse(BaseModel):
+    presets: List[MarginPresetDTO]
+    applicable: bool
+    
+class ValidSlotCountsRequest(BaseModel):
+    finish_x: float
+    separation: float
+    number_sections: int
+    side_margin: float
+    x_offset: float
+    spacer: float
+    bit_diameter: float
+    shape: str
+    slot_style: str
+
+class ValidSlotConfig(BaseModel):
+    total_slots: int
+    n_end: int
+
+class ValidSlotCountsResponse(BaseModel):
+    valid_configs: List[ValidSlotConfig]
+    applicable: bool   
+
 @app.get("/")
 def health_check():
     """Basic health check endpoint."""
@@ -205,6 +246,53 @@ def get_slot_data(state: CompositionStateDTO):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
+@app.post("/api/geometry/valid-slot-counts", response_model=ValidSlotCountsResponse)
+def get_valid_slot_counts(request: ValidSlotCountsRequest) -> ValidSlotCountsResponse:
+    """Return valid slot counts for symmetric distribution given geometry."""
+    if (request.shape != 'rectangular' or 
+        request.slot_style != 'linear' or 
+        request.number_sections < 3):
+        return ValidSlotCountsResponse(valid_counts=[], applicable=False)
+    
+    panel_width = (request.finish_x - request.separation * (request.number_sections - 1)) / request.number_sections
+    
+    valid_configs = facade._slot_generation_service.compute_valid_slot_counts(
+        n_sections=request.number_sections,
+        panel_width=panel_width,
+        side_margin=request.side_margin,
+        x_offset=request.x_offset,
+        spacer=request.spacer,
+        bit_diameter=request.bit_diameter
+    )
+    
+    return ValidSlotCountsResponse(
+        valid_configs=[ValidSlotConfig(**c) for c in valid_configs],
+        applicable=True
+    )
+
+@app.post("/api/geometry/margin-presets", response_model=MarginPresetsResponse)
+def get_margin_presets(request: MarginPresetsRequest) -> MarginPresetsResponse:
+    """Return valid side_margin presets for rectangular linear n>=3."""
+    if (request.shape != 'rectangular' or 
+        request.slot_style != 'linear' or 
+        request.number_sections < 3):
+        return MarginPresetsResponse(presets=[], applicable=False)
+    
+    panel_width = (request.finish_x - request.separation * (request.number_sections - 1)) / request.number_sections
+    
+    presets = facade._slot_generation_service.compute_margin_presets(
+        total_slots=request.number_slots,
+        n_sections=request.number_sections,
+        panel_width=panel_width,
+        x_offset=request.x_offset,
+        spacer=request.spacer,
+        bit_diameter=request.bit_diameter
+    )
+    
+    return MarginPresetsResponse(
+        presets=[MarginPresetDTO(**p) for p in presets],
+        applicable=True
+    )
 
 @app.post("/geometry/backing-parameters")
 def get_backing_parameters(state: CompositionStateDTO) -> Dict[str, Any]:

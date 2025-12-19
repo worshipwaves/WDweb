@@ -211,16 +211,19 @@ def find_max_amplitude_linear_constrained(
     def generate_slot_x_position(section_id: int, local_slot_index: int) -> float:
         # Determine margins for this section
         if number_sections == 1:
-            # Single section: side_margin on both edges (both are exterior)
-            left_margin = side_margin
-            right_margin = side_margin
+            # Single section: both edges are exterior
+            left_margin = x_offset + side_margin
+            right_margin = x_offset + side_margin
         elif section_id == 0:
-            left_margin = side_margin
+            # Leftmost section: left edge is exterior
+            left_margin = x_offset + side_margin
             right_margin = x_offset
         elif section_id == number_sections - 1:
+            # Rightmost section: right edge is exterior
             left_margin = x_offset
-            right_margin = side_margin
+            right_margin = x_offset + side_margin
         else:
+            # Center sections: both edges are interior
             left_margin = x_offset
             right_margin = x_offset
         

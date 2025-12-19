@@ -77,6 +77,13 @@ export class SliderGroup implements PanelComponent {
     }
 
     this._sliders.forEach(config => {
+      // Check for discrete presets
+      if (config.discretePresets && config.discretePresets.length > 0) {
+        const discreteEl = this._renderDiscreteSelector(config);
+        container.appendChild(discreteEl);
+        return;
+      }
+      
       const group = document.createElement('div');
       group.className = 'slider-control control-group'; // Add back the expected generic class
 
@@ -89,10 +96,15 @@ export class SliderGroup implements PanelComponent {
       label.htmlFor = config.id;
       labelRow.appendChild(label);
 
+      const displayOffset = config.displayOffset || 0;
+      const displayValue = config.value + displayOffset;
+      const displayMin = config.min + displayOffset;
+      const displayMax = config.max + displayOffset;
+      
       const valueDisplay = document.createElement('span');
       valueDisplay.className = 'slider-value';
       valueDisplay.id = `${config.id}-value`;
-      valueDisplay.textContent = `${config.value}${config.unit || ''}`;
+      valueDisplay.textContent = `${displayValue}${config.unit || ''}`;
       labelRow.appendChild(valueDisplay);
 
       group.appendChild(labelRow);
@@ -101,10 +113,10 @@ export class SliderGroup implements PanelComponent {
       const slider = document.createElement('input');
       slider.type = 'range';
       slider.id = config.id;
-      slider.min = String(config.min);
-      slider.max = String(config.max);
+      slider.min = String(displayMin);
+      slider.max = String(displayMax);
       slider.step = String(config.step);
-      slider.value = String(config.value);
+      slider.value = String(displayValue);
       slider.className = 'slider-input';
 
       // Event handler with debouncing
@@ -112,7 +124,8 @@ export class SliderGroup implements PanelComponent {
 
       slider.addEventListener('input', (e) => {
         const target = e.target as HTMLInputElement;
-        let value = parseFloat(target.value);
+        const displayOffset = config.displayOffset || 0;
+        let value = parseFloat(target.value) - displayOffset;
 
         // Enforce slot increments based on number of sections (radial only)
         if (config.id === 'slots' && this._numberSections && this._numberSections > 0 && this._slotStyle === 'radial') {
@@ -125,7 +138,7 @@ export class SliderGroup implements PanelComponent {
         }
 
         // Update display immediately (visual feedback)
-        valueDisplay.textContent = `${value}${config.unit || ''}`;
+        valueDisplay.textContent = `${value + displayOffset}${config.unit || ''}`;
 
         // Debounce the actual state update (backend call)
         if (debounceTimer !== null) {
@@ -146,6 +159,52 @@ export class SliderGroup implements PanelComponent {
     return container;
   }
   
+  private _renderDiscreteSelector(config: SliderConfig): HTMLElement {
+    const group = document.createElement('div');
+    group.className = 'slider-control control-group discrete-selector';
+
+    const labelRow = document.createElement('div');
+    labelRow.className = 'slider-label-row';
+
+    const label = document.createElement('label');
+    label.textContent = config.label;
+    label.htmlFor = `${config.id}-select`;
+    labelRow.appendChild(label);
+
+    const valueDisplay = document.createElement('span');
+    valueDisplay.className = 'slider-value';
+    valueDisplay.id = `${config.id}-value`;
+    const selected = config.discretePresets?.find(p => p.n_end === config.selectedPresetNEnd);
+    valueDisplay.textContent = selected ? `${selected.side_margin}${config.unit || ''}` : '';
+    labelRow.appendChild(valueDisplay);
+
+    group.appendChild(labelRow);
+
+    const select = document.createElement('select');
+    select.id = `${config.id}-select`;
+    select.className = 'discrete-select';
+
+    for (const preset of config.discretePresets || []) {
+      const option = document.createElement('option');
+      option.value = String(preset.n_end);
+      option.textContent = `${preset.label} (${preset.side_margin}")`;
+      option.selected = preset.n_end === config.selectedPresetNEnd;
+      select.appendChild(option);
+    }
+
+    select.addEventListener('change', () => {
+      const n_end = parseInt(select.value, 10);
+      const preset = config.discretePresets?.find(p => p.n_end === n_end);
+      if (preset) {
+        valueDisplay.textContent = `${preset.side_margin}${config.unit || ''}`;
+      }
+      this._onChange('symmetric_n_end', n_end);
+    });
+
+    group.appendChild(select);
+    return group;
+  }
+
   destroy(): void {
     if (this._container) {
       this._container.remove();

@@ -176,15 +176,70 @@ export class ApplicationController {
 	private _constraints: ConstraintsConfig | null = null;
 	private _resolver: ConstraintResolver | null = null;
 	private _compositionCache: Map<string, CompositionStateDTO> = new Map();
-	private _isUpdatingComposition: boolean = false;
+  private _marginPresetCache: Map<string, import('../types/schemas').MarginPreset[]> = new Map();
+  private _isUpdatingComposition: boolean = false;
 	public getResolver(): ConstraintResolver | null {
     return this._resolver;
+  }
+  
+  private _isRectangularLinearN3Plus(archetypeId: string): boolean {
+    return archetypeId === 'rectangular_linear_n3' || archetypeId === 'rectangular_linear_n4';
   }
 	public getConstraintsConfig(): ConstraintsConfig | null {
     return this._constraints;
   }
 	
-	public getCategories(): import('./types/PanelTypes').CategoryConfig[] {
+	private async _fetchMarginPresets(composition: CompositionStateDTO): Promise<import('../types/schemas').MarginPreset[]> {
+    const frame = composition.frame_design;
+    const pattern = composition.pattern_settings;
+    
+    if (frame.shape !== 'rectangular' || pattern.slot_style !== 'linear' || frame.number_sections < 3) {
+      return [];
+    }
+    
+    const cacheKey = `${frame.finish_x}-${frame.separation}-${frame.number_sections}-${pattern.number_slots}`;
+    
+    const cached = this._marginPresetCache.get(cacheKey);
+    if (cached) return cached;
+    
+    try {
+      const response = await fetch('/api/geometry/margin-presets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          finish_x: frame.finish_x,
+          separation: frame.separation,
+          number_sections: frame.number_sections,
+          number_slots: pattern.number_slots,
+          x_offset: pattern.x_offset,
+          spacer: pattern.spacer,
+          bit_diameter: pattern.bit_diameter,
+          shape: frame.shape,
+          slot_style: pattern.slot_style
+        })
+      });
+      
+      const data = await response.json() as import('../types/schemas').MarginPresetsResponse;
+      
+      if (data.applicable && data.presets.length > 0) {
+        this._marginPresetCache.set(cacheKey, data.presets);
+        return data.presets;
+      }
+    } catch (e) {
+      console.error('[Controller] Failed to fetch margin presets:', e);
+    }
+    
+    return [];
+  }
+	
+	public getMarginPresets(composition: CompositionStateDTO): import('../types/schemas').MarginPreset[] {
+    const frame = composition.frame_design;
+    const pattern = composition.pattern_settings;
+    const cacheKey = `${frame.finish_x}-${frame.separation}-${frame.number_sections}-${pattern.number_slots}`;
+    return this._marginPresetCache.get(cacheKey) || [];
+  }
+  
+  public getCategories(): import('./types/PanelTypes').CategoryConfig[] {
     if (!this._categoriesConfig) return [];
     return Object.entries(this._categoriesConfig)
       .map(([id, config]) => ({
@@ -795,13 +850,27 @@ export class ApplicationController {
 			// Clear composition cache on new audio upload
       this._compositionCache.clear();
 
-      // Sync CSS container with default background
-      const defaultRoom = this._backgroundsConfig?.categories.rooms.find(
-        r => r.id === this._backgroundsConfig?.default_room
-      );
-      if (defaultRoom && this._sceneManager && 'changeBackground' in this._sceneManager) {
-        await (this._sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string, wallCompensation?: number) => Promise<void> })
-          .changeBackground('rooms', defaultRoom.id, undefined, defaultRoom.path, (defaultRoom as { foreground_path?: string }).foreground_path, (defaultRoom as { wall_compensation?: number }).wall_compensation);
+      // Preserve current background selection during audio processing
+      const currentBg = this._state.ui.currentBackground;
+      if (this._backgroundsConfig && this._sceneManager && 'changeBackground' in this._sceneManager) {
+        const changeBackground = (this._sceneManager as unknown as { changeBackground: (type: string, id: string, rgb?: number[], path?: string, foregroundPath?: string, wallCompensation?: number) => Promise<void> }).changeBackground;
+        
+        if (currentBg.type === 'rooms') {
+          const room = this._backgroundsConfig.categories.rooms.find(r => r.id === currentBg.id);
+          if (room) {
+            await changeBackground.call(this._sceneManager, 'rooms', room.id, undefined, room.path, (room as { foreground_path?: string }).foreground_path, (room as { wall_compensation?: number }).wall_compensation);
+          }
+        } else if (currentBg.type === 'paint') {
+          const paint = this._backgroundsConfig.categories.paint.find(p => p.id === currentBg.id);
+          if (paint) {
+            await changeBackground.call(this._sceneManager, 'paint', paint.id, (paint as { rgb?: number[] }).rgb, (paint as { path?: string }).path, undefined, undefined);
+          }
+        } else if (currentBg.type === 'accent') {
+          const accent = this._backgroundsConfig.categories.accent.find(a => a.id === currentBg.id);
+          if (accent) {
+            await changeBackground.call(this._sceneManager, 'accent', accent.id, (accent as { rgb?: number[] }).rgb, (accent as { path?: string }).path, undefined, undefined);
+          }
+        }
       }
 
       // Process audio through facade
@@ -1307,8 +1376,9 @@ export class ApplicationController {
         id: subcategoryId,
         label: subcategory.label,
         getValue: () => this._getSubcategoryDisplayValue(categoryId, subcategoryId),
-        isDisabled: !!subcategory.note, // Placeholder subcategories are disabled
+        isDisabled: !!subcategory.note,
         isSingle: sortedSubcategories.length === 1,
+        helpText: subcategory.panel_help,
         getContent: async () => this._renderSubcategoryContent(categoryId, subcategoryId)
       };
       
@@ -3521,6 +3591,12 @@ export class ApplicationController {
   public getActiveArchetypeId(): string | null {
     if (!this._state) return null;
     
+    // Prefer explicit selection from UI state
+    if (this._state.ui.selectedArchetypeId) {
+      return this._state.ui.selectedArchetypeId;
+    }
+    
+    // Fallback to detection logic
     for (const archetype of this._archetypes.values()) {
       const comp = this._state.composition;
       const matches = 
@@ -3658,6 +3734,26 @@ export class ApplicationController {
       
       // Cache the result
       this._compositionCache.set(cacheKey, composition);
+    }
+    
+    // Pre-fetch margin presets for constrained archetypes
+    if (this._isRectangularLinearN3Plus(archetypeId)) {
+      const presets = await this._fetchMarginPresets(composition);
+      if (presets.length > 0 && composition.pattern_settings.symmetric_n_end == null) {
+        composition = {
+          ...composition,
+          pattern_settings: {
+            ...composition.pattern_settings,
+            symmetric_n_end: presets[0].n_end,
+            side_margin: presets[0].side_margin
+          }
+        };
+      }
+    }
+    
+    // Store selected archetype ID in state
+    if (this._state) {
+      this._state.ui.selectedArchetypeId = archetypeId;
     }
     
     // Apply cached or newly created composition
@@ -4316,7 +4412,9 @@ export class ApplicationController {
           a.slot_style === newComposition.pattern_settings.slot_style && 
           a.number_sections === newN
         );
-        const validGrains = (targetArchetype as { available_grains?: string[] })?.available_grains ?? ['vertical', 'horizontal'];
+        // Fallback to config default (Single Source of Truth) instead of hardcoded strings
+        const validGrains = (targetArchetype as { available_grains?: string[] })?.available_grains 
+          ?? [this._woodMaterialsConfig.default_grain_direction];
 
         const initializedMaterials = initializeSectionMaterials(
           oldN,
@@ -4341,6 +4439,45 @@ export class ApplicationController {
         this._state.composition,
         newComposition
       );
+
+      // Invalidate margin presets if geometry changed
+      const geometryChanged = changedParams.some(p => 
+        ['finish_x', 'finish_y', 'separation', 'number_sections', 'number_slots', 'side_margin'].includes(p)
+      );
+      if (geometryChanged && this._isRectangularLinearN3Plus(this._state.ui.selectedArchetypeId || '')) {
+        this._marginPresetCache.clear();
+        // Let backend solver compute symmetric distribution with minimum margin
+        newComposition = {
+          ...newComposition,
+          pattern_settings: {
+            ...newComposition.pattern_settings,
+            symmetric_n_end: null,
+            side_margin: 0
+          }
+        };
+      }
+
+      // Clamp number_slots if side_margin change reduces available space
+      if ((changedParams.includes('side_margin') || changedParams.includes('separation')) && this._resolver) {
+        const archetypeId = this.getActiveArchetypeId();
+        if (archetypeId) {
+          const sliderConfigs = this._resolver.resolveSliderConfigs(archetypeId, newComposition);
+          const slotsConfig = sliderConfigs.find(s => s.id === 'slots');
+          if (slotsConfig && newComposition.pattern_settings.number_slots > slotsConfig.max) {
+            newComposition = {
+              ...newComposition,
+              pattern_settings: {
+                ...newComposition.pattern_settings,
+                number_slots: slotsConfig.max
+              }
+            };
+            // Force pipeline to re-bin audio and visual slider to snap to new position
+            if (!changedParams.includes('number_slots')) changedParams.push('number_slots');
+            const slotsSlider = document.getElementById('slots') as HTMLInputElement;
+            if (slotsSlider) slotsSlider.value = String(slotsConfig.max);						
+          }
+        }
+      }
 
       // If nothing relevant changed, just update the local state without an API call.
       if (changedParams.length === 0) {
@@ -4527,6 +4664,11 @@ export class ApplicationController {
         
         // Notify subscribers so UI updates
         this.notifySubscribers();
+      }
+			
+			// Refresh layout panel if geometry changed to update slider constraints
+      if (this._accordion && geometryChanged) {
+        this._accordion.refreshContent('layout');
       }
     } finally {
       this._isUpdatingComposition = false;

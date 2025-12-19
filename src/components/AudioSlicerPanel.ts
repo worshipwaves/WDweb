@@ -1493,7 +1493,15 @@ private async _processVocals(): Promise<void> {
     // Reset states
     this._isPlaying = false;
     this._isPreviewing = false;
-    if (this._playBtn) this._playBtn.textContent = '▶';
+    
+    // Reset play button icon to play state
+    if (this._playBtn) {
+      const playIcon = this._playBtn.querySelector('.slicer-play-icon') as HTMLElement;
+      const pauseIcon = this._playBtn.querySelector('.slicer-pause-icon') as HTMLElement;
+      if (playIcon) playIcon.style.display = '';
+      if (pauseIcon) pauseIcon.style.display = 'none';
+      this._playBtn.classList.remove('playing');
+    }
     
     const previewBtn = this._container?.querySelector('.slicer-btn-preview') as HTMLButtonElement;
     if (previewBtn) previewBtn.textContent = '▶ Preview';
