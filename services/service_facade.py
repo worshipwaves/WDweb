@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 import numpy as np
 
-from services.config_service import ConfigService
+from services.config_loader import get_config_service
 from services.geometry_service import GeometryService, calculate_section_dimensions
 from services.slot_generation_service import SlotGenerationService
 from services.composition_service import CompositionService
@@ -32,10 +32,8 @@ class WaveformDesignerFacade:
         Services are created with their dependencies injected,
         maintaining loose coupling and testability.
         """
-        # Create configuration service (single source of truth for defaults)
-        self._config_service = ConfigService(
-            PROJECT_ROOT / "config"
-        )
+        # Create configuration service (supports JSON or PostgreSQL based on env)
+        self._config_service = get_config_service()
         
         # Create base services
         self._geometry_service = GeometryService()
