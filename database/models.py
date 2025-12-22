@@ -342,3 +342,25 @@ class PlacementDefaults(Base):
     scene_overrides = Column(JSONB, default={})
     
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    
+# =============================================================================
+# UI CONFIGURATION
+# =============================================================================
+
+class UIConfig(Base):
+    """
+    UI configuration for frontend elements, buttons, and upload settings.
+    Maps to ui_config.json. Singleton (id=1).
+    """
+    __tablename__ = "ui_config"
+    
+    id = Column(Integer, primary_key=True, default=1)
+    
+    # Store as structured JSONB to match frontend UIConfig interface
+    elements = Column(JSONB, nullable=False, default={})
+    buttons = Column(JSONB, nullable=False, default={})
+    upload = Column(JSONB, nullable=False, default={})
+    thumbnail_config = Column(JSONB, default={})
+    categories = Column(JSONB, default={})
+    
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())    

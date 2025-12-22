@@ -27,6 +27,7 @@ from database import (
     BackgroundPaint, BackgroundRoom, BackgroundConfig,
     CompositionDefaults, ColorPalette,
     PlacementDefaults,
+    UIConfig,
 )
 
 
@@ -47,6 +48,7 @@ def clear_database(session) -> None:
     print("Clearing existing data...")
     
     # Delete in dependency order
+    session.query(UIConfig).delete()
     session.query(PlacementDefaults).delete()
     session.query(ColorPalette).delete()
     session.query(CompositionDefaults).delete()
@@ -329,7 +331,22 @@ def seed_placement_defaults(session) -> None:
     ))
     
     print("  Inserted placement defaults")
-
+    
+def seed_ui_config(session) -> None:
+    """Seed ui_config.json data."""
+    print("Seeding UI config...")
+    data = load_json("ui_config.json")
+    
+    session.add(UIConfig(
+        id=1,
+        elements=data.get("elements", {}),
+        buttons=data.get("buttons", {}),
+        upload=data.get("upload", {}),
+        thumbnail_config=data.get("thumbnail_config", {}),
+        categories=data.get("categories", {}),
+    ))
+    
+    print("  Inserted UI config")
 
 def main():
     parser = argparse.ArgumentParser(description="Seed database from JSON config files")
@@ -361,6 +378,7 @@ def main():
             seed_backgrounds(session)
             seed_composition_defaults(session)
             seed_placement_defaults(session)
+            seed_ui_config(session)
             
             session.commit()
             print()

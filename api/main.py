@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+load_dotenv()
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,7 +10,7 @@ import os
 
 from services.dtos import CompositionStateDTO
 from services.service_facade import WaveformDesignerFacade
-from services.config_service import ConfigService
+from services.config_loader import get_config_service
 from fastapi import Response
 from dev_utils.performance_monitor import performance_monitor
 from routers.audio_router import router as audio_router
@@ -33,7 +35,7 @@ app.add_middleware(
 facade = WaveformDesignerFacade()
 
 # Create ConfigService instance for configuration endpoints
-config_service = ConfigService(PROJECT_ROOT / "config")
+config_service = get_config_service()
 
 # Register routers
 app.include_router(audio_router)

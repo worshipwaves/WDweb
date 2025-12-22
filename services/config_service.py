@@ -26,9 +26,6 @@ class ConfigService:
         
         with open(config_dir / 'archetypes.json', 'r', encoding='utf-8') as f:
             self._archetypes = json.load(f)
-        
-        with open(config_dir / 'ui_config.json', 'r', encoding='utf-8') as f:
-            self._ui_config = json.load(f)
             
         with open(config_dir / 'backgrounds_config.json', 'r', encoding='utf-8') as f:
             self._backgrounds = json.load(f)
@@ -83,8 +80,11 @@ class ConfigService:
         
         Returns:
             Dictionary with UI configuration.
+            
+        Raises:
+            RuntimeError: ConfigService no longer supports ui_config. Use DatabaseConfigService.
         """
-        return self._ui_config
+        raise RuntimeError("UI config has been migrated to database. Set USE_DATABASE=true.")
     
     def get_composition_defaults(self) -> dict:
         """Return composition defaults as dict.

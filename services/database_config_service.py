@@ -43,6 +43,7 @@ class DatabaseConfigService:
             self._load_backgrounds(session)
             self._load_composition_defaults(session)
             self._load_placement_defaults(session)
+            self._load_ui_config(session)
     
     # =========================================================================
     # WOOD MATERIALS
@@ -236,6 +237,8 @@ class DatabaseConfigService:
         paints = session.query(BackgroundPaint).filter_by(is_active=True).order_by(BackgroundPaint.sort_order).all()
         rooms = session.query(BackgroundRoom).filter_by(is_active=True).order_by(BackgroundRoom.sort_order).all()
         
+        print(f"[DEBUG] Loaded {len(rooms)} active rooms from database")
+        
         self._backgrounds = {
             "default_room": config.default_room,
             "default_wall_finish": config.default_wall_finish,
@@ -328,19 +331,25 @@ class DatabaseConfigService:
     # UI CONFIG
     # =========================================================================
     
+    def _load_ui_config(self, session: Session) -> None:
+        """Load UI configuration."""
+        from database import UIConfig
+        
+        config = session.query(UIConfig).filter_by(id=1).first()
+        if not config:
+            raise RuntimeError("UI config not found in database")
+        
+        self._ui_config = {
+            "elements": config.elements or {},
+            "buttons": config.buttons or {},
+            "upload": config.upload or {},
+            "thumbnail_config": config.thumbnail_config or {},
+            "categories": config.categories or {},
+        }
+    
     def get_ui_config(self) -> dict:
-        """
-        Return UI configuration.
-        
-        Note: ui_config.json is frontend-specific and not migrated to database.
-        This method loads from file for backward compatibility.
-        """
-        import json
-        from pathlib import Path
-        
-        config_path = Path(__file__).resolve().parent.parent / "config" / "ui_config.json"
-        with open(config_path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        """Return UI configuration."""
+        return self._ui_config
     
     # =========================================================================
     # PLACEMENT DEFAULTS

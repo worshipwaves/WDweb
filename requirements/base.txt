@@ -33,3 +33,5 @@ audioread==3.0.1
 # Export File Formats
 ezdxf==1.4.1
 svgwrite==1.4.3
+
+python-dotenv

@@ -23,6 +23,8 @@ from database.models import (
     CompositionDefaults,
     ColorPalette,
     PlacementDefaults,
+    # UI
+    UIConfig,
 )
 
 __all__ = [
@@ -47,4 +49,5 @@ __all__ = [
     "CompositionDefaults",
     "ColorPalette",
     "PlacementDefaults",
+    "UIConfig",
 ]
