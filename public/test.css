@@ -2723,6 +2723,53 @@ SPECIES CARDS - 140px
   height: 12px;
 }
 
+/* Optimization Section */
+.slicer-optimize-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.slicer-optimize-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.slicer-radio {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.slicer-btn-optimize {
+  background: var(--accent-gold, #D9A464);
+  color: #1a1a1a;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.slicer-btn-optimize:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.slicer-optimize-status {
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.slicer-optimize-status.optimized { color: #27ae60; }
+.slicer-optimize-status.fallback { color: #f39c12; }
+.slicer-optimize-status.error { color: #e74c3c; }
+
 /* CTA Footer */
 .slicer-cta-footer {
   display: flex;

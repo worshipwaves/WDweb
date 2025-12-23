@@ -22,7 +22,9 @@ type AudioSession = z.infer<typeof AudioSessionSchema>;
 // Schema for bin parameters
 const BinParametersSchema = z.object({
   numSlots: z.number().int().positive(),
-  binningMode: z.enum(['mean_abs', 'min_max', 'continuous'])
+  binningMode: z.enum(['mean_abs', 'min_max', 'continuous']),
+  filterAmount: z.number().min(0).max(1).optional(),
+  exponent: z.number().positive().optional()
 }).strict();
 
 type BinParameters = z.infer<typeof BinParametersSchema>;
@@ -108,11 +110,28 @@ export class AudioCacheService {
     }
     
     // Perform binning based on mode
-    return this._binSamples(
+    let amplitudes = this._binSamples(
       session.samples,
       params.numSlots,
       params.binningMode
     );
+    
+    // Apply filter if specified (MUST come before exponent)
+    if (params.filterAmount && params.filterAmount > 0) {
+      amplitudes = this._filterData(amplitudes, params.filterAmount);
+    }
+    
+    // Apply exponent if specified
+    if (params.exponent && params.exponent !== 1.0) {
+      for (let i = 0; i < amplitudes.length; i++) {
+        // Parity: Desktop does not re-normalize after power. 
+        // Input is 0-1, Power keeps it 0-1.
+        amplitudes[i] = Math.pow(amplitudes[i], params.exponent);
+      }
+      // Note: Previous re-normalization logic removed to match PyQt behavior
+    }
+    
+    return amplitudes;
   }
 
   /**
@@ -239,6 +258,43 @@ export class AudioCacheService {
     }
     
     return amplitudes;
+  }
+
+  /**
+   * Filter data by subtracting noise floor and renormalizing.
+   * Port of Python AudioProcessingService.filter_data()
+   */
+  private _filterData(amplitudes: Float32Array, filterAmount: number): Float32Array {
+    if (amplitudes.length === 0 || filterAmount <= 0) {
+      return amplitudes;
+    }
+    
+    // Sort absolute values to find noise floor (returns new array)
+    const sortedAbs = Array.from(amplitudes).map(Math.abs).sort((a, b) => a - b);
+    const n = Math.max(1, Math.floor(sortedAbs.length * filterAmount));
+    
+    // Calculate noise floor as mean of bottom N values
+    let noiseFloor = 0;
+    for (let i = 0; i < n; i++) {
+      noiseFloor += sortedAbs[i];
+    }
+    noiseFloor /= n;
+    
+    // Subtract noise floor and clamp to 0
+    const filtered = new Float32Array(amplitudes.length);
+    for (let i = 0; i < amplitudes.length; i++) {
+      filtered[i] = Math.max(0, Math.abs(amplitudes[i]) - noiseFloor);
+    }
+    
+    // Renormalize to 0-1
+    const maxVal = Math.max(...filtered);
+    if (maxVal > 1e-9) {
+      for (let i = 0; i < filtered.length; i++) {
+        filtered[i] = filtered[i] / maxVal;
+      }
+    }
+    
+    return filtered;
   }
 
   /**

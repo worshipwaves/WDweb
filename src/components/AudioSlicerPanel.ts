@@ -81,6 +81,7 @@ export class AudioSlicerPanel implements PanelComponent {
   private _silenceThresh!: number;
   private _silenceEnabled!: boolean;
   private _isolateVocals: boolean = false;
+	private _optimizationMode: 'speech' | 'music' = 'music';
 
   // Persisted state
   private _persistedFileName: string | null = null;
@@ -428,6 +429,22 @@ export class AudioSlicerPanel implements PanelComponent {
       <input type="hidden" class="slicer-min-duration" value="${this._minDuration}">
       <input type="hidden" class="slicer-silence-thresh" value="${this._silenceThresh}">
       
+      <div class="slicer-optimize-section">
+        <div class="slicer-section-header" style="padding-bottom:8px;">
+          <span class="slicer-section-number">3</span>
+          <div class="slicer-section-text">
+            <div class="slicer-section-title">Optimize for Visual Impact</div>
+            <div class="slicer-section-desc">Auto-adjust settings for best carving results</div>
+          </div>
+        </div>
+        <div class="slicer-optimize-controls">
+          <label class="slicer-radio"><input type="radio" name="opt-mode" value="music" checked> Music</label>
+          <label class="slicer-radio"><input type="radio" name="opt-mode" value="speech"> Speech</label>
+          <button class="slicer-btn-optimize">Auto-Optimize</button>
+          <span class="slicer-optimize-status"></span>
+        </div>
+      </div>
+      
       <div class="slicer-cta-footer">
         <button class="slicer-btn-primary slicer-btn-apply" style="flex:1;">Apply To Artwork</button>
       </div>
@@ -529,6 +546,15 @@ export class AudioSlicerPanel implements PanelComponent {
       }
     });
     section.querySelector('.slicer-btn-apply')?.addEventListener('click', () => this._handleCommit());
+    
+    // Optimization controls
+    section.querySelectorAll('input[name="opt-mode"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        this._optimizationMode = (e.target as HTMLInputElement).value as 'speech' | 'music';
+      });
+    });
+    section.querySelector('.slicer-btn-optimize')?.addEventListener('click', () => this._runOptimization());
+    
     window.addEventListener('resize', this._handleResize);
   }
 	
@@ -594,6 +620,57 @@ export class AudioSlicerPanel implements PanelComponent {
       }
     });
     this._commitBtn?.addEventListener('click', () => this._handleCommit());
+  }
+  
+  private async _runOptimization(): Promise<void> {
+    if (!this._originalFile) return;
+    
+    const statusEl = this._trimmerSection?.querySelector('.slicer-optimize-status') as HTMLElement;
+    const btn = this._trimmerSection?.querySelector('.slicer-btn-optimize') as HTMLButtonElement;
+    
+    if (statusEl) statusEl.textContent = 'Analyzing...';
+    if (btn) btn.disabled = true;
+    
+    const formData = new FormData();
+    formData.append('file', this._originalFile);
+    formData.append('mode', this._optimizationMode);
+    formData.append('num_slots', String(this._controller.getState()?.composition.pattern_settings.number_slots || 48));
+    
+    try {
+      const response = await fetch('/api/audio/optimize', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) throw new Error(`${response.status}`);
+      
+      const result = await response.json();
+      
+      // 1. Get optimized composition DTO (Pure, no state mutation yet)
+      const optimizedComposition = this._controller.createOptimizedComposition(result);
+      
+      if (optimizedComposition) {
+        // 2. Pass to main pipeline
+        // This ensures detectChangedParams sees the difference in exponent/filter settings,
+        // triggering logic which handles cache rebinning AND backend scaling.
+        await this._controller.handleCompositionUpdate(optimizedComposition);
+      }
+      
+      if (statusEl) {
+        statusEl.textContent = result.status === 'fallback' 
+          ? `⚠ ${result.exponent}` 
+          : `✓ ${result.exponent}`;
+        statusEl.className = `slicer-optimize-status ${result.status}`;
+      }
+    } catch (error) {
+      console.error('[AudioSlicerPanel] Optimization failed:', error);
+      if (statusEl) {
+        statusEl.textContent = '✗ Error';
+        statusEl.className = 'slicer-optimize-status error';
+      }
+    } finally {
+      if (btn) btn.disabled = false;
+    }
   }
 	
 	private _cacheEnhanceElements(section: HTMLElement): void {

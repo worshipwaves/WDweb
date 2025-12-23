@@ -11,6 +11,7 @@ import librosa
 import soundfile as sf
 
 from services.demucs_service import DemucsService
+from services.audio_processing_service import AudioProcessingService
 
 
 router = APIRouter(prefix="/api/audio", tags=["audio"])
@@ -110,7 +111,38 @@ async def compress_silence(
         raise HTTPException(500, f"Compression failed: {str(e)}")
     finally:
         if temp_input.exists():
-            temp_input.unlink()            
+            temp_input.unlink()
+
+
+@router.post("/optimize")
+async def optimize_audio_settings(
+    file: UploadFile = File(...),
+    mode: str = Form(...),
+    num_slots: int = Form(...)
+):
+    """Analyze audio and return optimized processing settings."""
+    if not file.filename:
+        raise HTTPException(400, "No filename provided")
+    
+    suffix = Path(file.filename).suffix or ".wav"
+    temp_input = Path(tempfile.gettempdir()) / f"{uuid.uuid4()}{suffix}"
+    
+    try:
+        content = await file.read()
+        temp_input.write_bytes(content)
+        
+        samples, _ = librosa.load(str(temp_input), sr=44100, mono=True)
+        result = AudioProcessingService.analyze_and_optimize(samples, num_slots, mode)
+        
+        return result
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(500, f"Processing failed: {str(e)}")
+    finally:
+        if temp_input.exists():
+            temp_input.unlink()
 
 
 @router.post("/process-commit")
@@ -143,8 +175,16 @@ async def process_audio_commit(
         # Apply slice using librosa (Desktop parity: sample-accurate, float32, mono)
         if start_time is not None and end_time is not None:
             duration = end_time - start_time
+            print(f"[DEBUG] Slicing: start={start_time}, end={end_time}, duration={duration}")
             y, sr = librosa.load(str(temp_input), sr=_audio_config.target_sample_rate, mono=True, offset=start_time, duration=duration)
+            print(f"[DEBUG] Loaded slice: {len(y)} samples, sr={sr}")
+            # Write to new WAV file (soundfile can't write to m4a/mp3)
+            temp_input.unlink()
+            temp_input = Path(tempfile.gettempdir()) / f"{uuid.uuid4()}.wav"
             sf.write(str(temp_input), y, sr)
+            print(f"[DEBUG] Wrote sliced file: {temp_input}")
+        
+        print(f"[DEBUG] isolate_vocals={isolate_vocals}, remove_silence={remove_silence}")
         
         # Process based on options
         if isolate_vocals:
@@ -168,6 +208,8 @@ async def process_audio_commit(
         )
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(500, f"Processing failed: {str(e)}")
     finally:
         if temp_input.exists() and not isolate_vocals:

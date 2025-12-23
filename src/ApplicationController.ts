@@ -316,6 +316,42 @@ export class ApplicationController {
     };
     this._facade.persistState(this._state);
   }
+
+  /**
+   * Create optimized composition state from /api/audio/optimize result
+   * Does NOT mutate state directly - returns DTO for processing pipeline
+   */
+  public createOptimizedComposition(result: {
+    exponent: number;
+    filter_amount: number;
+    silence_threshold: number;
+    binning_mode: string;
+    remove_silence: boolean;
+    silence_duration: number;
+  }): CompositionStateDTO | null {
+    if (!this._state) return null;
+    
+    const newAudioProcessing = {
+      ...this._state.composition.audio_processing,
+      filter_amount: result.filter_amount,
+      silence_threshold: result.silence_threshold,
+      binning_mode: result.binning_mode,
+      remove_silence: result.remove_silence,
+      silence_duration: result.silence_duration,
+      apply_filter: true
+    };
+    
+    const newPatternSettings = {
+      ...this._state.composition.pattern_settings,
+      amplitude_exponent: result.exponent
+    };
+    
+    return {
+      ...this._state.composition,
+      audio_processing: newAudioProcessing,
+      pattern_settings: newPatternSettings
+    };
+  }
 	
 	/**
    * Restore UI from persisted state after DOM is ready
@@ -4450,6 +4486,15 @@ export class ApplicationController {
         newComposition
       );
 
+      // PARITY FIX: Invalidate client cache if "Heavy" audio parameters change.
+      // These affect the timeline (silence/trimming), making cached samples stale.
+      const heavyAudioParams = ['audio_processing.remove_silence', 'audio_processing.silence_threshold', 'audio_processing.silence_duration', 'audio_source'];
+      if (changedParams.some(p => heavyAudioParams.some(h => p.startsWith(h))) && this._state.audio.audioSessionId) {
+        this._audioCache.clearSession(this._state.audio.audioSessionId);
+        this._state.audio.audioSessionId = null;
+        this._facade.persistState(this._state);
+      }
+
       // Invalidate margin presets if geometry changed
       const geometryChanged = changedParams.some(p => 
         ['finish_x', 'finish_y', 'separation', 'number_sections', 'number_slots', 'side_margin'].includes(p)
@@ -4538,7 +4583,7 @@ export class ApplicationController {
       }
 
       // 3. Check if this is an audio-level change that we can handle client-side
-      const audioLevelParams = ['number_sections', 'number_slots', 'binning_mode'];
+      const audioLevelParams = ['number_sections', 'number_slots', 'binning_mode', 'amplitude_exponent', 'filter_amount'];
       const isAudioChange = changedParams.some(param => audioLevelParams.includes(param));
       
       let stateToSend = newComposition;
@@ -4548,8 +4593,10 @@ export class ApplicationController {
           this._state.audio.audioSessionId,
           {
             numSlots: newComposition.pattern_settings.number_slots,
-            binningMode: 'mean_abs'
-          } as { numSlots: number; binningMode: 'mean_abs' }
+            binningMode: (newComposition.audio_processing.binning_mode || 'mean_abs') as 'mean_abs' | 'min_max' | 'continuous',
+            filterAmount: newComposition.audio_processing.apply_filter ? newComposition.audio_processing.filter_amount : 0,
+            exponent: newComposition.pattern_settings.amplitude_exponent
+          }
         );
         
         if (rebinnedAmplitudes) {

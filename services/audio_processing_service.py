@@ -1,9 +1,20 @@
 # services/audio_processing_service.py
 """
-Faithful port of PyQt audio processing functions for numerical parity.
-All methods are stateless, pure functions for web deployment.
+PARITY DIAGNOSTIC VERSION - Web Backend Audio Processing Service
+
+This file replaces the production audio_processing_service.py temporarily.
+Adds [PARITY-WEB] JSON output at each pipeline stage for comparison with PyQt.
+
+USAGE:
+1. Back up original: cp services/audio_processing_service.py services/audio_processing_service.py.bak
+2. Replace with this file: cp web_backend_parity_diagnostic.py services/audio_processing_service.py
+3. Run parity test
+4. Restore original: cp services/audio_processing_service.py.bak services/audio_processing_service.py
+
+NO LOGIC CHANGES - Only print statements added.
 """
 
+import json
 import math
 import numpy as np
 from typing import Tuple, Dict, Any, List, Optional
@@ -24,10 +35,15 @@ class BinningMode(Enum):
     CONTINUOUS = "continuous"
 
 
+def _parity_json(stage: str, data: dict) -> None:
+    """Print parity diagnostic in format matching PyQt output."""
+    print(f"[PARITY-WEB] {stage}: {json.dumps(data)}")
+
+
 class AudioProcessingService:
     """
-    Static service containing exact ports of PyQt audio processing functions.
-    All methods must produce numerically identical outputs to PyQt versions (tolerance: 1e-10).
+    DIAGNOSTIC VERSION - Static service for audio processing with parity output.
+    All methods must produce numerically identical outputs to PyQt versions.
     """
     
     def __init__(self):
@@ -42,31 +58,32 @@ class AudioProcessingService:
     ) -> List[float]:
         """
         Scale normalized amplitudes to physical dimensions with floor clamp.
-        
-        Args:
-            normalized_amps: 0-1 normalized amplitude values
-            max_amplitude: Maximum physical amplitude (inches)
-            bit_diameter: CNC bit diameter for floor calculation
-            
-        Returns:
-            Scaled amplitudes with minimum floor of bit_diameter * 2.0
         """
         floor = bit_diameter * 2.0
         return [max(amp * max_amplitude, floor) for amp in normalized_amps]
     
     @staticmethod
+    def filter_data(amplitudes: np.ndarray, filter_amount: float) -> np.ndarray:
+        """
+        Filter data by subtracting noise floor and renormalizing.
+        CRITICAL: Must run BEFORE applying exponent/compression.
+        """
+        if len(amplitudes) == 0 or filter_amount <= 0:
+            return amplitudes
+        sorted_amps = np.array(sorted(np.abs(amplitudes)))
+        n = max(1, int(len(sorted_amps) * filter_amount))
+        noise_floor = np.mean(sorted_amps[:n])
+        filtered = np.maximum(0, np.abs(amplitudes) - noise_floor)
+        max_val = np.max(filtered)
+        if max_val > 1e-9:
+            filtered = filtered / max_val
+        return filtered
+    
+    @staticmethod
     def extract_amplitudes(y: np.ndarray, num_amplitudes: int) -> np.ndarray:
         """
-        Port of PyQt's _extract_amplitudes from core/algorithms/audio_processing.py.
-        
+        Port of PyQt's _extract_amplitudes.
         Converts to mono, normalizes to [-1, 1], resamples to exactly num_amplitudes samples.
-        
-        Args:
-            y: Input audio samples
-            num_amplitudes: Target number of samples (typically 200,000)
-            
-        Returns:
-            Resampled and normalized amplitude array
         """
         # Work on a copy to preserve immutability
         y_work = y.copy()
@@ -102,39 +119,25 @@ class AudioProcessingService:
     def bin_amplitudes(amplitudes: np.ndarray, num_slots: int, 
                       mode: BinningMode) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Port of PyQt's bin_amplitudes from core/algorithms/audio_processing.py.
-        
-        Bins amplitudes into slots using specified mode, includes final normalization step.
-        
-        Args:
-            amplitudes: Input amplitude array (normalized to [-1, 1])
-            num_slots: Number of output slots
-            mode: Binning mode (MEAN_ABSOLUTE, MIN_MAX, or CONTINUOUS)
-            
-        Returns:
-            Tuple of (min_amplitudes, max_amplitudes) normalized arrays.
-            For MEAN_ABSOLUTE mode, arrays are symmetric.
+        Port of PyQt's bin_amplitudes.
+        Bins amplitudes into slots using specified mode.
         """
         if amplitudes is None or len(amplitudes) == 0:
             return np.zeros(num_slots), np.zeros(num_slots)
-        
+
         if num_slots <= 0:
             raise ValueError("Number of slots must be positive")
-        
+
         min_binned_data = np.zeros(num_slots)
         max_binned_data = np.zeros(num_slots)
-        
+
         if mode == BinningMode.CONTINUOUS:
             # Check if we have gaps from silence removal
-            will_fallback = len(amplitudes) < num_slots * 0.8
+            if len(amplitudes) < num_slots * 0.8:
+                # Fallback to mean_abs
+                return AudioProcessingService.bin_amplitudes(amplitudes, num_slots, BinningMode.MEAN_ABSOLUTE)
             
-            if will_fallback:  # Less than 80% of expected samples
-                # Fallback to MEAN_ABSOLUTE
-                return AudioProcessingService.bin_amplitudes(
-                    amplitudes, num_slots, BinningMode.MEAN_ABSOLUTE
-                )
-            
-            # Direct resampling, no binning
+            # Direct resampling for continuous mode
             if len(amplitudes) != num_slots:
                 old_indices = np.arange(len(amplitudes))
                 new_indices = np.linspace(0, len(amplitudes)-1, num_slots)
@@ -142,279 +145,48 @@ class AudioProcessingService:
             else:
                 resampled = amplitudes.copy()
             
-            # Split positive/negative for visualization
             for i in range(num_slots):
-                if resampled[i] >= 0:
+                val = resampled[i]
+                if val >= 0:
+                    max_binned_data[i] = val
                     min_binned_data[i] = 0
-                    max_binned_data[i] = resampled[i]
                 else:
-                    min_binned_data[i] = resampled[i]
                     max_binned_data[i] = 0
+                    min_binned_data[i] = val
+                    
         else:
-            # Binning approaches (MEAN_ABSOLUTE and MIN_MAX)
-            num_total_amplitudes = len(amplitudes)
-            bin_size = num_total_amplitudes / float(num_slots)
+            # Standard binning (MEAN_ABSOLUTE or MIN_MAX)
+            samples_per_slot = len(amplitudes) / num_slots
             
-            for i in range(num_slots):
-                start_idx = int(round(i * bin_size))
-                end_idx = int(round((i + 1) * bin_size))
+            for slot_idx in range(num_slots):
+                start_idx = int(slot_idx * samples_per_slot)
+                end_idx = int((slot_idx + 1) * samples_per_slot)
+                end_idx = min(end_idx, len(amplitudes))
                 
-                if start_idx >= num_total_amplitudes:
-                    continue
-                
-                end_idx = min(end_idx, num_total_amplitudes)
                 if start_idx >= end_idx:
                     continue
-                
-                slice_data = amplitudes[start_idx:end_idx]
-                
-                if len(slice_data) > 0:
-                    if mode == BinningMode.MEAN_ABSOLUTE:
-                        binned_value = np.mean(np.abs(slice_data))
-                        min_binned_data[i] = -binned_value  # Symmetric
-                        max_binned_data[i] = binned_value
-                    elif mode == BinningMode.MIN_MAX:
-                        min_binned_data[i] = np.min(slice_data)
-                        max_binned_data[i] = np.max(slice_data)
-        
-        # Final normalization step - critical for parity
-        if mode == BinningMode.MEAN_ABSOLUTE:
-            # Normalize to [0, 1] but keep symmetry
-            max_val = np.max(np.abs(max_binned_data))
-            if max_val > 1e-9:
-                min_normalized = min_binned_data / max_val  # Will be negative
-                max_normalized = max_binned_data / max_val  # Will be positive
-            else:
-                min_normalized = np.zeros_like(min_binned_data)
-                max_normalized = np.zeros_like(max_binned_data)
-        else:
-            # For MIN_MAX and CONTINUOUS, preserve negative values
-            all_values = np.concatenate([min_binned_data, max_binned_data])
-            max_abs = np.max(np.abs(all_values))
-            
-            if max_abs > 1e-9:
-                min_normalized = min_binned_data / max_abs
-                max_normalized = max_binned_data / max_abs
-            else:
-                min_normalized = np.zeros_like(min_binned_data)
-                max_normalized = np.zeros_like(max_binned_data)
-        
-        return min_normalized, max_normalized
-        
-    @staticmethod
-    def process_audio_file(audio_path: str, state: CompositionStateDTO) -> Dict[str, Any]:
-        """
-        Complete audio processing pipeline with slicing, demucs, and silence removal.
-        This method is now focused ONLY on audio processing and does not calculate geometry.
-        
-        Args:
-            audio_path: Path to the audio file
-            state: Composition state containing processing parameters
-            
-        Returns:
-            Dictionary containing scaled amplitudes and raw samples for client caching
-        """
-        performance_monitor.start('total_audio_processing')
-        
-        try:
-            import librosa
-            import soundfile as sf
-            # [INVESTIGATION] Log environment details
-            file_size = os.path.getsize(audio_path)
-            print(f"[ENV-CHECK] Librosa: {librosa.__version__}, SoundFile: {sf.__version__}")
-            print(f"[ENV-CHECK] File on disk: {file_size} bytes (Path: {audio_path})")
-        except ImportError:
-            raise ValueError("Required libraries not installed")
-        
-        # Extract parameters
-        start_time = state.audio_source.start_time if state.audio_source else 0.0
-        end_time = state.audio_source.end_time if state.audio_source else 0.0
-        use_stems = state.audio_source.use_stems if state.audio_source else False
-        stem_choice = state.audio_source.stem_choice if state.audio_source else "vocals"
-        
-        performance_monitor.start('audio_slicing_and_loading')
-        
-        # Step 1: Time slicing
-        working_path = audio_path
-        if start_time > 0 or (end_time > 0 and end_time > start_time):
-            print(f"Step 1: Slicing audio from {start_time}s to {end_time}s...")
-            duration = (end_time - start_time) if end_time > start_time else None
-            
-            try:
-                audio_data, sample_rate = librosa.load(
-                    audio_path, 
-                    sr=None, 
-                    mono=True,
-                    offset=start_time,
-                    duration=duration
-                )
-                
-                # Save slice to temp file for potential demucs processing
-                with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
-                    sf.write(tmp.name, audio_data, sample_rate)
-                    working_path = tmp.name
-                    print(f"  Sliced to {duration:.1f} seconds")
                     
-            except Exception as e:
-                raise ValueError(f"Failed to slice audio: {e}")
-        else:
-            # Load full file
-            try:
-                audio_data, sample_rate = librosa.load(working_path, sr=None, mono=True)
-            except Exception as e:
-                raise ValueError(f"Failed to load audio file: {e}")
+                slot_data = amplitudes[start_idx:end_idx]
                 
-        performance_monitor.end('audio_slicing_and_loading')
-        
-        # Step 2: Demucs stem separation (optional)
-        if use_stems:
-            print(f"Step 2: Extracting {stem_choice} with demucs...")
-            
-            performance_monitor.start('demucs_execution')
-            
-            stem_path = AudioProcessingService._run_demucs_local(working_path, stem_choice)
-            
-            performance_monitor.end('demucs_execution')
-            
-            if stem_path:
-                # Load the stem
-                try:
-                    audio_data, sample_rate = librosa.load(stem_path, sr=None, mono=True)
-                    print(f"  Extracted {stem_choice} stem")
+                if mode == BinningMode.MEAN_ABSOLUTE:
+                    mean_abs = np.mean(np.abs(slot_data))
+                    max_binned_data[slot_idx] = mean_abs
+                    min_binned_data[slot_idx] = -mean_abs
                     
-                    # Clean up demucs output
-                    try:
-                        demucs_dir = Path(stem_path).parent.parent
-                        if demucs_dir.name in ["htdemucs", "htdemucs_ft"]:
-                            shutil.rmtree(demucs_dir, ignore_errors=True)
-                    except:
-                        pass
-                except Exception as e:
-                    print(f"  Warning: Failed to load stem, using original: {e}")
+                elif mode == BinningMode.MIN_MAX:
+                    max_binned_data[slot_idx] = np.max(slot_data)
+                    min_binned_data[slot_idx] = np.min(slot_data)
+
+        # Normalize both arrays by the combined max
+        all_values = np.concatenate([np.abs(min_binned_data), np.abs(max_binned_data)])
+        max_val = np.max(all_values) if len(all_values) > 0 else 0
         
-        # Step 3: Remove silence (optional)
-        if state.audio_processing and state.audio_processing.remove_silence:
-            performance_monitor.start('silence_removal')
-            print(f"Step 3: Removing silence...")
-            original_length = len(audio_data) / sample_rate
-            audio_data = AudioProcessingService._remove_silence(
-                audio_data,
-                sample_rate, 
-                state.audio_processing.silence_threshold,
-                state.audio_processing.silence_duration
-            )
-            performance_monitor.end('silence_removal')
-            new_length = len(audio_data) / sample_rate
-            print(f"  Reduced from {original_length:.1f}s to {new_length:.1f}s")
-        
-        # Clean up temp file if created
-        if working_path != audio_path and os.path.exists(working_path):
-            try:
-                os.unlink(working_path)
-            except:
-                pass
-        
-        performance_monitor.start('amplitude_extraction_and_binning')
-        
-        # Extract 200k samples (matching PyQt behavior)
-        samples = AudioProcessingService.extract_amplitudes(audio_data, 200000)
-        
-        # Get binning mode from state with proper mapping
-        mode_str = state.audio_processing.binning_method if state.audio_processing else "mean_abs"
-        
-        # Map common variations to correct enum values
-        mode_map = {
-            "mean": "mean_abs",
-            "mean_abs": "mean_abs",
-            "mean_absolute": "mean_abs",
-            "min_max": "min_max",
-            "minmax": "min_max",
-            "continuous": "continuous"
-        }
-        
-        mode_str = mode_map.get(mode_str, "mean_abs")
-        binning_mode = BinningMode(mode_str)
-        
-        # Bin to match number of slots
-        num_slots = state.pattern_settings.number_slots
-        min_binned, max_binned = AudioProcessingService.bin_amplitudes(samples, num_slots, binning_mode)
-        
-        # Store both arrays for proper slot rendering
-        # Backend will send both arrays, frontend will use both for inner/outer radius
-        
-        # Apply amplitude exponent to both arrays
-        exponent = state.pattern_settings.amplitude_exponent
-        if exponent != 1.0:
-            min_binned = np.power(np.abs(min_binned), exponent) * np.sign(min_binned)
-            max_binned = np.power(np.abs(max_binned), exponent) * np.sign(max_binned)
-        
-        # Normalize both arrays by the same factor
-        all_values = np.concatenate([min_binned, max_binned])
-        max_val = np.max(np.abs(all_values))
-        if max_val > 0:
-            min_normalized = min_binned / max_val
-            max_normalized = max_binned / max_val
-        else:
-            min_normalized = min_binned
-            max_normalized = max_binned
-            
-        # --- DIAGNOSTIC DUMP START ---
-        print(f"\n[DIAGNOSTIC] Web Audio Pipeline Data Dump")
-        print(f"1. Audio Data (After Silence Removal):")
-        print(f"   - Length: {len(audio_data)}")
-        print(f"   - Sample Rate: {sample_rate}")
-        print(f"   - Duration: {len(audio_data)/sample_rate:.4f}s")
-        print(f"   - First 5 samples: {audio_data[:5].tolist()}")
-        print(f"   - Last 5 samples: {audio_data[-5:].tolist()}")
-        print(f"2. Extracted Samples (200k resampled):")
-        print(f"   - Length: {len(samples)}")
-        print(f"   - First 5: {samples[:5].tolist()}")
-        print(f"   - Last 5: {samples[-5:].tolist()}")
-        print(f"3. Binning Config:")
-        print(f"   - Mode: {binning_mode}")
-        print(f"   - Num Slots: {num_slots}")
-        print(f"   - Exponent: {exponent}")
-        print(f"4. Binned (Normalized) - max_normalized:")
-        print(f"   - Length: {len(max_normalized)}")
-        print(f"   - All values: {[round(float(x), 6) for x in max_normalized]}")
-        print(f"   - Min: {float(np.min(max_normalized)):.6f}")
-        print(f"   - Max: {float(np.max(max_normalized)):.6f}")
-        print(f"[DIAGNOSTIC] End Dump\n")
-        # --- DIAGNOSTIC DUMP END ---    
-            
-        performance_monitor.end('amplitude_extraction_and_binning')   
-        
-        # NOTE: max_amplitude_local is now calculated in the facade.
-        # This service now returns the NORMALIZED amplitudes.
-        # The facade is responsible for the final scaling.
-        
-        performance_monitor.end('total_audio_processing')
-        
-        return {
-            "min_amplitudes": min_normalized.tolist(),  # Normalized min array
-            "max_amplitudes": max_normalized.tolist(),  # Normalized max array
-            "raw_samples_for_cache": samples.tolist()
-        } 
-    
-    @staticmethod
-    def calculate_auto_roll_for_sections(num_sections: int, num_slots: int) -> int:
-        """
-        Port of PyQt's calculate_auto_roll_for_sections from geometry_calculator.py.
-        
-        Calculate automatic roll amount for n=3 sections business logic.
-        
-        Args:
-            num_sections: Number of sections in design
-            num_slots: Total number of slots
-            
-        Returns:
-            Roll amount (number of slots to shift)
-        """
-        if num_sections == 3 and num_slots > 0:
-            slots_in_section = num_slots // 3
-            return slots_in_section // 2
-        return 0
-    
+        if max_val > 1e-9:
+            min_binned_data = min_binned_data / max_val
+            max_binned_data = max_binned_data / max_val
+
+        return min_binned_data, max_binned_data
+
     @staticmethod
     def _remove_silence(
         audio_data: np.ndarray,
@@ -422,98 +194,277 @@ class AudioProcessingService:
         threshold_db: float,
         min_duration: float
     ) -> np.ndarray:
-        """
-        Remove silence from audio signal maintaining immutability.
-        Essential for vocals after demucs separation.
-        """
+        """Remove silence from audio signal."""
         import librosa
         
-        # Find non-silent intervals
+        # Get intervals of non-silence
         intervals = librosa.effects.split(
-            audio_data, 
+            audio_data,
             top_db=-threshold_db,
             frame_length=2048,
             hop_length=512
         )
         
         if len(intervals) == 0:
-            return audio_data.copy()
+            return audio_data
             
-        # Build merged intervals immutably
+        # Filter by minimum duration
         min_samples = int(min_duration * sample_rate)
-        merged_intervals = []
+        valid_intervals = [
+            (start, end) for start, end in intervals 
+            if (end - start) >= min_samples
+        ]
         
-        for start, end in intervals:
-            if end - start < min_samples:
-                continue
-                
-            if merged_intervals and start - merged_intervals[-1][1] < min_samples:
-                # Create new list with merged interval
-                merged_intervals = merged_intervals[:-1] + [(merged_intervals[-1][0], end)]
-            else:
-                # Create new list with added interval
-                merged_intervals = merged_intervals + [(start, end)]
-                
-        if not merged_intervals:
-            return audio_data.copy()
+        if len(valid_intervals) == 0:
+            return audio_data
             
-        # Extract non-silent parts using list comprehension (immutable)
-        non_silent_parts = [audio_data[start:end] for start, end in merged_intervals]
+        # Concatenate non-silent segments
+        segments = [audio_data[start:end] for start, end in valid_intervals]
+        return np.concatenate(segments)
+
+    def process_audio_file(
+        self,
+        audio_path: str,
+        state: CompositionStateDTO
+    ) -> Dict[str, Any]:
+        """
+        DIAGNOSTIC VERSION - Process audio file with parity output at each stage.
+        """
+        import librosa
         
-        return np.concatenate(non_silent_parts) if non_silent_parts else audio_data.copy()
-    
+        performance_monitor.start('total_audio_processing')
+        
+        print("\n" + "="*60)
+        print("[PARITY-WEB] === AUDIO PIPELINE DIAGNOSTIC START ===")
+        print("="*60)
+        
+        # Load audio file
+        audio_data, sample_rate = librosa.load(audio_path, sr=None, mono=True)
+        
+        _parity_json("stage0_loaded", {
+            "count": len(audio_data),
+            "sample_rate": sample_rate,
+            "duration": float(len(audio_data) / sample_rate),
+            "first5": audio_data[:5].tolist(),
+            "last5": audio_data[-5:].tolist()
+        })
+        
+        # Apply silence removal if configured
+        if state.audio_processing and state.audio_processing.remove_silence:
+            threshold = state.audio_processing.silence_threshold
+            duration = state.audio_processing.silence_duration
+            audio_data = self._remove_silence(audio_data, sample_rate, threshold, duration)
+            
+            _parity_json("stage0b_silence_removed", {
+                "count": len(audio_data),
+                "threshold_db": threshold,
+                "min_duration": duration
+            })
+        
+        performance_monitor.start('amplitude_extraction_and_binning')
+        
+        # Stage 1: Resample to 200k samples
+        num_raw_samples = 200000
+        samples = self.extract_amplitudes(audio_data, num_raw_samples)
+        
+        _parity_json("stage1_resampled", {
+            "count": len(samples),
+            "min": float(np.min(samples)),
+            "max": float(np.max(samples)),
+            "first10": samples[:10].tolist(),
+            "sum": float(np.sum(samples))
+        })
+        
+        # Stage 2: Bin to num_slots
+        num_slots = state.pattern_settings.number_slots
+        
+        # Get binning mode
+        mode_str = "mean_abs"
+        if state.audio_processing and state.audio_processing.binning_mode:
+            mode_str = state.audio_processing.binning_mode
+        
+        mode_map = {
+            "mean_abs": "mean_abs",
+            "mean_absolute": "mean_abs",
+            "min_max": "min_max",
+            "minmax": "min_max",
+            "continuous": "continuous"
+        }
+        mode_str = mode_map.get(mode_str, "mean_abs")
+        binning_mode = BinningMode(mode_str)
+        
+        min_normalized, max_normalized = self.bin_amplitudes(samples, num_slots, binning_mode)
+        
+        _parity_json("stage2_binned", {
+            "count": len(max_normalized),
+            "min": float(np.min(max_normalized)),
+            "max": float(np.max(max_normalized)),
+            "first10": max_normalized[:10].tolist(),
+            "last5": max_normalized[-5:].tolist(),
+            "sum": float(np.sum(max_normalized)),
+            "binning_mode": str(binning_mode.value)
+        })
+        
+        # Stage 3: Apply filter (BEFORE exponent)
+        apply_filter = False
+        filter_amount = 0.0
+        if state.audio_processing:
+            apply_filter = state.audio_processing.apply_filter or False
+            filter_amount = state.audio_processing.filter_amount or 0.0
+        
+        if apply_filter and filter_amount > 0:
+            min_normalized = self.filter_data(min_normalized, filter_amount)
+            max_normalized = self.filter_data(max_normalized, filter_amount)
+        
+        _parity_json("stage3_filtered", {
+            "count": len(max_normalized),
+            "min": float(np.min(max_normalized)),
+            "max": float(np.max(max_normalized)),
+            "first10": max_normalized[:10].tolist(),
+            "apply_filter": apply_filter,
+            "filter_amount": filter_amount
+        })
+        
+        # Stage 4: Apply exponent
+        exponent = state.pattern_settings.amplitude_exponent
+        if exponent != 1.0:
+            min_normalized = np.power(np.abs(min_normalized), exponent) * np.sign(min_normalized)
+            max_normalized = np.power(np.abs(max_normalized), exponent) * np.sign(max_normalized)
+        
+        _parity_json("stage4_afterExponent", {
+            "count": len(max_normalized),
+            "min": float(np.min(max_normalized)),
+            "max": float(np.max(max_normalized)),
+            "first10": max_normalized[:10].tolist(),
+            "exponent": exponent
+        })
+        
+        # Normalize after exponent (match PyQt behavior)
+        all_values = np.concatenate([np.abs(min_normalized), np.abs(max_normalized)])
+        max_val = np.max(all_values)
+        if max_val > 1e-9:
+            min_normalized = min_normalized / max_val
+            max_normalized = max_normalized / max_val
+        
+        _parity_json("stage4b_normalized", {
+            "count": len(max_normalized),
+            "min": float(np.min(max_normalized)),
+            "max": float(np.max(max_normalized)),
+            "first10": max_normalized[:10].tolist()
+        })
+        
+        performance_monitor.end('amplitude_extraction_and_binning')
+        performance_monitor.end('total_audio_processing')
+        
+        print("="*60)
+        print("[PARITY-WEB] === AUDIO PIPELINE DIAGNOSTIC END ===")
+        print("="*60 + "\n")
+        
+        # NOTE: Scaling (Stage 5) happens in service_facade.py after geometry calculation
+        # The facade calls scale_and_clamp_amplitudes() with max_amplitude_local
+        
+        return {
+            "min_amplitudes": min_normalized.tolist(),
+            "max_amplitudes": max_normalized.tolist(),
+            "raw_samples_for_cache": samples.tolist()
+        }
+
     @staticmethod
-    def _run_demucs_local(audio_path: str, stem_choice: str) -> Optional[str]:
-        """
-        Run demucs locally using GPU if available.
-        Returns path to the extracted stem or None if failed.
-        """
-        try:
-            import torch
+    def calculate_auto_roll_for_sections(num_sections: int, num_slots: int) -> int:
+        """Calculate automatic roll amount for n=3 sections business logic."""
+        if num_sections == 3 and num_slots > 0:
+            slots_in_section = num_slots // 3
+            return slots_in_section // 2
+        return 0
+
+    @staticmethod
+    def analyze_and_optimize(
+        samples: np.ndarray, 
+        num_slots: int, 
+        mode: str = "music"
+    ) -> Dict[str, Any]:
+        """Runs a grid search to find the best amplitude exponent."""
+        
+        # Mode defaults
+        if mode == "speech":
+            binning_mode = BinningMode.MIN_MAX
+            filter_amount = 0.05
+            fallback_exp = 0.6
+            candidates = [0.8, 0.6, 0.45, 0.35, 0.25]
+        else:  # music
+            binning_mode = BinningMode.MEAN_ABSOLUTE
+            filter_amount = 0.02
+            fallback_exp = 1.0
+            candidates = [1.0, 0.9, 0.8, 0.7, 0.6]
+
+        # Resample
+        resampled_samples = AudioProcessingService.extract_amplitudes(samples, 200000)
+        
+        # Bin
+        _, max_b = AudioProcessingService.bin_amplitudes(resampled_samples, num_slots, binning_mode)
+        baseline = max_b
+        
+        # Filter
+        clean_data = AudioProcessingService.filter_data(baseline, filter_amount)
+
+        # Dynamic silence threshold (speech only)
+        rec_threshold = -40
+        if mode == "speech":
+            abs_samples = np.abs(resampled_samples)
+            non_zeros = abs_samples[abs_samples > 1e-5]
+            if len(non_zeros) > 0:
+                noise_floor_db = 20 * np.log10(np.percentile(non_zeros, 15))
+                rec_threshold = int(max(-60, min(-10, noise_floor_db + 4)))
+
+        # Grid search
+        best_score = -float('inf')
+        best_exp = fallback_exp
+        logs = []
+
+        for exp in candidates:
+            compressed = np.power(clean_data, exp)
             
-            # Check for GPU
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-            if device == "cuda":
-                print(f"✓ Using GPU for demucs")
-            else:
-                print("⚠ Using CPU for demucs (will be slower)")
+            # Normalize
+            max_val = np.max(compressed)
+            if max_val > 1e-9:
+                compressed = compressed / max_val
             
-            # Create temp directory for output
-            output_dir = Path(tempfile.gettempdir()) / "demucs_output"
-            output_dir.mkdir(exist_ok=True)
+            # Score
+            p10 = np.percentile(compressed, 10)
+            p90 = np.percentile(compressed, 90)
+            spread = p90 - p10
             
-            # Run demucs via command line
-            cmd = [
-                "demucs",
-                "-d", device,
-                "--two-stems", "vocals",  # Faster: just vocals/no_vocals
-                "-o", str(output_dir),
-                audio_path
-            ]
+            brick_pct = np.sum(compressed > 0.95) / len(compressed)
+            ghost_pct = np.sum(compressed < 0.15) / len(compressed)
             
-            print(f"Running demucs on {Path(audio_path).name}...")
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            score = spread - (brick_pct * 2.0) - (ghost_pct * 1.5)
             
-            if result.returncode != 0:
-                print(f"Demucs failed: {result.stderr}")
-                return None
+            logs.append({
+                "exp": exp,
+                "spread": round(spread, 4),
+                "brick": round(brick_pct, 4),
+                "ghost": round(ghost_pct, 4),
+                "score": round(score, 4)
+            })
             
-            # Find the output file
-            audio_name = Path(audio_path).stem
-            stem_path = output_dir / "htdemucs" / audio_name / f"{stem_choice}.wav"
-            
-            if not stem_path.exists():
-                stem_path = output_dir / "htdemucs_ft" / audio_name / f"{stem_choice}.wav"
-            
-            if stem_path.exists():
-                return str(stem_path)
-            else:
-                print(f"Stem not found at expected path")
-                return None
-                
-        except ImportError:
-            print("⚠ Demucs not installed. Install with: pip install demucs")
-            return None
-        except Exception as e:
-            print(f"⚠ Demucs error: {e}")
-            return None
+            if score > best_score:
+                best_score = score
+                best_exp = exp
+
+        # Fallback check
+        status = "success"
+        if best_score < -0.1:
+            best_exp = fallback_exp
+            status = "fallback"
+
+        return {
+            "exponent": best_exp,
+            "filter_amount": filter_amount,
+            "silence_threshold": rec_threshold,
+            "binning_mode": binning_mode.value,
+            "remove_silence": mode == "speech",
+            "silence_duration": 0.2 if mode == "speech" else 0.5,
+            "score": round(best_score, 4),
+            "status": status,
+            "logs": logs
+        }

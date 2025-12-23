@@ -541,7 +541,7 @@ class SlotGenerationService:
             
             # Amplitude with exponent
             amplitude = amplitudes[slot_index]
-            scaled_amplitude = amplitude * state.pattern_settings.amplitude_exponent
+            scaled_amplitude = amplitude # * state.pattern_settings.amplitude_exponent
             
             # Symmetric extents about center point
             inward_extent = scaled_amplitude / 2.0
