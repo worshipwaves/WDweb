@@ -364,3 +364,15 @@ class UIConfig(Base):
     categories = Column(JSONB, default={})
     
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())    
+       
+# =============================================================================
+# COLLECTIONS CATALOG
+# =============================================================================    
+
+class CollectionsCatalog(Base):
+    """Collections catalog - stores entire JSON structure"""
+    __tablename__ = "collections_catalog"
+    
+    id = Column(Integer, primary_key=True, default=1)
+    data = Column(JSON, nullable=False)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

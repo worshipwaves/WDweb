@@ -1972,7 +1972,7 @@ SPECIES CARDS - 140px
 .slicer-drop-zone {
   border: 1px dashed rgb(var(--color-border));
   border-radius: 4px;
-  padding: 24px 16px;
+  padding: 0;
   text-align: center;
   cursor: pointer;
   transition: border-color 250ms ease, background-color 250ms ease;
@@ -1982,6 +1982,10 @@ SPECIES CARDS - 140px
 .slicer-drop-zone.dragover {
   border-color: rgb(var(--color-foreground));
   background-color: rgba(var(--color-foreground), 0.02);
+}
+
+.slicer-drop-content.hidden {
+  display: none;
 }
 
 .slicer-drop-zone.hidden {
@@ -2155,7 +2159,7 @@ SPECIES CARDS - 140px
   display: none;
   align-items: center;
   gap: 16px;
-  padding: 16px;
+  padding: 16px 12px 16px 14px;
   background: rgba(var(--color-foreground), 0.03);
   border: 1px solid rgb(var(--color-border));
 }
@@ -2165,8 +2169,8 @@ SPECIES CARDS - 140px
 }
 
 .slicer-song-artwork {
-  width: 48px;
-  height: 48px;
+  width: 24px;
+  height: 24px;
   background: rgb(var(--color-foreground));
   display: flex;
   align-items: center;
@@ -2175,8 +2179,8 @@ SPECIES CARDS - 140px
 }
 
 .slicer-song-artwork svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   color: rgb(var(--color-background));
 }
 
@@ -2242,14 +2246,52 @@ SPECIES CARDS - 140px
 }
 
 /* Section header (numbered sections) */
+.slicer-card {
+  background: rgba(var(--color-foreground), 0.03);
+  border: 1px solid rgb(var(--color-border));
+  margin-bottom: 16px;
+}
+
+.slicer-card .slicer-section-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  margin-bottom: 0;
+}
+
 .slicer-section-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 12px 4px 12px 12px;
   background: rgba(var(--color-foreground), 0.03);
   border: 1px solid rgb(var(--color-border));
   margin-bottom: 16px;
+}
+
+.slicer-intent-controls {
+  display: flex;
+  gap: 24px;
+  padding: 0 14px 14px 48px;
+}
+
+.slicer-drop-zone.slicer-card {
+  text-align: left;
+  padding: 0;
+  border-style: solid;
+}
+
+.slicer-drop-zone.slicer-card .slicer-section-header {
+  padding: 12px 14px;
+  justify-content: flex-start;
+}
+
+.slicer-drop-content {
+  text-align: center;
+  padding: 24px 16px;
 }
 
 .slicer-section-header:last-of-type {
@@ -2307,7 +2349,7 @@ SPECIES CARDS - 140px
   flex: 1;
   flex-direction: row;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 10px;
 }
 
 .slicer-controls-row .slicer-mark-btn-label {
@@ -2319,7 +2361,7 @@ SPECIES CARDS - 140px
 }
 
 .slicer-btn-reset {
-  padding: 10px 14px;
+  padding: 10px;
   background: transparent;
   border: 1px solid rgb(var(--color-border));
   border-radius: 4px;

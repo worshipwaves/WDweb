@@ -1951,11 +1951,7 @@ export class ApplicationController {
   private async _ensureAudioSlicerPanel(): Promise<void> {
     if (!this._audioSlicerPanel && this._state) {
       const { AudioSlicerPanel } = await import('./components/AudioSlicerPanel');
-      this._audioSlicerPanel = new AudioSlicerPanel(this, {
-        silenceThreshold: this._state.composition.audio_processing.silence_threshold,
-        silenceDuration: this._state.composition.audio_processing.silence_duration,
-        removeSilence: this._state.composition.audio_processing.remove_silence
-      });
+      this._audioSlicerPanel = new AudioSlicerPanel(this);
     }
   }
 
@@ -2016,7 +2012,7 @@ export class ApplicationController {
     if (!this._collectionsCatalog) {
       try {
         const { CollectionsCatalogSchema } = await import('./types/schemas');
-        const response = await fetch('/config/collections_catalog.json');
+        const response = await fetch('/api/config/collections');
         const data = await response.json();
         this._collectionsCatalog = CollectionsCatalogSchema.parse(data);
       } catch (error) {
@@ -2309,8 +2305,12 @@ export class ApplicationController {
       card.classList.toggle('selected', (card as HTMLElement).dataset.collectionId === collectionId);
     });
 
+    // Look up intent from category
+    const category = this._collectionsCatalog.categories.find(c => c.id === collection.category);
+    const intent = category?.intent || 'music';
+    
     // Load audio file
-    await this._loadCollectionAudio(recording.url, collection.title);
+    await this._loadCollectionAudio(recording.url, collection.title, intent);
 
     // Update accordion header
     if (this._accordion) {
@@ -2368,8 +2368,12 @@ export class ApplicationController {
       }
     };
 
+    // Look up intent from category
+    const category = this._collectionsCatalog.categories.find(c => c.id === collection.category);
+    const intent = category?.intent || 'music';
+    
     // Load the new recording
-    await this._loadCollectionAudio(recording.url, collection.title);
+    await this._loadCollectionAudio(recording.url, collection.title, intent);
     
     // Update accordion header
     if (this._accordion) {
@@ -2381,7 +2385,7 @@ export class ApplicationController {
    * Load audio from collection URL
    * @private
    */
-  private async _loadCollectionAudio(url: string, title: string): Promise<void> {
+  private async _loadCollectionAudio(url: string, title: string, intent: 'music' | 'speech' = 'music'): Promise<void> {
     try {
       const response = await fetch(url);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -2403,7 +2407,7 @@ export class ApplicationController {
       
       // Use existing AudioSlicerPanel to load
       if (this._audioSlicerPanel) {
-        this._audioSlicerPanel.loadAudioFile(file);
+        this._audioSlicerPanel.loadAudioFile(file, intent);
       }
     } catch (error) {
       console.error('[Controller] Failed to load collection audio:', error);

@@ -390,12 +390,12 @@ class AudioProcessingService:
             binning_mode = BinningMode.MIN_MAX
             filter_amount = 0.05
             fallback_exp = 0.6
-            candidates = [0.8, 0.6, 0.45, 0.35, 0.25]
+            candidates = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.25]
         else:  # music
             binning_mode = BinningMode.MEAN_ABSOLUTE
             filter_amount = 0.02
             fallback_exp = 1.0
-            candidates = [1.0, 0.9, 0.8, 0.7, 0.6]
+            candidates = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.25]
 
         # Resample
         resampled_samples = AudioProcessingService.extract_amplitudes(samples, 200000)

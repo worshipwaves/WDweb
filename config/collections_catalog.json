@@ -34,12 +34,12 @@
       "thumbnail": "/assets/collections/artists/gregorian-chant.jpg"
     }
   },
-  "categories": [
-    { "id": "hymn", "label": "Hymns" },
-    { "id": "bible", "label": "Bible Passages" },
-    { "id": "prayer", "label": "Prayers" },
-    { "id": "original", "label": "Original Works" }
-  ],
+	"categories": [
+		{ "id": "hymn", "label": "Hymns", "intent": "music" },
+		{ "id": "bible", "label": "Bible Passages", "intent": "speech" },
+		{ "id": "prayer", "label": "Prayers", "intent": "speech" },
+		{ "id": "original", "label": "Original Works", "intent": "music" }
+	],
   "collections": [
     {
       "id": "hymn-amazing-grace",

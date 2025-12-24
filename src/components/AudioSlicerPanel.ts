@@ -20,19 +20,13 @@ interface SliceResult {
   duration: number;
 }
 
-interface AudioSlicerConfig {
-  silenceThreshold: number;
-  silenceDuration: number;
-  removeSilence: boolean;
-}
-
 export class AudioSlicerPanel implements PanelComponent {
   private _container: HTMLElement | null = null;
   private _controller: ApplicationController;
-  private _config: AudioSlicerConfig;
   
   // DOM references
   private _dropZone: HTMLElement | null = null;
+	private _dropContent: HTMLElement | null = null;
   private _fileInput: HTMLInputElement | null = null;
   private _canvas: HTMLCanvasElement | null = null;
   private _ctx: CanvasRenderingContext2D | null = null;
@@ -76,12 +70,8 @@ export class AudioSlicerPanel implements PanelComponent {
 	// Raw vocals buffer (before silence removal)
   private _rawVocalsBuffer: AudioBuffer | null = null;
   
-  // Silence params (from config)
-  private _minDuration!: number;
-  private _silenceThresh!: number;
-  private _silenceEnabled!: boolean;
+  // Isolate Vocals param
   private _isolateVocals: boolean = false;
-	private _optimizationMode: 'speech' | 'music' = 'music';
 
   // Persisted state
   private _persistedFileName: string | null = null;
@@ -267,27 +257,15 @@ export class AudioSlicerPanel implements PanelComponent {
     }
     
     // Ensure drop zone is visible
-    this._dropZone?.classList.remove('hidden');
+    this._dropContent?.classList.remove('hidden');
     this._songLoaded?.classList.remove('visible');
   }
   
   constructor(
     controller: ApplicationController,
-    config?: Partial<AudioSlicerConfig>,
     onSliceComplete?: (result: SliceResult) => void
   ) {
     this._controller = controller;
-    if (!config || config.silenceThreshold === undefined || config.silenceDuration === undefined) {
-      throw new Error('[AudioSlicerPanel] Config missing required audio_processing values - check composition_defaults.json');
-    }
-    this._config = {
-      silenceThreshold: config.silenceThreshold,
-      silenceDuration: config.silenceDuration,
-      removeSilence: config.removeSilence ?? false
-    };
-    this._silenceThresh = this._config.silenceThreshold;
-    this._minDuration = this._config.silenceDuration;
-    this._silenceEnabled = this._config.removeSilence;
     this._onSliceComplete = onSliceComplete || null;
     
     // Restore state from composition if available
@@ -301,9 +279,6 @@ export class AudioSlicerPanel implements PanelComponent {
       this._isolateVocals = src.use_stems || false;
       this._persistedFileName = src.source_file || null;
     }
-    if (state?.composition?.audio_processing) {
-      this._silenceEnabled = state.composition.audio_processing.remove_silence || false;
-    }
   }
   
   /**
@@ -314,7 +289,7 @@ export class AudioSlicerPanel implements PanelComponent {
     const isLoaded = !!this._audioBuffer || !!this._persistedFileName;
 
     if (isLoaded && fileName) {
-      this._dropZone?.classList.add('hidden');
+      this._dropContent?.classList.add('hidden');
       this._songLoaded?.classList.add('visible');
       
       if (this._songNameEl) this._songNameEl.textContent = fileName;
@@ -352,9 +327,6 @@ export class AudioSlicerPanel implements PanelComponent {
   private _persistToggleState(): void {
     this._controller.updateAudioSourceState({
       use_stems: this._isolateVocals
-    });
-    this._controller.updateAudioProcessingState({
-      remove_silence: this._silenceEnabled
     });
   }
 	
@@ -426,25 +398,6 @@ export class AudioSlicerPanel implements PanelComponent {
         </label>
       </div>
       
-      <input type="hidden" class="slicer-min-duration" value="${this._minDuration}">
-      <input type="hidden" class="slicer-silence-thresh" value="${this._silenceThresh}">
-      
-      <div class="slicer-optimize-section">
-        <div class="slicer-section-header" style="padding-bottom:8px;">
-          <span class="slicer-section-number">3</span>
-          <div class="slicer-section-text">
-            <div class="slicer-section-title">Optimize for Visual Impact</div>
-            <div class="slicer-section-desc">Auto-adjust settings for best carving results</div>
-          </div>
-        </div>
-        <div class="slicer-optimize-controls">
-          <label class="slicer-radio"><input type="radio" name="opt-mode" value="music" checked> Music</label>
-          <label class="slicer-radio"><input type="radio" name="opt-mode" value="speech"> Speech</label>
-          <button class="slicer-btn-optimize">Auto-Optimize</button>
-          <span class="slicer-optimize-status"></span>
-        </div>
-      </div>
-      
       <div class="slicer-cta-footer">
         <button class="slicer-btn-primary slicer-btn-apply" style="flex:1;">Apply To Artwork</button>
       </div>
@@ -467,28 +420,50 @@ export class AudioSlicerPanel implements PanelComponent {
     section.className = 'audio-slicer-upload-section';
     this._uploadSection = section;
     section.innerHTML = `
-      <div class="slicer-drop-zone" data-demo-id="slicer_drop">
-        <div class="upload-icon">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+      <div class="slicer-card">
+        <div class="slicer-section-header">
+          <span class="slicer-section-number">1</span>
+          <div class="slicer-section-text">
+            <div class="slicer-section-title">What type of audio?</div>
+            <div class="slicer-section-desc">Select one before uploading</div>
+          </div>
         </div>
-        <p class="slicer-drop-text">Tap to Choose Your Song</p>
-        <p class="slicer-drop-hint">or drag and drop your file here</p>
-        <input type="file" class="slicer-file-input" accept="audio/*">
+        <div class="slicer-intent-controls">
+          <label class="slicer-radio"><input type="radio" name="upload-intent" value="music" checked> Music</label>
+          <label class="slicer-radio"><input type="radio" name="upload-intent" value="speech"> Speech</label>
+        </div>
       </div>
       
-      <div class="slicer-song-loaded">
-        <div class="slicer-song-artwork">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
-          </svg>
+      <div class="slicer-card slicer-drop-zone" data-demo-id="slicer_drop">
+        <div class="slicer-section-header">
+          <span class="slicer-section-number">2</span>
+          <div class="slicer-section-text">
+            <div class="slicer-section-title">Upload your file</div>
+            <div class="slicer-section-desc">Drop or browse to select</div>
+          </div>
         </div>
-        <div class="slicer-song-info">
-          <div class="slicer-song-name"></div>
-          <div class="slicer-song-duration"></div>
+        <div class="slicer-drop-content">
+          <div class="upload-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <p class="slicer-drop-text">Drop file here</p>
+          <p class="slicer-drop-hint">or tap to browse</p>
         </div>
-        <button class="slicer-song-change">Change</button>
+        <div class="slicer-song-loaded">
+          <div class="slicer-song-artwork">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+            </svg>
+          </div>
+          <div class="slicer-song-info">
+            <div class="slicer-song-name"></div>
+            <div class="slicer-song-duration"></div>
+          </div>
+          <button class="slicer-song-change">Change</button>
+        </div>
+        <input type="file" class="slicer-file-input" accept="audio/*">
       </div>
     `;
     this._cacheUploadElements(section);
@@ -525,6 +500,16 @@ export class AudioSlicerPanel implements PanelComponent {
     section.querySelector('.slicer-song-change')?.addEventListener('click', () => {
       this._resetToUpload();
     });
+    
+    // Reprocess when intent changes if audio already loaded
+    section.querySelectorAll('input[name="upload-intent"]').forEach(radio => {
+      radio.addEventListener('change', async () => {
+        if (this._originalFile && this._audioBuffer) {
+          await this._runOptimization();
+          this._handleCommit();
+        }
+      });
+    });
   }
 
   private _attachTrimmerListeners(section: HTMLElement): void {
@@ -545,15 +530,10 @@ export class AudioSlicerPanel implements PanelComponent {
         void this._processVocals();
       }
     });
-    section.querySelector('.slicer-btn-apply')?.addEventListener('click', () => this._handleCommit());
-    
-    // Optimization controls
-    section.querySelectorAll('input[name="opt-mode"]').forEach(radio => {
-      radio.addEventListener('change', (e) => {
-        this._optimizationMode = (e.target as HTMLInputElement).value as 'speech' | 'music';
-      });
+    section.querySelector('.slicer-btn-apply')?.addEventListener('click', async () => {
+      await this._runOptimization();
+      this._handleCommit();
     });
-    section.querySelector('.slicer-btn-optimize')?.addEventListener('click', () => this._runOptimization());
     
     window.addEventListener('resize', this._handleResize);
   }
@@ -563,7 +543,7 @@ export class AudioSlicerPanel implements PanelComponent {
    */
   public getEnhancementsDisplay(): string | null {
     const vocals = this._isolateVocals;
-    const silence = this._silenceEnabled;
+    const silence = this._controller.getState()?.composition.audio_processing?.remove_silence;
     
     if (!vocals && !silence) return null;
     
@@ -606,24 +586,18 @@ export class AudioSlicerPanel implements PanelComponent {
     section.querySelector('.slicer-btn-vocals-preview')?.addEventListener('click', () => {
       void this._previewVocals(section);
     });
-    section.querySelector('#toggle-silence .toggle-switch input')?.addEventListener('change', (e) => {
-      const card = section.querySelector('#toggle-silence');
-      const checked = (e.target as HTMLInputElement).checked;
-      card?.classList.toggle('active', checked);
-      this._silenceEnabled = checked;
-      this._controller.updateAudioAccordionValue('demucs');
-      this._persistToggleState();
-      
-      // Auto-process silence removal if enabled and vocals buffer exists
-      if (checked && this._rawVocalsBuffer && !this._processedBuffer) {
-        void this._processSilenceRemoval(section);
-      }
-    });
+		
     this._commitBtn?.addEventListener('click', () => this._handleCommit());
   }
   
-  private async _runOptimization(): Promise<void> {
-    if (!this._originalFile) return;
+  private async _runOptimization(intentOverride?: 'music' | 'speech'): Promise<void> {
+    if (!this._originalFile) {
+      void this._controller.dispatch({
+        type: 'PROCESSING_UPDATE',
+        payload: { stage: 'idle', progress: 100 }
+      });
+      return;
+    }
     
     const statusEl = this._trimmerSection?.querySelector('.slicer-optimize-status') as HTMLElement;
     const btn = this._trimmerSection?.querySelector('.slicer-btn-optimize') as HTMLButtonElement;
@@ -632,8 +606,24 @@ export class AudioSlicerPanel implements PanelComponent {
     if (btn) btn.disabled = true;
     
     const formData = new FormData();
-    formData.append('file', this._originalFile);
-    formData.append('mode', this._optimizationMode);
+    
+    // Use sliced audio if slice markers are set, otherwise use original
+    const hasSlice = this._markStart !== null && this._markEnd !== null && 
+                     (this._markStart > 0 || this._markEnd < (this._audioBuffer?.duration ?? 0));
+    if (hasSlice && this._audioBuffer) {
+      const sliceBlob = this._createSliceBlob();
+      if (sliceBlob) {
+        formData.append('file', new File([sliceBlob], 'slice.wav', { type: 'audio/wav' }));
+      } else {
+        formData.append('file', this._originalFile);
+      }
+    } else {
+      formData.append('file', this._originalFile);
+    }
+    
+    const intentRadio = this._uploadSection?.querySelector('input[name="upload-intent"]:checked') as HTMLInputElement;
+    const intent = intentOverride || intentRadio?.value || 'music';
+    formData.append('mode', intent);
     formData.append('num_slots', String(this._controller.getState()?.composition.pattern_settings.number_slots || 48));
     
     try {
@@ -700,12 +690,6 @@ export class AudioSlicerPanel implements PanelComponent {
     if (vocalsCard && this._isolateVocals) {
       vocalsCard.classList.add('active');
     }
-    
-    // Restore silence toggle card state
-    const silenceCard = section.querySelector('#toggle-silence');
-    if (silenceCard && this._silenceEnabled) {
-      silenceCard.classList.add('active');
-    }
   }
 	
 	private _restoreTrimmerState(): void {
@@ -758,7 +742,7 @@ export class AudioSlicerPanel implements PanelComponent {
 	
 	private _restoreUploadState(): void {
     if (this._audioBuffer && this._originalFile) {
-      this._dropZone?.classList.add('hidden');
+      this._dropContent?.classList.add('hidden');
       this._songLoaded?.classList.add('visible');
       if (this._songNameEl) this._songNameEl.textContent = this._originalFile.name;
       if (this._songDurationEl) this._songDurationEl.textContent = `${this._formatTime(this._audioBuffer.duration)} · Ready`;
@@ -767,6 +751,7 @@ export class AudioSlicerPanel implements PanelComponent {
 	
 	private _cacheUploadElements(section: HTMLElement): void {
     this._dropZone = section.querySelector('.slicer-drop-zone');
+    this._dropContent = section.querySelector('.slicer-drop-content');
     this._fileInput = section.querySelector('.slicer-file-input');
     this._songLoaded = section.querySelector('.slicer-song-loaded');
     this._songNameEl = section.querySelector('.slicer-song-name');
@@ -833,8 +818,16 @@ export class AudioSlicerPanel implements PanelComponent {
     }
   }
   
-  private async _loadFile(file: File, skipAutoCommit: boolean = false): Promise<void> {
+  private async _loadFile(file: File, skipAutoCommit: boolean = false, intent?: 'music' | 'speech'): Promise<void> {
     this._initAudioContext();
+    
+    // Show processing overlay immediately
+    if (!skipAutoCommit) {
+      void this._controller.dispatch({
+        type: 'PROCESSING_UPDATE',
+        payload: { stage: 'uploading', progress: 0, message: `Processing ${file.name}` }
+      });
+    }
     
     try {
       const arrayBuffer = await file.arrayBuffer();
@@ -842,7 +835,7 @@ export class AudioSlicerPanel implements PanelComponent {
 			this._originalFile = file;
       
       // Update UI
-      this._dropZone?.classList.add('hidden');
+      this._dropContent?.classList.add('hidden');
       this._songLoaded?.classList.add('visible');
       
       // Update song loaded display
@@ -882,13 +875,17 @@ export class AudioSlicerPanel implements PanelComponent {
         // Save to IndexedDB for persistence across refresh
         void this._saveAudioToStorage(file);
         
-        // Auto-commit: immediately process audio after upload
+        // Auto-optimize with intent, then commit
+        await this._runOptimization(intent);
         this._handleCommit();
       }
       
     } catch (err) {
       console.error('[AudioSlicerPanel] Decode error:', err);
-      // Could dispatch error action here
+      void this._controller.dispatch({
+        type: 'PROCESSING_UPDATE',
+        payload: { stage: 'idle', progress: 0 }
+      });
     }
   }
   
@@ -1398,11 +1395,12 @@ private async _processPreviewSilenceRemoval(): Promise<void> {
     
     try {
       const rawBlob = this._encodeWAV(this._rawVocalsBuffer);
+      const audioProcessing = this._controller.getState()?.composition.audio_processing;
       
       const formData = new FormData();
       formData.append('file', new File([rawBlob], 'vocals.wav', { type: 'audio/wav' }));
-      formData.append('min_duration', String(this._minDuration));
-      formData.append('threshold_db', String(this._silenceThresh));
+      formData.append('min_duration', String(audioProcessing?.silence_duration));
+      formData.append('threshold_db', String(audioProcessing?.silence_threshold));
       
       const response = await fetch('/api/audio/compress-silence', {
         method: 'POST',
@@ -1512,46 +1510,6 @@ private async _processVocals(): Promise<void> {
       this._isPreviewing = false;
       if (label) label.textContent = this._rawVocalsBuffer ? 'Preview Vocals' : 'Process & Preview';
     };
-  }
-	
-	private async _processSilenceRemoval(section: HTMLElement): Promise<void> {
-    if (!this._rawVocalsBuffer) return;
-    
-    const card = section.querySelector('#toggle-silence');
-    const statusEl = document.createElement('span');
-    statusEl.className = 'slicer-silence-status';
-    statusEl.textContent = ' Processing...';
-    card?.querySelector('.slicer-toggle-title')?.appendChild(statusEl);
-    
-    try {
-      const rawBlob = this._encodeWAV(this._rawVocalsBuffer);
-      
-      const formData = new FormData();
-      formData.append('file', new File([rawBlob], 'vocals.wav', { type: 'audio/wav' }));
-      formData.append('min_duration', String(this._minDuration));
-      formData.append('threshold_db', String(this._silenceThresh));
-      
-      const response = await fetch('/api/audio/compress-silence', {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (!response.ok) throw new Error(`Silence removal failed: ${response.status}`);
-      
-      const compressedBlob = await response.blob();
-      const arrayBuffer = await compressedBlob.arrayBuffer();
-      
-      this._initAudioContext();
-      this._processedBuffer = await this._audioContext!.decodeAudioData(arrayBuffer);
-      
-      statusEl.textContent = ' ✓ Ready';
-      setTimeout(() => statusEl.remove(), 2000);
-      
-    } catch (error) {
-      console.error('[AudioSlicerPanel] Silence removal failed:', error);
-      statusEl.textContent = ' ✗ Failed';
-      setTimeout(() => statusEl.remove(), 3000);
-    }
   }
   
   private _stopAll(): void {
@@ -1665,7 +1623,8 @@ private async _processVocals(): Promise<void> {
 	private _handleCommit(): void {
     const isolateVocals = this._isolateVocals || this._isolateCheckbox?.checked || false;
     const useSlice = this._markStart !== null && this._markEnd !== null;
-    const removeSilence = isolateVocals ? true : this._silenceEnabled;
+    const audioProcessing = this._controller.getState()?.composition.audio_processing;
+    const removeSilence = isolateVocals || audioProcessing?.remove_silence;
     
     // If vocals already processed client-side, use cached buffer and skip backend demucs
     const vocalsAlreadyProcessed = isolateVocals && !!this._rawVocalsBuffer;
@@ -1685,69 +1644,12 @@ private async _processVocals(): Promise<void> {
         endTime: vocalsAlreadyProcessed ? (this._rawVocalsBuffer?.duration ?? this._markEnd) : this._markEnd,
         isolateVocals: vocalsAlreadyProcessed ? false : isolateVocals, // Skip demucs if already done
         removeSilence,
-        silenceThreshold: this._silenceThresh,
-        silenceMinDuration: this._minDuration,
+        silenceThreshold: audioProcessing?.silence_threshold,
+      silenceMinDuration: audioProcessing?.silence_duration,
         sliceBlob: null, // Slicing handled by file selection above
         originalFile: fileToSend
       }
     });
-  }
-	
-	private async _applySilenceCompression(): Promise<void> {
-    if (!this._rawVocalsBuffer) {
-      console.warn('[AudioSlicerPanel] No raw vocals to compress');
-      return;
-    }
-    
-    // Use config values (set from composition_defaults.json in constructor)
-    // Do not override from DOM - instance properties are authoritative
-    
-    const applyBtn = this._container?.querySelector('.slicer-btn-apply-silence') as HTMLButtonElement;
-    if (applyBtn) applyBtn.textContent = '⏳ Applying...';
-    
-    try {
-      const rawBlob = this._encodeWAV(this._rawVocalsBuffer);
-      
-      const formData = new FormData();
-      formData.append('file', new File([rawBlob], 'vocals.wav', { type: 'audio/wav' }));
-      formData.append('min_duration', String(this._minDuration));
-      formData.append('threshold_db', String(this._silenceThresh));
-      
-      const response = await fetch('/api/audio/compress-silence', {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (!response.ok) throw new Error(`Compression failed: ${response.status}`);
-      
-      const compressedBlob = await response.blob();
-      const arrayBuffer = await compressedBlob.arrayBuffer();
-      
-      this._initAudioContext();
-      this._processedBuffer = await this._audioContext!.decodeAudioData(arrayBuffer);
-      
-      // Auto-play result
-      this._stopAll();
-      this._sourceNode = this._audioContext!.createBufferSource();
-      this._sourceNode.buffer = this._processedBuffer;
-      this._sourceNode.connect(this._audioContext!.destination);
-      this._sourceNode.start(0);
-      
-      this._isPreviewing = true;
-      
-      const previewBtn = this._container?.querySelector('.slicer-preview-row .slicer-btn-preview') as HTMLButtonElement;
-      if (previewBtn) previewBtn.textContent = '❚❚ Pause';
-      
-      this._sourceNode.onended = () => {
-        this._isPreviewing = false;
-        if (previewBtn) previewBtn.textContent = '▶ Preview';
-      };
-      
-    } catch (error) {
-      console.error('[AudioSlicerPanel] Silence compression failed:', error);
-    } finally {
-      if (applyBtn) applyBtn.textContent = 'Apply';
-    }
   }
   
   private _createSliceBlob(): Blob | null {
@@ -1846,7 +1748,7 @@ private async _processVocals(): Promise<void> {
     // Clear stored audio since user is starting fresh
     void this._clearAudioStorage();
     
-    this._dropZone?.classList.remove('hidden');
+    this._dropContent?.classList.remove('hidden');
     this._songLoaded?.classList.remove('visible');
     
     const songFooter = this._container?.querySelector('.slicer-song-footer') as HTMLElement;
@@ -1965,7 +1867,6 @@ private async _processVocals(): Promise<void> {
     this._pausedAt = 0;
     this._isPlaying = false;
     this._isolateVocals = false;
-    this._silenceEnabled = false;
     
     // Persist reset state to clear any stale values (unless skipping during restore)
     if (!skipPersist) {
@@ -2001,8 +1902,8 @@ private async _processVocals(): Promise<void> {
   /**
    * Load audio from an existing File object (e.g., from UploadPanel)
    */
-  public loadAudioFile(file: File): void {
-    this._loadFile(file);
+  public loadAudioFile(file: File, intent?: 'music' | 'speech'): void {
+    this._loadFile(file, false, intent);
   }
   
   /**
@@ -2012,7 +1913,7 @@ private async _processVocals(): Promise<void> {
     this._initAudioContext();
     this._audioBuffer = buffer;
     
-    this._dropZone?.classList.add('hidden');
+    this._dropContent?.classList.add('hidden');
     this._songLoaded?.classList.add('visible');
     
     const fileNameEl = this._container?.querySelector('.slicer-file-name');

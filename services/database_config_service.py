@@ -17,6 +17,7 @@ from database import (
     BackgroundPaint, BackgroundRoom, BackgroundConfig,
     CompositionDefaults, ColorPalette,
     PlacementDefaults,
+    CollectionsCatalog,
 )
 from services.dtos import CompositionStateDTO, PlacementDefaultsDTO, AudioProcessingDTO
 
@@ -44,6 +45,7 @@ class DatabaseConfigService:
             self._load_composition_defaults(session)
             self._load_placement_defaults(session)
             self._load_ui_config(session)
+            self._load_collections(session)
     
     # =========================================================================
     # WOOD MATERIALS
@@ -376,3 +378,15 @@ class DatabaseConfigService:
     def refresh(self) -> None:
         """Reload all configuration from database."""
         self._load_all_config()
+        
+    def _load_collections(self, session: Session) -> None:
+        """Load collections catalog from database."""
+        config = session.query(CollectionsCatalog).filter_by(id=1).first()
+        if config:
+            self._collections_catalog = config.data
+        else:
+            self._collections_catalog = {"version": "1.0", "artists": {}, "categories": [], "collections": []}
+
+    def get_collections_catalog(self) -> dict:
+        """Return collections catalog."""
+        return self._collections_catalog    

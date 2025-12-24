@@ -134,6 +134,11 @@ async def optimize_audio_settings(
         samples, _ = librosa.load(str(temp_input), sr=44100, mono=True)
         result = AudioProcessingService.analyze_and_optimize(samples, num_slots, mode)
         
+        for log in result.get("logs", []):
+            print(f"[OPTIMIZER] Exp {log['exp']}: Score={log['score']:.3f} (Spread={log['spread']:.2f}, Brick={log['brick']:.2f}, Ghost={log['ghost']:.2f})")
+        print(f"[OPTIMIZER] Selected: Exp={result['exponent']}, Status={result['status']}")
+        print(f"[OPTIMIZER] Params: binning={result['binning_mode']}, filter={result['filter_amount']}, silence={result['remove_silence']}, thresh={result['silence_threshold']}, dur={result['silence_duration']}")
+        
         return result
         
     except Exception as e:

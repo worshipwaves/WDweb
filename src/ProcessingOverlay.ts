@@ -70,7 +70,8 @@ export class ProcessingOverlay {
     if (stage === 'idle') {
       this.hide();
     } else {
-      this.show(config.message, config.showProgress ? progress : undefined);
+      const displayMessage = state.processing.message || config.message;
+      this.show(displayMessage, config.showProgress ? progress : undefined);
     }
   }
   

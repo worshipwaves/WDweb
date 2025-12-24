@@ -443,7 +443,8 @@ export const CollectionsCatalogSchema = z.object({
   categories: z.array(z.object({
     id: z.string(),
     label: z.string(),
-    icon: z.string().optional()
+    icon: z.string().optional(),
+    intent: z.string().optional()
   })).optional(),
   collections: z.array(CollectionItemSchema)
 });
@@ -569,6 +570,7 @@ export const ApplicationStateSchema = z.object({
   processing: z.object({
     stage: z.enum(['idle', 'uploading', 'preparing_textures', 'demucs', 'rendering']),
     progress: z.number(),
+    message: z.string().optional(),
   }),
 });
 

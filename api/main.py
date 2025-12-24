@@ -366,3 +366,8 @@ async def process_audio(
                 os.unlink(tmp_file.name)
             except:
                 pass        
+                
+@app.get("/api/config/collections")
+def get_collections_catalog():
+    """Get collections catalog."""
+    return config_service.get_collections_catalog()                

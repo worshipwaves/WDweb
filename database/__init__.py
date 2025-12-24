@@ -25,6 +25,7 @@ from database.models import (
     PlacementDefaults,
     # UI
     UIConfig,
+    CollectionsCatalog,
 )
 
 __all__ = [
@@ -50,4 +51,5 @@ __all__ = [
     "ColorPalette",
     "PlacementDefaults",
     "UIConfig",
+    "CollectionsCatalog",
 ]
