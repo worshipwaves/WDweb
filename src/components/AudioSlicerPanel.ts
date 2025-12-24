@@ -89,6 +89,9 @@ export class AudioSlicerPanel implements PanelComponent {
   
   // Isolate Vocals param
   private _isolateVocals: boolean = false;
+	
+	// Pending intent for deferred UI update
+  private _pendingIntent: 'music' | 'speech' | null = null;
 
   // Persisted state
   private _persistedFileName: string | null = null;
@@ -428,7 +431,15 @@ export class AudioSlicerPanel implements PanelComponent {
     
     return section;
   }
-
+	
+	private _applyPendingIntent(): void {
+    if (!this._pendingIntent || !this._uploadSection) return;
+    const radio = this._uploadSection.querySelector(`input[name="upload-intent"][value="${this._pendingIntent}"]`) as HTMLInputElement;
+    if (radio) {
+      radio.checked = true;
+      this._pendingIntent = null;
+    }
+  }
 	
 	renderUploadSection(): HTMLElement {
     const section = document.createElement('div');
@@ -489,6 +500,9 @@ export class AudioSlicerPanel implements PanelComponent {
     if (!this._audioBuffer) {
       void this._attemptAudioRestore();
     }
+		
+		// Apply any pending intent from collection load
+    this._applyPendingIntent();
     
     return section;
   }
@@ -888,6 +902,12 @@ export class AudioSlicerPanel implements PanelComponent {
         
         // Save to IndexedDB for persistence across refresh
         void this._saveAudioToStorage(file);
+				
+				// Update intent radio button if provided (or store for later if section not rendered)
+        if (intent) {
+          this._pendingIntent = intent;
+          this._applyPendingIntent();
+        }
         
         // Auto-optimize with intent, then commit
         await this._runOptimization(intent);

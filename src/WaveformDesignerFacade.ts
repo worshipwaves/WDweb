@@ -126,12 +126,13 @@ export class WaveformDesignerFacade {
    * Create initial application state
    */
   async createInitialState(): Promise<ApplicationState> {
-  const [composition, backgroundsConfig] = await Promise.all([
+  const [composition, backgroundsConfig, uiConfig] = await Promise.all([
     this.getDefaultState(),
     fetchAndValidate<BackgroundsConfig>(
       `${this.apiBase}/api/config/backgrounds`,
       BackgroundsConfigSchema
-    )
+    ),
+    fetch(`${this.apiBase}/api/config/ui`).then(r => r.json())
   ]);
   
   return {
@@ -151,7 +152,7 @@ export class WaveformDesignerFacade {
       isAutoPlaying: false,
       showHint: false,
       renderQuality: 'medium',
-      activeCategory: null,
+      activeCategory: uiConfig?.default_category || null,
       activeSubcategory: null,
       subcategoryHistory: {},
       filterSelections: {},

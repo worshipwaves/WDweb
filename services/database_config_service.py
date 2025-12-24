@@ -349,6 +349,7 @@ class DatabaseConfigService:
             "upload": config.upload or {},
             "thumbnail_config": config.thumbnail_config or {},
             "categories": config.categories or {},
+            "default_category": config.default_category or {},
         }
     
     def get_ui_config(self) -> dict:
