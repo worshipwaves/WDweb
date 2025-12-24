@@ -18,8 +18,9 @@ from database import (
     CompositionDefaults, ColorPalette,
     PlacementDefaults,
     CollectionsCatalog,
+    IntentDefaults,
 )
-from services.dtos import CompositionStateDTO, PlacementDefaultsDTO, AudioProcessingDTO
+from services.dtos import CompositionStateDTO, PlacementDefaultsDTO, AudioProcessingDTO, IntentDefaultsDTO
 
 
 class DatabaseConfigService:
@@ -46,6 +47,7 @@ class DatabaseConfigService:
             self._load_placement_defaults(session)
             self._load_ui_config(session)
             self._load_collections(session)
+            self._load_intent_defaults(session)
     
     # =========================================================================
     # WOOD MATERIALS
@@ -389,4 +391,20 @@ class DatabaseConfigService:
 
     def get_collections_catalog(self) -> dict:
         """Return collections catalog."""
-        return self._collections_catalog    
+        return self._collections_catalog   
+
+    # =========================================================================
+    # INTENT DEFAULTS
+    # =========================================================================
+    
+    def _load_intent_defaults(self, session: Session) -> None:
+        """Load intent defaults for audio processing."""
+        config = session.query(IntentDefaults).filter_by(id=1).first()
+        if config and config.config:
+            self._intent_defaults = IntentDefaultsDTO(**config.config)
+        else:
+            raise RuntimeError("Intent defaults not found in database")
+    
+    def get_intent_defaults(self) -> IntentDefaultsDTO:
+        """Return intent defaults DTO."""
+        return self._intent_defaults        

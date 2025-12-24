@@ -17,12 +17,13 @@ from services.audio_processing_service import AudioProcessingService
 router = APIRouter(prefix="/api/audio", tags=["audio"])
 
 # Initialize service
-from services.config_service import ConfigService
+from services.config_loader import get_config_service
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-_config_service = ConfigService(PROJECT_ROOT / "config")
+_config_service = get_config_service()
 _audio_config = _config_service.get_audio_processing_config()
+_intent_defaults = _config_service.get_intent_defaults()
 _demucs = DemucsService(
     audio_config=_audio_config,
     output_dir=PROJECT_ROOT / "temp" / "demucs_output"
@@ -132,7 +133,10 @@ async def optimize_audio_settings(
         temp_input.write_bytes(content)
         
         samples, _ = librosa.load(str(temp_input), sr=44100, mono=True)
-        result = AudioProcessingService.analyze_and_optimize(samples, num_slots, mode)
+        result = AudioProcessingService.analyze_and_optimize(
+            samples, num_slots, mode, 
+            intent_config=_intent_defaults.model_dump()
+        )
         
         for log in result.get("logs", []):
             print(f"[OPTIMIZER] Exp {log['exp']}: Score={log['score']:.3f} (Spread={log['spread']:.2f}, Brick={log['brick']:.2f}, Ghost={log['ghost']:.2f})")

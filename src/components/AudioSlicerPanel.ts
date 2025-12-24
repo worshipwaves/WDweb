@@ -10,14 +10,31 @@
  * - Emits AUDIO_SLICE_COMPLETE action via controller dispatch
  */
 
-import type { PanelComponent } from '../types/PanelTypes';
 import type { ApplicationController } from '../ApplicationController';
+import type { PanelComponent } from '../types/PanelTypes';
 
 interface SliceResult {
   blob: Blob;
   startTime: number;
   endTime: number;
   duration: number;
+}
+
+interface StoredAudioRecord {
+  id: string;
+  file: File;
+  fileName: string;
+  savedAt: number;
+}
+
+interface OptimizationResult {
+  exponent: number;
+  filter_amount: number;
+  silence_threshold: number;
+  binning_mode: string;
+  remove_silence: boolean;
+  silence_duration: number;
+  status: 'optimized' | 'fallback' | 'error';
 }
 
 export class AudioSlicerPanel implements PanelComponent {
@@ -138,7 +155,6 @@ export class AudioSlicerPanel implements PanelComponent {
         });
         
         tx.oncomplete = () => {
-          console.log('[AudioSlicerPanel] Audio saved to IndexedDB');
           db.close();
           resolve(true);
         };
@@ -164,9 +180,9 @@ export class AudioSlicerPanel implements PanelComponent {
         
         request.onsuccess = () => {
           db.close();
-          if (request.result?.file) {
-            console.log('[AudioSlicerPanel] Audio restored from IndexedDB');
-            resolve(request.result.file);
+          const record = request.result as StoredAudioRecord | undefined;
+          if (record?.file) {
+            resolve(record.file);
           } else {
             resolve(null);
           }
@@ -309,7 +325,6 @@ export class AudioSlicerPanel implements PanelComponent {
    */
   private _invalidateGeneratedBuffers(): void {
     if (this._rawVocalsBuffer || this._processedBuffer) {
-      console.log('[AudioSlicerPanel] Invalidating cached buffers');
       this._rawVocalsBuffer = null;
       this._processedBuffer = null;
     }
@@ -490,12 +505,12 @@ export class AudioSlicerPanel implements PanelComponent {
     this._dropZone?.addEventListener('drop', (e) => {
       e.preventDefault();
       this._dropZone?.classList.remove('dragover');
-      const file = (e as DragEvent).dataTransfer?.files[0];
-      if (file) this._loadFile(file);
+      const file = e.dataTransfer?.files[0];
+      if (file) void this._loadFile(file);
     });
     this._fileInput?.addEventListener('change', (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) this._loadFile(file);
+      if (file) void this._loadFile(file);
     });
     section.querySelector('.slicer-song-change')?.addEventListener('click', () => {
       this._resetToUpload();
@@ -503,10 +518,9 @@ export class AudioSlicerPanel implements PanelComponent {
     
     // Reprocess when intent changes if audio already loaded
     section.querySelectorAll('input[name="upload-intent"]').forEach(radio => {
-      radio.addEventListener('change', async () => {
+      radio.addEventListener('change', () => {
         if (this._originalFile && this._audioBuffer) {
-          await this._runOptimization();
-          this._handleCommit();
+          void this._runOptimization().then(() => this._handleCommit());
         }
       });
     });
@@ -530,9 +544,8 @@ export class AudioSlicerPanel implements PanelComponent {
         void this._processVocals();
       }
     });
-    section.querySelector('.slicer-btn-apply')?.addEventListener('click', async () => {
-      await this._runOptimization();
-      this._handleCommit();
+    section.querySelector('.slicer-btn-apply')?.addEventListener('click', () => {
+      void this._runOptimization().then(() => this._handleCommit());
     });
     
     window.addEventListener('resize', this._handleResize);
@@ -634,7 +647,7 @@ export class AudioSlicerPanel implements PanelComponent {
       
       if (!response.ok) throw new Error(`${response.status}`);
       
-      const result = await response.json();
+      const result = await response.json() as OptimizationResult;
       
       // 1. Get optimized composition DTO (Pure, no state mutation yet)
       const optimizedComposition = this._controller.createOptimizedComposition(result);
@@ -814,7 +827,8 @@ export class AudioSlicerPanel implements PanelComponent {
   
   private _initAudioContext(): void {
     if (!this._audioContext) {
-      this._audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      this._audioContext = new AudioCtx();
     }
   }
   
@@ -869,7 +883,7 @@ export class AudioSlicerPanel implements PanelComponent {
         this._controller.updateAudioSourceState({
           source_file: file.name,
           start_time: 0,
-          end_time: this._audioBuffer!.duration
+          end_time: this._audioBuffer.duration
         });
         
         // Save to IndexedDB for persistence across refresh
@@ -1087,7 +1101,7 @@ export class AudioSlicerPanel implements PanelComponent {
       const selectionStart = Math.min(this._markStart, this._markEnd);
       const selectionEnd = Math.max(this._markStart, this._markEnd);
       const selectionDuration = selectionEnd - selectionStart;
-      const visualTime = selectionStart + (t / this._rawVocalsBuffer!.duration) * selectionDuration;
+      const visualTime = selectionStart + (t / this._rawVocalsBuffer.duration) * selectionDuration;
       pct = (visualTime / this._audioBuffer.duration) * 100;
     } else {
       pct = (t / this._audioBuffer.duration) * 100;
@@ -1241,18 +1255,20 @@ export class AudioSlicerPanel implements PanelComponent {
     this._sourceNode.start(0, startTime, endTime - startTime);
     
     this._isPreviewing = true;
-    if (previewBtn) previewBtn.textContent = '❚❚ Pause';
+    const btn = previewBtn;
+    if (btn) btn.textContent = '❚❚ Pause';
     
     this._sourceNode.onended = () => {
       this._isPreviewing = false;
-      if (previewBtn) previewBtn.textContent = '▶ Preview';
+      if (btn) btn.textContent = '▶ Preview';
     };
   }
   private async _previewWithProcessing(previewBtn: HTMLButtonElement | null): Promise<void> {
     if (!this._audioBuffer || !this._originalFile) return;
     
     this._isProcessing = true;
-    if (previewBtn) previewBtn.textContent = '⏳ Processing...';
+    const btn = previewBtn;
+    if (btn) btn.textContent = '⏳ Processing...';
     
     try {
       // Build source audio
@@ -1299,30 +1315,12 @@ export class AudioSlicerPanel implements PanelComponent {
       this._isProcessing = false;
       this._pausedAt = 0;
       this._playStartedAt = this._audioContext!.currentTime;
-      if (previewBtn) previewBtn.textContent = '❚❚ Pause';
-      
-      // Start highlight animation loop
-      const duration = this._processedBuffer!.duration;
-      const updatePreviewHighlight = () => {
-        if (!this._isPreviewing) return;
-        const currentTime = this._audioContext!.currentTime - this._playStartedAt;
-        this._updateSlotHighlight(currentTime);
-        if (currentTime < duration) {
-          requestAnimationFrame(updatePreviewHighlight);
-        }
-      };
-      requestAnimationFrame(updatePreviewHighlight);
-      
-      this._sourceNode.onended = () => {
-        this._isPreviewing = false;
-        this._controller.highlightSlot(null);
-        if (previewBtn) previewBtn.textContent = '▶ Preview';
-      };
+      if (btn) btn.textContent = '❚❚ Pause';
       
     } catch (error) {
       console.error('[AudioSlicerPanel] Preview processing failed:', error);
       this._isProcessing = false;
-      if (previewBtn) previewBtn.textContent = '▶ Preview';
+      if (btn) btn.textContent = '▶ Preview';
     }
   }
 	
@@ -1504,11 +1502,12 @@ private async _processVocals(): Promise<void> {
     this._sourceNode.start(0);
     
     this._isPreviewing = true;
-    if (label) label.textContent = 'Pause';
+    const labelEl = label;
+    if (labelEl) labelEl.textContent = 'Pause';
     
     this._sourceNode.onended = () => {
       this._isPreviewing = false;
-      if (label) label.textContent = this._rawVocalsBuffer ? 'Preview Vocals' : 'Process & Preview';
+      if (labelEl) labelEl.textContent = this._rawVocalsBuffer ? 'Preview Vocals' : 'Process & Preview';
     };
   }
   
@@ -1730,8 +1729,9 @@ private async _processVocals(): Promise<void> {
     const target = this._container?.querySelector(`#${id}`) as HTMLDetailsElement;
     if (target) {
       // Close others
-      this._container?.querySelectorAll('.subcategory-item').forEach(item => {
-        (item as HTMLDetailsElement).open = false;
+      this._container?.querySelectorAll('.subcategory-item').forEach(el => {
+        const details = el as HTMLDetailsElement;
+        details.open = false;
       });
       target.open = true;
     }
@@ -1903,7 +1903,7 @@ private async _processVocals(): Promise<void> {
    * Load audio from an existing File object (e.g., from UploadPanel)
    */
   public loadAudioFile(file: File, intent?: 'music' | 'speech'): void {
-    this._loadFile(file, false, intent);
+    void this._loadFile(file, false, intent);
   }
   
   /**
@@ -1931,9 +1931,9 @@ private async _processVocals(): Promise<void> {
 		
 		// Persist filename to composition state
 		this._controller.updateAudioSourceState({
-			source_file: file.name,
+			source_file: fileName ?? '',
 			start_time: 0,
-			end_time: this._audioBuffer!.duration
+			end_time: this._audioBuffer.duration
 		});
   }
   
@@ -1946,7 +1946,7 @@ private async _processVocals(): Promise<void> {
     
     // Close audio context
     if (this._audioContext) {
-      this._audioContext.close();
+      void this._audioContext.close();
       this._audioContext = null;
     }
     

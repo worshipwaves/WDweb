@@ -363,11 +363,26 @@ class UIConfig(Base):
     thumbnail_config = Column(JSONB, default={})
     categories = Column(JSONB, default={})
     
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())    
-       
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())     
+
+# =============================================================================
+# INTENT CONFIGURATION
+# =============================================================================
+
+class IntentDefaults(Base):
+    """
+    Intent-driven audio processing defaults.
+    Singleton table (id=1) storing params for speech/music intents.
+    """
+    __tablename__ = "intent_defaults"
+    
+    id = Column(Integer, primary_key=True, default=1)
+    config = Column(JSONB, nullable=False)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    
 # =============================================================================
 # COLLECTIONS CATALOG
-# =============================================================================    
+# =============================================================================
 
 class CollectionsCatalog(Base):
     """Collections catalog - stores entire JSON structure"""

@@ -26,6 +26,8 @@ from database.models import (
     # UI
     UIConfig,
     CollectionsCatalog,
+    # Audio
+    IntentDefaults,
 )
 
 __all__ = [
@@ -52,4 +54,5 @@ __all__ = [
     "PlacementDefaults",
     "UIConfig",
     "CollectionsCatalog",
+    "IntentDefaults",
 ]

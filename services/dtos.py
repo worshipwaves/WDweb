@@ -26,7 +26,7 @@ ENGINE-FIXED (Literal):
 - artistic_style: shader implementations
 """
 
-from typing import List, Dict, Optional, Literal, Tuple, Any
+from typing import List, Dict, Optional, Literal, Tuple, Any, Union
 from pydantic import BaseModel, Field, ConfigDict, model_validator
 from pydantic.alias_generators import to_camel
 
@@ -166,6 +166,25 @@ class PatternSettingsDTO(BaseModel):
     lead_overlap: float = Field(ge=0.0)  # Upper bound from config
     lead_radius: float = Field(ge=0.05)  # Upper bound from config
     dovetail_settings: DovetailSettingsDTO
+    
+class IntentParamsDTO(BaseModel):
+    """Parameters for a single audio intent (speech or music)."""
+    model_config = ConfigDict(frozen=True, populate_by_name=True)
+    
+    binning_mode: Literal["mean_abs", "min_max", "continuous"]
+    filter_amount: float = Field(ge=0.0, le=1.0)
+    fallback_exponent: float = Field(ge=0.1, le=2.0)
+    remove_silence: bool
+    silence_duration: float = Field(ge=0.1)
+
+
+class IntentDefaultsDTO(BaseModel):
+    """Intent-driven audio processing configuration."""
+    model_config = ConfigDict(frozen=True, populate_by_name=True)
+    
+    speech: IntentParamsDTO
+    music: IntentParamsDTO
+    exponent_candidates: List[float]    
 
 
 # Audio Processing DTOs

@@ -381,21 +381,17 @@ class AudioProcessingService:
     def analyze_and_optimize(
         samples: np.ndarray, 
         num_slots: int, 
-        mode: str = "music"
+        mode: str,
+        intent_config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Runs a grid search to find the best amplitude exponent."""
         
-        # Mode defaults
-        if mode == "speech":
-            binning_mode = BinningMode.MIN_MAX
-            filter_amount = 0.05
-            fallback_exp = 0.6
-            candidates = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.25]
-        else:  # music
-            binning_mode = BinningMode.MEAN_ABSOLUTE
-            filter_amount = 0.02
-            fallback_exp = 1.0
-            candidates = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.25]
+        # Load from config (required)
+        params = intent_config[mode]
+        binning_mode = BinningMode(params["binning_mode"])
+        filter_amount = params["filter_amount"]
+        fallback_exp = params["fallback_exponent"]
+        candidates = intent_config["exponent_candidates"]
 
         # Resample
         resampled_samples = AudioProcessingService.extract_amplitudes(samples, 200000)
@@ -416,40 +412,34 @@ class AudioProcessingService:
                 noise_floor_db = 20 * np.log10(np.percentile(non_zeros, 15))
                 rec_threshold = int(max(-60, min(-10, noise_floor_db + 4)))
 
-        # Grid search
-        best_score = -float('inf')
-        best_exp = fallback_exp
-        logs = []
-
-        for exp in candidates:
+        # Grid search helper
+        def evaluate_exponent(exp: float) -> Tuple[float, Dict[str, Any]]:
             compressed = np.power(clean_data, exp)
-            
-            # Normalize
             max_val = np.max(compressed)
             if max_val > 1e-9:
                 compressed = compressed / max_val
-            
-            # Score
             p10 = np.percentile(compressed, 10)
             p90 = np.percentile(compressed, 90)
             spread = p90 - p10
-            
             brick_pct = np.sum(compressed > 0.95) / len(compressed)
             ghost_pct = np.sum(compressed < 0.15) / len(compressed)
-            
             score = spread - (brick_pct * 2.0) - (ghost_pct * 1.5)
-            
-            logs.append({
+            return score, {
                 "exp": exp,
                 "spread": round(spread, 4),
                 "brick": round(brick_pct, 4),
                 "ghost": round(ghost_pct, 4),
                 "score": round(score, 4)
-            })
-            
-            if score > best_score:
-                best_score = score
-                best_exp = exp
+            }
+        
+        # Evaluate all candidates (immutable)
+        results = tuple(evaluate_exponent(exp) for exp in candidates)
+        logs = tuple(log for _, log in results)
+        best_score, best_exp = max(
+            ((score, exp) for (score, _), exp in zip(results, candidates)),
+            key=lambda x: x[0],
+            default=(-float('inf'), fallback_exp)
+        )
 
         # Fallback check
         status = "success"
@@ -462,8 +452,8 @@ class AudioProcessingService:
             "filter_amount": filter_amount,
             "silence_threshold": rec_threshold,
             "binning_mode": binning_mode.value,
-            "remove_silence": mode == "speech",
-            "silence_duration": 0.2 if mode == "speech" else 0.5,
+            "remove_silence": params["remove_silence"],
+            "silence_duration": params["silence_duration"],
             "score": round(best_score, 4),
             "status": status,
             "logs": logs
