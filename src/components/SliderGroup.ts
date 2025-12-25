@@ -22,19 +22,25 @@ export class SliderGroup implements PanelComponent {
 	private _numberSections?: number;
 	private _slotStyle?: string;
 	private _title?: string;
+	private _onInteraction?: (isInteracting: boolean) => void;
+  private _isDragging = false;
+  private _windowMouseUpHandler: (() => void) | null = null;
+	private _pendingSliderValue: { id: string; value: number } | null = null;
   
   constructor(
     sliders: SliderConfig[],
     onChange: (id: string, value: number) => void,
     numberSections?: number,
     slotStyle?: string,
-    title?: string
+    title?: string,
+    onInteraction?: (isInteracting: boolean) => void
   ) {
     this._sliders = sliders;
     this._onChange = onChange;
     this._numberSections = numberSections;
     this._slotStyle = slotStyle;
     this._title = title;
+		this._onInteraction = onInteraction;
     
     // Apply dynamic max values based on number of sections
     this._updateDynamicMaxValues();
@@ -75,6 +81,20 @@ export class SliderGroup implements PanelComponent {
       header.innerHTML = `<h3>${this._title}</h3>`;
       container.appendChild(header);
     }
+		
+		// Window-level listeners to catch mouseup outside slider
+    this._windowMouseUpHandler = () => {
+      if (this._isDragging) {
+        this._isDragging = false;
+        // Fire pending value on drag end
+        if (this._pendingSliderValue) {
+          this._onChange(this._pendingSliderValue.id, this._pendingSliderValue.value);
+          this._pendingSliderValue = null;
+        }
+        this._onInteraction?.(false);
+      }
+    };
+    window.addEventListener('mouseup', this._windowMouseUpHandler);
 
     this._sliders.forEach(config => {
       // Check for discrete presets
@@ -118,6 +138,14 @@ export class SliderGroup implements PanelComponent {
       slider.step = String(config.step);
       slider.value = String(displayValue);
       slider.className = 'slider-input';
+			
+			// Track interaction start
+      slider.addEventListener('mousedown', () => {
+        if (!this._isDragging) {
+          this._isDragging = true;
+          this._onInteraction?.(true);
+        }
+      });
 
       // Event handler with debouncing
       let debounceTimer: number | null = null;
@@ -140,15 +168,13 @@ export class SliderGroup implements PanelComponent {
         // Update display immediately (visual feedback)
         valueDisplay.textContent = `${value + displayOffset}${config.unit || ''}`;
 
-        // Debounce the actual state update (backend call)
-        if (debounceTimer !== null) {
-          clearTimeout(debounceTimer);
-        }
-
-        debounceTimer = window.setTimeout(() => {
+        // Store value for render on drag end
+        if (this._isDragging) {
+          this._pendingSliderValue = { id: config.id, value };
+        } else {
+          // Not dragging (keyboard input, etc.) - fire immediately
           this._onChange(config.id, value);
-          debounceTimer = null;
-        }, 300); // Wait 300ms after user stops dragging
+        }
       });
 
       group.appendChild(slider);
@@ -206,6 +232,15 @@ export class SliderGroup implements PanelComponent {
   }
 
   destroy(): void {
+		// Clean up window-level event listener
+    if (this._windowMouseUpHandler) {
+      window.removeEventListener('mouseup', this._windowMouseUpHandler);
+      this._windowMouseUpHandler = null;
+    }
+    if (this._isDragging) {
+      this._isDragging = false;
+      this._onInteraction?.(false);
+    }
     if (this._container) {
       this._container.remove();
       this._container = null;

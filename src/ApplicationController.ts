@@ -178,8 +178,25 @@ export class ApplicationController {
 	private _compositionCache: Map<string, CompositionStateDTO> = new Map();
   private _marginPresetCache: Map<string, import('../types/schemas').MarginPreset[]> = new Map();
   private _isUpdatingComposition: boolean = false;
+	private _pendingCompositionUpdate: CompositionStateDTO | null = null;
+  private _isUserInteracting: boolean = false;
 	public getResolver(): ConstraintResolver | null {
     return this._resolver;
+  }
+	
+	/**
+   * Track user interaction state (e.g., slider dragging)
+   * Prevents DOM destruction during active drag operations
+   */
+  public setInteractionState(isInteracting: boolean): void {
+    this._isUserInteracting = isInteracting;
+    
+    // If interaction ended and no pending updates, refresh constraints
+    if (!isInteracting && !this._isUpdatingComposition && !this._pendingCompositionUpdate) {
+      if (this._accordion) {
+        this._accordion.refreshContent('layout');
+      }
+    }
   }
   
   private _isRectangularLinearN3Plus(archetypeId: string): boolean {
@@ -2809,7 +2826,9 @@ export class ApplicationController {
       sliderConfigs,
       (id, value) => void this._updateStateValue(id, value),
       this._state.composition.frame_design.number_sections,
-      this._state.composition.pattern_settings.slot_style
+      this._state.composition.pattern_settings.slot_style,
+      undefined,
+      (isInteracting) => this.setInteractionState(isInteracting)
     );
     
     const wrapper = document.createElement('div');
@@ -3316,7 +3335,9 @@ export class ApplicationController {
               void this._updateStateValue(id, value);
             },
             this._state.composition.frame_design.number_sections,
-            this._state.composition.pattern_settings.slot_style
+            this._state.composition.pattern_settings.slot_style,
+            undefined,
+            (isInteracting) => this.setInteractionState(isInteracting)
           );
           panelContent.appendChild(sliderGroup.render());
           
@@ -4407,10 +4428,11 @@ export class ApplicationController {
 	async handleCompositionUpdate(initialComposition: CompositionStateDTO): Promise<void> {
 		
     if (this._isUpdatingComposition) {
-      console.warn('[Controller] Composition update already in progress. Ignoring request.');
+      this._pendingCompositionUpdate = initialComposition;
       return;
     }
     this._isUpdatingComposition = true;
+		let geometryChanged = false;
     try {
       if (!this._state) {
         throw new Error('Controller not initialized');
@@ -4500,7 +4522,7 @@ export class ApplicationController {
       }
 
       // Invalidate margin presets if geometry changed
-      const geometryChanged = changedParams.some(p => 
+      geometryChanged = changedParams.some(p => 
         ['finish_x', 'finish_y', 'separation', 'number_sections', 'number_slots', 'side_margin'].includes(p)
       );
       if (geometryChanged && this._isRectangularLinearN3Plus(this._state.ui.selectedArchetypeId || '')) {
@@ -4694,13 +4716,19 @@ export class ApplicationController {
         // Notify subscribers so UI updates
         this.notifySubscribers();
       }
-			
+    } finally {
 			// Refresh layout panel if geometry changed to update slider constraints
-      if (this._accordion && geometryChanged) {
+      if (this._accordion && geometryChanged && !this._isUserInteracting) {
         this._accordion.refreshContent('layout');
       }
-    } finally {
       this._isUpdatingComposition = false;
+      
+      // Process any update that arrived during execution
+      if (this._pendingCompositionUpdate) {
+        const pending = this._pendingCompositionUpdate;
+        this._pendingCompositionUpdate = null;
+        void this.handleCompositionUpdate(pending);
+      }
     }
   } 
  
