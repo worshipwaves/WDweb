@@ -2101,7 +2101,8 @@ SPECIES CARDS - 140px
    ============================================ */
 
 .slicer-transport {
-  display: flex;
+  /*display: flex;*/
+	display: none !important;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
@@ -2113,13 +2114,28 @@ SPECIES CARDS - 140px
   font-weight: 400;
   color: rgb(var(--color-foreground-secondary));
   min-width: 36px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  padding: 2px 0;
+  outline: none;
+  cursor: text;
 }
 
-.slicer-time-current {
+.slicer-time:hover {
+  border-bottom-color: rgb(var(--color-border));
+}
+
+.slicer-time:focus {
+  border-bottom-color: rgb(var(--color-foreground));
+  color: rgb(var(--color-foreground));
+}
+
+.slicer-time-start {
   text-align: right;
 }
 
-.slicer-time-total {
+.slicer-time-end {
   text-align: left;
 }
 
@@ -2269,7 +2285,7 @@ SPECIES CARDS - 140px
   padding: 12px 4px 12px 12px;
   background: rgba(var(--color-foreground), 0.03);
   border: 1px solid rgb(var(--color-border));
-  margin-bottom: 16px;
+  margin-bottom: 28px;
 }
 
 .slicer-intent-controls {
@@ -2333,7 +2349,7 @@ SPECIES CARDS - 140px
   display: flex;
   align-items: stretch;
   gap: 8px;
-  margin-bottom: 32px;
+  margin: 28px 0;
 }
 
 .slicer-controls-row .slicer-play-btn {
@@ -2529,6 +2545,27 @@ SPECIES CARDS - 140px
 .slicer-mark-btn-time {
   font-size: 11px;
   font-weight: 500;
+  color: rgb(var(--color-foreground-secondary));
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  text-align: center;
+  width: 42px;
+  padding: 2px 0;
+  outline: none;
+  cursor: pointer;
+}
+
+.slicer-mark-btn-time:not([readonly]) {
+  border-bottom-color: rgb(var(--color-border));
+  cursor: text;
+}
+
+.slicer-mark-btn-time:focus {
+  border-bottom-color: rgb(var(--color-foreground));
+}
+
+.slicer-mark-btn-time::placeholder {
   color: rgb(var(--color-foreground-secondary));
 }
 

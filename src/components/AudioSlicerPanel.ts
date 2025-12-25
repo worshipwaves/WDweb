@@ -49,8 +49,8 @@ export class AudioSlicerPanel implements PanelComponent {
   private _ctx: CanvasRenderingContext2D | null = null;
   private _playhead: HTMLElement | null = null;
   private _selectionOverlay: HTMLElement | null = null;
-  private _currentTimeEl: HTMLElement | null = null;
-  private _totalTimeEl: HTMLElement | null = null;
+  private _startTimeInput: HTMLInputElement | null = null;
+  private _endTimeInput: HTMLInputElement | null = null;
   private _markStartBtn: HTMLButtonElement | null = null;
   private _markEndBtn: HTMLButtonElement | null = null;
   private _selectionValueEl: HTMLElement | null = null;
@@ -357,7 +357,7 @@ export class AudioSlicerPanel implements PanelComponent {
         <span class="slicer-section-number">1</span>
         <div class="slicer-section-text">
           <div class="slicer-section-title">Select part of the audio</div>
-          <div class="slicer-section-desc">Listen, then tap to mark your selection</div>
+          <div class="slicer-section-desc">Listen, then either drag the handles or tap to mark your selection</div>
         </div>
       </div>
       
@@ -383,9 +383,9 @@ export class AudioSlicerPanel implements PanelComponent {
       </div>
       
       <div class="slicer-transport">
-        <span class="slicer-time slicer-time-current">0:00</span>
+        <input type="text" class="slicer-time slicer-time-start" value="0:00" placeholder="0:00">
         <span class="slicer-time-separator">/</span>
-        <span class="slicer-time slicer-time-total">0:00</span>
+        <input type="text" class="slicer-time slicer-time-end" value="0:00" placeholder="0:00">
       </div>
       
       <div class="slicer-controls-row">
@@ -545,6 +545,21 @@ export class AudioSlicerPanel implements PanelComponent {
     section.querySelector('.slicer-play-btn')?.addEventListener('click', () => this._togglePlayback());
     section.querySelector('.slicer-btn-rewind')?.addEventListener('click', () => this._seek(-5));
     section.querySelector('.slicer-btn-forward')?.addEventListener('click', () => this._seek(5));
+		
+		// Transport time input editing
+    const transportStartInput = section.querySelector('.slicer-time-start') as HTMLInputElement;
+    const transportEndInput = section.querySelector('.slicer-time-end') as HTMLInputElement;
+    
+    transportStartInput?.addEventListener('blur', () => this._handleTransportTimeInput('start', transportStartInput));
+    transportStartInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); transportStartInput.blur(); }
+    });
+    
+    transportEndInput?.addEventListener('blur', () => this._handleTransportTimeInput('end', transportEndInput));
+    transportEndInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); transportEndInput.blur(); }
+    });
+		
     section.querySelector('.slicer-btn-mark-start')?.addEventListener('click', () => this._handleMarkStart());
     section.querySelector('.slicer-btn-mark-end')?.addEventListener('click', () => this._handleMarkEnd());
     section.querySelector('.slicer-btn-reset')?.addEventListener('click', () => this._resetToFullTrack());
@@ -700,8 +715,8 @@ export class AudioSlicerPanel implements PanelComponent {
     this._ctx = this._canvas?.getContext('2d') || null;
     this._playhead = section.querySelector('.slicer-playhead');
     this._playBtn = section.querySelector('.slicer-play-btn');
-    this._currentTimeEl = section.querySelector('.slicer-time-current');
-    this._totalTimeEl = section.querySelector('.slicer-time-total');
+    this._startTimeInput = section.querySelector('.slicer-time-start');
+    this._endTimeInput = section.querySelector('.slicer-time-end');
     this._selectionOverlay = section.querySelector('.slicer-selection');
     this._markStartBtn = section.querySelector('.slicer-btn-mark-start');
     this._markEndBtn = section.querySelector('.slicer-btn-mark-end');
@@ -721,8 +736,8 @@ export class AudioSlicerPanel implements PanelComponent {
 	
 	private _restoreTrimmerState(): void {
     // Restore total time
-    if (this._audioBuffer && this._totalTimeEl) {
-      this._totalTimeEl.textContent = this._formatTime(this._audioBuffer.duration);
+    if (this._audioBuffer) {
+      this._updateTransportTimes();
     }
     
     // Draw waveform if audio loaded
@@ -812,6 +827,7 @@ export class AudioSlicerPanel implements PanelComponent {
       if (statusEl) statusEl.textContent = '';
       this._updateSelection();
       this._updateMarkButtonsV2();
+      this._updateTransportTimes();
       this._updateSelectionSummary();
     };
 
@@ -878,9 +894,7 @@ export class AudioSlicerPanel implements PanelComponent {
       const songSubtitle = this._container?.querySelector('.slicer-song-subtitle');
       if (songSubtitle) songSubtitle.textContent = file.name;
       
-      if (this._totalTimeEl) {
-        this._totalTimeEl.textContent = this._formatTime(this._audioBuffer.duration);
-      }
+      this._updateTransportTimes();
       
       this._resetState(skipAutoCommit);
       // Initialize selection to full track so handles are visible
@@ -962,6 +976,56 @@ export class AudioSlicerPanel implements PanelComponent {
       // Scale RMS to visible height (RMS of full-scale sine is ~0.707)
       const barH = Math.max(1, rms * amp * 4.5);
       this._ctx.fillRect(i, amp - barH / 2, 1, barH);
+    }
+  }
+	
+	private _parseTime(timeStr: string): number | null {
+    const match = timeStr.trim().match(/^(\d+):(\d{2})$/);
+    if (!match) return null;
+    const mins = parseInt(match[1], 10);
+    const secs = parseInt(match[2], 10);
+    if (secs >= 60) return null;
+    return mins * 60 + secs;
+  }
+
+  private _handleTransportTimeInput(which: 'start' | 'end', input: HTMLInputElement): void {
+    const seconds = this._parseTime(input.value);
+    if (seconds === null || !this._audioBuffer) {
+      this._updateTransportTimes();
+      return;
+    }
+    const clamped = Math.max(0, Math.min(seconds, this._audioBuffer.duration));
+    if (which === 'start') {
+      this._markStart = clamped;
+      if (this._markEnd !== null && clamped > this._markEnd) {
+        this._markEnd = clamped;
+      }
+    } else {
+      this._markEnd = clamped;
+      if (this._markStart !== null && clamped < this._markStart) {
+        this._markStart = clamped;
+      }
+    }
+    this._updateSelection();
+    this._updateTransportTimes();
+    this._updateMarkButtonsV2();
+    this._updateCommitButton();
+    this._persistTrimState();
+  }
+
+  private _updateTransportTimes(): void {
+    if (!this._trimmerSection || !this._audioBuffer) return;
+    const startInput = this._trimmerSection.querySelector('.slicer-time-start') as HTMLInputElement;
+    const endInput = this._trimmerSection.querySelector('.slicer-time-end') as HTMLInputElement;
+    
+    const startTime = this._markStart ?? 0;
+    const endTime = this._markEnd ?? this._audioBuffer.duration;
+    
+    if (startInput && document.activeElement !== startInput) {
+      startInput.value = this._formatTime(startTime);
+    }
+    if (endInput && document.activeElement !== endInput) {
+      endInput.value = this._formatTime(endTime);
     }
   }
   
@@ -1075,7 +1139,7 @@ export class AudioSlicerPanel implements PanelComponent {
     if (pauseIcon) pauseIcon.style.display = 'none';
     playBtn?.classList.remove('playing');
     
-    if (this._currentTimeEl) this._currentTimeEl.textContent = this._formatTime(this._pausedAt);
+    // Playback position tracked internally, transport shows selection bounds
   }
   
   private _seek(delta: number): void {
@@ -1085,7 +1149,7 @@ export class AudioSlicerPanel implements PanelComponent {
     if (wasPlaying) this._stop();
     
     this._pausedAt = Math.max(0, Math.min(this._pausedAt + delta, this._audioBuffer.duration));
-    if (this._currentTimeEl) this._currentTimeEl.textContent = this._formatTime(this._pausedAt);
+    // Playback position tracked internally, transport shows selection bounds
     this._updatePlayheadPosition();
     
     if (wasPlaying) this._play();
@@ -1094,7 +1158,7 @@ export class AudioSlicerPanel implements PanelComponent {
   private _updatePlayhead(): void {
     const t = this._getCurrentTime();
     this._updatePlayheadPosition();
-    if (this._currentTimeEl) this._currentTimeEl.textContent = this._formatTime(t);
+    // Playback position tracked internally, transport shows selection bounds
     
     // Determine selection end (default to full track)
     const startTime = this._markStart ?? 0;
@@ -1137,6 +1201,7 @@ export class AudioSlicerPanel implements PanelComponent {
     this._updateSelection();
     this._updateCommitButton();
     this._updateMarkButtonsV2();
+    this._updateTransportTimes();
     this._updateSelectionSummary();
     this._controller.updateAudioAccordionValue('slicing');
     this._persistTrimState();
@@ -1156,6 +1221,7 @@ export class AudioSlicerPanel implements PanelComponent {
     this._updateSelection();
     this._updateCommitButton();
     this._updateMarkButtonsV2();
+    this._updateTransportTimes();
     this._updateSelectionSummary();
     this._controller.updateAudioAccordionValue('slicing');
     this._persistTrimState();
@@ -1587,7 +1653,7 @@ private async _processVocals(): Promise<void> {
     this._selectionOverlay?.classList.remove('visible');
     this._playhead?.classList.remove('visible');
     
-    if (this._currentTimeEl) this._currentTimeEl.textContent = '0:00';
+    this._updateTransportTimes();
     
     // Enable preview/commit if audio loaded
     if (this._audioBuffer) {
@@ -1916,7 +1982,7 @@ private async _processVocals(): Promise<void> {
     this._selectionOverlay?.classList.remove('visible');
     this._playhead?.classList.remove('visible');
     
-    if (this._currentTimeEl) this._currentTimeEl.textContent = '0:00';
+    this._updateTransportTimes();
   }
   
   /**
@@ -1939,9 +2005,7 @@ private async _processVocals(): Promise<void> {
     const fileNameEl = this._container?.querySelector('.slicer-file-name');
     if (fileNameEl) fileNameEl.textContent = fileName || 'Audio';
     
-    if (this._totalTimeEl) {
-      this._totalTimeEl.textContent = this._formatTime(buffer.duration);
-    }
+    this._updateTransportTimes();
     
     this._resetState();
 		this._invalidateGeneratedBuffers();
