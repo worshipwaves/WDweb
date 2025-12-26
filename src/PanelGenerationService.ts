@@ -13,6 +13,12 @@ import {
 	TransformNode
 } from '@babylonjs/core';
 
+// BabylonJS requires earcut for ExtrudePolygon triangulation
+import earcut from 'earcut';
+if (typeof window !== 'undefined' && !(window as any).earcut) {
+  (window as any).earcut = earcut;
+}
+
 interface PanelConfig {
   thickness: number;
   separation: number;
@@ -39,6 +45,10 @@ interface SlotData {
   panelIndex?: number;
   vertices?: number[][];  // Array of [x, y] coordinates
 }
+
+// Fillet parameters for CNC router visualization
+const FILLET_RADIUS = 0.125;  // Half of 0.25" bit diameter
+const FILLET_SEGMENTS = 4;    // Arc segments per corner
 
 export class PanelGenerationService {
   private debugMode: boolean = false;
@@ -501,6 +511,49 @@ export class PanelGenerationService {
     return result;
   }
   
+  private getFilletedPath(vertices: Vector3[], radius: number, segments: number): Vector3[] {
+    const result: Vector3[] = [];
+    const n = vertices.length;
+    
+    for (let i = 0; i < n; i++) {
+      const prev = vertices[(i - 1 + n) % n];
+      const curr = vertices[i];
+      const next = vertices[(i + 1) % n];
+      
+      const toPrev = { x: prev.x - curr.x, z: prev.z - curr.z };
+      const toNext = { x: next.x - curr.x, z: next.z - curr.z };
+      
+      const lenPrev = Math.sqrt(toPrev.x ** 2 + toPrev.z ** 2);
+      const lenNext = Math.sqrt(toNext.x ** 2 + toNext.z ** 2);
+      
+      const dirPrev = { x: toPrev.x / lenPrev, z: toPrev.z / lenPrev };
+      const dirNext = { x: toNext.x / lenNext, z: toNext.z / lenNext };
+      
+      const effectiveRadius = Math.min(radius, lenPrev * 0.4, lenNext * 0.4);
+      
+      const arcStart = {
+        x: curr.x + dirPrev.x * effectiveRadius,
+        z: curr.z + dirPrev.z * effectiveRadius
+      };
+      const arcEnd = {
+        x: curr.x + dirNext.x * effectiveRadius,
+        z: curr.z + dirNext.z * effectiveRadius
+      };
+      
+      for (let s = 0; s <= segments; s++) {
+        const t = s / segments;
+        const mt = 1 - t;
+        result.push(new Vector3(
+          mt * mt * arcStart.x + 2 * mt * t * curr.x + t * t * arcEnd.x,
+          0,
+          mt * mt * arcStart.z + 2 * mt * t * curr.z + t * t * arcEnd.z
+        ));
+      }
+    }
+    
+    return result;
+  }
+
 	private createSlotBox(slot: SlotData, config: PanelConfig): Mesh {
 		if (!slot.vertices || slot.vertices.length !== 4) {
       throw new Error(`Slot missing required vertices data`);
@@ -509,57 +562,39 @@ export class PanelGenerationService {
     // Transform CNC coordinates to Babylon coordinates
     const CNC_CENTER_X = config.finishX / 2.0;
     const CNC_CENTER_Y = config.finishY / 2.0;
-    const vertices2D = slot.vertices.map(v => [
-      v[0] - CNC_CENTER_X,  // CNC X → Babylon X
-      v[1] - CNC_CENTER_Y   // CNC Y → Babylon Z
-    ]);
     
-    const positions: number[] = [];
+    let shapePoints = slot.vertices.map(v => new Vector3(
+      v[0] - CNC_CENTER_X,
+      0,
+      v[1] - CNC_CENTER_Y
+    ));
+    
+    // Enforce consistent winding (CCW) via signed area check
+    let sum = 0;
+    for (let i = 0; i < shapePoints.length; i++) {
+      const cur = shapePoints[i];
+      const next = shapePoints[(i + 1) % shapePoints.length];
+      sum += (next.x - cur.x) * (next.z + cur.z);
+    }
+    if (sum > 0) {
+      shapePoints.reverse();
+    }
+    
+    // Apply fillets to corners
+    const filletedPoints = this.getFilletedPath(shapePoints, FILLET_RADIUS, FILLET_SEGMENTS);
+    
+    // Extrude using Earcut triangulation (robust for N-gons)
     const extrudeHeight = config.thickness * 3;
+    const slotMesh = MeshBuilder.ExtrudePolygon('slotCutter', {
+      shape: filletedPoints,
+      depth: extrudeHeight,
+      sideOrientation: Mesh.DOUBLESIDE
+    }, this.scene);
     
-    // Bottom face
-    for (const v of vertices2D) {
-      positions.push(v[0], -extrudeHeight, v[1]);
-    }
+    // Center vertically (ExtrudePolygon extrudes downward from y=0)
+    slotMesh.position.y = extrudeHeight / 2;
     
-    // Top face
-    for (const v of vertices2D) {
-      positions.push(v[0], extrudeHeight, v[1]);
-    }
-    
-    // Check if vertices form axis-aligned rectangle (linear slots)
-    const isLinearRect = Math.abs(vertices2D[0][0] - vertices2D[1][0]) < 0.001 &&
-                         Math.abs(vertices2D[2][0] - vertices2D[3][0]) < 0.001;
-    
-    const indices: number[] = isLinearRect ? [
-      0, 1, 2, 0, 2, 3,  // Bottom (rectangle winding)
-      4, 6, 5, 4, 7, 6,  // Top
-      0, 4, 5, 0, 5, 1,  // Sides
-      1, 5, 6, 1, 6, 2,
-      2, 6, 7, 2, 7, 3,
-      3, 7, 4, 3, 4, 0
-    ] : [
-      0, 2, 1, 0, 3, 2,  // Bottom (trapezoid winding)
-      4, 5, 6, 4, 6, 7,  // Top
-      0, 1, 5, 0, 5, 4,  // Sides
-      1, 2, 6, 1, 6, 5,
-      2, 3, 7, 2, 7, 6,
-      3, 0, 4, 3, 4, 7
-    ];
-    
-    const customMesh = new Mesh('slotWedge', this.scene);
-    const vertexData = new VertexData();
-    
-    vertexData.positions = positions;
-    vertexData.indices = indices;
-    
-    const normals: number[] = [];
-    VertexData.ComputeNormals(positions, indices, normals);
-    vertexData.normals = normals;
-    
-    vertexData.applyToMesh(customMesh);
-    
-    return customMesh;
+    return slotMesh;
   }
 
   private filterSlotsForSection(slots: SlotData[], sectionIndex: number, config: PanelConfig): SlotData[] {
