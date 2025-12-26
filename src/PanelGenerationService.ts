@@ -588,7 +588,10 @@ export class PanelGenerationService {
     const slotMesh = MeshBuilder.ExtrudePolygon('slotCutter', {
       shape: filletedPoints,
       depth: extrudeHeight,
-      sideOrientation: Mesh.DOUBLESIDE
+      sideOrientation: Mesh.DOUBLESIDE,
+      bevel: true,
+      bevelSize: 0.125,
+      bevelSegments: 1
     }, this.scene);
     
     // Center vertically (ExtrudePolygon extrudes downward from y=0)

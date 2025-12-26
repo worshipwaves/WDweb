@@ -144,8 +144,7 @@ export class SceneManager {
     private setupCamera(): ArcRotateCamera {
         const camera = new ArcRotateCamera('mainCamera', Math.PI / 2, Math.PI / 2, 50, Vector3.Zero(), this._scene);  // Standard 50" gallery viewing distance
         this._baseCameraRadius = camera.radius;  // Capture base for scene-specific calculations
-        camera.lowerRadiusLimit = 20;
-        camera.lowerRadiusLimit = 20;
+        camera.lowerRadiusLimit = 1;
         camera.upperRadiusLimit = 300;
         camera.lowerBetaLimit = 0.1;
         camera.upperBetaLimit = Math.PI - 0.1;
@@ -993,14 +992,14 @@ export class SceneManager {
     }
 	
     public toggleZoom(zoomIn: boolean): void {
-        let targetRadius = zoomIn ? this._camera.radius / 1.1 : this._camera.radius * 1.1;
+        let targetRadius = zoomIn ? this._camera.radius / 1.5 : this._camera.radius * 1.5;
         targetRadius = Math.max(this._camera.lowerRadiusLimit ?? 1, Math.min(targetRadius, this._camera.upperRadiusLimit ?? 1000));
         const anim = new Animation('camRadius', 'radius', 30, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_CONSTANT);
         anim.setKeys([{ frame: 0, value: this._camera.radius }, { frame: 20, value: targetRadius }]);
         const ease = new CubicEase();
         ease.setEasingMode(EasingFunction.EASINGMODE_EASEOUT);
         anim.setEasingFunction(ease);
-        this._camera.animations.push(anim);
+        this._camera.animations = [anim];
         this._scene.beginAnimation(this._camera, 0, 20, false);
     }
 	
