@@ -69,18 +69,18 @@ class AudioProcessingService:
         CRITICAL: Must run BEFORE applying exponent/compression.
         Matches PyQt's filter_data exactly.
         """
-        print(f"[FILTER ENTRY] Called with {len(amplitudes) if amplitudes is not None else 0} samples, filter_amount={filter_amount}", flush=True)
         if amplitudes is None or len(amplitudes) == 0:
             return np.array([])
-        temp_amps = np.sort(amplitudes.copy())
-        n = max(1, int(len(temp_amps) * filter_amount))
-        average_noise = np.mean(temp_amps[:n])
+        n = max(1, int(len(amplitudes) * filter_amount))
+        # np.partition is O(n) vs O(n log n) for sort - only need smallest n values
+        partitioned = np.partition(amplitudes.copy(), n)
+        average_noise = np.mean(partitioned[:n])
         filtered_amps = np.maximum(0, amplitudes - average_noise)
         max_orig = np.max(amplitudes)
         max_filt = np.max(filtered_amps)
         if max_filt > 1e-9:
             filtered_amps = filtered_amps * (max_orig / max_filt)
-        print(f"[FILTER DEBUG] max_orig={max_orig}, max_filt={max_filt}, result_max={np.max(filtered_amps)}")
+
         return filtered_amps    
     
     @staticmethod
@@ -407,39 +407,47 @@ class AudioProcessingService:
                 noise_floor_db = 20 * np.log10(np.percentile(non_zeros, 15))
                 rec_threshold = int(max(-60, min(-10, noise_floor_db + 4)))
 
-        # 2D grid search: filter × exponent
-        best_score = -float('inf')
-        best_exp = fallback_exp
-        best_filter = fallback_filter
-        logs = []
-        
-        for filter_amt in filter_candidates:
-            filtered = AudioProcessingService.filter_data(baseline, filter_amt)
-            for exp in exponent_candidates:
-                compressed = np.power(filtered, exp)
-                max_val = np.max(compressed)
-                if max_val > 1e-9:
-                    compressed = compressed / max_val
-                p10 = np.percentile(compressed, 10)
-                p90 = np.percentile(compressed, 90)
-                spread = p90 - p10
-                brick_pct = np.sum(compressed > 0.95) / len(compressed)
-                ghost_pct = np.sum(compressed < 0.15) / len(compressed)
-                score = spread - (brick_pct * 2.0) - (ghost_pct * 1.5)
-                logs.append({
-                    "filter": filter_amt,
-                    "exp": exp,
-                    "spread": round(spread, 4),
-                    "brick": round(brick_pct, 4),
-                    "ghost": round(ghost_pct, 4),
-                    "score": round(score, 4)
-                })
-                if score > best_score:
-                    best_score = score
-                    best_exp = exp
-                    best_filter = filter_amt
+        # Define calculation logic as a pure inner function
+        def evaluate_candidate(f_amt: float, exp: float) -> Dict[str, Any]:
+            filtered = AudioProcessingService.filter_data(baseline, f_amt)
+            compressed = np.power(filtered, exp)
+            
+            max_val = np.max(compressed)
+            if max_val > 1e-9:
+                compressed = compressed / max_val
+            
+            p10 = np.percentile(compressed, 10)
+            p90 = np.percentile(compressed, 90)
+            spread = p90 - p10
+            brick_pct = np.sum(compressed > 0.95) / len(compressed)
+            ghost_pct = np.sum(compressed < 0.15) / len(compressed)
+            score = spread - (brick_pct * 2.0) - (ghost_pct * 1.5)
+            
+            return {
+                "filter": f_amt,
+                "exp": exp,
+                "spread": round(spread, 4),
+                "brick": round(brick_pct, 4),
+                "ghost": round(ghost_pct, 4),
+                "score": round(score, 4)
+            }
 
-        # Fallback check
+        # 1. Generate logs list immutably (Replacement for loop + append)
+        logs = tuple(
+            evaluate_candidate(f_amt, exp)
+            for f_amt in filter_candidates
+            for exp in exponent_candidates
+        )
+
+        # 2. Find best candidate based on score
+        best_candidate = max(logs, key=lambda x: x['score']) if logs else None
+        
+        # Default to fallbacks if calculation failed or list empty
+        best_score = best_candidate['score'] if best_candidate else -float('inf')
+        best_exp = best_candidate['exp'] if best_candidate else fallback_exp
+        best_filter = best_candidate['filter'] if best_candidate else fallback_filter
+
+        # 3. Fallback check (Logic parity with original)
         status = "success"
         if best_score < -0.1:
             best_exp = fallback_exp
