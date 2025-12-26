@@ -172,8 +172,10 @@ class IntentParamsDTO(BaseModel):
     model_config = ConfigDict(frozen=True, populate_by_name=True)
     
     binning_mode: Literal["mean_abs", "min_max", "continuous"]
-    filter_amount: float = Field(ge=0.0, le=1.0)
+    filter_candidates: List[float]
+    fallback_filter: float = Field(ge=0.0, le=1.0)
     fallback_exponent: float = Field(ge=0.1, le=2.0)
+    exponent_candidates: List[float]
     remove_silence: bool
     silence_duration: float = Field(ge=0.1)
 
@@ -183,8 +185,7 @@ class IntentDefaultsDTO(BaseModel):
     model_config = ConfigDict(frozen=True, populate_by_name=True)
     
     speech: IntentParamsDTO
-    music: IntentParamsDTO
-    exponent_candidates: List[float]    
+    music: IntentParamsDTO   
 
 
 # Audio Processing DTOs

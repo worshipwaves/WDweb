@@ -16,6 +16,7 @@ interface ExtendedSliderConfig extends SliderConfig {
 
 
 export class SliderGroup implements PanelComponent {
+	private static _keyboardHandlerInitialized = false;
   private _container: HTMLElement | null = null;
   private _sliders: SliderConfig[];
   private _onChange: (id: string, value: number) => void;
@@ -40,10 +41,62 @@ export class SliderGroup implements PanelComponent {
     this._numberSections = numberSections;
     this._slotStyle = slotStyle;
     this._title = title;
-		this._onInteraction = onInteraction;
     
     // Apply dynamic max values based on number of sections
     this._updateDynamicMaxValues();
+    
+    // Initialize keyboard handler once
+    SliderGroup._initKeyboardHandler();
+  }
+  
+  /**
+   * Enable keyboard arrow keys for sliders.
+   * BabylonJS captures keyboard at window level; this intercepts for sliders.
+   */
+  private static _initKeyboardHandler(): void {
+    if (SliderGroup._keyboardHandlerInitialized) return;
+    SliderGroup._keyboardHandlerInitialized = true;
+    
+    let activeSlider: HTMLInputElement | null = null;
+    let renderTimer: number | null = null;
+    
+    document.addEventListener('mousedown', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('slider-input')) {
+        activeSlider = target as HTMLInputElement;
+      } else if (!target.closest('.slider-control')) {
+        activeSlider = null;
+      }
+    }, true);
+    
+    window.addEventListener('keydown', (e) => {
+      if (!activeSlider) return;
+      if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+      
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      
+      if (renderTimer !== null) clearTimeout(renderTimer);
+      
+      const step = parseFloat(activeSlider.step) || 1;
+      const min = parseFloat(activeSlider.min);
+      const max = parseFloat(activeSlider.max);
+      let val = parseFloat(activeSlider.value);
+      
+      if (e.key === 'ArrowRight' || e.key === 'ArrowUp') val += step;
+      else val -= step;
+      
+      val = Math.max(min, Math.min(max, val));
+      activeSlider.value = String(val);
+      
+      const display = activeSlider.closest('.slider-control')?.querySelector('.slider-value');
+      if (display) display.textContent = val + '"';
+      
+      const slider = activeSlider;
+      renderTimer = window.setTimeout(() => {
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+      }, 300);
+    }, true);
   }
   
   /**

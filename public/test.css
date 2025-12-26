@@ -1323,7 +1323,7 @@ input:checked + .toggle-slider:before {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0px 25px 18px;
+  padding: 8px 25px 28px 36px;
   background: rgb(var(--color-background));
 }
 
@@ -2265,7 +2265,7 @@ SPECIES CARDS - 140px
 .slicer-card {
   background: rgba(var(--color-foreground), 0.03);
   border: 1px solid rgb(var(--color-border));
-  margin-bottom: 16px;
+  margin-bottom: 28px;
 }
 
 .slicer-card .slicer-section-header {
@@ -3037,8 +3037,8 @@ body.menus-hidden:not(.room-blank-wall) .bottom-controls {
    ============================================ */
 
 .collection-variant-area {
-  margin-top: 16px;
-  padding: 12px 16px;
+  margin-top: 18px;
+  padding: 12px 16px 12px 36px;
   background: rgba(var(--color-foreground), 0.03);
   border-radius: 4px;
   min-height: 44px;

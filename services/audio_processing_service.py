@@ -65,19 +65,23 @@ class AudioProcessingService:
     @staticmethod
     def filter_data(amplitudes: np.ndarray, filter_amount: float) -> np.ndarray:
         """
-        Filter data by subtracting noise floor and renormalizing.
+        Filter data by subtracting noise floor and rescaling to preserve original max.
         CRITICAL: Must run BEFORE applying exponent/compression.
+        Matches PyQt's filter_data exactly.
         """
-        if len(amplitudes) == 0 or filter_amount <= 0:
-            return amplitudes
-        sorted_amps = np.array(sorted(np.abs(amplitudes)))
-        n = max(1, int(len(sorted_amps) * filter_amount))
-        noise_floor = np.mean(sorted_amps[:n])
-        filtered = np.maximum(0, np.abs(amplitudes) - noise_floor)
-        max_val = np.max(filtered)
-        if max_val > 1e-9:
-            filtered = filtered / max_val
-        return filtered
+        print(f"[FILTER ENTRY] Called with {len(amplitudes) if amplitudes is not None else 0} samples, filter_amount={filter_amount}", flush=True)
+        if amplitudes is None or len(amplitudes) == 0:
+            return np.array([])
+        temp_amps = np.sort(amplitudes.copy())
+        n = max(1, int(len(temp_amps) * filter_amount))
+        average_noise = np.mean(temp_amps[:n])
+        filtered_amps = np.maximum(0, amplitudes - average_noise)
+        max_orig = np.max(amplitudes)
+        max_filt = np.max(filtered_amps)
+        if max_filt > 1e-9:
+            filtered_amps = filtered_amps * (max_orig / max_filt)
+        print(f"[FILTER DEBUG] max_orig={max_orig}, max_filt={max_filt}, result_max={np.max(filtered_amps)}")
+        return filtered_amps    
     
     @staticmethod
     def extract_amplitudes(y: np.ndarray, num_amplitudes: int) -> np.ndarray:
@@ -159,8 +163,8 @@ class AudioProcessingService:
             samples_per_slot = len(amplitudes) / num_slots
             
             for slot_idx in range(num_slots):
-                start_idx = int(slot_idx * samples_per_slot)
-                end_idx = int((slot_idx + 1) * samples_per_slot)
+                start_idx = int(round(slot_idx * samples_per_slot))
+                end_idx = int(round((slot_idx + 1) * samples_per_slot))
                 end_idx = min(end_idx, len(amplitudes))
                 
                 if start_idx >= end_idx:
@@ -325,7 +329,7 @@ class AudioProcessingService:
             "filter_amount": filter_amount
         })
         
-        # Stage 4: Apply exponent
+        # Stage 4: Apply exponent (PyQt does NOT renormalize after this)
         exponent = state.pattern_settings.amplitude_exponent
         if exponent != 1.0:
             min_normalized = np.power(np.abs(min_normalized), exponent) * np.sign(min_normalized)
@@ -338,13 +342,6 @@ class AudioProcessingService:
             "first10": max_normalized[:10].tolist(),
             "exponent": exponent
         })
-        
-        # Normalize after exponent (match PyQt behavior)
-        all_values = np.concatenate([np.abs(min_normalized), np.abs(max_normalized)])
-        max_val = np.max(all_values)
-        if max_val > 1e-9:
-            min_normalized = min_normalized / max_val
-            max_normalized = max_normalized / max_val
         
         _parity_json("stage4b_normalized", {
             "count": len(max_normalized),
@@ -389,9 +386,10 @@ class AudioProcessingService:
         # Load from config (required)
         params = intent_config[mode]
         binning_mode = BinningMode(params["binning_mode"])
-        filter_amount = params["filter_amount"]
+        filter_candidates = params["filter_candidates"]
+        fallback_filter = params["fallback_filter"]
         fallback_exp = params["fallback_exponent"]
-        candidates = intent_config["exponent_candidates"]
+        exponent_candidates = params["exponent_candidates"]
 
         # Resample
         resampled_samples = AudioProcessingService.extract_amplitudes(samples, 200000)
@@ -399,9 +397,6 @@ class AudioProcessingService:
         # Bin
         _, max_b = AudioProcessingService.bin_amplitudes(resampled_samples, num_slots, binning_mode)
         baseline = max_b
-        
-        # Filter
-        clean_data = AudioProcessingService.filter_data(baseline, filter_amount)
 
         # Dynamic silence threshold (speech only)
         rec_threshold = -40
@@ -412,34 +407,37 @@ class AudioProcessingService:
                 noise_floor_db = 20 * np.log10(np.percentile(non_zeros, 15))
                 rec_threshold = int(max(-60, min(-10, noise_floor_db + 4)))
 
-        # Grid search helper
-        def evaluate_exponent(exp: float) -> Tuple[float, Dict[str, Any]]:
-            compressed = np.power(clean_data, exp)
-            max_val = np.max(compressed)
-            if max_val > 1e-9:
-                compressed = compressed / max_val
-            p10 = np.percentile(compressed, 10)
-            p90 = np.percentile(compressed, 90)
-            spread = p90 - p10
-            brick_pct = np.sum(compressed > 0.95) / len(compressed)
-            ghost_pct = np.sum(compressed < 0.15) / len(compressed)
-            score = spread - (brick_pct * 2.0) - (ghost_pct * 1.5)
-            return score, {
-                "exp": exp,
-                "spread": round(spread, 4),
-                "brick": round(brick_pct, 4),
-                "ghost": round(ghost_pct, 4),
-                "score": round(score, 4)
-            }
+        # 2D grid search: filter × exponent
+        best_score = -float('inf')
+        best_exp = fallback_exp
+        best_filter = fallback_filter
+        logs = []
         
-        # Evaluate all candidates (immutable)
-        results = tuple(evaluate_exponent(exp) for exp in candidates)
-        logs = tuple(log for _, log in results)
-        best_score, best_exp = max(
-            ((score, exp) for (score, _), exp in zip(results, candidates)),
-            key=lambda x: x[0],
-            default=(-float('inf'), fallback_exp)
-        )
+        for filter_amt in filter_candidates:
+            filtered = AudioProcessingService.filter_data(baseline, filter_amt)
+            for exp in exponent_candidates:
+                compressed = np.power(filtered, exp)
+                max_val = np.max(compressed)
+                if max_val > 1e-9:
+                    compressed = compressed / max_val
+                p10 = np.percentile(compressed, 10)
+                p90 = np.percentile(compressed, 90)
+                spread = p90 - p10
+                brick_pct = np.sum(compressed > 0.95) / len(compressed)
+                ghost_pct = np.sum(compressed < 0.15) / len(compressed)
+                score = spread - (brick_pct * 2.0) - (ghost_pct * 1.5)
+                logs.append({
+                    "filter": filter_amt,
+                    "exp": exp,
+                    "spread": round(spread, 4),
+                    "brick": round(brick_pct, 4),
+                    "ghost": round(ghost_pct, 4),
+                    "score": round(score, 4)
+                })
+                if score > best_score:
+                    best_score = score
+                    best_exp = exp
+                    best_filter = filter_amt
 
         # Fallback check
         status = "success"
@@ -449,7 +447,7 @@ class AudioProcessingService:
 
         return {
             "exponent": best_exp,
-            "filter_amount": filter_amount,
+            "filter_amount": best_filter,
             "silence_threshold": rec_threshold,
             "binning_mode": binning_mode.value,
             "remove_silence": params["remove_silence"],
