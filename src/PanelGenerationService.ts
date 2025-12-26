@@ -180,7 +180,7 @@ export class PanelGenerationService {
       const cylinder = MeshBuilder.CreateCylinder('baseDisc', {
         diameter: dim.width,
         height: config.thickness,
-        tessellation: 64,
+        tessellation: 128,
         cap: Mesh.CAP_ALL
       }, this.scene);
       
@@ -391,7 +391,7 @@ export class PanelGenerationService {
         const fullDisc = MeshBuilder.CreateCylinder('baseDisc', {
           diameter: config.finishX,  // Full size, not section size
           height: config.thickness,
-          tessellation: 64,
+          tessellation: 128,
           cap: Mesh.CAP_ALL
         }, this.scene);
         fullDisc.bakeCurrentTransformIntoVertices();
@@ -834,7 +834,7 @@ export class PanelGenerationService {
       backingMesh = MeshBuilder.CreateCylinder('backing', {
         diameter: width,
         height: thickness,
-        tessellation: 64
+        tessellation: 128
       }, this.scene);
     } else if (shape === 'rectangular') {
       backingMesh = MeshBuilder.CreateBox('backing', {
