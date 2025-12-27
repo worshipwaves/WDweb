@@ -420,8 +420,8 @@ class AudioProcessingService:
             p90 = np.percentile(compressed, 90)
             spread = p90 - p10
             brick_pct = np.sum(compressed > 0.95) / len(compressed)
-            ghost_pct = np.sum(compressed < 0.15) / len(compressed)
-            score = spread - (brick_pct * 2.0) - (ghost_pct * 1.5)
+            ghost_pct = np.sum(compressed < 0.2) / len(compressed)
+            score = spread - (brick_pct * 2.0) - (ghost_pct * 1.75)
             
             return {
                 "filter": f_amt,

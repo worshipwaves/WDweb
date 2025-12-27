@@ -48,7 +48,7 @@ interface SlotData {
 
 // Fillet parameters for CNC router visualization
 const FILLET_RADIUS = 0.125;  // Half of 0.25" bit diameter
-const FILLET_SEGMENTS = 4;    // Arc segments per corner
+const FILLET_SEGMENTS = 2;    // Arc segments per corner
 
 export class PanelGenerationService {
   private debugMode: boolean = false;

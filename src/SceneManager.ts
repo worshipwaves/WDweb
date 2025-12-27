@@ -144,12 +144,13 @@ export class SceneManager {
     private setupCamera(): ArcRotateCamera {
         const camera = new ArcRotateCamera('mainCamera', Math.PI / 2, Math.PI / 2, 50, Vector3.Zero(), this._scene);  // Standard 50" gallery viewing distance
         this._baseCameraRadius = camera.radius;  // Capture base for scene-specific calculations
-        camera.lowerRadiusLimit = 1;
+				camera.lowerRadiusLimit = 0.1;
+				camera.minZ = 0.01;
+				camera.wheelPrecision = 5;
         camera.upperRadiusLimit = 300;
         camera.lowerBetaLimit = 0.1;
         camera.upperBetaLimit = Math.PI - 0.1;
         camera.panningSensibility = 50;
-        camera.wheelPrecision = 20;
         camera.pinchPrecision = 50;
         camera.attachControl(this._canvas, true);
         camera.useNaturalPinchZoom = true;
