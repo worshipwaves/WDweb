@@ -6,6 +6,7 @@ Aligned with Desktop App logic (librosa/numpy) for mathematical parity.
 
 import subprocess
 import shutil
+import time
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 import numpy as np
@@ -39,7 +40,7 @@ class DemucsService:
         self,
         input_path: Path,
         remove_silence: bool
-    ) -> Path:
+    ) -> tuple[Path, float]:
         """
         Separate vocals from audio file using Demucs.
         
@@ -48,13 +49,17 @@ class DemucsService:
             remove_silence: Whether to compress silence in output
             
         Returns:
-            Path to processed vocals WAV file
+            Tuple of (path to processed vocals WAV, processing time in seconds)
         """
+        start_time = time.perf_counter()
+        
         subprocess.run(
             [
                 "demucs",
+                "-n", "htdemucs",
                 "--two-stems=vocals",
                 "-d", "cuda",
+                "--jobs", "4",
                 "-o", str(self._output_dir),
                 str(input_path)
             ],
@@ -62,6 +67,8 @@ class DemucsService:
             text=True,
             check=True
         )
+        
+        demucs_time = time.perf_counter() - start_time
         
         stem_name = input_path.stem
         vocals_path = self._output_dir / "htdemucs" / stem_name / "vocals.wav"
@@ -74,9 +81,9 @@ class DemucsService:
                 raise FileNotFoundError(f"Demucs output not found: {vocals_path}")
         
         if remove_silence:
-            return self._compress_silence(vocals_path)
+            return self._compress_silence(vocals_path), demucs_time
         
-        return vocals_path
+        return vocals_path, demucs_time
     
     def _compress_silence(self, vocals_path: Path) -> Path:
         """

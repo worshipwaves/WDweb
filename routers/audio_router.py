@@ -55,7 +55,7 @@ async def isolate_vocals(
         temp_input.write_bytes(content)
         
         # Process
-        vocals_path = _demucs.separate_vocals(
+        vocals_path, demucs_time = _demucs.separate_vocals(
             input_path=temp_input,
             remove_silence=remove_silence
         )
@@ -64,7 +64,8 @@ async def isolate_vocals(
         return FileResponse(
             path=str(vocals_path),
             media_type="audio/wav",
-            filename="vocals.wav"
+            filename="vocals.wav",
+            headers={"X-Demucs-Time": str(round(demucs_time, 2))}
         )
         
     except subprocess.CalledProcessError as e:
@@ -196,8 +197,9 @@ async def process_audio_commit(
         print(f"[DEBUG] isolate_vocals={isolate_vocals}, remove_silence={remove_silence}")
         
         # Process based on options
+        demucs_time = 0.0
         if isolate_vocals:
-            output_path = _demucs.separate_vocals(
+            output_path, demucs_time = _demucs.separate_vocals(
                 input_path=temp_input,
                 remove_silence=remove_silence
             )
@@ -210,10 +212,13 @@ async def process_audio_commit(
         else:
             output_path = temp_input
         
+        headers = {"X-Demucs-Time": str(round(demucs_time, 2))} if demucs_time > 0 else {}
+        
         return FileResponse(
             path=str(output_path),
             media_type="audio/wav",
-            filename="processed.wav"
+            filename="processed.wav",
+            headers=headers
         )
         
     except Exception as e:

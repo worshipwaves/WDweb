@@ -87,6 +87,15 @@ export class AudioSlicerPanel implements PanelComponent {
 	// Raw vocals buffer (before silence removal)
   private _rawVocalsBuffer: AudioBuffer | null = null;
   
+  // Demucs timing calibration
+  private static readonly CALIBRATION_KEY = 'demucsCalibration';
+  private static readonly SEED_RATE = 1.0;
+  private static readonly SEED_OVERHEAD = 5.0;
+  private static readonly MAX_SAMPLES = 5;
+  private _demucsStartTime: number = 0;
+  private _demucsEstimatedTotal: number = 0;
+  private _progressInterval: number | null = null;
+  
   // Isolate Vocals param
   private _isolateVocals: boolean = false;
 	
@@ -1505,10 +1514,90 @@ private async _processPreviewSilenceRemoval(): Promise<void> {
       // Keep raw vocals buffer - preview will work but without silence removal
     }
   }
+	
+private _getCalibration(): { rate: number; overhead: number } {
+    try {
+      const stored = localStorage.getItem(AudioSlicerPanel.CALIBRATION_KEY);
+      if (stored) {
+        const data = JSON.parse(stored);
+        if (data.samples?.length > 0) {
+          const avgRate = data.samples.reduce((a: number, b: number) => a + b, 0) / data.samples.length;
+          return { rate: avgRate, overhead: data.overhead ?? AudioSlicerPanel.SEED_OVERHEAD };
+        }
+      }
+    } catch (e) { /* use seed */ }
+    return { rate: AudioSlicerPanel.SEED_RATE, overhead: AudioSlicerPanel.SEED_OVERHEAD };
+  }
+	
+private _updateCalibration(audioDuration: number, actualTime: number): void {
+    const measuredRate = actualTime / audioDuration;
+    try {
+      const stored = localStorage.getItem(AudioSlicerPanel.CALIBRATION_KEY);
+      const data = stored ? JSON.parse(stored) : { samples: [] };
+      data.samples.push(measuredRate);
+      if (data.samples.length > AudioSlicerPanel.MAX_SAMPLES) data.samples.shift();
+      localStorage.setItem(AudioSlicerPanel.CALIBRATION_KEY, JSON.stringify(data));
+    } catch (e) { /* ignore */ }
+  }
+	
+private _estimateDemucsTime(audioDuration: number): number {
+    const cal = this._getCalibration();
+    return Math.ceil(cal.overhead + (audioDuration * cal.rate));
+  }
+	
+private _confirmVocalsProcessing(estimatedSeconds: number): Promise<boolean> {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'demucs-confirm-overlay';
+      overlay.innerHTML = `
+        <div class="demucs-confirm-modal">
+          <div class="demucs-confirm-title">Isolate Vocals</div>
+          <p>Estimated processing time:</p>
+          <div class="demucs-confirm-estimate">${estimatedSeconds} seconds</div>
+          <div class="demucs-confirm-buttons">
+            <button class="demucs-btn-cancel">Cancel</button>
+            <button class="demucs-btn-continue">Continue</button>
+          </div>
+        </div>`;
+      overlay.querySelector('.demucs-btn-cancel')?.addEventListener('click', () => { overlay.remove(); resolve(false); });
+      overlay.querySelector('.demucs-btn-continue')?.addEventListener('click', () => { overlay.remove(); resolve(true); });
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
+      document.body.appendChild(overlay);
+    });
+  }
+	
+private _startProgressTimer(statusEl: HTMLElement): void {
+    this._demucsStartTime = Date.now();
+    const update = () => {
+      const elapsed = (Date.now() - this._demucsStartTime) / 1000;
+      const pct = Math.min(99, Math.floor((elapsed / this._demucsEstimatedTotal) * 100));
+      const remaining = Math.max(0, Math.ceil(this._demucsEstimatedTotal - elapsed));
+      statusEl.textContent = `${pct}% (~${remaining}s)`;
+    };
+    update();
+    this._progressInterval = window.setInterval(update, 500);
+  }
+
+  private _stopProgressTimer(): void {
+    if (this._progressInterval !== null) { clearInterval(this._progressInterval); this._progressInterval = null; }
+  }
 
 private async _processVocals(): Promise<void> {
     if (!this._audioBuffer || !this._originalFile) return;
     if (this._isProcessing) return;
+    
+    const useSlice = this._markStart !== null && this._markEnd !== null;
+    const audioDuration = useSlice 
+      ? Math.abs((this._markEnd ?? 0) - (this._markStart ?? 0))
+      : this._audioBuffer.duration;
+    
+    const confirmed = await this._confirmVocalsProcessing(this._estimateDemucsTime(audioDuration));
+    if (!confirmed) {
+      this._isolateVocals = false;
+      const cb = this._trimmerSection?.querySelector('.slicer-isolate-checkbox') as HTMLInputElement;
+      if (cb) cb.checked = false;
+      return;
+    }
     
     this._isProcessing = true;
     
@@ -1517,8 +1606,9 @@ private async _processVocals(): Promise<void> {
     const playBtn = this._trimmerSection?.querySelector('.slicer-play-btn') as HTMLButtonElement;
     const applyBtn = this._trimmerSection?.querySelector('.slicer-btn-apply') as HTMLButtonElement;
     if (statusEl) {
-      statusEl.textContent = '(processing...)';
       statusEl.style.color = '#c0392b';
+      this._demucsEstimatedTotal = this._estimateDemucsTime(audioDuration);
+      this._startProgressTimer(statusEl);
     }
     if (playBtn) playBtn.disabled = true;
     if (applyBtn) applyBtn.disabled = true;
@@ -1540,6 +1630,9 @@ private async _processVocals(): Promise<void> {
       
       if (!response.ok) throw new Error(`Processing failed: ${response.status}`);
       
+      const demucsTimeHeader = response.headers.get('X-Demucs-Time');
+      if (demucsTimeHeader) this._updateCalibration(audioDuration, parseFloat(demucsTimeHeader));
+      
       const processedBlob = await response.blob();
       const arrayBuffer = await processedBlob.arrayBuffer();
       
@@ -1550,6 +1643,7 @@ private async _processVocals(): Promise<void> {
       await this._processPreviewSilenceRemoval();
       
       // Show success
+      this._stopProgressTimer();
       const statusEl = this._trimmerSection?.querySelector('.slicer-vocals-status') as HTMLElement;
       if (statusEl) {
         statusEl.textContent = '✓';
@@ -1563,6 +1657,7 @@ private async _processVocals(): Promise<void> {
       if (checkbox) checkbox.checked = false;
       
       // Show failure
+      this._stopProgressTimer();
       const statusEl = this._trimmerSection?.querySelector('.slicer-vocals-status') as HTMLElement;
       if (statusEl) {
         statusEl.textContent = '✗ failed';

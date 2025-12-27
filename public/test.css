@@ -3089,3 +3089,21 @@ body.menus-hidden:not(.room-blank-wall) .bottom-controls {
   color: rgba(var(--color-foreground), 0.4);
   font-style: italic;
 }
+
+/* Demucs confirmation modal */
+.demucs-confirm-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 10000;
+}
+.demucs-confirm-modal {
+  background: #fff; border-radius: 8px; padding: 24px 32px; max-width: 320px; text-align: center;
+}
+.demucs-confirm-title { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
+.demucs-confirm-modal p { margin: 0 0 8px; color: #666; font-size: 14px; }
+.demucs-confirm-estimate { font-size: 28px; font-weight: 700; color: #2c3e50; margin-bottom: 20px; }
+.demucs-confirm-buttons { display: flex; gap: 12px; justify-content: center; }
+.demucs-btn-cancel, .demucs-btn-continue {
+  padding: 10px 24px; border-radius: 4px; font-size: 14px; cursor: pointer; border: none;
+}
+.demucs-btn-cancel { background: #e0e0e0; color: #333; }
+.demucs-btn-continue { background: #3498db; color: #fff; }
