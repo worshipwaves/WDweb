@@ -91,7 +91,12 @@ export class AudioSlicerPanel implements PanelComponent {
   private static readonly CALIBRATION_KEY = 'demucsCalibration';
   private static readonly SEED_RATE = 1.0;
   private static readonly SEED_OVERHEAD = 5.0;
-  private static readonly MAX_SAMPLES = 5;
+	private static readonly MAX_SAMPLES = 5;
+  // Calibration data shape
+  private static _isValidCalibration(data: unknown): data is { samples: number[]; overhead?: number } {
+    return typeof data === 'object' && data !== null && 
+           'samples' in data && Array.isArray((data as { samples: unknown }).samples);
+  }
   private _demucsStartTime: number = 0;
   private _demucsEstimatedTotal: number = 0;
   private _progressInterval: number | null = null;
@@ -1519,10 +1524,10 @@ private _getCalibration(): { rate: number; overhead: number } {
     try {
       const stored = localStorage.getItem(AudioSlicerPanel.CALIBRATION_KEY);
       if (stored) {
-        const data = JSON.parse(stored);
-        if (data.samples?.length > 0) {
-          const avgRate = data.samples.reduce((a: number, b: number) => a + b, 0) / data.samples.length;
-          return { rate: avgRate, overhead: data.overhead ?? AudioSlicerPanel.SEED_OVERHEAD };
+        const parsed: unknown = JSON.parse(stored);
+        if (AudioSlicerPanel._isValidCalibration(parsed) && parsed.samples.length > 0) {
+          const avgRate = parsed.samples.reduce((a, b) => a + b, 0) / parsed.samples.length;
+          return { rate: avgRate, overhead: parsed.overhead ?? AudioSlicerPanel.SEED_OVERHEAD };
         }
       }
     } catch (e) { /* use seed */ }
@@ -1533,10 +1538,11 @@ private _updateCalibration(audioDuration: number, actualTime: number): void {
     const measuredRate = actualTime / audioDuration;
     try {
       const stored = localStorage.getItem(AudioSlicerPanel.CALIBRATION_KEY);
-      const data = stored ? JSON.parse(stored) : { samples: [] };
-      data.samples.push(measuredRate);
-      if (data.samples.length > AudioSlicerPanel.MAX_SAMPLES) data.samples.shift();
-      localStorage.setItem(AudioSlicerPanel.CALIBRATION_KEY, JSON.stringify(data));
+      const parsed: unknown = stored ? JSON.parse(stored) : null;
+      const samples = AudioSlicerPanel._isValidCalibration(parsed) ? [...parsed.samples] : [];
+      samples.push(measuredRate);
+      if (samples.length > AudioSlicerPanel.MAX_SAMPLES) samples.shift();
+      localStorage.setItem(AudioSlicerPanel.CALIBRATION_KEY, JSON.stringify({ samples }));
     } catch (e) { /* ignore */ }
   }
 	
@@ -1568,11 +1574,12 @@ private _confirmVocalsProcessing(estimatedSeconds: number): Promise<boolean> {
 	
 private _startProgressTimer(statusEl: HTMLElement): void {
     this._demucsStartTime = Date.now();
+    const el = statusEl;
     const update = () => {
       const elapsed = (Date.now() - this._demucsStartTime) / 1000;
       const pct = Math.min(99, Math.floor((elapsed / this._demucsEstimatedTotal) * 100));
       const remaining = Math.max(0, Math.ceil(this._demucsEstimatedTotal - elapsed));
-      statusEl.textContent = `${pct}% (~${remaining}s)`;
+      el.textContent = `${pct}% (~${remaining}s)`;
     };
     update();
     this._progressInterval = window.setInterval(update, 500);
