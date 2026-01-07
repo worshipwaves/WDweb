@@ -537,17 +537,22 @@ export class SceneManager {
             // Regenerate shadow receiver (same lifecycle as backing)
             this._createShadowReceiver(csgData);
             
-            // Wait only for current section textures (not all preloaded textures)
+            // Collect texture promises but do not await them (prevents blocking main thread)
             const texturePromises: Promise<void>[] = [];
             for (const mat of this._sectionMaterials) {
-                if (mat.albedoMap && !mat.albedoMap.isReady()) {
-                    texturePromises.push(new Promise(resolve => mat.albedoMap!.onLoadObservable.addOnce(resolve)));
+                if (mat.albedoTexture && !mat.albedoTexture.isReady()) {
+                    texturePromises.push(new Promise(resolve => mat.albedoTexture!.onLoadObservable.addOnce(resolve)));
                 }
             }
+
+            // Keep scene hidden until textures are ready to prevent "pop-in" artifact
             if (texturePromises.length > 0) {
+                this._rootNode?.setEnabled(false);
                 await Promise.all(texturePromises);
+                this._rootNode?.setEnabled(true);
+            } else {
+                this._rootNode?.setEnabled(true);
             }
-            this._rootNode?.setEnabled(true);
             
             document.dispatchEvent(new CustomEvent('demo:renderComplete'));
             PerformanceMonitor.end('render_internal_total');

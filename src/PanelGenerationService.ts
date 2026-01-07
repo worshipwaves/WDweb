@@ -180,7 +180,7 @@ export class PanelGenerationService {
       const cylinder = MeshBuilder.CreateCylinder('baseDisc', {
         diameter: dim.width,
         height: config.thickness,
-        tessellation: 128,
+        tessellation: 64,
         cap: Mesh.CAP_ALL
       }, this.scene);
       
@@ -391,7 +391,7 @@ export class PanelGenerationService {
         const fullDisc = MeshBuilder.CreateCylinder('baseDisc', {
           diameter: config.finishX,  // Full size, not section size
           height: config.thickness,
-          tessellation: 128,
+          tessellation: 64,
           cap: Mesh.CAP_ALL
         }, this.scene);
         fullDisc.bakeCurrentTransformIntoVertices();
@@ -476,18 +476,18 @@ export class PanelGenerationService {
     // 1. Create all cutter meshes first.
     const slotCutters = slots.map(slot => this.createSlotBox(slot, config));
 
-    // 2. Union all cutters into a single CSG object.
-    const allSlotsCSG = CSG.FromMesh(slotCutters[0]);
-    for (let i = 1; i < slotCutters.length; i++) {
-      const slotCSG = CSG.FromMesh(slotCutters[i]);
-      allSlotsCSG.unionInPlace(slotCSG);
-    }
-    
-    // 3. Perform a single, highly optimized subtraction.
+    // 2. Optimization: Merge meshes first. CRITICAL: Bake transforms first to ensure correct positioning!
+    slotCutters.forEach(m => m.bakeCurrentTransformIntoVertices());
+    const mergedCutters = Mesh.MergeMeshes(slotCutters, true);
+    if (!mergedCutters) return panelMesh;
+
+    // 3. Perform a single subtraction
+    const allSlotsCSG = CSG.FromMesh(mergedCutters);
     const resultCSG = panelCSG.subtract(allSlotsCSG);
     
     // 4. Clean up all the temporary cutter meshes.
     slotCutters.forEach(cutter => cutter.dispose());
+    mergedCutters.dispose();
     
     const result = resultCSG.toMesh(`${panelMesh.name}_withSlots`, null, this.scene);
     
@@ -512,6 +512,9 @@ export class PanelGenerationService {
   }
   
   private getFilletedPath(vertices: Vector3[], radius: number, segments: number): Vector3[] {
+    // Guard against divide-by-zero if segments is 0 (prevents NaN/infinite loop)
+    if (segments <= 0 || radius <= 0) return vertices;
+
     const result: Vector3[] = [];
     const n = vertices.length;
     
