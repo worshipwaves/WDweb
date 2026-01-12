@@ -1809,6 +1809,54 @@ SPECIES CARDS - 140px
 }
 
 /* ============================================
+   ASYMMETRIC TOGGLE (Layout > Asymmetric)
+   ============================================ */
+
+.asymmetric-toggle-card {
+  margin: 16px 25px 0;
+  padding: 16px;
+  background: rgba(var(--color-foreground), 0.02);
+  border: 1px solid rgb(var(--color-border));
+  border-radius: 4px;
+}
+
+.asymmetric-toggle-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgb(var(--color-foreground-secondary));
+  margin-bottom: 12px;
+}
+
+.asymmetric-toggle-group {
+  display: flex;
+  gap: 8px;
+}
+
+.asymmetric-toggle-btn {
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgb(var(--color-foreground-secondary));
+  background: transparent;
+  border: 1px solid rgb(var(--color-border));
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.asymmetric-toggle-btn:hover {
+  color: rgb(var(--color-foreground));
+  border-color: rgb(var(--color-foreground-secondary));
+}
+
+.asymmetric-toggle-btn.active {
+  color: rgb(var(--color-foreground));
+  background: rgba(var(--color-foreground), 0.08);
+  border-color: rgb(var(--color-foreground));
+}
+
+/* ============================================
    UPLOAD CARD (AUDIO > Custom)
    Matches .slider-card + .slider-group pattern
    ============================================ */

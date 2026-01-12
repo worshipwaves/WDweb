@@ -78,22 +78,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const initialState = controller.getState();
       if (!TourModal.shouldShow() && initialState?.composition?.processed_amplitudes?.length > 0) {
         try {
-          const response = await fetch(`${API_BASE_URL}/geometry/csg-data`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              state: initialState.composition,
-              changed_params: [],
-              previous_max_amplitude: null
-            })
-          });
-          
-          if (response.ok) {
-            const csgData = await response.json() as SmartCsgResponse;
-            await sceneManager.renderComposition(csgData);
-          } else {
-            console.error('[main.ts] Failed to fetch CSG data for initial render:', response.status, await response.text());
-          }
+          const csgData = await controller.getRoutedCSGData(
+            initialState.composition,
+            [],
+            null
+          );
+          await sceneManager.renderComposition(csgData);
         } catch (error) {
             console.error('[main.ts] Network error during initial fetch. Is the backend running?', error);
         }

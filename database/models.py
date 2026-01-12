@@ -33,6 +33,7 @@ class ShapeType(enum.Enum):
 class SlotStyle(enum.Enum):
     radial = "radial"
     linear = "linear"
+    asymmetric = "asymmetric"
 
 
 class GrainDirection(enum.Enum):

@@ -146,7 +146,7 @@ class PatternSettingsDTO(BaseModel):
     """Slot pattern configuration"""
     model_config = ConfigDict(frozen=True, populate_by_name=True)
     
-    slot_style: Literal["radial", "linear", "sunburst"]  # Engine-fixed: geometry algorithms
+    slot_style: Literal["radial", "linear", "sunburst", "asymmetric"]  # Engine-fixed: geometry algorithms
     pattern_diameter: float = Field(default=36.0, ge=1.0)  # Upper bound from constraints.json
     number_slots: int = Field(ge=1)  # Upper bound from constraints.json
     bit_diameter: float = Field(ge=0.0)  # Upper bound from config

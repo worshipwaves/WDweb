@@ -346,6 +346,27 @@ export const CSGDataResponseSchema = z.object({
   })).optional(),
   section_local_centers: z.array(z.tuple([z.number(), z.number()])),
   true_min_radius: z.number(),
+  asymmetric_config: z.object({
+    gap: z.number(),
+    large_finish_x: z.number(),
+    small_finish_x: z.number(),
+    large_slots: z.array(z.object({
+      vertices: z.array(z.array(z.number())).optional(),
+      x: z.number(),
+      z: z.number(),
+      angle: z.number(),
+      length: z.number(),
+      width: z.number().optional(),
+    })),
+    small_slots: z.array(z.object({
+      vertices: z.array(z.array(z.number())).optional(),
+      x: z.number(),
+      z: z.number(),
+      angle: z.number(),
+      length: z.number(),
+      width: z.number().optional(),
+    })),
+  }).optional(),
 });
 
 export type CSGDataResponse = z.infer<typeof CSGDataResponseSchema>;
@@ -682,7 +703,8 @@ export const ConstraintsConfigSchema = z.object({
     }).strict(),
     slot_style: z.object({
       radial: z.object({ x_offset: z.number() }).strict(),
-      linear: z.object({ x_offset: z.number() }).strict()
+      linear: z.object({ x_offset: z.number() }).strict(),
+      asymmetric: z.object({ x_offset: z.number() }).strict()
     }).strict()
   }).strict(),
   archetype_constraints: z.record(z.string(), ArchetypeConstraintSchema),

@@ -48,6 +48,7 @@ export class SceneManager {
     private _idealCameraRadius: number = 50;
 		private _archetypeIdealRadius: Map<string, number> = new Map();
     private _currentArchetypeId: string | null = null;
+    private _asymmetricLargeOnLeft: boolean = true; // Toggle state for asymmetric archetype
 		private _currentImageAspectRatio: number = 1.5; // Default 3:2
 		private _currentPaintColor: number[] | null = null;
 		private _currentWallTexturePath: string | undefined = undefined;
@@ -481,6 +482,11 @@ export class SceneManager {
                 mesh.receiveShadows = false;
             });
             
+            // Sync asymmetric visibility with toggle state after mesh recreation
+            if (csgData.csg_data?.panel_config?.slot_style === 'asymmetric') {
+                this._syncAsymmetricVisibility();
+            }
+            
             PerformanceMonitor.end('csg_mesh_generation');
             PerformanceMonitor.start('apply_materials');
             this.applySectionMaterials();
@@ -615,9 +621,18 @@ export class SceneManager {
                 const pickResult = pointerInfo.pickInfo;
                 if (pickResult?.hit && pickResult.pickedMesh) {
                     const meshName = pickResult.pickedMesh.name;
-                    const match = meshName.match(/^section_(\d+)$/);
-                    if (this._sectionMeshes.length > 1 && match) {
-                        const sectionId = parseInt(match[1], 10);
+                    
+                    // Determine section_id from mesh name
+                    let sectionId: number | null = null;
+                    const standardMatch = meshName.match(/^section_(\d+)$/);
+                    if (standardMatch) {
+                        sectionId = parseInt(standardMatch[1], 10);
+                    } else if (meshName.startsWith('asymmetric_')) {
+                        // For asymmetric: section_id by SIZE (0=small, 1=large)
+                        sectionId = meshName.includes('_large_') ? 1 : meshName.includes('_small_') ? 0 : null;
+                    }
+                    
+                    if (this._sectionMeshes.length > 1 && sectionId !== null) {
                         const multiSelect = (pointerInfo.event as PointerEvent).ctrlKey || (pointerInfo.event as PointerEvent).metaKey;
                         const isDeselectingSingle = !multiSelect && this._selectedSectionIndices.size === 1 && this._selectedSectionIndices.has(sectionId);
                         if (!multiSelect && !isDeselectingSingle) this.clearSelection();
@@ -653,6 +668,98 @@ export class SceneManager {
                 const overlay = this.createCircularOverlay(index);
                 if (overlay) this._overlayMeshes.set(index, overlay);
             }
+        }
+    }
+
+    /**
+     * Toggle asymmetric layout between large-on-left and large-on-right.
+     * Swaps visibility of mesh pairs without regenerating geometry.
+     * Also toggles backing meshes if present.
+     */
+    public toggleAsymmetricLayout(): void {
+        this._asymmetricLargeOnLeft = !this._asymmetricLargeOnLeft;
+        
+        // Find asymmetric wood meshes by name
+        const largeLeft = this._sectionMeshes.find(m => m.name === 'asymmetric_large_left');
+        const largeRight = this._sectionMeshes.find(m => m.name === 'asymmetric_large_right');
+        const smallLeft = this._sectionMeshes.find(m => m.name === 'asymmetric_small_left');
+        const smallRight = this._sectionMeshes.find(m => m.name === 'asymmetric_small_right');
+        
+        if (!largeLeft || !largeRight || !smallLeft || !smallRight) {
+            console.warn('[SceneManager] toggleAsymmetricLayout called but wood meshes not found');
+            return;
+        }
+        
+        // Find asymmetric backing meshes by name (may not exist if backing disabled)
+        const backingLargeLeft = this._backingMeshes.find(m => m.name === 'backing_large_left');
+        const backingLargeRight = this._backingMeshes.find(m => m.name === 'backing_large_right');
+        const backingSmallLeft = this._backingMeshes.find(m => m.name === 'backing_small_left');
+        const backingSmallRight = this._backingMeshes.find(m => m.name === 'backing_small_right');
+        
+        if (this._asymmetricLargeOnLeft) {
+            // Large on LEFT, Small on RIGHT
+            largeLeft.setEnabled(true);
+            smallRight.setEnabled(true);
+            largeRight.setEnabled(false);
+            smallLeft.setEnabled(false);
+            
+            // Toggle backing if present
+            backingLargeLeft?.setEnabled(true);
+            backingSmallRight?.setEnabled(true);
+            backingLargeRight?.setEnabled(false);
+            backingSmallLeft?.setEnabled(false);
+        } else {
+            // Large on RIGHT, Small on LEFT
+            largeLeft.setEnabled(false);
+            smallRight.setEnabled(false);
+            largeRight.setEnabled(true);
+            smallLeft.setEnabled(true);
+            
+            // Toggle backing if present
+            backingLargeLeft?.setEnabled(false);
+            backingSmallRight?.setEnabled(false);
+            backingLargeRight?.setEnabled(true);
+            backingSmallLeft?.setEnabled(true);
+        }
+    }
+
+    public isAsymmetricLargeOnLeft(): boolean {
+        return this._asymmetricLargeOnLeft;
+    }
+		
+		/**
+     * Sync asymmetric mesh visibility with current toggle state.
+     * Called after mesh recreation to preserve user's left/right selection.
+     */
+    private _syncAsymmetricVisibility(): void {
+        const largeLeft = this._sectionMeshes.find(m => m.name === 'asymmetric_large_left');
+        const largeRight = this._sectionMeshes.find(m => m.name === 'asymmetric_large_right');
+        const smallLeft = this._sectionMeshes.find(m => m.name === 'asymmetric_small_left');
+        const smallRight = this._sectionMeshes.find(m => m.name === 'asymmetric_small_right');
+        
+        const backingLargeLeft = this._backingMeshes.find(m => m.name === 'backing_large_left');
+        const backingLargeRight = this._backingMeshes.find(m => m.name === 'backing_large_right');
+        const backingSmallLeft = this._backingMeshes.find(m => m.name === 'backing_small_left');
+        const backingSmallRight = this._backingMeshes.find(m => m.name === 'backing_small_right');
+        
+        if (this._asymmetricLargeOnLeft) {
+            largeLeft?.setEnabled(true);
+            smallRight?.setEnabled(true);
+            largeRight?.setEnabled(false);
+            smallLeft?.setEnabled(false);
+            backingLargeLeft?.setEnabled(true);
+            backingSmallRight?.setEnabled(true);
+            backingLargeRight?.setEnabled(false);
+            backingSmallLeft?.setEnabled(false);
+        } else {
+            largeLeft?.setEnabled(false);
+            smallRight?.setEnabled(false);
+            largeRight?.setEnabled(true);
+            smallLeft?.setEnabled(true);
+            backingLargeLeft?.setEnabled(false);
+            backingSmallRight?.setEnabled(false);
+            backingLargeRight?.setEnabled(true);
+            backingSmallLeft?.setEnabled(true);
         }
     }
 		
@@ -972,10 +1079,17 @@ export class SceneManager {
         const state = this._controller.getState();
         const config = this._controller.getWoodMaterialsConfig();
         const { number_sections, finish_x, section_materials = [] } = state.composition.frame_design;
-        const sectionMaterialData = section_materials.find(m => m.section_id === sectionIndex);
+        
+        // For asymmetric, determine material_id by SIZE from mesh name
+        let materialId = sectionIndex;
+        if (mesh.name.startsWith('asymmetric_')) {
+            materialId = mesh.name.includes('_large_') ? 1 : 0;
+        }
+        
+        const sectionMaterialData = section_materials.find(m => m.section_id === materialId);
         const species = sectionMaterialData?.species || config.default_species;
         const grainDirection = sectionMaterialData?.grain_direction || config.default_grain_direction as any;
-        const grainAngle = calculateGrainAngle(grainDirection, sectionIndex, number_sections, config, this._currentCSGData);
+        const grainAngle = calculateGrainAngle(grainDirection, materialId, number_sections, config, this._currentCSGData);
         let material = this._sectionMaterials[sectionIndex];
         if (!material) {
             material = new WoodMaterial(`wood_section_${sectionIndex}`, this._scene);
@@ -983,6 +1097,20 @@ export class SceneManager {
         }
         material.updateTexturesAndGrain(species, grainAngle, finish_x, config, sectionIndex, this._textureCache);
         mesh.material = material;
+    }
+
+    /**
+     * Reapply materials to visible section meshes.
+     * Used after asymmetric toggle to sync materials with swapped state.
+     */
+    public reapplyVisibleMaterials(): void {
+        // Apply materials to all visible asymmetric meshes
+        for (let i = 0; i < this._sectionMeshes.length; i++) {
+            const mesh = this._sectionMeshes[i];
+            if (mesh.isEnabled()) {
+                this.applySingleSectionMaterial(i);
+            }
+        }
     }
 
     public dispose(): void {
@@ -1111,10 +1239,19 @@ export class SceneManager {
             return;
         }
         
-        console.log('[SceneManager] Creating backing meshes for', backingParams.sections.length, 'sections');
-        
         this.disposeBackingMeshes();
         this._backingMeshes = [];
+        
+        // Check for asymmetric pattern
+        const asymmetricConfig = this._currentCSGData?.csg_data?.asymmetric_config;
+        if (composition.pattern_settings.slot_style === 'asymmetric' && asymmetricConfig) {
+            console.log('[SceneManager] Creating asymmetric backing meshes');
+            this._generateAsymmetricBacking(backingParams, asymmetricConfig);
+            PerformanceMonitor.end('generate_backing');
+            return;
+        }
+        
+        console.log('[SceneManager] Creating backing meshes for', backingParams.sections.length, 'sections');
         
         // NOTE: Backing meshes must NOT cast shadows (receive only) to avoid blocking the wood panel's slot shadows.
         // They are intentionally excluded from this._shadowGenerator.addShadowCaster() calls.
@@ -1168,6 +1305,83 @@ export class SceneManager {
         console.log(`[SceneManager] Generated ${this._backingMeshes.length} backing meshes`);
 				
 				PerformanceMonitor.end('generate_backing');
+    }
+
+    /**
+     * Generate backing meshes for asymmetric pattern.
+     * Creates 4 backing meshes (large_left, large_right, small_left, small_right)
+     * with visibility matching wood panel state.
+     */
+    private _generateAsymmetricBacking(
+        backingParams: BackingParameters,
+        asymmetricConfig: { gap: number; large_finish_x: number; small_finish_x: number }
+    ): void {
+        const panelService = new PanelGenerationService(this._scene);
+        const thickness = backingParams.sections[0].thickness;
+        const positionY = backingParams.sections[0].position_y;
+        const inset = backingParams.sections[0].inset || 0;
+        const halfGap = asymmetricConfig.gap / 2.0;
+
+        // Apply inset to backing dimensions (0.5" reveal at edges)
+        const largeBackingSize = asymmetricConfig.large_finish_x - (2.0 * inset);
+        const smallBackingSize = asymmetricConfig.small_finish_x - (2.0 * inset);
+
+        // Create large backing panels
+        // separation = 2*inset creates 0.5" inset on each straight edge
+        const largeConfig = {
+            finishX: largeBackingSize,
+            finishY: largeBackingSize,
+            thickness,
+            separation: 2 * inset,
+            numberSections: 2,
+            shape: 'circular',
+            slotStyle: 'radial'
+        };
+        const largePanels = panelService.createPanelsWithCSG(largeConfig, [], []);
+
+        // Create small backing panels
+        const smallConfig = {
+            finishX: smallBackingSize,
+            finishY: smallBackingSize,
+            thickness,
+            separation: 2 * inset,
+            numberSections: 2,
+            shape: 'circular',
+            slotStyle: 'radial'
+        };
+        const smallPanels = panelService.createPanelsWithCSG(smallConfig, [], []);
+
+        // Apply material and common setup to all backing meshes
+        const setupBackingMesh = (mesh: Mesh, name: string, offsetX: number): void => {
+            mesh.name = name;
+            mesh.rotation.y = Math.PI;
+            mesh.bakeCurrentTransformIntoVertices();
+            mesh.position.x = offsetX;
+            mesh.position.y = positionY;
+            const backingMaterial = new BackingMaterial(this._scene, backingParams);
+            mesh.material = backingMaterial.getMaterial();
+            mesh.parent = this._rootNode;
+            mesh.receiveShadows = true;
+        };
+
+        // Position backing meshes (same logic as wood panels)
+        // Note: Visual left = +X, Visual right = -X in scene coordinate system
+        setupBackingMesh(largePanels[0], 'backing_large_right', -halfGap);
+        setupBackingMesh(largePanels[1], 'backing_large_left', halfGap);
+        setupBackingMesh(smallPanels[0], 'backing_small_right', -halfGap);
+        setupBackingMesh(smallPanels[1], 'backing_small_left', halfGap);
+
+        // Set initial visibility to match wood panels (large left + small right)
+        largePanels[0].setEnabled(false);  // large_right hidden
+        largePanels[1].setEnabled(true);   // large_left visible
+        smallPanels[0].setEnabled(true);   // small_right visible
+        smallPanels[1].setEnabled(false);  // small_left hidden
+
+        // Store in order: [small_right, large_left, large_right, small_left]
+        // Matches wood panel _sectionMeshes order for material application
+        this._backingMeshes = [smallPanels[0], largePanels[1], largePanels[0], smallPanels[1]];
+
+        console.log(`[SceneManager] Generated ${this._backingMeshes.length} asymmetric backing meshes`);
     }
     
     private _createShadowReceiver(csgData: SmartCsgResponse): void {

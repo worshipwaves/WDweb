@@ -496,19 +496,14 @@ export class ApplicationController {
         const maxAmp = Math.max(...amps.map(Math.abs));
         if (maxAmp > 0 && maxAmp <= 1.5) {
           // Call backend to get max_amplitude_local for current geometry
-          const response = await fetch('http://localhost:8000/geometry/csg-data', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              state: this._state.composition,
-              changed_params: [],
-              previous_max_amplitude: null
-            })
-          });
+          const csgResponse = await this.getRoutedCSGData(
+            this._state.composition,
+            [],
+            null
+          );
           
-          if (response.ok) {
-            const csgData = await response.json() as { max_amplitude_local: number };
-            const maxAmplitudeLocal = csgData.max_amplitude_local;
+          if (csgResponse) {
+            const maxAmplitudeLocal = csgResponse.max_amplitude_local;
             
             // Scale amplitudes to physical dimensions
             const scaledAmps = amps.map(a => a * maxAmplitudeLocal);
@@ -2835,6 +2830,44 @@ export class ApplicationController {
     wrapper.className = 'slider-card';
     wrapper.appendChild(sliderGroup.render());
     container.appendChild(wrapper);
+    
+    // Add asymmetric orientation toggle if applicable
+    if (this._state.composition.pattern_settings.slot_style === 'asymmetric') {
+      const toggleWrapper = document.createElement('div');
+      toggleWrapper.className = 'asymmetric-toggle-card';
+      toggleWrapper.innerHTML = `
+        <div class="asymmetric-toggle-label">Large Section Position</div>
+        <div class="asymmetric-toggle-group">
+          <button class="asymmetric-toggle-btn active" data-side="left">Left</button>
+          <button class="asymmetric-toggle-btn" data-side="right">Right</button>
+        </div>
+      `;
+      
+      const buttons = toggleWrapper.querySelectorAll('.asymmetric-toggle-btn');
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const side = (btn as HTMLElement).dataset.side;
+          const isCurrentlyLeft = (this._sceneManager as unknown as { isAsymmetricLargeOnLeft: () => boolean }).isAsymmetricLargeOnLeft();
+          const wantsLeft = side === 'left';
+          
+          if (isCurrentlyLeft !== wantsLeft) {
+            // Toggle mesh visibility (includes backing)
+            // Materials follow SIZE (large/small), not POSITION (left/right)
+            (this._sceneManager as unknown as { toggleAsymmetricLayout: () => void }).toggleAsymmetricLayout();
+            
+            // Re-apply materials to newly visible meshes
+            if (this._sceneManager) {
+              (this._sceneManager as unknown as { reapplyVisibleMaterials: () => void }).reapplyVisibleMaterials();
+            }
+          }
+          
+          buttons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+      
+      container.appendChild(toggleWrapper);
+    }
   }
   
   /**
@@ -3697,6 +3730,80 @@ export class ApplicationController {
     return (background.type === 'paint' || background.type === 'accent') 
       ? 'paint_and_accent' 
       : background.id;
+  }
+
+  /**
+   * Make two backend calls for asymmetric archetype and merge responses
+   */
+  private async _getAsymmetricCSGData(
+    state: CompositionStateDTO,
+    changedParams: string[],
+    previousMaxAmplitude: number | null
+  ): Promise<SmartCsgResponse> {
+    // Normalize amplitudes to 0-1 range before sending to backend
+    // Ensures consistent behavior whether called from initialize() or handleCompositionUpdate()
+    const validAmps = state.processed_amplitudes?.filter(
+      (amp): amp is number => amp !== null && isFinite(amp)
+    ) || [];
+    const normalizedAmps = (() => {
+      if (validAmps.length === 0) return validAmps;
+      const maxAmp = Math.max(...validAmps.map(Math.abs));
+      return maxAmp > 1.5 ? validAmps.map(a => a / maxAmp) : validAmps;
+    })();
+    const normalizedState: CompositionStateDTO = {
+      ...state,
+      processed_amplitudes: normalizedAmps
+    };
+
+    const finishX = normalizedState.frame_design.finish_x;
+    const gap = finishX / 12.0;
+    const largeFinishX = finishX;
+    const smallFinishX = finishX - 2.0 * gap;
+    const largeState: CompositionStateDTO = {
+      ...normalizedState,
+      frame_design: { ...normalizedState.frame_design, finish_x: largeFinishX, finish_y: largeFinishX, separation: 0 },
+      pattern_settings: { ...normalizedState.pattern_settings, slot_style: 'radial' }
+    };
+    const smallState: CompositionStateDTO = {
+      ...normalizedState,
+      frame_design: { ...normalizedState.frame_design, finish_x: smallFinishX, finish_y: smallFinishX, separation: 0 },
+      pattern_settings: { ...normalizedState.pattern_settings, slot_style: 'radial' }
+    };
+
+    const [largeResponse, smallResponse] = await Promise.all([
+      this._facade.getSmartCSGData(largeState, changedParams, previousMaxAmplitude),
+      this._facade.getSmartCSGData(smallState, changedParams, previousMaxAmplitude)
+    ]);
+
+    return {
+      ...largeResponse,
+      csg_data: {
+        ...largeResponse.csg_data,
+        asymmetric_config: {
+          gap,
+          large_finish_x: largeFinishX,
+          small_finish_x: smallFinishX,
+          large_slots: largeResponse.csg_data.slot_data,
+          small_slots: smallResponse.csg_data.slot_data
+        },
+        slot_data: [],
+        panel_config: { ...largeResponse.csg_data.panel_config, slot_style: 'asymmetric' }
+      },
+      updated_state: state
+    };
+  }
+	
+	/**
+   * Route CSG requests - intercepts asymmetric before backend call
+   */
+  public async getRoutedCSGData(
+    state: CompositionStateDTO,
+    changedParams: string[],
+    previousMaxAmplitude: number | null
+  ): Promise<SmartCsgResponse> {
+    return state.pattern_settings.slot_style === 'asymmetric'
+      ? this._getAsymmetricCSGData(state, changedParams, previousMaxAmplitude)
+      : this._facade.getSmartCSGData(state, changedParams, previousMaxAmplitude);
   }
 
   /**
@@ -4657,8 +4764,8 @@ export class ApplicationController {
           }
       
       try {
-        // 4. Make one smart API call.
-        const response = await this._facade.getSmartCSGData(
+        // 4. Make one smart API call (or two for asymmetric).
+        const response = await this.getRoutedCSGData(
           stateToSend,
           changedParams,
           this._state.audio.previousMaxAmplitude

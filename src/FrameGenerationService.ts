@@ -13,7 +13,8 @@ interface CSGDataResponse {
         thickness: number;
         separation: number;
         number_sections: number;
-				shape?: string;
+        shape?: string;
+        slot_style?: string;
     };
     slot_data: Array<{
         vertices?: number[][];
@@ -26,11 +27,32 @@ interface CSGDataResponse {
     }>;
     section_edges?: Array<{
         section_index: number;
-        edge1_start: number[];  // [x, y] inner vertex
-        edge1_end: number[];    // [x, y] arc start
-        edge2_start: number[];  // [x, y] arc end  
-        edge2_end: number[];    // [x, y] inner vertex
+        edge1_start: number[];
+        edge1_end: number[];
+        edge2_start: number[];
+        edge2_end: number[];
     }>;
+    asymmetric_config?: {
+        gap: number;
+        large_finish_x: number;
+        small_finish_x: number;
+        large_slots: Array<{
+            vertices?: number[][];
+            x: number;
+            z: number;
+            angle: number;
+            length: number;
+            width?: number;
+        }>;
+        small_slots: Array<{
+            vertices?: number[][];
+            x: number;
+            z: number;
+            angle: number;
+            length: number;
+            width?: number;
+        }>;
+    };
 }
 
 export class FrameGenerationService {
@@ -48,23 +70,27 @@ export class FrameGenerationService {
      */
 		public createFrameMeshes(data: CSGDataResponse): Mesh[] {
 				try {
+						const slotStyle = data.panel_config.slot_style || 'radial';
+						
+						// Handle asymmetric: create 4 meshes (2 large, 2 small) with gap positioning
+						if (slotStyle === 'asymmetric' && data.asymmetric_config) {
+								return this.createAsymmetricMeshes(data);
+						}
+						
 						// Map backend snake_case to frontend camelCase
 						const config: PanelConfig = {
-								finishX: (data.panel_config as { finish_x: number }).finish_x,
+								finishX: data.panel_config.finish_x,
 								finishY: data.panel_config.finish_y,
 								thickness: data.panel_config.thickness,
 								separation: data.panel_config.separation,
 								numberSections: data.panel_config.number_sections,
 								shape: data.panel_config.shape || 'circular',
-								slotStyle: (data.panel_config as { slot_style?: string }).slot_style || 'radial'
+								slotStyle: slotStyle
 						};
 						
 						const slots: SlotData[] = data.slot_data || [];
-
-						// Pass section edges if available (for n=3)
 						const sectionEdges = data.section_edges || [];
 						
-						// Create panels using CSG - now returns array
 						const panels = this.panelService.createPanelsWithCSG(config, slots, sectionEdges);
 						
 						return panels;
@@ -72,6 +98,69 @@ export class FrameGenerationService {
 						console.error('[POC] Error creating frame meshes:', error);
 						throw error;
 				}
+		}
+		
+		/**
+		 * Create meshes for asymmetric archetype: 4 semi-circles (2 large, 2 small)
+		 * positioned with calculated gap. Toggle controls visibility pairs.
+		 */
+		private createAsymmetricMeshes(data: CSGDataResponse): Mesh[] {
+				const cfg = data.asymmetric_config!;
+				const thickness = data.panel_config.thickness;
+				const finishX = data.panel_config.finish_x;
+				const gcX = finishX / 2.0;
+				
+				// Large config (separation=0 for standalone n=2)
+				const largeConfig: PanelConfig = {
+						finishX: cfg.large_finish_x,
+						finishY: cfg.large_finish_x,
+						thickness,
+						separation: 0,
+						numberSections: 2,
+						shape: 'circular',
+						slotStyle: 'radial'
+				};
+				
+				// Small config (separation=0 for standalone n=2)
+				const smallConfig: PanelConfig = {
+						finishX: cfg.small_finish_x,
+						finishY: cfg.small_finish_x,
+						thickness,
+						separation: 0,
+						numberSections: 2,
+						shape: 'circular',
+						slotStyle: 'radial'
+				};
+				
+				// Create meshes with their respective slots
+				const largeMeshes = this.panelService.createPanelsWithCSG(largeConfig, cfg.large_slots as SlotData[]);
+				const smallMeshes = this.panelService.createPanelsWithCSG(smallConfig, cfg.small_slots as SlotData[]);
+				
+				// Position meshes with gap between flat edges
+				// Note: Visual left = +X, Visual right = -X in scene coordinate system
+				const halfGap = cfg.gap / 2.0;
+				
+				largeMeshes[0].position.x = -halfGap;  // Large right: visual right
+				largeMeshes[1].position.x = halfGap;   // Large left: visual left
+				smallMeshes[0].position.x = -halfGap;  // Small right: visual right
+				smallMeshes[1].position.x = halfGap;   // Small left: visual left
+				
+				// Rename for clarity and set initial visibility
+				// Default: Large on LEFT, Small on RIGHT
+				largeMeshes[0].name = 'asymmetric_large_right';
+				largeMeshes[1].name = 'asymmetric_large_left';
+				smallMeshes[0].name = 'asymmetric_small_right';
+				smallMeshes[1].name = 'asymmetric_small_left';
+				
+				// Initial visibility: large left + small right visible
+				largeMeshes[0].setEnabled(false);  // Large right hidden
+				largeMeshes[1].setEnabled(true);   // Large left visible
+				smallMeshes[0].setEnabled(true);   // Small right visible
+				smallMeshes[1].setEnabled(false);  // Small left hidden
+				
+				// Return all 4 meshes: indices 0-1 are visible, 2-3 are hidden alternates
+				// Section 0 = right (small_right visible), Section 1 = left (large_left visible)
+				return [smallMeshes[0], largeMeshes[1], largeMeshes[0], smallMeshes[1]];
 		}
 		
 		// Keep old method for backwards compatibility during transition
