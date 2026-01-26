@@ -758,10 +758,11 @@ export const ConstraintsConfigSchema = z.object({
       height: z.object({ min: z.number(), max: z.number() }).strict(),
       reason: z.string()
     }).strict(),
-    slot_style: z.object({
-      radial: z.object({ x_offset: z.number() }).strict(),
-      linear: z.object({ x_offset: z.number() }).strict()
-    }).strict()
+		slot_style: z.object({
+			radial: z.object({ x_offset: z.number() }).strict(),
+			linear: z.object({ x_offset: z.number() }).strict(),
+			asymmetric: z.object({ x_offset: z.number() }).strict().optional()
+		}).strict()
   }).strict(),
   archetype_constraints: z.record(z.string(), ArchetypeConstraintSchema),
   scenes: z.record(z.string(), SceneConstraintSchema),
