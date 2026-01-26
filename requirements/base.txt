@@ -22,7 +22,7 @@ fastapi-mail==1.4.1
 
 # Core Math & Audio (non-GPU)
 numpy==1.26.4
-scipy==1.13.1
+scipy
 numba==0.60.0
 llvmlite==0.43.0
 librosa==0.10.2.post1
@@ -33,5 +33,3 @@ audioread==3.0.1
 # Export File Formats
 ezdxf==1.4.1
 svgwrite==1.4.3
-
-python-dotenv
