@@ -25,7 +25,12 @@ app = FastAPI(title="WaveDesigner API", version="0.1.0")
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Vite dev server
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://wavedesigner-frontend.onrender.com",
+        "https://design.worshipwaves.art"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
