@@ -359,9 +359,11 @@ async def process_audio(
         try:
             # Write uploaded file to temp location
             content = await file.read()
+            print(f"[DEBUG] Received {len(content)} bytes from upload")
             tmp_file.write(content)
             tmp_file.flush()
             tmp_file.close()
+            print(f"[DEBUG] Temp file size: {os.path.getsize(tmp_file.name)} bytes")
             
             # Process the audio file and get the response package
             response_data = facade.process_audio(tmp_file.name, composition_state)
