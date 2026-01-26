@@ -10,6 +10,8 @@
 import { z } from 'zod';
 
 import type { CompositionStateDTO } from './types/schemas';
+import { getApiBaseUrl } from './utils/assetUrl';
+
  
 
 interface UIElementConfig {
@@ -109,7 +111,8 @@ export class UIEngine {
    * Load UI configuration from backend
    */
 	async loadConfig(): Promise<void> {
-		const response = await fetch('http://localhost:8000/api/config/ui');
+		const response = await fetch(`${getApiBaseUrl()}/api/config/ui`);
+
 		
 		if (!response.ok) {
 			throw new Error('Failed to load UI configuration');

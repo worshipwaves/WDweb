@@ -28,6 +28,8 @@ import {
 	type BackgroundsConfig
 } from './types/schemas';
 import { fetchAndValidate, parseStoredData } from './utils/validation';
+import { getApiBaseUrl } from './utils/assetUrl';
+
 
 interface UIConfigResponse {
   default_category?: string | null;
@@ -61,7 +63,7 @@ export type Action =
 	
 
 export class WaveformDesignerFacade {
-	private readonly apiBase = 'http://localhost:8000';
+	private readonly apiBase = getApiBaseUrl();
   private _stylePresets: StylePreset[] = [];
   
   /**

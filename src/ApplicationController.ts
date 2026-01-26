@@ -47,6 +47,7 @@ import { applyDimensionChange, type DimensionConstraints } from './utils/dimensi
 import { deepMerge } from './utils/mergeUtils';
 import { fetchAndValidate } from './utils/validation';
 import { Action, WaveformDesignerFacade } from './WaveformDesignerFacade';
+import { getApiBaseUrl } from './utils/assetUrl';
 
 
 // Internal facade APIs that aren't exposed in the public interface
@@ -445,14 +446,14 @@ export class ApplicationController {
       
       // Load wood materials configuration
       this._woodMaterialsConfig = await fetchAndValidate<WoodMaterialsConfig>(
-        'http://localhost:8000/api/config/wood-materials',
+        `${getApiBaseUrl()}/api/config/wood-materials`,
         WoodMaterialsConfigSchema
       );
 			
 			// Load placement defaults configuration
       try {
         this._placementDefaults = await fetchAndValidate<PlacementDefaults>(
-          'http://localhost:8000/api/config/placement-defaults',
+          `${getApiBaseUrl()}/api/config/placement-defaults`,
           PlacementDefaultsSchema
         );
       } catch (error) {
@@ -463,13 +464,13 @@ export class ApplicationController {
 			// Load thumbnail and categories configuration
       // Load all configs in parallel
 			const [archetypes, woodMaterials, backgrounds, placementDefaults, uiConfig, _compositionDefaults, constraints] = await Promise.all([
-				fetch('http://localhost:8000/api/config/archetypes').then(r => r.json() as Promise<Record<string, Archetype>>),
-				fetch('http://localhost:8000/api/config/wood-materials').then(r => r.json() as Promise<WoodMaterialsConfig>),
-				fetchAndValidate<BackgroundsConfig>('http://localhost:8000/api/config/backgrounds', BackgroundsConfigSchema),
-				fetch('http://localhost:8000/api/config/placement-defaults').then(r => r.json() as Promise<PlacementDefaults>),
-				fetch('http://localhost:8000/api/config/ui').then(r => r.json() as Promise<UIConfig>),
-				fetch('http://localhost:8000/api/config/composition-defaults').then(r => r.json() as Promise<unknown>),
-				fetchAndValidate('http://localhost:8000/api/config/constraints', ConstraintsConfigSchema)
+				fetch(`${getApiBaseUrl()}/api/config/archetypes`).then(r => r.json() as Promise<Record<string, Archetype>>),
+				fetch(`${getApiBaseUrl()}/api/config/wood-materials`).then(r => r.json() as Promise<WoodMaterialsConfig>),
+				fetchAndValidate<BackgroundsConfig>(`${getApiBaseUrl()}/api/config/backgrounds`, BackgroundsConfigSchema),
+				fetch(`${getApiBaseUrl()}/api/config/placement-defaults`).then(r => r.json() as Promise<PlacementDefaults>),
+				fetch(`${getApiBaseUrl()}/api/config/ui`).then(r => r.json() as Promise<UIConfig>),
+				fetch(`${getApiBaseUrl()}/api/config/composition-defaults`).then(r => r.json() as Promise<unknown>),
+				fetchAndValidate(`${getApiBaseUrl()}/api/config/constraints`, ConstraintsConfigSchema)
 			]);
 
 			// Store archetypes
@@ -4353,7 +4354,7 @@ export class ApplicationController {
       }
     };
     
-    const response = await fetch('http://localhost:8000/geometry/backing-parameters', {
+    const response = await fetch(`${getApiBaseUrl()}/geometry/backing-parameters`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newComposition)
@@ -4399,7 +4400,7 @@ export class ApplicationController {
 			}
 		};
 		
-		const response = await fetch('http://localhost:8000/geometry/backing-parameters', {
+		const response = await fetch(`${getApiBaseUrl()}/geometry/backing-parameters`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(newComposition)

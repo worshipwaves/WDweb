@@ -4,6 +4,8 @@ import type { PanelComponent } from '../types/PanelTypes';
 
 import { HorizontalScrollContainer } from './HorizontalScrollContainer';
 import { Tooltip } from './Tooltip';
+import { getApiBaseUrl } from '../utils/assetUrl';
+
 
 // Interfaces matching the structure from config/backing_materials.json
 interface BackingMaterial {
@@ -97,7 +99,7 @@ export class BackingPanel implements PanelComponent {
   private async loadBackingConfig(): Promise<BackingConfig | null> {
     if (this.backingConfig) return this.backingConfig;
     try {
-      const response = await fetch('http://localhost:8000/api/config/backing-materials');
+      const response = await fetch(`${getApiBaseUrl()}/api/config/backing-materials`);
       if (!response.ok) throw new Error('Failed to load backing config');
       this.backingConfig = await response.json() as BackingConfig;
       return this.backingConfig;
