@@ -12,6 +12,7 @@
 
 import type { ApplicationController } from '../ApplicationController';
 import type { PanelComponent } from '../types/PanelTypes';
+import { getApiBaseUrl } from '../utils/assetUrl';
 
 interface SliceResult {
   blob: Blob;
@@ -683,7 +684,7 @@ export class AudioSlicerPanel implements PanelComponent {
     formData.append('num_slots', String(this._controller.getState()?.composition.pattern_settings.number_slots || 48));
     
     try {
-      const response = await fetch('/api/audio/optimize', {
+      const response = await fetch(`${getApiBaseUrl()}/api/audio/optimize`, {
         method: 'POST',
         body: formData
       });
@@ -1382,7 +1383,7 @@ export class AudioSlicerPanel implements PanelComponent {
       formData.append('file', audioFile);
       formData.append('isolate_vocals', 'true');
       
-      const response = await fetch('/api/audio/process-commit', {
+      const response = await fetch(`${getApiBaseUrl()}/api/audio/process-commit`, {
         method: 'POST',
         body: formData
       });
@@ -1460,7 +1461,7 @@ export class AudioSlicerPanel implements PanelComponent {
       formData.append('file', audioFile);
       formData.append('isolate_vocals', 'true');
       
-      const response = await fetch('/api/audio/process-commit', {
+      const response = await fetch(`${getApiBaseUrl()}/api/audio/process-commit`, {
         method: 'POST',
         body: formData
       });
@@ -1507,7 +1508,7 @@ private async _processPreviewSilenceRemoval(): Promise<void> {
 			formData.append('threshold_db', String(threshold));
 			formData.append('min_duration', String(duration));
       
-      const response = await fetch('/api/audio/compress-silence', {
+      const response = await fetch(`${getApiBaseUrl()}/api/audio/compress-silence`, {
         method: 'POST',
         body: formData
       });
@@ -1637,7 +1638,7 @@ private async _processVocals(): Promise<void> {
       formData.append('file', audioFile);
       formData.append('isolate_vocals', 'true');
       
-      const response = await fetch('/api/audio/process-commit', {
+      const response = await fetch(`${getApiBaseUrl()}/api/audio/process-commit`, {
         method: 'POST',
         body: formData
       });
@@ -1866,7 +1867,7 @@ private async _processVocals(): Promise<void> {
     }
     
     try {
-      const response = await fetch('/api/export/commission-package', {
+      const response = await fetch(`${getApiBaseUrl()}/api/export/commission-package`, {
         method: 'POST',
         body: formData
       });

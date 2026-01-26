@@ -224,7 +224,7 @@ export class ApplicationController {
     if (cached) return cached;
     
     try {
-      const response = await fetch('/api/geometry/margin-presets', {
+      const response = await fetch(`${getApiBaseUrl()}/api/geometry/margin-presets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -849,7 +849,7 @@ export class ApplicationController {
       }
       
       // Call backend
-      const response = await fetch('/api/audio/process-commit', {
+      const response = await fetch(`${getApiBaseUrl()}/api/audio/process-commit`, {
         method: 'POST',
         body: formData
       });
@@ -2046,7 +2046,7 @@ export class ApplicationController {
     if (!this._collectionsCatalog) {
       try {
         const { CollectionsCatalogSchema } = await import('./types/schemas');
-        const response = await fetch('/api/config/collections');
+        const response = await fetch(`${getApiBaseUrl()}/api/config/collections`);
         const data: unknown = await response.json();
         this._collectionsCatalog = CollectionsCatalogSchema.parse(data);
       } catch (error) {
