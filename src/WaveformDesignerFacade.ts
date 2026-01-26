@@ -29,6 +29,10 @@ import {
 } from './types/schemas';
 import { fetchAndValidate, parseStoredData } from './utils/validation';
 
+interface UIConfigResponse {
+  default_category?: string | null;
+}
+
 // Action types for state updates
 export type Action =
   | { type: 'FILE_UPLOADED'; payload: { file: File; uiSnapshot: CompositionStateDTO } }
@@ -132,7 +136,7 @@ export class WaveformDesignerFacade {
       `${this.apiBase}/api/config/backgrounds`,
       BackgroundsConfigSchema
     ),
-    fetch(`${this.apiBase}/api/config/ui`).then(r => r.json())
+    fetch(`${this.apiBase}/api/config/ui`).then(r => r.json() as Promise<UIConfigResponse>)
   ]);
   
   return {

@@ -14,6 +14,7 @@ from services.config_loader import get_config_service
 from fastapi import Response
 from dev_utils.performance_monitor import performance_monitor
 from routers.audio_router import router as audio_router
+from routers.export_router import router as export_router
 
 # Define project root directory (parent of api directory)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -39,6 +40,7 @@ config_service = get_config_service()
 
 # Register routers
 app.include_router(audio_router)
+app.include_router(export_router)
 
 # Pydantic model for the audio processing response
 class AudioProcessResponse(BaseModel):

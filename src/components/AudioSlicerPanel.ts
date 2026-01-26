@@ -829,7 +829,7 @@ export class AudioSlicerPanel implements PanelComponent {
       const rect = wrap.getBoundingClientRect();
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-      const time = pct * this._audioBuffer.duration;
+      const time = Math.round(pct * this._audioBuffer.duration);
       if (isStart) {
         this._markStart = time;
       } else {
@@ -1497,8 +1497,15 @@ private async _processPreviewSilenceRemoval(): Promise<void> {
       
       const formData = new FormData();
       formData.append('file', new File([rawBlob], 'vocals.wav', { type: 'audio/wav' }));
-      formData.append('min_duration', String(audioProcessing?.silence_duration));
-      formData.append('threshold_db', String(audioProcessing?.silence_threshold));
+			// Use demucs-specific params for vocals isolation, general params otherwise
+			const threshold = this._isolateVocals 
+				? audioProcessing?.demucs_silence_threshold
+				: audioProcessing?.silence_threshold;
+			const duration = this._isolateVocals
+				? audioProcessing?.demucs_silence_duration
+				: audioProcessing?.silence_duration;
+			formData.append('threshold_db', String(threshold));
+			formData.append('min_duration', String(duration));
       
       const response = await fetch('/api/audio/compress-silence', {
         method: 'POST',
@@ -1646,7 +1653,6 @@ private async _processVocals(): Promise<void> {
       this._initAudioContext();
       this._rawVocalsBuffer = await this._audioContext!.decodeAudioData(arrayBuffer);
       
-      // Now process silence removal for preview parity
       await this._processPreviewSilenceRemoval();
       
       // Show success
@@ -1807,6 +1813,88 @@ private async _processVocals(): Promise<void> {
     });
   }
 	
+	public async handleExport(): Promise<void> {
+    const state = this._controller.getState()?.composition;
+    if (!state || !state.processed_amplitudes?.length) {
+      console.warn('[AudioSlicerPanel] Cannot export: no processed amplitudes');
+      return;
+    }
+    
+    // Determine which audio to export (prefer processed > vocals > sliced > original)
+    let audioBlob: Blob;
+    if (this._processedBuffer) {
+      audioBlob = this._encodeWAV(this._processedBuffer);
+    } else if (this._rawVocalsBuffer) {
+      audioBlob = this._encodeWAV(this._rawVocalsBuffer);
+    } else if (this._audioBuffer) {
+      const useSlice = this._markStart !== null && this._markEnd !== null &&
+                       (this._markStart > 0 || this._markEnd < this._audioBuffer.duration);
+      if (useSlice) {
+        const sliceBlob = this._createSliceBlob();
+        audioBlob = sliceBlob ?? this._encodeWAV(this._audioBuffer);
+      } else {
+        audioBlob = this._encodeWAV(this._audioBuffer);
+      }
+    } else {
+      console.warn('[AudioSlicerPanel] Cannot export: no audio buffer');
+      return;
+    }
+    
+    // Validate original file is available for Reconstruction Kit
+    if (!this._originalFile) {
+      console.warn('[AudioSlicerPanel] Cannot export: original file not available');
+      alert('Original audio file not available. Please re-upload the audio.');
+      return;
+    }
+    
+    // Prompt for client/project name
+    const clientName = prompt('Client name:', 'Customer') || 'Customer';
+    const projectName = prompt('Project name:', 'Commission') || 'Commission';
+    
+    const formData = new FormData();
+    formData.append('state_json', JSON.stringify(state));
+    formData.append('client_name', clientName);
+    formData.append('project_name', projectName);
+    formData.append('audio_file', new File([audioBlob], 'vocals.wav', { type: 'audio/wav' }));
+    formData.append('original_file', this._originalFile);
+    
+    // Update button state
+    const exportBtn = this._trimmerSection?.querySelector('.slicer-btn-export') as HTMLButtonElement;
+    if (exportBtn) {
+      exportBtn.disabled = true;
+      exportBtn.textContent = 'Exporting...';
+    }
+    
+    try {
+      const response = await fetch('/api/export/commission-package', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) throw new Error(`Export failed: ${response.status}`);
+      
+      // Trigger download
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${clientName}_${projectName}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('[AudioSlicerPanel] Export failed:', error);
+      alert('Export failed. Please try again.');
+    } finally {
+      if (exportBtn) {
+        exportBtn.disabled = false;
+        exportBtn.textContent = 'Export for Production';
+      }
+    }
+  }
+	
 	private _handleCommit(): void {
     const isolateVocals = this._isolateVocals || this._isolateCheckbox?.checked || false;
     const useSlice = this._markStart !== null && this._markEnd !== null;
@@ -1821,6 +1909,10 @@ private async _processVocals(): Promise<void> {
       // Send pre-processed vocals, tell backend to skip demucs
       fileToSend = new File([this._encodeWAV(this._rawVocalsBuffer!)], 'vocals.wav', { type: 'audio/wav' });
     }
+		
+		// Enable export button after commit
+    const exportBtn = this._trimmerSection?.querySelector('.slicer-btn-export') as HTMLButtonElement;
+    if (exportBtn) exportBtn.disabled = false;
     
     void this._controller.dispatch({
       type: 'AUDIO_COMMIT',
@@ -1830,7 +1922,7 @@ private async _processVocals(): Promise<void> {
         startTime: vocalsAlreadyProcessed ? 0 : this._markStart,
         endTime: vocalsAlreadyProcessed ? (this._rawVocalsBuffer?.duration ?? this._markEnd) : this._markEnd,
         isolateVocals: vocalsAlreadyProcessed ? false : isolateVocals, // Skip demucs if already done
-        removeSilence,
+        removeSilence: vocalsAlreadyProcessed ? false : removeSilence, // Skip if already applied in preview
         silenceThreshold: audioProcessing?.silence_threshold,
       silenceMinDuration: audioProcessing?.silence_duration,
         sliceBlob: null, // Slicing handled by file selection above

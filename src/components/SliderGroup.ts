@@ -41,6 +41,7 @@ export class SliderGroup implements PanelComponent {
     this._numberSections = numberSections;
     this._slotStyle = slotStyle;
     this._title = title;
+    this._onInteraction = onInteraction;
     
     // Apply dynamic max values based on number of sections
     this._updateDynamicMaxValues();
@@ -199,9 +200,6 @@ export class SliderGroup implements PanelComponent {
           this._onInteraction?.(true);
         }
       });
-
-      // Event handler with debouncing
-      let debounceTimer: number | null = null;
 
       slider.addEventListener('input', (e) => {
         const target = e.target as HTMLInputElement;

@@ -1,0 +1,576 @@
+================================================================================
+BLENDER DIAGNOSTIC OUTPUT
+================================================================================
+
+{
+  "blender_version": "4.5.3",
+  "blend_file": "c:\\Users\\paulj\\WDweb\\blender\\Archetype_Render.blend",
+  "render_settings": {
+    "engine": "CYCLES",
+    "resolution": {
+      "x": 1024,
+      "y": 1024,
+      "percentage": 100
+    },
+    "sampling": {
+      "render_samples": 512,
+      "viewport_samples": 1024,
+      "use_adaptive_sampling": true,
+      "adaptive_threshold": 0.009999999776482582,
+      "time_limit": 0.0
+    },
+    "denoising": {
+      "use_denoising": false,
+      "denoiser": "OPENIMAGEDENOISE",
+      "denoising_input_passes": "RGB_ALBEDO_NORMAL",
+      "use_preview_denoising": false,
+      "preview_denoiser": "AUTO"
+    },
+    "light_paths": {
+      "max_bounces": 12,
+      "diffuse_bounces": 4,
+      "glossy_bounces": 4,
+      "transmission_bounces": 12,
+      "volume_bounces": 0,
+      "transparent_max_bounces": 8,
+      "caustics_reflective": false,
+      "caustics_refractive": false
+    },
+    "clamping": {
+      "sample_clamp_direct": 0.0,
+      "sample_clamp_indirect": 10.0
+    },
+    "color_management": {
+      "view_transform": "Khronos PBR Neutral",
+      "look": "Medium Contrast",
+      "exposure": 0.0,
+      "gamma": 1.0,
+      "display_device": "sRGB"
+    },
+    "film": {
+      "filter_type": null,
+      "filter_width": 1.5,
+      "film_transparent": false
+    }
+  },
+  "world_settings": {
+    "name": "World",
+    "use_nodes": true,
+    "ray_visibility": {
+      "camera": true,
+      "diffuse": true,
+      "glossy": true,
+      "transmission": true,
+      "scatter": true
+    },
+    "nodes": [
+      {
+        "name": "World Output",
+        "type": "OUTPUT_WORLD",
+        "label": ""
+      },
+      {
+        "name": "Background",
+        "type": "BACKGROUND",
+        "label": "",
+        "color": [
+          0.800000011920929,
+          0.800000011920929,
+          0.800000011920929,
+          1.0
+        ],
+        "strength": 1.0
+      },
+      {
+        "name": "Environment Texture",
+        "type": "TEX_ENVIRONMENT",
+        "label": "",
+        "image": "studio_small_09_4k.exr",
+        "image_filepath": "//hdri\\studio_small_09_4k.exr",
+        "colorspace": "Linear Rec.709"
+      },
+      {
+        "name": "Light Path",
+        "type": "LIGHT_PATH",
+        "label": "",
+        "outputs": [
+          "Is Camera Ray",
+          "Is Shadow Ray",
+          "Is Diffuse Ray",
+          "Is Glossy Ray",
+          "Is Singular Ray",
+          "Is Reflection Ray",
+          "Is Transmission Ray",
+          "Is Volume Scatter Ray",
+          "Ray Length",
+          "Ray Depth",
+          "Diffuse Depth",
+          "Glossy Depth",
+          "Transparent Depth",
+          "Transmission Depth"
+        ]
+      },
+      {
+        "name": "Background.001",
+        "type": "BACKGROUND",
+        "label": "",
+        "color": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "strength": 1.0
+      },
+      {
+        "name": "Mix Shader",
+        "type": "MIX_SHADER",
+        "label": "",
+        "fac": 0.5
+      }
+    ]
+  },
+  "workspace_viewport_modes": {
+    "Animation": {
+      "shading_type": "SOLID",
+      "use_scene_lights": false,
+      "use_scene_world": false
+    },
+    "Geometry Nodes": {
+      "shading_type": "SOLID",
+      "use_scene_lights": false,
+      "use_scene_world": false
+    },
+    "Layout": {
+      "shading_type": "SOLID",
+      "use_scene_lights": false,
+      "use_scene_world": false
+    },
+    "Modeling": {
+      "shading_type": "SOLID",
+      "use_scene_lights": false,
+      "use_scene_world": false
+    },
+    "Scripting": {
+      "shading_type": "SOLID",
+      "use_scene_lights": false,
+      "use_scene_world": false
+    },
+    "Sculpting": {
+      "shading_type": "SOLID",
+      "use_scene_lights": false,
+      "use_scene_world": false
+    },
+    "Shading": {
+      "shading_type": "MATERIAL",
+      "use_scene_lights": false,
+      "use_scene_world": false
+    },
+    "Texture Paint": {
+      "shading_type": "SOLID",
+      "use_scene_lights": false,
+      "use_scene_world": false
+    },
+    "UV Editing": {
+      "shading_type": "SOLID",
+      "use_scene_lights": false,
+      "use_scene_world": false
+    }
+  },
+  "viewport_settings": [
+    {
+      "screen_name": "Animation",
+      "shading_type": "SOLID",
+      "light": "STUDIO",
+      "color_type": "MATERIAL",
+      "use_scene_lights": false,
+      "use_scene_world": false,
+      "use_scene_lights_render": true,
+      "use_scene_world_render": true,
+      "studio_light": "Default",
+      "studiolight_rotate_z": 0.0,
+      "studiolight_intensity": 1.0,
+      "studiolight_background_alpha": 0.0,
+      "studiolight_background_blur": 0.5
+    },
+    {
+      "screen_name": "Animation",
+      "shading_type": "SOLID",
+      "light": "STUDIO",
+      "color_type": "MATERIAL",
+      "use_scene_lights": false,
+      "use_scene_world": false,
+      "use_scene_lights_render": true,
+      "use_scene_world_render": true,
+      "studio_light": "Default",
+      "studiolight_rotate_z": 0.0,
+      "studiolight_intensity": 1.0,
+      "studiolight_background_alpha": 0.0,
+      "studiolight_background_blur": 0.5
+    },
+    {
+      "screen_name": "Geometry Nodes",
+      "shading_type": "SOLID",
+      "light": "STUDIO",
+      "color_type": "MATERIAL",
+      "use_scene_lights": false,
+      "use_scene_world": false,
+      "use_scene_lights_render": true,
+      "use_scene_world_render": true,
+      "studio_light": "Default",
+      "studiolight_rotate_z": 0.0,
+      "studiolight_intensity": 1.0,
+      "studiolight_background_alpha": 0.0,
+      "studiolight_background_blur": 0.0
+    },
+    {
+      "screen_name": "Layout",
+      "shading_type": "SOLID",
+      "light": "STUDIO",
+      "color_type": "MATERIAL",
+      "use_scene_lights": false,
+      "use_scene_world": false,
+      "use_scene_lights_render": true,
+      "use_scene_world_render": true,
+      "studio_light": "Default",
+      "studiolight_rotate_z": 0.0,
+      "studiolight_intensity": 1.0,
+      "studiolight_background_alpha": 0.0,
+      "studiolight_background_blur": 0.5
+    },
+    {
+      "screen_name": "Modeling",
+      "shading_type": "SOLID",
+      "light": "STUDIO",
+      "color_type": "MATERIAL",
+      "use_scene_lights": false,
+      "use_scene_world": false,
+      "use_scene_lights_render": true,
+      "use_scene_world_render": true,
+      "studio_light": "Default",
+      "studiolight_rotate_z": 0.0,
+      "studiolight_intensity": 1.0,
+      "studiolight_background_alpha": 0.0,
+      "studiolight_background_blur": 0.5
+    },
+    {
+      "screen_name": "Scripting",
+      "shading_type": "SOLID",
+      "light": "STUDIO",
+      "color_type": "MATERIAL",
+      "use_scene_lights": false,
+      "use_scene_world": false,
+      "use_scene_lights_render": true,
+      "use_scene_world_render": true,
+      "studio_light": "Default",
+      "studiolight_rotate_z": 0.0,
+      "studiolight_intensity": 1.0,
+      "studiolight_background_alpha": 0.0,
+      "studiolight_background_blur": 0.5
+    },
+    {
+      "screen_name": "Sculpting",
+      "shading_type": "SOLID",
+      "light": "MATCAP",
+      "color_type": "MATERIAL",
+      "use_scene_lights": false,
+      "use_scene_world": false,
+      "use_scene_lights_render": true,
+      "use_scene_world_render": true,
+      "studio_light": "basic_1.exr",
+      "studiolight_rotate_z": 0.0,
+      "studiolight_intensity": 1.0,
+      "studiolight_background_alpha": 0.0,
+      "studiolight_background_blur": 0.5
+    },
+    {
+      "screen_name": "Shading",
+      "shading_type": "MATERIAL",
+      "light": "STUDIO",
+      "color_type": "MATERIAL",
+      "use_scene_lights": false,
+      "use_scene_world": false,
+      "use_scene_lights_render": true,
+      "use_scene_world_render": true,
+      "studio_light": "forest.exr",
+      "studiolight_rotate_z": 0.0,
+      "studiolight_intensity": 1.0,
+      "studiolight_background_alpha": 1.0,
+      "studiolight_background_blur": 0.5
+    },
+    {
+      "screen_name": "Texture Paint",
+      "shading_type": "SOLID",
+      "light": "STUDIO",
+      "color_type": "TEXTURE",
+      "use_scene_lights": false,
+      "use_scene_world": false,
+      "use_scene_lights_render": true,
+      "use_scene_world_render": true,
+      "studio_light": "Default",
+      "studiolight_rotate_z": 0.0,
+      "studiolight_intensity": 1.0,
+      "studiolight_background_alpha": 0.0,
+      "studiolight_background_blur": 0.5
+    },
+    {
+      "screen_name": "UV Editing",
+      "shading_type": "SOLID",
+      "light": "STUDIO",
+      "color_type": "MATERIAL",
+      "use_scene_lights": false,
+      "use_scene_world": false,
+      "use_scene_lights_render": true,
+      "use_scene_world_render": true,
+      "studio_light": "Default",
+      "studiolight_rotate_z": 0.0,
+      "studiolight_intensity": 1.0,
+      "studiolight_background_alpha": 0.0,
+      "studiolight_background_blur": 0.5
+    }
+  ],
+  "materials": [
+    {
+      "name": "backing_material",
+      "use_nodes": true,
+      "blend_method": "HASHED",
+      "shadow_method": null,
+      "principled_bsdf": {
+        "base_color": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "metallic": 0.0,
+        "roughness": 0.5,
+        "ior": 1.4900000095367432,
+        "alpha": 1.0,
+        "specular_ior_level": 0.5,
+        "coat_weight": 0.0,
+        "coat_roughness": 0.029999999329447746,
+        "emission_strength": 0.0,
+        "subsurface_weight": 0.0,
+        "anisotropic": 0.0,
+        "anisotropic_rotation": 0.0
+      },
+      "connected_texture_inputs": []
+    },
+    {
+      "name": "backing_material.001",
+      "use_nodes": true,
+      "blend_method": "HASHED",
+      "shadow_method": null,
+      "principled_bsdf": {
+        "base_color": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "metallic": 0.0,
+        "roughness": 0.5,
+        "ior": 1.4900000095367432,
+        "alpha": 1.0,
+        "specular_ior_level": 0.5,
+        "coat_weight": 0.0,
+        "coat_roughness": 0.029999999329447746,
+        "emission_strength": 0.0,
+        "subsurface_weight": 0.0,
+        "anisotropic": 0.0,
+        "anisotropic_rotation": 0.0
+      },
+      "connected_texture_inputs": []
+    },
+    {
+      "name": "Material",
+      "use_nodes": true,
+      "blend_method": "HASHED",
+      "shadow_method": null,
+      "principled_bsdf": {
+        "base_color": [
+          0.800000011920929,
+          0.800000011920929,
+          0.800000011920929,
+          1.0
+        ],
+        "metallic": 0.0,
+        "roughness": 0.5,
+        "ior": 1.4500000476837158,
+        "alpha": 1.0,
+        "specular_ior_level": 0.5,
+        "coat_weight": 0.0,
+        "coat_roughness": 0.029999999329447746,
+        "emission_strength": 0.0,
+        "subsurface_weight": 0.0,
+        "anisotropic": 0.0,
+        "anisotropic_rotation": 0.0
+      },
+      "connected_texture_inputs": []
+    },
+    {
+      "name": "Wall_Paint",
+      "use_nodes": true,
+      "blend_method": "HASHED",
+      "shadow_method": null,
+      "principled_bsdf": {
+        "base_color": [
+          0.800000011920929,
+          0.800000011920929,
+          0.800000011920929,
+          1.0
+        ],
+        "metallic": 0.0,
+        "roughness": 0.8999999761581421,
+        "ior": 1.5,
+        "alpha": 1.0,
+        "specular_ior_level": 0.5,
+        "coat_weight": 0.0,
+        "coat_roughness": 0.029999999329447746,
+        "emission_strength": 0.0,
+        "subsurface_weight": 0.0,
+        "anisotropic": 0.0,
+        "anisotropic_rotation": 0.0
+      },
+      "connected_texture_inputs": []
+    },
+    {
+      "name": "wood_oak-white-american_0",
+      "use_nodes": true,
+      "blend_method": "HASHED",
+      "shadow_method": null,
+      "principled_bsdf": {
+        "base_color": [
+          0.800000011920929,
+          0.800000011920929,
+          0.800000011920929,
+          1.0
+        ],
+        "metallic": 0.0,
+        "roughness": 0.5,
+        "ior": 1.5,
+        "alpha": 1.0,
+        "specular_ior_level": 0.5,
+        "coat_weight": 0.0,
+        "coat_roughness": 0.029999999329447746,
+        "emission_strength": 0.0,
+        "subsurface_weight": 0.05000000074505806,
+        "anisotropic": 0.30000001192092896,
+        "anisotropic_rotation": 0.0
+      },
+      "connected_texture_inputs": [
+        "Base Color",
+        "Roughness",
+        "Normal"
+      ]
+    },
+    {
+      "name": "wood_padauk-african_1",
+      "use_nodes": true,
+      "blend_method": "HASHED",
+      "shadow_method": null,
+      "principled_bsdf": {
+        "base_color": [
+          0.800000011920929,
+          0.800000011920929,
+          0.800000011920929,
+          1.0
+        ],
+        "metallic": 0.0,
+        "roughness": 0.5,
+        "ior": 1.5,
+        "alpha": 1.0,
+        "specular_ior_level": 0.5,
+        "coat_weight": 0.0,
+        "coat_roughness": 0.029999999329447746,
+        "emission_strength": 0.0,
+        "subsurface_weight": 0.05000000074505806,
+        "anisotropic": 0.30000001192092896,
+        "anisotropic_rotation": 0.0
+      },
+      "connected_texture_inputs": [
+        "Base Color",
+        "Roughness",
+        "Normal"
+      ]
+    }
+  ],
+  "lights": [
+    {
+      "name": "Key_Light",
+      "type": "AREA",
+      "color": [
+        1.0,
+        0.949999988079071,
+        0.8999999761581421
+      ],
+      "energy": 200.0,
+      "location": [
+        100.0,
+        -84.0,
+        42.0
+      ],
+      "rotation": [
+        1.1820276975631714,
+        1.5974706002452876e-09,
+        0.610725998878479
+      ],
+      "size": 21.000003814697266,
+      "size_y": 1.0,
+      "shape": "SQUARE",
+      "use_shadow": false,
+      "cycles_cast_shadow": null,
+      "cycles_max_bounces": 1024
+    }
+  ]
+}
+
+================================================================================
+KEY ITEMS TO CHECK FOR NOISE ISSUES:
+================================================================================
+
+[SAMPLING]
+  Render samples: 512
+  Viewport samples: 1024
+  Denoising enabled: False
+  Preview denoising: False
+
+[CLAMPING]
+  Direct clamp: 0.0
+  Indirect clamp: 10.0
+
+[CAUSTICS]
+  Reflective: False
+  Refractive: False
+
+[WORLD RAY VISIBILITY]
+  Camera: True
+  Diffuse: True
+  Glossy: True
+
+[WORKSPACE VIEWPORT MODES]
+  Animation: SOLID (scene_lights=False, scene_world=False)
+  Geometry Nodes: SOLID (scene_lights=False, scene_world=False)
+  Layout: SOLID (scene_lights=False, scene_world=False)
+  Modeling: SOLID (scene_lights=False, scene_world=False)
+  Scripting: SOLID (scene_lights=False, scene_world=False)
+  Sculpting: SOLID (scene_lights=False, scene_world=False)
+  Shading: MATERIAL (scene_lights=False, scene_world=False)
+  Texture Paint: SOLID (scene_lights=False, scene_world=False)
+  UV Editing: SOLID (scene_lights=False, scene_world=False)
+
+[BACKING MATERIALS]
+  backing_material:
+    Roughness: 0.5
+    Base Color: [0.0, 0.0, 0.0, 1.0]
+    Metallic: 0.0
+    Coat Weight: 0.0
+  backing_material.001:
+    Roughness: 0.5
+    Base Color: [0.0, 0.0, 0.0, 1.0]
+    Metallic: 0.0
+    Coat Weight: 0.0
+Blender 4.5.3 LTS (hash 67807e1800cc built 2025-09-09 01:33:33)
+Read blend: "c:\Users\paulj\WDweb\blender\Archetype_Render.blend"
+
+Blender quit

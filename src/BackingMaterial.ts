@@ -1,6 +1,7 @@
 // src/BackingMaterial.ts
 
 import { PBRMaterial, Color3, Texture, Scene } from '@babylonjs/core';
+
 import type { BackingParameters } from './types/PanelTypes';
 
 /**

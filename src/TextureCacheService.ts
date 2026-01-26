@@ -7,6 +7,7 @@
 
 import { Texture, Scene } from '@babylonjs/core';
 
+import { resolveAssetUrl } from './utils/assetUrl';
 import { IdleTextureLoader } from './IdleTextureLoader';
 import type { WoodMaterialsConfig } from './types/schemas';
 
@@ -35,7 +36,7 @@ export class TextureCacheService {
     }
     
     // Not in cache - load and cache it
-    const texture = new Texture(path, this._scene);
+    const texture = new Texture(resolveAssetUrl(path), this._scene);
     this._textureCache.set(path, texture);
     
     // Return clone (GPU data shared, wrapper independent)
@@ -147,7 +148,7 @@ export class TextureCacheService {
 	 */
 	ensureCached(path: string): void {
 			if (this._textureCache.has(path)) return;
-			const texture = new Texture(path, this._scene);
+			const texture = new Texture(resolveAssetUrl(path), this._scene);
 			this._textureCache.set(path, texture);
 	}	
 }

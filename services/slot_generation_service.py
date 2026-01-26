@@ -137,7 +137,9 @@ class SlotGenerationService:
         # Y limits
         center_y = finish_y / 2.0
         max_amplitude = finish_y - 2 * y_offset
-        safety_minimum = bit_diameter * 2.0
+        art_floor = max_amplitude * state.pattern_settings.visual_floor_pct
+        physical_limit = bit_diameter * 2.0
+        safety_minimum = max(art_floor, physical_limit)
         
         if n_sections <= 2:
             # Simple case: side_margin on outer edges, x_offset on inner edges
@@ -729,7 +731,8 @@ class SlotGenerationService:
         min_radial_dist_from_V_allowed = geometry.min_radius_from_V_calc
         max_radial_dist_from_V_allowed = geometry.max_radius_local - geometry.circum_radius
         
-        ref_len1_from_V = max(current_slot_center_point_from_V - inward_extent, min_radial_dist_from_V_allowed)
+        # Inner boundary managed by Audio Pipeline artistic floor; only clamp outer boundary
+        ref_len1_from_V = current_slot_center_point_from_V - inward_extent
         ref_len2_from_V = min(current_slot_center_point_from_V + outward_extent, max_radial_dist_from_V_allowed)
         
         if ref_len2_from_V < ref_len1_from_V + 1e-6:
@@ -740,6 +743,13 @@ class SlotGenerationService:
         
         length1 = ref_len1_from_V / cos_half_angle
         length2 = ref_len2_from_V / cos_half_angle
+
+        # Physical safety check to ensure slot is cuttable
+        physical_min_len = (geometry.bit_diameter / cos_half_angle) + 0.001
+        if (length2 - length1) < physical_min_len:
+            center = (length1 + length2) / 2.0
+            length1 = center - (physical_min_len / 2.0)
+            length2 = center + (physical_min_len / 2.0)
         
         angle_V_side_1_rad = slot_fan_centerline_rad - half_slot_angle_rad
         angle_V_side_2_rad = slot_fan_centerline_rad + half_slot_angle_rad

@@ -1,7 +1,10 @@
 // src/services/ConstraintResolver.ts
 
 import type { SliderConfig } from '../types/PanelTypes';
-import type { ArchetypeConstraint, CompositionStateDTO, ConstraintsConfig } from '../types/schemas';
+import type { CompositionStateDTO, ConstraintsConfig } from '../types/schemas';
+
+/** Local type derived from ConstraintsConfig to avoid any-typed import */
+type ArchetypeConstraint = ConstraintsConfig['archetype_constraints'][string];
 
 interface WindowWithController extends Window {
   controller?: {
@@ -43,7 +46,7 @@ export class ConstraintResolver {
       console.warn(`[Resolver] No constraints found for archetype: ${archetypeId ?? 'null'}`);
       return null;
     }
-    return this.constraints.archetype_constraints[archetypeId] as ArchetypeConstraint;
+    return this.constraints.archetype_constraints[archetypeId];
   }
 	
 	/**

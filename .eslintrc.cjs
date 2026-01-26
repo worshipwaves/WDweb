@@ -36,7 +36,7 @@ module.exports = {
   ignorePatterns: ['.eslintrc.cjs'],
   
   rules: {
-    'no-param-reassign': ['error', { props: true }],
+    'no-param-reassign': ['error', { props: true, ignorePropertyModificationsFor: ['container'] }],
     
     // --- DEFINITIVELY CORRECTED BOUNDARIES RULE ---
     'boundaries/element-types': ['error', {

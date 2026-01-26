@@ -8,6 +8,7 @@
  */
 
 import type { PanelComponent } from '../types/PanelTypes';
+
 import { Tooltip } from './Tooltip';
 
 interface RoomBackground {

@@ -1,6 +1,7 @@
 // src/components/SubcategoryAccordion.ts
 
 import type { PanelComponent } from '../types/PanelTypes';
+
 import { Tooltip } from './Tooltip';
 
 /**
@@ -315,9 +316,10 @@ export class SubcategoryAccordion implements PanelComponent {
 
     if (isOpen) {
       // Single-open: close all other sections
-      this._detailsElements.forEach((details, id) => {
-        if (id !== subcategoryId && details.open) {
-          details.open = false;
+      this._detailsElements.forEach((detailsEl, id) => {
+      if (id !== subcategoryId && detailsEl.open) {
+        // eslint-disable-next-line no-param-reassign
+        detailsEl.open = false;
           this._openState[id] = false;
           this._onToggle(id, false);
         }

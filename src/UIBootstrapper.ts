@@ -1,14 +1,13 @@
 // src/UIBootstrapper.ts
 
 import { ApplicationController } from './ApplicationController';
-import { SceneManager } from './SceneManager';
-import { UIEngine } from './UIEngine';
-import { CompositionStateDTO, ApplicationState } from './types/schemas';
-import { UploadInterface } from './UploadInterface';
-import { ProcessingOverlay } from './ProcessingOverlay';
-import { TourModal } from './components/TourModal';
-import { DemoPlayer } from './demo/DemoPlayer';
 import { Tooltip } from './components/Tooltip';
+import { TourModal } from './components/TourModal';
+import { ProcessingOverlay } from './ProcessingOverlay';
+import { SceneManager } from './SceneManager';
+import { CompositionStateDTO, ApplicationState } from './types/schemas';
+import { UIEngine } from './UIEngine';
+import { UploadInterface } from './UploadInterface';
 
 export class UIBootstrapper {
     private uiEngine: UIEngine;
@@ -99,7 +98,7 @@ export class UIBootstrapper {
         if (fullscreenBtn) {
             fullscreenBtn.addEventListener('click', () => {
                 if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(err => console.error(err));
-                else if (document.exitFullscreen) document.exitFullscreen();
+                else if (document.exitFullscreen) void document.exitFullscreen();
                 setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
             });
             fullscreenBtn.addEventListener('mouseenter', () => tooltip.show('Fullscreen', fullscreenBtn, 'right', 'tooltip-filter'));
@@ -233,8 +232,10 @@ export class UIBootstrapper {
 					const currentState = this.controller.getState();
 					const shape = currentState.composition.frame_design.shape;
 					if (shape === 'circular') {
+						// eslint-disable-next-line no-param-reassign
 						target.value = source.value;
 						if (targetDisplay) {
+							// eslint-disable-next-line no-param-reassign
 							targetDisplay.textContent = source.value;
 						}
 					}

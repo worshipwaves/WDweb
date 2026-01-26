@@ -10,8 +10,9 @@
  * - Bidirectional sync with SceneManager white dot overlays
  */
 
-import type { PanelComponent } from '../types/PanelTypes';
 import type { ApplicationController } from '../ApplicationController';
+import type { PanelComponent } from '../types/PanelTypes';
+
 import { Tooltip } from './Tooltip';
 
 interface SectionIcon {
@@ -273,7 +274,7 @@ export class SectionSelectorPanel implements PanelComponent {
     }
   }
 	
-	private async _loadRectangularIcon(iconDef: SectionIcon, container: HTMLElement): Promise<void> {
+	private _loadRectangularIcon(iconDef: SectionIcon, container: HTMLElement): void {
     const iconPath = `/assets/icons/rectangular_${this._numberSections}_${iconDef.sectionIndex === null ? 'all' : iconDef.sectionIndex}.png`;
     
     const img = document.createElement('img');
@@ -336,7 +337,7 @@ export class SectionSelectorPanel implements PanelComponent {
       
       // n=3 circular: Three separate path elements with class="section"
       const paths = svgElement.querySelectorAll('path.section');
-      const sectionOrder = ['top', 'right', 'left']; // Maps to section_id [0, 1, 2]
+      const _sectionOrder = ['top', 'right', 'left']; // Maps to section_id [0, 1, 2]
       
       paths.forEach((path, index) => {
         const color = orangeSections.has(index) ? '#D9A464' : '#FFFFFF';

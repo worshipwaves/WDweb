@@ -162,6 +162,7 @@ export const PatternSettingsSchema = z.object({
   symmetric_n_end: z.number().nullable().optional(),
   scale_center_point: z.number(),
   amplitude_exponent: z.number(),
+  visual_floor_pct: z.number(),
   orientation: z.string(),
   grain_angle: z.number(),
   lead_overlap: z.number(),
@@ -183,6 +184,7 @@ export const AudioSourceSchema = z.object({
 });
 
 export const AudioProcessingSchema = z.object({
+  target_sample_rate: z.number().nullable().optional(),
   num_raw_samples: z.number(),
   filter_amount: z.number(),
   apply_filter: z.boolean(),
@@ -191,6 +193,10 @@ export const AudioProcessingSchema = z.object({
   remove_silence: z.boolean(),
   silence_threshold: z.number(),
   silence_duration: z.number(),
+  silence_frame_length: z.number(),
+  silence_hop_length: z.number(),
+  demucs_silence_threshold: z.number(),
+  demucs_silence_duration: z.number(),
 });
 
 export const PeakControlSchema = z.object({
@@ -289,6 +295,7 @@ export const ArtisticRenderingSchema = z.object({
 });
 
 export const CompositionStateDTOSchema = z.object({
+  archetype_id: z.string().optional(),
   frame_design: FrameDesignSchema,
   pattern_settings: PatternSettingsSchema,
   size_defaults: SizeDefaultsSchema.optional(), // Make optional to handle old stored states
@@ -371,11 +378,61 @@ export const CSGDataResponseSchema = z.object({
 
 export type CSGDataResponse = z.infer<typeof CSGDataResponseSchema>;
 
+export const BackingParametersSectionSchema = z.object({
+  shape: z.string(),
+  width: z.number(),
+  height: z.number(),
+  thickness: z.number(),
+  position_x: z.number(),
+  position_y: z.number(),
+  position_z: z.number(),
+  inset: z.number(),
+});
+
+export const BackingMaterialPropertiesSchema = z.object({
+  id: z.string(),
+  display: z.string(),
+  color_rgb: z.array(z.number()),
+  alpha: z.number().optional(),
+  pbr_properties: z.object({
+    metallic: z.number(),
+    roughness: z.number(),
+    clearcoat_intensity: z.number().optional(),
+    clearcoat_roughness: z.number().optional(),
+  }),
+  texture_files: z.object({
+    diffuse: z.string(),
+    normal: z.string(),
+  }).optional(),
+});
+
+export const BackingParametersSchema = z.object({
+  enabled: z.boolean(),
+  type: z.string().optional(),
+  material: z.string().optional(),
+  sections: z.array(BackingParametersSectionSchema).optional(),
+  material_properties: BackingMaterialPropertiesSchema.optional(),
+  csg_config: z.object({
+    finish_x: z.number(),
+    finish_y: z.number(),
+    separation: z.number(),
+  }).optional(),
+  section_edges: z.array(z.object({
+    section_index: z.number(),
+    edge1_start: z.array(z.number()),
+    edge1_end: z.array(z.number()),
+    edge2_start: z.array(z.number()),
+    edge2_end: z.array(z.number()),
+  })).optional(),
+});
+
+export type BackingParametersDTO = z.infer<typeof BackingParametersSchema>;
+
 export const SmartCsgResponseSchema = z.object({
   csg_data: CSGDataResponseSchema,
   updated_state: CompositionStateDTOSchema,
   max_amplitude_local: z.number(),
-  backing_parameters: z.any().optional(),
+  backing_parameters: BackingParametersSchema.optional(),
 });
 
 export type SmartCsgResponse = z.infer<typeof SmartCsgResponseSchema>;

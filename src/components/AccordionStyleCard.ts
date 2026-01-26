@@ -1,6 +1,7 @@
 // src/components/AccordionStyleCard.ts
 
 import type { PanelComponent } from '../types/PanelTypes';
+
 import { Tooltip } from './Tooltip';
 
 export interface StyleCardConfig {

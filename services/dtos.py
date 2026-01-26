@@ -161,6 +161,7 @@ class PatternSettingsDTO(BaseModel):
     )
     scale_center_point: float = Field(ge=0.1)  # Upper bound from config
     amplitude_exponent: float = Field(ge=0.25)  # Upper bound from config
+    visual_floor_pct: float = Field(ge=0.0, le=0.5)  # Min slot height as % of max
     orientation: Literal["auto", "horizontal", "vertical"]  # Engine-fixed: geometric constraint
     grain_angle: float = Field(ge=0.0, le=360.0)  # Mathematical constraint: degrees in circle
     lead_overlap: float = Field(ge=0.0)  # Upper bound from config
@@ -215,6 +216,8 @@ class AudioProcessingDTO(BaseModel):
     silence_duration: float = Field(ge=0.1)  # Upper bound from config
     silence_frame_length: int = Field(default=2048, ge=1)  # Upper bound from config
     silence_hop_length: int = Field(default=512, ge=1)  # Upper bound from config
+    demucs_silence_threshold: float = Field(default=-35.0, ge=-80, le=0)
+    demucs_silence_duration: float = Field(default=0.3, ge=0.1)
 
 
 # Peak Control DTOs

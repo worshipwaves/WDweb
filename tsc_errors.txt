@@ -1,0 +1,245 @@
+dev_utils/PlacementDebugPanel.ts(14,19): error TS6133: 'PickingInfo' is declared but its value is never read.
+dev_utils/PlacementDebugPanel.ts(228,40): error TS2341: Property '_engine' is private and only accessible within class 'SceneManager'.
+dev_utils/PlacementDebugPanel.ts(322,40): error TS2341: Property '_engine' is private and only accessible within class 'SceneManager'.
+dev_utils/PlacementDebugPanel.ts(327,11): error TS6133: 'artworkPixels' is declared but its value is never read.
+src/ApplicationController.ts(105,5): error TS2717: Subsequent property declarations must have the same type.  Property 'uiEngine' must be of type 'UIEngine | undefined', but here has type 'UIEngine | undefined'.
+src/ApplicationController.ts(149,7): error TS2322: Type 'string' is not assignable to type '$InferEnumOutput<{ horizontal: "horizontal"; vertical: "vertical"; radiant: "radiant"; diamond: "diamond"; }>'.
+src/ApplicationController.ts(175,10): error TS6133: '_currentRoomId' is declared but its value is never read.
+src/ApplicationController.ts(176,10): error TS6133: '_currentWallFinishId' is declared but its value is never read.
+src/ApplicationController.ts(276,11): error TS6133: '_thumbnailConfig' is declared but its value is never read.
+src/ApplicationController.ts(318,10): error TS2393: Duplicate function implementation.
+src/ApplicationController.ts(542,28): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'number[] | null' is not assignable to parameter of type 'ArrayBufferLike'.
+      Type 'null' is not assignable to type 'ArrayBufferLike'.
+src/ApplicationController.ts(639,32): error TS2304: Cannot find name 'LightingConfig'.
+src/ApplicationController.ts(650,73): error TS2554: Expected 1 arguments, but got 2.
+src/ApplicationController.ts(681,26): error TS18048: 'category' is possibly 'undefined'.
+src/ApplicationController.ts(751,16): error TS6133: 'waitForWalnutTextures' is declared but its value is never read.
+src/ApplicationController.ts(839,56): error TS2339: Property 'removeSilence' does not exist on type '{ useSlice: boolean; startTime: number | null; endTime: number | null; isolateVocals: boolean; sliceBlob: Blob | null; originalFile?: File | undefined; }'.
+src/ApplicationController.ts(840,59): error TS2339: Property 'silenceThreshold' does not exist on type '{ useSlice: boolean; startTime: number | null; endTime: number | null; isolateVocals: boolean; sliceBlob: Blob | null; originalFile?: File | undefined; }'.
+src/ApplicationController.ts(841,62): error TS2339: Property 'silenceMinDuration' does not exist on type '{ useSlice: boolean; startTime: number | null; endTime: number | null; isolateVocals: boolean; sliceBlob: Blob | null; originalFile?: File | undefined; }'.
+src/ApplicationController.ts(869,19): error TS2339: Property 'removeSilence' does not exist on type '{ useSlice: boolean; startTime: number | null; endTime: number | null; isolateVocals: boolean; sliceBlob: Blob | null; originalFile?: File | undefined; }'.
+src/ApplicationController.ts(938,26): error TS2532: Object is possibly 'undefined'.
+src/ApplicationController.ts(1006,54): error TS2345: Argument of type '{ csg_data: { panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; ... 4 more ...; asymmetric_config?: { ...; } | undefined; }; updated_state: { ...; }; max_amplitude_local: number; backing_...' is not assignable to parameter of type '{ panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; slot_data: { ...; }[]; section_local_centers: [...][]; true_min_radius: number; section_edges?: { ...; }[] | undefined; asymmetric_conf...'.
+  Type '{ csg_data: { panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; ... 4 more ...; asymmetric_config?: { ...; } | undefined; }; updated_state: { ...; }; max_amplitude_local: number; backing_...' is missing the following properties from type '{ panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; slot_data: { ...; }[]; section_local_centers: [...][]; true_min_radius: number; section_edges?: { ...; }[] | undefined; asymmetric_conf...': panel_config, slot_data, section_local_centers, true_min_radius
+src/ApplicationController.ts(1064,26): error TS2531: Object is possibly 'null'.
+src/ApplicationController.ts(1104,49): error TS2322: Type '"customization"' is not assignable to type '$InferEnumOutput<{ intent: "intent"; upload: "upload"; discovery: "discovery"; reveal: "reveal"; customize: "customize"; }>'.
+src/ApplicationController.ts(1134,20): error TS2367: This comparison appears to be unintentional because the types '"intent" | "upload" | "reveal" | "customize"' and '"customization"' have no overlap.
+src/ApplicationController.ts(1160,18): error TS2339: Property 'phase' does not exist on type '{ leftPanelVisible: boolean; rightPanelVisible: boolean; selectedCategory: string | null; selectedOption: string | null; currentStyleIndex: number | null; isAutoPlaying: boolean; ... 13 more ...; selectedArchetypeId: string | null; }'.
+src/ApplicationController.ts(1187,8): error TS2352: Conversion of type '{ renderComposition: (csgData: { panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; ... 4 more ...; asymmetric_config?: { ...; } | undefined; }) => Promise<...>; applySectionMaterials: () ...' to type '{ setSectionOverlaysVisible: (visible: boolean) => void; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property 'setSectionOverlaysVisible' is missing in type '{ renderComposition: (csgData: { panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; ... 4 more ...; asymmetric_config?: { ...; } | undefined; }) => Promise<...>; applySectionMaterials: () ...' but required in type '{ setSectionOverlaysVisible: (visible: boolean) => void; }'.
+src/ApplicationController.ts(1269,30): error TS2531: Object is possibly 'null'.
+src/ApplicationController.ts(1336,50): error TS2531: Object is possibly 'null'.
+src/ApplicationController.ts(1338,41): error TS2531: Object is possibly 'null'.
+src/ApplicationController.ts(1342,54): error TS2531: Object is possibly 'null'.
+src/ApplicationController.ts(1344,37): error TS2531: Object is possibly 'null'.
+src/ApplicationController.ts(1451,33): error TS2339: Property 'order' does not exist on type 'SubcategoryConfig'.
+src/ApplicationController.ts(1451,58): error TS2339: Property 'order' does not exist on type 'SubcategoryConfig'.
+src/ApplicationController.ts(1475,11): error TS6133: '_renderLeftSecondaryPanel' is declared but its value is never read.
+src/ApplicationController.ts(1636,11): error TS6133: '_getBackingDisplayName' is declared but its value is never read.
+src/ApplicationController.ts(1687,10): error TS2352: Conversion of type '{ renderComposition: (csgData: { panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; ... 4 more ...; asymmetric_config?: { ...; } | undefined; }) => Promise<...>; applySectionMaterials: () ...' to type '{ setSectionOverlaysVisible: (visible: boolean) => void; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property 'setSectionOverlaysVisible' is missing in type '{ renderComposition: (csgData: { panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; ... 4 more ...; asymmetric_config?: { ...; } | undefined; }) => Promise<...>; applySectionMaterials: () ...' but required in type '{ setSectionOverlaysVisible: (visible: boolean) => void; }'.
+src/ApplicationController.ts(1689,12): error TS2352: Conversion of type '{ renderComposition: (csgData: { panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; ... 4 more ...; asymmetric_config?: { ...; } | undefined; }) => Promise<...>; applySectionMaterials: () ...' to type '{ clearSelection: () => void; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property 'clearSelection' is missing in type '{ renderComposition: (csgData: { panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; ... 4 more ...; asymmetric_config?: { ...; } | undefined; }) => Promise<...>; applySectionMaterials: () ...' but required in type '{ clearSelection: () => void; }'.
+src/ApplicationController.ts(1721,29): error TS2339: Property 'order' does not exist on type 'SubcategoryConfig'.
+src/ApplicationController.ts(1721,50): error TS2339: Property 'order' does not exist on type 'SubcategoryConfig'.
+src/ApplicationController.ts(1747,85): error TS2554: Expected 3 arguments, but got 4.
+src/ApplicationController.ts(1922,11): error TS6133: '_createBackingToggleToolbar' is declared but its value is never read.
+src/ApplicationController.ts(1961,40): error TS2345: Argument of type '{ frame_design: { backing: { enabled: boolean; type?: $InferEnumOutput<{ acrylic: "acrylic"; cloth: "cloth"; leather: "leather"; foam: "foam"; }> | undefined; material?: string | undefined; inset?: number | undefined; }; ... 9 more ...; section_materials: { ...; }[]; }; ... 9 more ...; size_defaults?: Record<...> | ...' is not assignable to parameter of type '{ frame_design: { shape: $InferEnumOutput<{ diamond: "diamond"; circular: "circular"; rectangular: "rectangular"; }>; frame_orientation: string; finish_x: number; finish_y: number; ... 6 more ...; backing?: { ...; } | undefined; }; ... 9 more ...; size_defaults?: Record<...> | undefined; }'.
+  The types of 'frame_design.backing.type' are incompatible between these types.
+    Type '$InferEnumOutput<{ acrylic: "acrylic"; cloth: "cloth"; leather: "leather"; foam: "foam"; }> | undefined' is not assignable to type '$InferEnumOutput<{ acrylic: "acrylic"; cloth: "cloth"; leather: "leather"; foam: "foam"; }>'.
+      Type 'undefined' is not assignable to type '$InferEnumOutput<{ acrylic: "acrylic"; cloth: "cloth"; leather: "leather"; foam: "foam"; }>'.
+src/ApplicationController.ts(1975,51): error TS2345: Argument of type '{ renderComposition: (csgData: { panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; ... 4 more ...; asymmetric_config?: { ...; } | undefined; }) => Promise<...>; applySectionMaterials: () ...' is not assignable to parameter of type '{ startCinematicRotation: (callback: () => void) => void; clearScene: () => void; } | null'.
+  Type '{ renderComposition: (csgData: { panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; ... 4 more ...; asymmetric_config?: { ...; } | undefined; }) => Promise<...>; applySectionMaterials: () ...' is missing the following properties from type '{ startCinematicRotation: (callback: () => void) => void; clearScene: () => void; }': startCinematicRotation, clearScene
+src/ApplicationController.ts(2032,17): error TS6133: '_renderUploadInterfaceContent' is declared but its value is never read.
+src/ApplicationController.ts(2059,26): error TS2531: Object is possibly 'null'.
+src/ApplicationController.ts(2059,59): error TS2531: Object is possibly 'null'.
+src/ApplicationController.ts(2060,26): error TS2531: Object is possibly 'null'.
+src/ApplicationController.ts(2342,22): error TS2532: Object is possibly 'undefined'.
+src/ApplicationController.ts(2346,70): error TS2345: Argument of type 'string' is not assignable to parameter of type '"music" | "speech" | undefined'.
+src/ApplicationController.ts(2405,22): error TS2532: Object is possibly 'undefined'.
+src/ApplicationController.ts(2409,70): error TS2345: Argument of type 'string' is not assignable to parameter of type '"music" | "speech" | undefined'.
+src/ApplicationController.ts(2520,11): error TS6133: '_shape' is declared but its value is never read.
+src/ApplicationController.ts(2521,11): error TS6133: '_numSections' is declared but its value is never read.
+src/ApplicationController.ts(2521,79): error TS2552: Cannot find name 'number_sections'. Did you mean '_numSections'?
+src/ApplicationController.ts(2815,11): error TS6133: '_setupScrollFades' is declared but its value is never read.
+src/ApplicationController.ts(2916,10): error TS6133: '_handleStyleCategorySelected' is declared but its value is never read.
+src/ApplicationController.ts(3035,8): error TS2352: Conversion of type '{ renderComposition: (csgData: { panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; ... 4 more ...; asymmetric_config?: { ...; } | undefined; }) => Promise<...>; applySectionMaterials: () ...' to type '{ setSectionOverlaysVisible: (visible: boolean) => void; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property 'setSectionOverlaysVisible' is missing in type '{ renderComposition: (csgData: { panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; ... 4 more ...; asymmetric_config?: { ...; } | undefined; }) => Promise<...>; applySectionMaterials: () ...' but required in type '{ setSectionOverlaysVisible: (visible: boolean) => void; }'.
+src/ApplicationController.ts(3121,11): error TS6133: '_updateSectionInteractionState' is declared but its value is never read.
+src/ApplicationController.ts(3400,45): error TS2339: Property 'config' does not exist on type 'UIEngine'.
+src/ApplicationController.ts(3487,30): error TS18048: 'items' is possibly 'undefined'.
+src/ApplicationController.ts(3510,24): error TS18048: 'items' is possibly 'undefined'.
+src/ApplicationController.ts(3530,31): error TS18048: 'items' is possibly 'undefined'.
+src/ApplicationController.ts(3556,9): error TS2345: Argument of type '({ id: string; label: string; thumbnailUrl: string; disabled: boolean; tooltip: string; rgb: number[]; } | { id: string; label: string; thumbnailUrl: string; disabled: boolean; tooltip: string; rgb?: undefined; })[]' is not assignable to parameter of type 'ThumbnailItem[]'.
+  Type '{ id: string; label: string; thumbnailUrl: string; disabled: boolean; tooltip: string; rgb: number[]; } | { id: string; label: string; thumbnailUrl: string; disabled: boolean; tooltip: string; rgb?: undefined; }' is not assignable to type 'ThumbnailItem'.
+    Type '{ id: string; label: string; thumbnailUrl: string; disabled: boolean; tooltip: string; rgb: number[]; }' is not assignable to type 'ThumbnailItem'.
+      Types of property 'rgb' are incompatible.
+        Type 'number[]' is not assignable to type '[number, number, number]'.
+          Target requires 3 element(s) but source may have fewer.
+src/ApplicationController.ts(3572,15): error TS2345: Argument of type '{ renderComposition: (csgData: { panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; ... 4 more ...; asymmetric_config?: { ...; } | undefined; }) => Promise<...>; applySectionMaterials: () ...' is not assignable to parameter of type '{ startCinematicRotation: (callback: () => void) => void; clearScene: () => void; } | null'.
+src/ApplicationController.ts(3834,11): error TS6133: '_getNestedValue' is declared but its value is never read.
+src/ApplicationController.ts(3874,7): error TS2322: Type 'string' is not assignable to type '$InferEnumOutput<{ diamond: "diamond"; circular: "circular"; rectangular: "rectangular"; }>'.
+src/ApplicationController.ts(3884,36): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ radial: { x_offset: number; }; linear: { x_offset: number; }; asymmetric: { x_offset: number; }; }'.
+  No index signature with a parameter of type 'string' was found on type '{ radial: { x_offset: number; }; linear: { x_offset: number; }; asymmetric: { x_offset: number; }; }'.
+src/ApplicationController.ts(4008,11): error TS6133: '_handleOptionSelected' is declared but its value is never read.
+src/ApplicationController.ts(4059,35): error TS2339: Property 'config' does not exist on type 'UIEngine'.
+src/ApplicationController.ts(4308,9): error TS2322: Type 'string' is not assignable to type '"horizontal" | "vertical" | "radiant" | "diamond"'.
+src/ApplicationController.ts(4314,11): error TS2322: Type 'string' is not assignable to type '$InferEnumOutput<{ horizontal: "horizontal"; vertical: "vertical"; radiant: "radiant"; diamond: "diamond"; }>'.
+src/ApplicationController.ts(4371,10): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/ApplicationController.ts(4417,10): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/ApplicationController.ts(4730,13): error TS2531: Object is possibly 'null'.
+src/ApplicationController.ts(4818,54): error TS2345: Argument of type '{ csg_data: { panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; ... 4 more ...; asymmetric_config?: { ...; } | undefined; }; updated_state: { ...; }; max_amplitude_local: number; backing_...' is not assignable to parameter of type '{ panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; slot_data: { ...; }[]; section_local_centers: [...][]; true_min_radius: number; section_edges?: { ...; }[] | undefined; asymmetric_conf...'.
+src/ApplicationController.ts(4881,3): error TS2393: Duplicate function implementation.
+src/ApplicationController.ts(4924,7): error TS2322: Type '{ section_id: number; species: string; grain_direction: "horizontal" | "vertical" | "angled"; }' is not assignable to type '{ section_id: number; species: string; grain_direction: $InferEnumOutput<{ horizontal: "horizontal"; vertical: "vertical"; radiant: "radiant"; diamond: "diamond"; }>; }'.
+  Types of property 'grain_direction' are incompatible.
+    Type '"horizontal" | "vertical" | "angled"' is not assignable to type '$InferEnumOutput<{ horizontal: "horizontal"; vertical: "vertical"; radiant: "radiant"; diamond: "diamond"; }>'.
+      Type '"angled"' is not assignable to type '$InferEnumOutput<{ horizontal: "horizontal"; vertical: "vertical"; radiant: "radiant"; diamond: "diamond"; }>'.
+src/ApplicationController.ts(4926,29): error TS2345: Argument of type '{ section_id: number; species: string; grain_direction: "horizontal" | "vertical" | "angled"; }' is not assignable to parameter of type '{ section_id: number; species: string; grain_direction: $InferEnumOutput<{ horizontal: "horizontal"; vertical: "vertical"; radiant: "radiant"; diamond: "diamond"; }>; }'.
+src/ApplicationController.ts(4971,5): error TS2531: Object is possibly 'null'.
+src/ApplicationController.ts(4972,10): error TS2531: Object is possibly 'null'.
+src/ApplicationController.ts(4974,12): error TS2531: Object is possibly 'null'.
+src/ApplicationController.ts(4975,9): error TS2322: Type '{ section_id: number; species: string; grain_direction: string; }[]' is not assignable to type '{ section_id: number; species: string; grain_direction: $InferEnumOutput<{ horizontal: "horizontal"; vertical: "vertical"; radiant: "radiant"; diamond: "diamond"; }>; }[]'.
+  Type '{ section_id: number; species: string; grain_direction: string; }' is not assignable to type '{ section_id: number; species: string; grain_direction: $InferEnumOutput<{ horizontal: "horizontal"; vertical: "vertical"; radiant: "radiant"; diamond: "diamond"; }>; }'.
+    Types of property 'grain_direction' are incompatible.
+      Type 'string' is not assignable to type '$InferEnumOutput<{ horizontal: "horizontal"; vertical: "vertical"; radiant: "radiant"; diamond: "diamond"; }>'.
+src/components/AudioSlicerPanel.ts(40,14): error TS2420: Class 'AudioSlicerPanel' incorrectly implements interface 'PanelComponent'.
+  Property 'render' is missing in type 'AudioSlicerPanel' but required in type 'PanelComponent'.
+src/components/AudioSlicerPanel.ts(52,11): error TS6133: '_startTimeInput' is declared but its value is never read.
+src/components/AudioSlicerPanel.ts(53,11): error TS6133: '_endTimeInput' is declared but its value is never read.
+src/components/AudioSlicerPanel.ts(67,11): error TS6133: '_selectionSummary' is declared but its value is never read.
+src/components/AudioSlicerPanel.ts(68,11): error TS6133: '_markStartBtnV2' is declared but its value is never read.
+src/components/AudioSlicerPanel.ts(69,11): error TS6133: '_markEndBtnV2' is declared but its value is never read.
+src/components/AudioSlicerPanel.ts(116,11): error TS6133: '_enhanceSection' is declared but its value is never read.
+src/components/AudioSlicerPanel.ts(121,11): error TS6133: '_markPhase' is declared but its value is never read.
+src/components/AudioSlicerPanel.ts(320,11): error TS2393: Duplicate function implementation.
+src/components/AudioSlicerPanel.ts(629,11): error TS6133: '_attachEnhanceListeners' is declared but its value is never read.
+src/components/AudioSlicerPanel.ts(722,10): error TS6133: '_cacheEnhanceElements' is declared but its value is never read.
+src/components/AudioSlicerPanel.ts(740,10): error TS6133: '_restoreEnhanceState' is declared but its value is never read.
+src/components/AudioSlicerPanel.ts(799,10): error TS2393: Duplicate function implementation.
+src/components/AudioSlicerPanel.ts(1202,48): error TS2531: Object is possibly 'null'.
+src/components/AudioSlicerPanel.ts(1270,11): error TS6133: '_redo' is declared but its value is never read.
+src/components/AudioSlicerPanel.ts(1298,11): error TS6133: '_showResult' is declared but its value is never read.
+src/components/AudioSlicerPanel.ts(1319,17): error TS6133: '_preview' is declared but its value is never read.
+src/components/AudioSlicerPanel.ts(1690,44): error TS6133: 'btn' is declared but its value is never read.
+src/components/AudioSlicerPanel.ts(1739,11): error TS6133: '_reset' is declared but its value is never read.
+src/components/AudioSlicerPanel.ts(1775,11): error TS6133: '_exportSlice' is declared but its value is never read.
+src/components/AudioSlicerPanel.ts(1807,7): error TS2322: Type '"AUDIO_SLICE_COMPLETE"' is not assignable to type '"FILE_UPLOADED" | "STYLE_SELECTED" | "STYLE_ADVANCE" | "AUTOPLAY_TOGGLED" | "PHASE_CHANGED" | "PROCESSING_UPDATE" | "DEMUCS_COMPLETED" | "STATE_RESTORED" | "COMPOSITION_UPDATED" | ... 5 more ... | "FILTER_CHANGED"'.
+src/components/AudioSlicerPanel.ts(1809,9): error TS2353: Object literal may only specify known properties, and 'blob' does not exist in type '{ category: string; subcategory: string; filterId: string; selections: string[]; }'.
+src/components/AudioSlicerPanel.ts(1933,9): error TS2322: Type 'File | Blob | undefined' is not assignable to type 'File | undefined'.
+  Type 'Blob' is missing the following properties from type 'File': lastModified, name, webkitRelativePath
+src/components/AudioSlicerPanel.ts(2012,10): error TS6133: '_openAccordion' is declared but its value is never read.
+src/components/AudioSlicerPanel.ts(2047,11): error TS6133: '_useFullTrack' is declared but its value is never read.
+src/components/AudioSlicerPanel.ts(2057,11): error TS6133: '_handlePreviewFinal' is declared but its value is never read.
+src/components/BackingPanel.ts(234,11): error TS6133: 'createEnableToggle' is declared but its value is never read.
+src/components/BackingPanel.ts(384,11): error TS6133: 'scrollToSelected' is declared but its value is never read.
+src/components/FilterIconStrip.ts(139,46): error TS6133: 'groupType' is declared but its value is never read.
+src/components/LeftSecondaryPanel.ts(27,11): error TS6133: '_documentClickHandler' is declared but its value is never read.
+src/components/RightPanelContent.ts(258,30): error TS2339: Property 'section_materials' does not exist on type '{ frame_design: { shape: $InferEnumOutput<{ diamond: "diamond"; circular: "circular"; rectangular: "rectangular"; }>; frame_orientation: string; finish_x: number; finish_y: number; ... 6 more ...; backing?: { ...; } | undefined; }; ... 9 more ...; size_defaults?: Record<...> | undefined; }'.
+src/components/RightPanelContent.ts(340,29): error TS2339: Property 'section_materials' does not exist on type '{ frame_design: { shape: $InferEnumOutput<{ diamond: "diamond"; circular: "circular"; rectangular: "rectangular"; }>; frame_orientation: string; finish_x: number; finish_y: number; ... 6 more ...; backing?: { ...; } | undefined; }; ... 9 more ...; size_defaults?: Record<...> | undefined; }'.
+src/components/RightPanelContent.ts(364,29): error TS2339: Property 'section_materials' does not exist on type '{ frame_design: { shape: $InferEnumOutput<{ diamond: "diamond"; circular: "circular"; rectangular: "rectangular"; }>; frame_orientation: string; finish_x: number; finish_y: number; ... 6 more ...; backing?: { ...; } | undefined; }; ... 9 more ...; size_defaults?: Record<...> | undefined; }'.
+src/components/RightPanelContent.ts(373,11): error TS6133: '_createNavigationCard' is declared but its value is never read.
+src/components/RightPanelContent.ts(538,40): error TS6133: 'shape' is declared but its value is never read.
+src/components/SectionSelectorPanel.ts(277,16): error TS6133: '_loadRectangularIcon' is declared but its value is never read.
+src/components/SectionSelectorPanel.ts(340,13): error TS6133: 'sectionOrder' is declared but its value is never read.
+src/components/SliderGroup.ts(37,5): error TS6133: 'onInteraction' is declared but its value is never read.
+src/components/SliderGroup.ts(204,13): error TS6133: 'debounceTimer' is declared but its value is never read.
+src/components/ThumbnailGrid.ts(127,11): error TS2322: Type 'string | undefined' is not assignable to type 'string | null'.
+  Type 'undefined' is not assignable to type 'string | null'.
+src/components/TourLauncherPanel.ts(75,59): error TS2345: Argument of type '{ startCinematicRotation: (callback: () => void) => void; clearScene: () => void; } | null' is not assignable to parameter of type '{ startCinematicRotation: (callback: () => void) => void; } | undefined'.
+  Type 'null' is not assignable to type '{ startCinematicRotation: (callback: () => void) => void; } | undefined'.
+src/components/UploadPanel.ts(21,11): error TS6133: '_dropZone' is declared but its value is never read.
+src/components/WoodMaterialSelector.ts(16,11): error TS6133: '_numberSections' is declared but its value is never read.
+src/components/WoodMaterialSelector.ts(168,59): error TS2339: Property 'options' does not exist on type '{ label: string; state_path: string; }'.
+src/components/WoodMaterialSelector.ts(178,31): error TS2339: Property 'options' does not exist on type '{ label: string; state_path: string; }'.
+src/demo/DemoPlayer.ts(23,3): error TS2322: Type '{ startCinematicRotation: (callback: () => void) => void; } | null' is not assignable to type '{ startCinematicRotation: (callback: () => void) => void; clearScene: () => void; } | null'.
+  Property 'clearScene' is missing in type '{ startCinematicRotation: (callback: () => void) => void; }' but required in type '{ startCinematicRotation: (callback: () => void) => void; clearScene: () => void; }'.
+src/FrameGenerationService.ts(59,13): error TS6133: 'scene' is declared but its value is never read.
+src/FrameGenerationService.ts(87,9): error TS2322: Type 'string' is not assignable to type '"diamond" | "circular" | "rectangular"'.
+src/FrameGenerationService.ts(94,60): error TS2345: Argument of type 'import("C:/Users/paulj/WDweb/src/types/PanelTypes").PanelConfig' is not assignable to parameter of type 'PanelConfig'.
+  Property 'slotStyle' is missing in type 'import("C:/Users/paulj/WDweb/src/types/PanelTypes").PanelConfig' but required in type 'PanelConfig'.
+src/FrameGenerationService.ts(119,7): error TS2353: Object literal may only specify known properties, and 'slotStyle' does not exist in type 'PanelConfig'.
+src/FrameGenerationService.ts(130,7): error TS2353: Object literal may only specify known properties, and 'slotStyle' does not exist in type 'PanelConfig'.
+src/FrameGenerationService.ts(134,63): error TS2345: Argument of type 'import("C:/Users/paulj/WDweb/src/types/PanelTypes").PanelConfig' is not assignable to parameter of type 'PanelConfig'.
+src/FrameGenerationService.ts(135,63): error TS2345: Argument of type 'import("C:/Users/paulj/WDweb/src/types/PanelTypes").PanelConfig' is not assignable to parameter of type 'PanelConfig'.
+src/IdleTextureLoader.ts(14,11): error TS2430: Interface 'InternalTextureCacheService' incorrectly extends interface 'TextureCacheService'.
+  Property '_textureCache' is private in type 'TextureCacheService' but not in type 'InternalTextureCacheService'.
+src/IdleTextureLoader.ts(35,25): error TS2352: Conversion of type 'TextureCacheService' to type 'InternalTextureCacheService' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property '_preloadSpeciesTexturesAsync' is private in type 'TextureCacheService' but not in type 'InternalTextureCacheService'.
+src/main.ts(30,5): error TS2717: Subsequent property declarations must have the same type.  Property 'uiEngine' must be of type 'UIEngine | undefined', but here has type 'UIEngine | undefined'.
+src/main.ts(51,7): error TS2322: Type 'import("C:/Users/paulj/WDweb/src/UIEngine").UIEngine' is not assignable to type 'UIEngine'.
+  The types returned by 'getElementConfig(...)' are incompatible between these types.
+    Type 'UIElementConfig | null' is not assignable to type '{ label: string; state_path: string; } | undefined'.
+      Type 'null' is not assignable to type '{ label: string; state_path: string; } | undefined'.
+src/main.ts(59,39): error TS2345: Argument of type 'SceneManager' is not assignable to parameter of type '{ renderComposition: (csgData: { panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; ... 4 more ...; asymmetric_config?: { ...; } | undefined; }) => Promise<...>; ... 5 more ...; resetLight...'.
+  Types of property 'renderComposition' are incompatible.
+    Type '(csgData: { csg_data: { panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; ... 4 more ...; asymmetric_config?: { ...; } | undefined; }; updated_state: { ...; }; max_amplitude_local: number...' is not assignable to type '(csgData: { panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; slot_data: { ...; }[]; section_local_centers: [...][]; true_min_radius: number; section_edges?: { ...; }[] | undefined; asymm...'.
+      Types of parameters 'csgData' and 'csgData' are incompatible.
+        Type '{ panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; slot_data: { ...; }[]; section_local_centers: [...][]; true_min_radius: number; section_edges?: { ...; }[] | undefined; asymmetric_conf...' is missing the following properties from type '{ csg_data: { panel_config: { finish_x: number; finish_y: number; thickness: number; separation: number; number_sections: number; shape?: string | undefined; slot_style?: string | undefined; }; ... 4 more ...; asymmetric_config?: { ...; } | undefined; }; updated_state: { ...; }; max_amplitude_local: number; backing_...': csg_data, updated_state, max_amplitude_local
+src/PanelGenerationService.ts(13,20): error TS7016: Could not find a declaration file for module 'earcut'. 'C:/Users/paulj/WDweb/node_modules/earcut/src/earcut.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/earcut` if it exists or add a new declaration (.d.ts) file containing `declare module 'earcut';`
+src/PanelGenerationService.ts(58,11): error TS6133: 'debugMode' is declared but its value is never read.
+src/PanelGenerationService.ts(229,11): error TS6133: '_createDiamondSectionCSG' is declared but its value is never read.
+src/PanelGenerationService.ts(599,7): error TS2353: Object literal may only specify known properties, and 'bevel' does not exist in type '{ shape: Vector3[]; holes?: Vector3[][] | undefined; depth?: number | undefined; faceUV?: Vector4[] | undefined; faceColors?: Color4[] | undefined; updatable?: boolean | undefined; sideOrientation?: number | undefined; frontUVs?: Vector4 | undefined; backUVs?: Vector4 | undefined; wrap?: boolean | undefined; }'.
+src/SceneManager.ts(28,13): error TS6133: '_facade' is declared but its value is never read.
+src/SceneManager.ts(57,11): error TS6133: '_baselineAspectRatio' is declared but its value is never read.
+src/SceneManager.ts(58,11): error TS6133: '_baseRadiusBeforeAspect' is declared but its value is never read.
+src/SceneManager.ts(138,21): error TS2339: Property '_referenceAspectRatio' does not exist on type 'SceneManager'.
+src/SceneManager.ts(139,52): error TS2339: Property '_referenceAspectRatio' does not exist on type 'SceneManager'.
+src/SceneManager.ts(160,45): error TS2339: Property 'multiTouchPanning' does not exist on type 'ICameraInput<ArcRotateCamera>'.
+src/SceneManager.ts(161,45): error TS2339: Property 'multiTouchPanAndZoom' does not exist on type 'ICameraInput<ArcRotateCamera>'.
+src/SceneManager.ts(203,21): error TS2339: Property 'environmentColor' does not exist on type 'Scene'.
+src/SceneManager.ts(207,11): error TS6133: 'setupBackground' is declared but its value is never read.
+src/SceneManager.ts(239,9): error TS2322: Type 'undefined' is not assignable to type 'number[] | null'.
+src/SceneManager.ts(503,43): error TS2538: Type 'null' cannot be used as an index type.
+src/SceneManager.ts(503,85): error TS2538: Type 'null' cannot be used as an index type.
+src/SceneManager.ts(551,84): error TS2339: Property 'onLoadObservable' does not exist on type 'BaseTexture'.
+src/SceneManager.ts(599,44): error TS6133: 'size' is declared but its value is never read.
+src/SceneManager.ts(793,13): error TS6133: 'pulseAllSections' is declared but its value is never read.
+src/SceneManager.ts(1179,27): error TS6133: 'canvas' is declared but its value is never read.
+src/SceneManager.ts(1191,11): error TS6133: 'calculateIdealRadius' is declared but its value is never read.
+src/SceneManager.ts(1321,27): error TS18048: 'backingParams.sections' is possibly 'undefined'.
+src/SceneManager.ts(1322,27): error TS18048: 'backingParams.sections' is possibly 'undefined'.
+src/SceneManager.ts(1323,23): error TS18048: 'backingParams.sections' is possibly 'undefined'.
+src/SceneManager.ts(1437,11): error TS6133: 'createBackingMesh' is declared but its value is never read.
+src/SceneManager.ts(1438,48): error TS2339: Property '0' does not exist on type '{ shape: string; width: number; height: number; thickness: number; position_x: number; position_y: number; position_z: number; inset: number; }[] | undefined'.
+src/SceneManager.ts(1550,49): error TS2339: Property 'archetype_id' does not exist on type '{ frame_design: { shape: $InferEnumOutput<{ diamond: "diamond"; circular: "circular"; rectangular: "rectangular"; }>; frame_orientation: string; finish_x: number; finish_y: number; ... 6 more ...; backing?: { ...; } | undefined; }; ... 9 more ...; size_defaults?: Record<...> | undefined; }'.
+src/SceneManager.ts(1622,52): error TS2339: Property 'shadowLevel' does not exist on type 'Material'.
+src/SceneManager.ts(1644,11): error TS6133: '_positionShadowReceiver' is declared but its value is never read.
+src/SceneManager.ts(1823,17): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/SceneManager.ts(1963,9): error TS2353: Object literal may only specify known properties, and 'grain_angle' does not exist in type '{ section_id: number; species: string; grain_direction: string; mesh_name: string; }'.
+src/SceneManager.ts(2012,17): error TS2353: Object literal may only specify known properties, and 'shouldExportTexture' does not exist in type 'IExportOptions'.
+src/services/ConstraintResolver.ts(9,11): error TS2430: Interface 'WindowWithController' incorrectly extends interface 'Window'.
+  Types of property 'controller' are incompatible.
+    Type '{ getState: () => { ui?: { currentBackground?: { type: string; id: string; } | undefined; } | undefined; }; getMarginPresets: (state: { frame_design: { shape: $InferEnumOutput<{ diamond: "diamond"; circular: "circular"; rectangular: "rectangular"; }>; ... 9 more ...; backing?: { ...; } | undefined; }; ... 9 more ......' is not assignable to type 'ApplicationController | undefined'.
+      Type '{ getState: () => { ui?: { currentBackground?: { type: string; id: string; } | undefined; } | undefined; }; getMarginPresets: (state: { frame_design: { shape: $InferEnumOutput<{ diamond: "diamond"; circular: "circular"; rectangular: "rectangular"; }>; ... 9 more ...; backing?: { ...; } | undefined; }; ... 9 more ......' is missing the following properties from type 'ApplicationController': _state, _facade, _subscribers, _panelStack, and 145 more.
+src/services/ConstraintResolver.ts(34,13): error TS6138: Property 'placementDefaults' is declared but its value is never read.
+src/services/ConstraintResolver.ts(135,5): error TS6133: 'minDim' is declared but its value is never read.
+src/services/ConstraintResolver.ts(252,13): error TS6133: '_clampedValue' is declared but its value is never read.
+src/testParams.ts(1,10): error TS2305: Module '"./types/PanelTypes"' has no exported member 'CompositionStateDTO'.
+src/types/schemas.ts(74,3): error TS1117: An object literal cannot have multiple properties with the same name.
+src/UIBootstrapper.ts(37,39): error TS2554: Expected 0 arguments, but got 1.
+src/UIBootstrapper.ts(59,35): error TS2554: Expected 0 arguments, but got 1.
+src/UIBootstrapper.ts(205,47): error TS2554: Expected 0 arguments, but got 1.
+src/UIBootstrapper.ts(213,47): error TS2554: Expected 0 arguments, but got 1.
+src/UIBootstrapper.ts(348,68): error TS2345: Argument of type '"horizontal" | "vertical" | "radiant" | "diamond"' is not assignable to parameter of type '"horizontal" | "vertical" | "angled"'.
+src/UIBootstrapper.ts(353,67): error TS2345: Argument of type '"horizontal" | "vertical" | "radiant" | "diamond"' is not assignable to parameter of type '"horizontal" | "vertical" | "angled"'.
+  Type '"radiant"' is not assignable to type '"horizontal" | "vertical" | "angled"'.
+src/UIEngine.ts(224,5): error TS2322: Type '{} | null' is not assignable to type 'string | null'.
+  Type '{}' is not assignable to type 'string'.
+src/UIEngine.ts(465,41): error TS2345: Argument of type 'string | number' is not assignable to parameter of type 'number'.
+  Type 'string' is not assignable to type 'number'.
+src/UIEngine.ts(497,45): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string | number'.
+src/UploadInterface.ts(22,11): error TS6133: 'acceptedExtensions' is declared but its value is never read.
+src/UploadInterface.ts(24,11): error TS6133: 'hintDelayMs' is declared but its value is never read.
+src/UploadInterface.ts(25,11): error TS6133: 'messages' is declared but its value is never read.
+src/UploadInterface.ts(44,7): error TS2322: Type 'string[] | undefined' is not assignable to type 'string[]'.
+  Type 'undefined' is not assignable to type 'string[]'.
+src/UploadInterface.ts(45,7): error TS2322: Type 'string[] | undefined' is not assignable to type 'string[]'.
+  Type 'undefined' is not assignable to type 'string[]'.
+src/UploadInterface.ts(46,26): error TS18048: 'uploadConfig.max_file_size_mb' is possibly 'undefined'.
+src/utils/mergeUtils.ts(22,75): error TS2345: Argument of type 'Partial<T>[keyof T] & Record<string, unknown>' is not assignable to parameter of type 'Partial<(T & Record<string, unknown>)[keyof T] & Record<string, unknown>>'.
+src/WaveformDesignerFacade.ts(146,5): error TS2739: Type '{ leftPanelVisible: true; rightPanelVisible: true; selectedCategory: null; selectedOption: null; currentStyleIndex: number; isAutoPlaying: false; showHint: false; renderQuality: "medium"; ... 6 more ...; selectedArchetypeId: null; }' is missing the following properties from type '{ leftPanelVisible: boolean; rightPanelVisible: boolean; selectedCategory: string | null; selectedOption: string | null; currentStyleIndex: number | null; isAutoPlaying: boolean; ... 13 more ...; selectedArchetypeId: string | null; }': accordionState, aspectRatioLocked, lockedAspectRatio, selectedCollectionId, selectedRecordingId
+src/WoodMaterial.ts(162,15): error TS6133: '_isRotatedGrain' is declared but its value is never read.

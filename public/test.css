@@ -2925,8 +2925,13 @@ SPECIES CARDS - 140px
   color: rgb(var(--color-foreground));
 }
 
-.slicer-cta-footer .slicer-btn-secondary:hover {
+.slicer-cta-footer .slicer-btn-secondary:hover:not(:disabled) {
   border-color: rgb(var(--color-foreground));
+}
+
+.slicer-cta-footer .slicer-btn-secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .slicer-cta-footer .slicer-btn-primary {

@@ -2,30 +2,29 @@
 
 import '@babylonjs/loaders/glTF/2.0';
 import * as BABYLON from '@babylonjs/core';
+
+import { PlacementDebugPanel, DEBUG_PLACEMENT_PANEL } from '../dev_utils/PlacementDebugPanel';
+import { ShadowDebugPanel, DEBUG_SHADOW_PANEL } from '../dev_utils/ShadowDebugPanel';
+
 import { ApplicationController } from './ApplicationController';
-import { SceneManager } from './SceneManager';
-import { UIEngine } from './UIEngine';
-import { WaveformDesignerFacade } from './WaveformDesignerFacade';
-import { UIBootstrapper } from './UIBootstrapper';
-import { calculateGrainAngle } from './utils/materialUtils';
+import type { AudioCacheService } from './AudioCacheService';
 import { TourModal } from './components/TourModal';
 import { DemoPlayer } from './demo/DemoPlayer';
-import { SmartCsgResponse } from './types/schemas';
-import { ShadowDebugPanel, DEBUG_SHADOW_PANEL } from '../dev_utils/ShadowDebugPanel';
-import { PlacementDebugPanel, DEBUG_PLACEMENT_PANEL } from '../dev_utils/PlacementDebugPanel';
+import { SceneManager } from './SceneManager';
+import { UIBootstrapper } from './UIBootstrapper';
+import { UIEngine } from './UIEngine';
+import { calculateGrainAngle } from './utils/materialUtils';
+import { WaveformDesignerFacade } from './WaveformDesignerFacade';
 
 // Expose Babylon core for console diagnostics
 (window as Window & { BJS_CORE?: typeof BABYLON }).BJS_CORE = BABYLON;
-
-// Define a constant for the API base URL for easier configuration
-const API_BASE_URL = 'http://localhost:8000';
 
 // Global type declarations
 declare global {
   interface Window {
     sceneManager?: SceneManager;
     controller?: ApplicationController;
-    audioCache?: any;
+    audioCache?: AudioCacheService;
     calculateGrainAngle?: typeof calculateGrainAngle;
     updateGrainDirectionOptionsFromController?: (newN: number) => void;
     uiEngine?: UIEngine;
@@ -58,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // 3. Initialize Controller and Register SceneManager
       await controller.initialize();
       controller.registerSceneManager(sceneManager);
-			(window as any).__wavedesigner_controller__ = controller;
+			(window as unknown as { __wavedesigner_controller__: ApplicationController }).__wavedesigner_controller__ = controller;
 			
 			// Shadow Debug Panel - toggle with Ctrl+Shift+D
 			if (DEBUG_SHADOW_PANEL) {
@@ -73,8 +72,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // 4. Bootstrap the UI
       const bootstrapper = new UIBootstrapper(uiEngine, controller, sceneManager);
       await bootstrapper.initialize();
+			
+			// 5. Wire up Order button
+      const orderBtn = document.getElementById('orderBtn');
+      orderBtn?.addEventListener('click', () => {
+        void controller.triggerExport();
+      });
 
-      // 5. Initial render from restored state (if applicable and not starting tour)
+      // 5a. Initial render from restored state (if applicable and not starting tour)
       const initialState = controller.getState();
       if (!TourModal.shouldShow() && initialState?.composition?.processed_amplitudes?.length > 0) {
         try {

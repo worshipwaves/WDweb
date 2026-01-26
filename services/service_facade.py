@@ -516,24 +516,14 @@ class WaveformDesignerFacade:
         Raises:
             ValueError: If audio processing fails
         """
-        # Step 1: Process audio to get NORMALIZED amplitudes (0-1) and raw samples
+        # Step 1: Process audio to get SCALED amplitudes (physical dimensions)
         audio_result = self._audio_processing_service.process_audio_file(audio_path, state)
         
-        # Step 2: Calculate geometry for the current state to get the scaling factor
-        geometry = self._geometry_service.calculate_geometries_dto(state)
-        max_amplitude_local = geometry.max_amplitude_local
-
-        # Step 3: Apply the final scaling to the normalized amplitudes
-        # For now, use max_amplitudes as the primary amplitude array
-        # TODO: Update to handle both min and max arrays properly
-        normalized_amplitudes = audio_result.get("max_amplitudes", audio_result.get("scaled_amplitudes", []))
-        scaled_amplitudes = AudioProcessingService.scale_and_clamp_amplitudes(
-            normalized_amplitudes,
-            max_amplitude_local,
-            state.pattern_settings.bit_diameter
-        )
+        # Step 2: Use already-scaled amplitudes (PyQt parity - audio service owns full pipeline)
+        scaled_amplitudes = audio_result.get("max_amplitudes", [])
+        max_amplitude_local = audio_result.get("max_amplitude_local", 0)
         
-        # Step 4: Create the final updated state DTO
+        # Step 3: Create the final updated state DTO
         updated_state = state.model_copy(update={"processed_amplitudes": scaled_amplitudes})
         
         return {

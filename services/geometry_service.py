@@ -499,7 +499,7 @@ def calculate_geometries_core(state: 'CompositionStateDTO') -> GeometryResultDTO
                 true_min_radius_from_NR = abs_min_check
         
         true_min_radius = true_min_radius_from_NR
-        min_radius_local = true_min_radius_from_NR
+        min_radius_local = true_min_radius
         
         # Slot angle calculations
         slot_angle_deg = 360.0 / num_slots
@@ -561,7 +561,7 @@ def calculate_geometries_core(state: 'CompositionStateDTO') -> GeometryResultDTO
         
         # V-POINT CALCULATIONS - Critical for correct amplitude
         # Calculate min/max radius from vertex V
-        min_radius_from_V = true_min_radius_from_NR - circum_radius
+        min_radius_from_V = true_min_radius - circum_radius
         max_radius_from_V = max_radius_local_from_LC - circum_radius
         
         # Ensure max_radius_from_V is reasonable
@@ -620,6 +620,21 @@ def calculate_geometries_core(state: 'CompositionStateDTO') -> GeometryResultDTO
                 shape
             )
             center_point_from_V = max_amplitude_from_V / 2.0
+            
+    # PARITY DIAGNOSTIC - Variable audit
+    print(f"[PARITY-GEO] === GEOMETRY VARIABLE AUDIT ===")
+    print(f"[PARITY-GEO] TrueMinRadius: {true_min_radius:.6f}")
+    print(f"[PARITY-GEO] CircumRadius: {circum_radius:.6f}")
+    print(f"[PARITY-GEO] MaxRadiusLocal: {max_radius_local_from_LC:.6f}")
+    print(f"[PARITY-GEO] SlotAngleDeg: {slot_angle_deg:.6f}")
+    print(f"[PARITY-GEO] ScaleCenterPoint: {scale_center_point:.6f}")
+    print(f"[PARITY-GEO] R_min_v (min_radius_from_V): {min_radius_from_V:.6f}")
+    print(f"[PARITY-GEO] R_max_v (max_radius_from_V): {max_radius_from_V:.6f}")
+    print(f"[PARITY-GEO] min_radius_from_V_calc: {min_radius_from_V_calc:.6f}")
+    print(f"[PARITY-GEO] CP (center_point_from_V): {center_point_from_V:.6f}")
+    print(f"[PARITY-GEO] A_radial (pre-cosine): {2.0 * min(max_radius_from_V - center_point_from_V, center_point_from_V - min_radius_from_V_calc):.6f}")
+    print(f"[PARITY-GEO] max_amplitude_local (post-cosine): {max_amplitude_from_V:.6f}")
+    print(f"[PARITY-GEO] ================================")        
     
     # Return properly typed DTO
     return GeometryResultDTO(

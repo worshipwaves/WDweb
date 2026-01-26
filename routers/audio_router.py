@@ -7,6 +7,7 @@ import uuid
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from fastapi.responses import FileResponse
+import subprocess
 import librosa
 import soundfile as sf
 
@@ -33,7 +34,7 @@ _demucs = DemucsService(
 @router.post("/isolate-vocals")
 async def isolate_vocals(
     file: UploadFile = File(...),
-    remove_silence: bool = True
+    remove_silence: bool = False
 ):
     """
     Isolate vocals from uploaded audio file.
@@ -41,26 +42,33 @@ async def isolate_vocals(
     - Runs Demucs stem separation (GPU accelerated)
     - Optionally compresses silence gaps
     - Returns processed vocals as WAV
+    
+    PyQt parity: When called with remove_silence=False, returns raw Demucs output.
+    PyQt handles silence removal locally with shop-specified parameters.
     """
     if not file.filename:
         raise HTTPException(400, "No filename provided")
     
-    # Save upload to temp file
     suffix = Path(file.filename).suffix or ".wav"
     temp_input = Path(tempfile.gettempdir()) / f"{uuid.uuid4()}{suffix}"
     
     try:
-        # Write uploaded file
         content = await file.read()
         temp_input.write_bytes(content)
         
-        # Process
+        # PyQt parity: Demucs only separates
         vocals_path, demucs_time = _demucs.separate_vocals(
-            input_path=temp_input,
-            remove_silence=remove_silence
+            input_path=temp_input
         )
         
-        # Return processed file
+        # PyQt parity: Silence removal is decoupled, apply if requested
+        if remove_silence:
+            vocals_path = _demucs.compress_silence_only(
+                input_path=vocals_path,
+                threshold_db=_audio_config.demucs_silence_threshold,
+                min_duration=_audio_config.demucs_silence_duration
+            )
+        
         return FileResponse(
             path=str(vocals_path),
             media_type="audio/wav",
@@ -73,7 +81,6 @@ async def isolate_vocals(
     except FileNotFoundError as e:
         raise HTTPException(500, str(e))
     finally:
-        # Cleanup input
         if temp_input.exists():
             temp_input.unlink()
             
@@ -96,6 +103,11 @@ async def compress_silence(
     try:
         content = await file.read()
         temp_input.write_bytes(content)
+        
+        # DIAGNOSTIC: Save input for parity comparison
+        debug_path = Path(tempfile.gettempdir()) / "debug_silence_input.wav"
+        debug_path.write_bytes(content)
+        print(f"[DEBUG-SILENCE] Saved input to: {debug_path}")
         
         output_path = _demucs.compress_silence_only(
             input_path=temp_input,
@@ -182,35 +194,44 @@ async def process_audio_commit(
         content = await file.read()
         temp_input.write_bytes(content)
         
-        # Apply slice using librosa (Desktop parity: sample-accurate, float32, mono)
+        # Apply time slicing FIRST if parameters provided
+        working_path = temp_input
         if start_time is not None and end_time is not None:
             duration = end_time - start_time
-            print(f"[DEBUG] Slicing: start={start_time}, end={end_time}, duration={duration}")
-            y, sr = librosa.load(str(temp_input), sr=_audio_config.target_sample_rate, mono=True, offset=start_time, duration=duration)
-            print(f"[DEBUG] Loaded slice: {len(y)} samples, sr={sr}")
-            # Write to new WAV file (soundfile can't write to m4a/mp3)
-            temp_input.unlink()
-            temp_input = Path(tempfile.gettempdir()) / f"{uuid.uuid4()}.wav"
-            sf.write(str(temp_input), y, sr)
-            print(f"[DEBUG] Wrote sliced file: {temp_input}")
+            if duration > 0:
+                y, sr = librosa.load(str(temp_input), sr=None, mono=True,
+                                     offset=start_time, duration=duration)
+                slice_path = Path(tempfile.gettempdir()) / f"{uuid.uuid4()}_slice.wav"
+                sf.write(str(slice_path), y, sr)
+                working_path = slice_path
         
         print(f"[DEBUG] isolate_vocals={isolate_vocals}, remove_silence={remove_silence}")
         
         # Process based on options
         demucs_time = 0.0
         if isolate_vocals:
-            output_path, demucs_time = _demucs.separate_vocals(
-                input_path=temp_input,
-                remove_silence=remove_silence
+            # PyQt parity: Demucs only separates
+            vocals_path, demucs_time = _demucs.separate_vocals(
+                input_path=working_path
             )
+            
+            # PyQt parity: Silence removal is decoupled, apply if requested
+            if remove_silence:
+                output_path = _demucs.compress_silence_only(
+                    input_path=vocals_path,
+                    threshold_db=_audio_config.demucs_silence_threshold,
+                    min_duration=_audio_config.demucs_silence_duration
+                )
+            else:
+                output_path = vocals_path
         elif remove_silence:
             output_path = _demucs.compress_silence_only(
-                input_path=temp_input,
+                input_path=working_path,
                 threshold_db=silence_threshold,
                 min_duration=silence_min_duration
             )
         else:
-            output_path = temp_input
+            output_path = working_path
         
         headers = {"X-Demucs-Time": str(round(demucs_time, 2))} if demucs_time > 0 else {}
         

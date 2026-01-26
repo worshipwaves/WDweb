@@ -363,7 +363,7 @@ class UIConfig(Base):
     upload = Column(JSONB, nullable=False, default={})
     thumbnail_config = Column(JSONB, default={})
     categories = Column(JSONB, default={})
-    default_category = Column(String(50), default={})
+    default_category = Column(String(50), nullable=True, default=None)
     
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())     
 

@@ -1,6 +1,7 @@
 // src/components/AccordionSpeciesCard.ts
 
 import type { PanelComponent } from '../types/PanelTypes';
+
 import { Tooltip } from './Tooltip';
 
 export interface GrainOption {

@@ -1,5 +1,4 @@
 // src/PanelGenerationService.ts
-
 import {
   Scene,
   Mesh,
@@ -7,16 +6,21 @@ import {
   CSG,
   Vector3,
   VertexBuffer,
-  VertexData,
   StandardMaterial,
   Color3,
 	TransformNode
 } from '@babylonjs/core';
+import earcut from 'earcut';
 
 // BabylonJS requires earcut for ExtrudePolygon triangulation
-import earcut from 'earcut';
-if (typeof window !== 'undefined' && !(window as any).earcut) {
-  (window as any).earcut = earcut;
+type EarcutFunction = (vertices: number[], holes?: number[], dim?: number) => number[];
+declare global {
+  interface Window {
+    earcut?: EarcutFunction;
+  }
+}
+if (typeof window !== 'undefined' && !window.earcut) {
+  window.earcut = earcut as EarcutFunction;
 }
 
 interface PanelConfig {
@@ -566,7 +570,7 @@ export class PanelGenerationService {
     const CNC_CENTER_X = config.finishX / 2.0;
     const CNC_CENTER_Y = config.finishY / 2.0;
     
-    let shapePoints = slot.vertices.map(v => new Vector3(
+    const shapePoints = slot.vertices.map(v => new Vector3(
       v[0] - CNC_CENTER_X,
       0,
       v[1] - CNC_CENTER_Y

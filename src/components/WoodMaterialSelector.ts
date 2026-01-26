@@ -1,8 +1,9 @@
 // src/components/WoodMaterialSelector.ts
 import type { PanelComponent } from '../types/PanelTypes';
+import { TooltipClassNameFactory } from '../utils/TooltipClassNameFactory';
+
 import { HorizontalScrollContainer } from './HorizontalScrollContainer';
 import { Tooltip } from './Tooltip';
-import { TooltipClassNameFactory } from '../utils/TooltipClassNameFactory';
 
 interface SpeciesInfo {
   id: string;

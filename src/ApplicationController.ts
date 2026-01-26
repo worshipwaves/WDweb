@@ -7,23 +7,23 @@
  */
 
 import { AudioCacheService } from './AudioCacheService';
+import { AccordionCollectionCard, type CollectionCardConfig } from './components/AccordionCollectionCard';
+import { AccordionSpeciesCard } from './components/AccordionSpeciesCard';
+import { AccordionStyleCard } from './components/AccordionStyleCard';
 import { AspectRatioLock } from './components/AspectRatioLock';
+import { CollectionVariantSelector } from './components/CollectionVariantSelector';
 import { FilterIconStrip } from './components/FilterIconStrip';
+import { HorizontalScrollContainer } from './components/HorizontalScrollContainer';
 import { PanelStackManager } from './components/PanelStackManager';
 import { RightPanelContentRenderer } from './components/RightPanelContent';
 import { SectionSelectorPanel } from './components/SectionSelectorPanel';
 import { SliderGroup } from './components/SliderGroup';
 import { SubcategoryAccordion, type AccordionItemConfig } from './components/SubcategoryAccordion';
 import { ThumbnailGrid } from './components/ThumbnailGrid';
-import { AccordionStyleCard } from './components/AccordionStyleCard';
-import { AccordionSpeciesCard } from './components/AccordionSpeciesCard';
-import { AccordionCollectionCard, type CollectionCardConfig } from './components/AccordionCollectionCard';
-import { CollectionVariantSelector } from './components/CollectionVariantSelector';
-import { HorizontalScrollContainer } from './components/HorizontalScrollContainer';
-import { WoodMaterialSelector } from './components/WoodMaterialSelector';
+import { Tooltip } from './components/Tooltip';
 import { PerformanceMonitor } from './PerformanceMonitor';
 import { ConstraintResolver } from './services/ConstraintResolver';
-import type { CategoriesConfig, FilterIconGroup, PanelComponent, ThumbnailConfig } from './types/PanelTypes';
+import type { CategoriesConfig, FilterIconGroup, PanelComponent, SliderConfig, ThumbnailConfig } from './types/PanelTypes';
 import {
   ApplicationState,
   BackgroundsConfigSchema,
@@ -38,13 +38,15 @@ import {
   type CSGDataResponse,
   type PlacementDefaults,
   type SectionMaterial,
+  type MarginPreset,
+  type MarginPresetsResponse,
+  type SmartCsgResponse,
   type WoodMaterialsConfig,
 } from './types/schemas';
 import { applyDimensionChange, type DimensionConstraints } from './utils/dimensionUtils';
 import { deepMerge } from './utils/mergeUtils';
 import { fetchAndValidate } from './utils/validation';
 import { Action, WaveformDesignerFacade } from './WaveformDesignerFacade';
-import { type CategoriesConfig, type FilterIconGroup, type ThumbnailConfig } from './types/PanelTypes';
 
 
 // Internal facade APIs that aren't exposed in the public interface
@@ -162,6 +164,7 @@ export class ApplicationController {
     renderComposition: (csgData: CSGDataResponse) => Promise<void>;
     applySectionMaterials: () => void;
     applySingleSectionMaterial?: (sectionId: number) => void;
+    generateBackingIfEnabled?: (params: Record<string, unknown>, composition: CompositionStateDTO) => Promise<void>;
   } | null = null;
 	private _audioCache: AudioCacheService;
   private _woodMaterialsConfig: WoodMaterialsConfig | null = null;
@@ -176,7 +179,7 @@ export class ApplicationController {
 	private _constraints: ConstraintsConfig | null = null;
 	private _resolver: ConstraintResolver | null = null;
 	private _compositionCache: Map<string, CompositionStateDTO> = new Map();
-  private _marginPresetCache: Map<string, import('../types/schemas').MarginPreset[]> = new Map();
+  private _marginPresetCache: Map<string, MarginPreset[]> = new Map();
   private _isUpdatingComposition: boolean = false;
 	private _pendingCompositionUpdate: CompositionStateDTO | null = null;
   private _isUserInteracting: boolean = false;
@@ -194,7 +197,7 @@ export class ApplicationController {
     // If interaction ended and no pending updates, refresh constraints
     if (!isInteracting && !this._isUpdatingComposition && !this._pendingCompositionUpdate) {
       if (this._accordion) {
-        this._accordion.refreshContent('layout');
+        void this._accordion.refreshContent('layout');
       }
     }
   }
@@ -206,7 +209,7 @@ export class ApplicationController {
     return this._constraints;
   }
 	
-	private async _fetchMarginPresets(composition: CompositionStateDTO): Promise<import('../types/schemas').MarginPreset[]> {
+	private async _fetchMarginPresets(composition: CompositionStateDTO): Promise<MarginPreset[]> {
     const frame = composition.frame_design;
     const pattern = composition.pattern_settings;
     
@@ -236,7 +239,7 @@ export class ApplicationController {
         })
       });
       
-      const data = await response.json() as import('../types/schemas').MarginPresetsResponse;
+      const data = await response.json() as MarginPresetsResponse;
       
       if (data.applicable && data.presets.length > 0) {
         this._marginPresetCache.set(cacheKey, data.presets);
@@ -249,17 +252,17 @@ export class ApplicationController {
     return [];
   }
 	
-	public getMarginPresets(composition: CompositionStateDTO): import('../types/schemas').MarginPreset[] {
+	public getMarginPresets(composition: CompositionStateDTO): MarginPreset[] {
     const frame = composition.frame_design;
     const pattern = composition.pattern_settings;
     const cacheKey = `${frame.finish_x}-${frame.separation}-${frame.number_sections}-${pattern.number_slots}`;
     return this._marginPresetCache.get(cacheKey) || [];
   }
   
-  public getCategories(): import('./types/PanelTypes').CategoryConfig[] {
+  public getCategories(): { id: string; label: string; icon: string; enabled: boolean; order: number }[] {
     if (!this._categoriesConfig) return [];
     return Object.entries(this._categoriesConfig)
-      .map(([id, config]) => ({
+      .map(([id, config]: [string, { label: string; subcategories: Record<string, unknown>; order?: number }]) => ({
         id,
         label: config.label,
         icon: '',
@@ -287,6 +290,16 @@ export class ApplicationController {
   private _accordion: SubcategoryAccordion | null = null;
   private _accordionState: Record<string, Record<string, boolean>> = {};
 	private _audioSlicerPanel: import('./components/AudioSlicerPanel').AudioSlicerPanel | null = null;
+	
+	/**
+   * Trigger export for production (called from Order button)
+   */
+  public async triggerExport(): Promise<void> {
+    await this._ensureAudioSlicerPanel();
+    if (this._audioSlicerPanel) {
+      await this._audioSlicerPanel.handleExport();
+    }
+  }
   
   constructor(facade: WaveformDesignerFacade) {
     this._facade = facade;
@@ -382,7 +395,7 @@ export class ApplicationController {
       this._accordionState = { ...this._state.ui.accordionState };
     }
     
-    const { activeCategory, activeSubcategory } = this._state.ui;
+    const { activeCategory, activeSubcategory: _activeSubcategory } = this._state.ui;
     
     if (!activeCategory) return;
     
@@ -851,8 +864,16 @@ export class ApplicationController {
       // PARITY FIX: The file is already processed (silence removed).
       // Update state snapshot to prevent double-processing in the main pipeline.
       const cleanState = structuredClone(this._state.composition);
+      // Always clear - process-commit is the single authority on demucs execution
+      cleanState.audio_source.use_stems = false;
       if (payload.removeSilence) {
         cleanState.audio_processing.remove_silence = false;
+      }
+
+      // Prevent double-slicing: backend already sliced, reset timestamps to T=0
+      cleanState.audio_source.start_time = 0;
+      if (payload.endTime !== null && payload.endTime !== undefined && payload.startTime !== null && payload.startTime !== undefined) {
+        cleanState.audio_source.end_time = payload.endTime - payload.startTime;
       }
 
       // Feed into existing upload pipeline
@@ -1771,22 +1792,22 @@ export class ApplicationController {
     // Render based on option type - reuse existing component creation
     switch (optionConfig.type) {
       case 'thumbnail_grid':
-        await this._renderThumbnailGridContent(container, categoryId, subcategoryId, optionConfig);
+        this._renderThumbnailGridContent(container, categoryId, subcategoryId, optionConfig);
         break;
       case 'slider_group':
         this._renderSliderGroupContent(container);
         break;
       case 'species_selector':
-        await this._renderSpeciesSelectorContent(container);
+        this._renderSpeciesSelectorContent(container);
         break;
       case 'backing_swatches':
-        await this._renderBackingSwatchesContent(container);
+        this._renderBackingSwatchesContent(container);
         break;
       case 'archetype_grid':
-        await this._renderArchetypeGridContent(container, categoryId, subcategoryId);
+        this._renderArchetypeGridContent(container, categoryId, subcategoryId);
         break;
       case 'wood_species_image_grid':
-        await this._renderSpeciesGridContent(container);
+        this._renderSpeciesGridContent(container);
         break;
       case 'backing_selector':
         await this._renderBackingSelectorContent(container);
@@ -2025,7 +2046,7 @@ export class ApplicationController {
       try {
         const { CollectionsCatalogSchema } = await import('./types/schemas');
         const response = await fetch('/api/config/collections');
-        const data = await response.json();
+        const data: unknown = await response.json();
         this._collectionsCatalog = CollectionsCatalogSchema.parse(data);
       } catch (error) {
         console.error('[Controller] Failed to load collections catalog:', error);
@@ -2041,7 +2062,7 @@ export class ApplicationController {
     
     // Route to artist view if selected
     if (activeFilter === 'artist') {
-      await this._renderArtistCollections(container);
+      this._renderArtistCollections(container);
       return;
     }
     
@@ -2105,7 +2126,7 @@ export class ApplicationController {
    * Groups recordings by artist, cards are artists, chips are songs
    * @private
    */
-  private async _renderArtistCollections(container: HTMLElement): Promise<void> {
+  private _renderArtistCollections(container: HTMLElement): void {
     if (!this._collectionsCatalog || !this._state) return;
 
     const catalog = this._collectionsCatalog;
@@ -2354,7 +2375,7 @@ export class ApplicationController {
 
     // Refresh content to show song chips
     if (this._accordion) {
-      this._accordion.refreshContent('collections');
+      void this._accordion.refreshContent('collections');
     }
   }
 
@@ -2482,7 +2503,7 @@ export class ApplicationController {
    * Render species grid content for accordion
    * @private
    */
-  private async _renderSpeciesGridContent(container: HTMLElement): Promise<void> {
+  private _renderSpeciesGridContent(container: HTMLElement): void {
     if (!this._woodMaterialsConfig || !this._state) {
       container.innerHTML = '<div class="panel-placeholder">Loading species...</div>';
       return;
@@ -2496,8 +2517,8 @@ export class ApplicationController {
     const scrollWrapper = scrollContainer.render();
     const scrollElement = scrollContainer.getScrollElement()!;
     
-    const shape = this._state.composition.frame_design.shape;
-    const numSections = this._state.composition.frame_design.number_sections;
+    const _shape = this._state.composition.frame_design.shape;
+    const _numSections = this._state.composition.frame_design.number_sections;number_sections;
     
     const allGrainDefs = [
       { id: 'n1_vertical', direction: 'vertical' },
@@ -2542,7 +2563,7 @@ export class ApplicationController {
    * Render archetype grid content for accordion
    * @private
    */
-  private async _renderArchetypeGridContent(container: HTMLElement, categoryId?: string, subcategoryId?: string): Promise<void> {
+  private _renderArchetypeGridContent(container: HTMLElement, categoryId?: string, subcategoryId?: string): void {
     if (!this._state || !this._archetypes) {
       container.innerHTML = '<div class="panel-placeholder">Loading styles...</div>';
       return;
@@ -2626,15 +2647,15 @@ export class ApplicationController {
    * Render thumbnail grid content for accordion
    * @private
    */
-  private async _renderThumbnailGridContent(
+  private _renderThumbnailGridContent(
     container: HTMLElement,
     categoryId: string,
     subcategoryId: string,
     _optionConfig: unknown
-  ): Promise<void> {
+  ): void {
     // Handle backgrounds category
     if (categoryId === 'backgrounds') {
-      await this._renderBackgroundsContent(container, subcategoryId);
+      this._renderBackgroundsContent(container, subcategoryId);
       return;
     }
     
@@ -2646,7 +2667,7 @@ export class ApplicationController {
    * Render backgrounds content (paint, accent, rooms)
    * @private
    */
-  private async _renderBackgroundsContent(container: HTMLElement, subcategoryId: string): Promise<void> {
+  private _renderBackgroundsContent(container: HTMLElement, subcategoryId: string): void {
     if (!this._backgroundsConfig) {
       container.innerHTML = '<div class="panel-placeholder">Loading backgrounds...</div>';
       return;
@@ -2874,7 +2895,7 @@ export class ApplicationController {
    * Render species selector content for accordion
    * @private
    */
-  private async _renderSpeciesSelectorContent(container: HTMLElement): Promise<void> {
+  private _renderSpeciesSelectorContent(container: HTMLElement): void {
     // This will be connected to WoodMaterialSelector with horizontal mode
     container.innerHTML = '<div class="horizontal-scroll"><div class="panel-placeholder">Species selector loading...</div></div>';
   }
@@ -2883,7 +2904,7 @@ export class ApplicationController {
    * Render backing swatches content for accordion
    * @private
    */
-  private async _renderBackingSwatchesContent(container: HTMLElement): Promise<void> {
+  private _renderBackingSwatchesContent(container: HTMLElement): void {
     // This will be connected to BackingPanel content in horizontal mode
     container.innerHTML = '<div class="horizontal-scroll"><div class="panel-placeholder">Backing options loading...</div></div>';
   }
@@ -3106,7 +3127,7 @@ export class ApplicationController {
       clearSelection: () => void;
     };
     
-    const enableInteraction = this._isSectionSelectionEnabled();
+    const isWoodSpecies = this._isSectionSelectionEnabled();
     
     sm.setSectionInteractionEnabled(isWoodSpecies);
     
@@ -3191,7 +3212,7 @@ export class ApplicationController {
       this._renderRightMainFiltered();
     } else {
       // Refresh accordion content for the filter's owning subcategory
-      this._accordion.refreshContent(effectiveSubcategory);
+      void this._accordion.refreshContent(effectiveSubcategory);
     }
   }
 	
@@ -3614,7 +3635,7 @@ export class ApplicationController {
 								<span class="toggle-slider"></span>
 							</label>
 						`;
-						const checkbox = toggleWrapper.querySelector('input')! as HTMLInputElement;
+						const checkbox = toggleWrapper.querySelector('input')!;
 						checkbox.addEventListener('change', () => {
 							void this._updateBackingEnabled(checkbox.checked);
 						});
@@ -3860,7 +3881,7 @@ export class ApplicationController {
       }
       
       // Set x_offset from constraints.json based on slot_style (single source of truth)
-      const slotStyleConstraints = this._constraints?.manufacturing?.slot_style?.[archetype.slot_style];
+      const slotStyleConstraints = this._constraints?.manufacturing?.slot_style?.[archetype.slot_style] as { x_offset?: number } | undefined;
       if (!slotStyleConstraints?.x_offset) {
         throw new Error(`Missing manufacturing.slot_style.${archetype.slot_style}.x_offset in constraints.json`);
       }
@@ -3917,7 +3938,7 @@ export class ApplicationController {
     // Pre-fetch margin presets for constrained archetypes
     if (this._isRectangularLinearN3Plus(archetypeId)) {
       const presets = await this._fetchMarginPresets(composition);
-      if (presets.length > 0 && composition.pattern_settings.symmetric_n_end == null) {
+      if (presets.length > 0 && composition.pattern_settings.symmetric_n_end === null) {
         composition = {
           ...composition,
           pattern_settings: {
@@ -3941,11 +3962,11 @@ export class ApplicationController {
     if (!this._accordion) {
       this._renderRightMainFiltered();
     } else {
-      this._accordion.refreshContent('panel');
+      void this._accordion.refreshContent('panel');
       this._accordion.updateValue('panel');
-      this._accordion.refreshContent('wood_species');
+      void this._accordion.refreshContent('wood_species');
       this._accordion.updateValue('wood_species');
-      this._accordion.refreshContent('layout');
+      void this._accordion.refreshContent('layout');
       this._accordion.updateValue('layout');
     }
     
@@ -4035,14 +4056,15 @@ export class ApplicationController {
 
     // Build constraints from current state and config
     const uiConfig = window.uiEngine;
-    const shapeConstraintsConfig = uiConfig?.config?.dimension_constraints?.[newComposition.frame_design.shape] as { min_dimension?: number; max_dimension?: number } | undefined;
+    const configTyped = uiConfig?.config as { dimension_constraints?: Record<string, { min_dimension?: number; max_dimension?: number }> } | undefined;
+    const shapeConstraintsConfig = configTyped?.dimension_constraints?.[newComposition.frame_design.shape];
     
     const constraints: DimensionConstraints = {
       shape: newComposition.frame_design.shape,
       aspectRatioLocked: this._state.ui.aspectRatioLocked ?? false,
       lockedAspectRatio: this._state.ui.lockedAspectRatio ?? null,
-      minDimension: (shapeConstraintsConfig?.min_dimension as number | undefined) ?? 8.0,
-      maxDimension: (shapeConstraintsConfig?.max_dimension as number | undefined) ?? 84.0
+      minDimension: (shapeConstraintsConfig?.min_dimension) ?? 8.0,
+      maxDimension: (shapeConstraintsConfig?.max_dimension) ?? 84.0
     };
     
     // Calculate new dimensions using utility function
@@ -4341,7 +4363,7 @@ export class ApplicationController {
       console.error('[Controller] Failed to fetch backing parameters after material change.');
       return;
     }
-    const backingParams = await response.json();
+    const backingParams = await response.json() as Record<string, unknown>;
     
     await this.dispatch({ type: 'COMPOSITION_UPDATED', payload: newComposition });
 
@@ -4388,7 +4410,7 @@ export class ApplicationController {
 			return;
 		}
 		
-		const backingParams = await response.json();
+		const backingParams = await response.json() as Record<string, unknown>;
 		await this.dispatch({ type: 'COMPOSITION_UPDATED', payload: newComposition });
 
 		if (this._sceneManager) {
@@ -4826,7 +4848,7 @@ export class ApplicationController {
     } finally {
 			// Refresh layout panel if geometry changed to update slider constraints
       if (this._accordion && geometryChanged && !this._isUserInteracting) {
-        this._accordion.refreshContent('layout');
+        void this._accordion.refreshContent('layout');
       }
       this._isUpdatingComposition = false;
       

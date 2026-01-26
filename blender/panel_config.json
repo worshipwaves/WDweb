@@ -1,0 +1,52 @@
+{
+  "panel_config": {
+    "finish_x": 54,
+    "finish_y": 54,
+    "thickness": 0.375,
+    "separation": 1.5,
+    "number_sections": 3,
+    "shape": "circular",
+    "slot_style": "radial"
+  },
+  "section_materials": [
+    {
+      "section_id": 0,
+      "species": "walnut-black-american",
+      "grain_direction": "radiant",
+      "grain_angle": 90,
+      "mesh_name": "section_0"
+    },
+    {
+      "section_id": 1,
+      "species": "cherry-black",
+      "grain_direction": "radiant",
+      "grain_angle": 330,
+      "mesh_name": "section_1"
+    },
+    {
+      "section_id": 2,
+      "species": "maple",
+      "grain_direction": "radiant",
+      "grain_angle": 210,
+      "mesh_name": "section_2"
+    }
+  ],
+  "backing_enabled": true,
+  "backing_material": {
+    "id": "black",
+    "display": "Black",
+    "description": "Black acrylic",
+    "color_rgb": [
+      0,
+      0,
+      0
+    ],
+    "alpha": 1,
+    "pbr_properties": {
+      "metallic": 0,
+      "roughness": 0.2,
+      "clearcoat_intensity": 1,
+      "clearcoat_roughness": 0.05
+    }
+  }
+}

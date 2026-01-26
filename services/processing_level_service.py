@@ -132,8 +132,9 @@ class ProcessingLevelService:
                     print(f"[PROCESSING DIAGNOSTIC] Detected normalized amplitudes (max={max_amp:.4f}), applying physical scaling")
                     scaled_amplitudes = AudioProcessingService.scale_and_clamp_amplitudes(
                         state.processed_amplitudes,
-                        current_max,
-                        state.pattern_settings.bit_diameter
+                        new_max_amplitude,
+                        state.pattern_settings.bit_diameter,
+                        state.pattern_settings.visual_floor_pct
                     )
                     state = state.model_copy(update={"processed_amplitudes": scaled_amplitudes})
                     print(f"[PROCESSING DIAGNOSTIC] Scaled to physical space: max={max(scaled_amplitudes):.4f}")
@@ -191,7 +192,8 @@ class ProcessingLevelService:
             scaled_amplitudes = AudioProcessingService.scale_and_clamp_amplitudes(
                 normalized_amplitudes,
                 new_max_amplitude,
-                state.pattern_settings.bit_diameter
+                state.pattern_settings.bit_diameter,
+                state.pattern_settings.visual_floor_pct
             )
             
             print(f"[PROCESSING DIAGNOSTIC] Scaled {len(scaled_amplitudes)} amplitudes")
@@ -230,7 +232,8 @@ class ProcessingLevelService:
             scaled_amplitudes = AudioProcessingService.scale_and_clamp_amplitudes(
                 state.processed_amplitudes,
                 new_max_amplitude,
-                state.pattern_settings.bit_diameter
+                geometry.min_radius_from_V_calc,
+                state.pattern_settings.visual_floor_pct
             )
             updated_state = state.model_copy(update={"processed_amplitudes": scaled_amplitudes})
             if state.frame_design and self._incoming_section_materials:

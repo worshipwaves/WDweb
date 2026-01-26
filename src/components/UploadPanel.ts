@@ -11,23 +11,20 @@
  * - Styles defined in test.css (.upload-card, .upload-card-*)
  */
 
-import type { PanelComponent } from '../types/PanelTypes';
 import type { ApplicationController } from '../ApplicationController';
-import type { AudioCacheService } from '../services/AudioCacheService';
+import type { PanelComponent } from '../types/PanelTypes';
 
 export class UploadPanel implements PanelComponent {
   private _container: HTMLElement | null = null;
   private _controller: ApplicationController;
-  private _audioCache: AudioCacheService;
   private _fileInput: HTMLInputElement | null = null;
   private _dropZone: HTMLElement | null = null;
   
   constructor(
     controller: ApplicationController,
-    audioCache: AudioCacheService
+    _audioCache?: unknown
   ) {
     this._controller = controller;
-    this._audioCache = audioCache;
   }
   
   render(): HTMLElement {

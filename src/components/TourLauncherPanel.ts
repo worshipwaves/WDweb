@@ -10,8 +10,8 @@
  * - Styles defined in test.css (.tour-card, .tour-card-*)
  */
 
-import type { PanelComponent } from '../types/PanelTypes';
 import type { ApplicationController } from '../ApplicationController';
+import type { PanelComponent } from '../types/PanelTypes';
 
 export class TourLauncherPanel implements PanelComponent {
   private _container: HTMLElement | null = null;

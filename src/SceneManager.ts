@@ -1,23 +1,34 @@
 // src/SceneManager.ts
 
 import {
-    Engine, Scene, ArcRotateCamera, HemisphericLight, DirectionalLight,
-    Vector3, Color3, Color4, Mesh, MeshBuilder, StandardMaterial,
-    TransformNode, Animation, CubicEase, EasingFunction, Layer, PointerEventTypes, ShadowGenerator, BackgroundMaterial, Texture
+    Engine, Scene, ArcRotateCamera, HemisphericLight, DirectionalLight, 
+    Vector3, Color3, Color4, Material, Mesh, MeshBuilder, StandardMaterial,
+    TransformNode, Animation, CubicEase, EasingFunction, Layer, PointerEventTypes, ShadowGenerator, BackgroundMaterial
 } from '@babylonjs/core';
 import { GLTFFileLoader } from '@babylonjs/loaders/glTF';
+import { GLTF2Export } from '@babylonjs/serializers/glTF';
+
 import { ApplicationController } from './ApplicationController';
+import { BackingMaterial } from './BackingMaterial';
 import { FrameGenerationService } from './FrameGenerationService';
+import { PanelGenerationService } from './PanelGenerationService';
 import { PerformanceMonitor } from './PerformanceMonitor';
 import { TextureCacheService } from './TextureCacheService';
-import { IdleTextureLoader } from './IdleTextureLoader';
-import { SmartCsgResponse, WoodMaterialsConfig, BackgroundsConfig, ApplicationState, CompositionStateDTO, ArtPlacement, LightingConfig } from './types/schemas';
+import type { BackingParameters } from './types/PanelTypes';
+import { SmartCsgResponse, WoodMaterialsConfig, ApplicationState, CompositionStateDTO, ArtPlacement, LightingConfig } from './types/schemas';
+import { calculateGrainAngle } from './utils/materialUtils';
 import { WaveformDesignerFacade } from './WaveformDesignerFacade';
 import { WoodMaterial } from './WoodMaterial';
-import { BackingMaterial } from './BackingMaterial';
-import { PanelGenerationService } from './PanelGenerationService';
-import type { BackingParameters } from './types/PanelTypes';
-import { calculateGrainAngle } from './utils/materialUtils';
+
+/* eslint-disable no-param-reassign */
+
+// Debug globals for development tools
+declare global {
+    interface Window {
+        scene?: Scene;
+        __sceneManager?: SceneManager;
+    }
+}
 
 export class SceneManager {
     private _engine: Engine;
@@ -60,6 +71,7 @@ export class SceneManager {
 		private _resizeObserver: ResizeObserver | null = null;
     private _shadowGenerator: ShadowGenerator | null = null;
     private _shadowReceiverPlane: Mesh | null = null;
+    private _referenceAspectRatio: number = 1.0;
 		// Debug getters
     public get engine(): Engine { return this._engine; }
     public get scene(): Scene { return this._scene; }
@@ -75,7 +87,7 @@ export class SceneManager {
         this._engine = new Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, antialias: true }, true);				
 				this._engine.setHardwareScalingLevel(1 / maxDPR);
         this._scene = new Scene(this._engine);
-				(window as any).scene = this._scene;
+				window.scene = this._scene;
         this._scene.clearColor = new Color4(0, 0, 0, 0);
         this._textureCache = new TextureCacheService(this._scene);
         this._camera = this.setupCamera();
@@ -102,7 +114,7 @@ export class SceneManager {
         this._engine.runRenderLoop(() => this._scene.render());
 				
 				// DEBUG: Expose for ShadowDebugPanel console tool
-        (window as any).__sceneManager = this;
+        window.__sceneManager = this;
     }
 		
 		private syncFovWithBackground(): void {
@@ -497,10 +509,10 @@ export class SceneManager {
 						this.setupSectionInteraction();
             
             // Disable section picking unless UI is on a subcategory that enables it
-            const uiState = this._controller.getState()?.ui;
-            const catConfig = (this._controller as any)._categoriesConfig;
-            const subConfig = catConfig?.[uiState?.activeCategory]?.subcategories?.[uiState?.activeSubcategory];
-            if (!subConfig?.enables_section_selection) {
+            const enablesSectionSelection = (this._controller as unknown as { 
+                isSectionSelectionEnabled?: () => boolean 
+            }).isSectionSelectionEnabled?.() ?? false;
+            if (!enablesSectionSelection) {
                 this.setSectionInteractionEnabled(false);
             }
 
@@ -537,7 +549,7 @@ export class SceneManager {
             
             // Regenerate backing if enabled (fixes backing disappearance on layout changes)
             if (csgData.backing_parameters) {
-                await this.generateBackingIfEnabled(csgData.backing_parameters, csgData.updated_state);
+                this.generateBackingIfEnabled(csgData.backing_parameters, csgData.updated_state);
             }
             
             // Regenerate shadow receiver (same lifecycle as backing)
@@ -546,8 +558,10 @@ export class SceneManager {
             // Collect texture promises but do not await them (prevents blocking main thread)
             const texturePromises: Promise<void>[] = [];
             for (const mat of this._sectionMaterials) {
-                if (mat.albedoTexture && !mat.albedoTexture.isReady()) {
-                    texturePromises.push(new Promise(resolve => mat.albedoTexture!.onLoadObservable.addOnce(resolve)));
+                const tex = mat.albedoTexture;
+                if (tex && !tex.isReady()) {
+                    const observable = (tex as import('@babylonjs/core').Texture).onLoadObservable;
+                    texturePromises.push(new Promise<void>(resolve => { observable.addOnce(() => { resolve(); }); }));
                 }
             }
 
@@ -595,7 +609,7 @@ export class SceneManager {
         return this._currentCSGData ?? null;
     }
 	
-    public async captureArchetypeThumbnail(size: number = 1024): Promise<void> {
+    public captureArchetypeThumbnail(_size: number = 1024): Promise<void> {
         throw new Error('Method captureArchetypeThumbnail() not implemented.');
     }
 		
@@ -1088,7 +1102,7 @@ export class SceneManager {
         
         const sectionMaterialData = section_materials.find(m => m.section_id === materialId);
         const species = sectionMaterialData?.species || config.default_species;
-        const grainDirection = sectionMaterialData?.grain_direction || config.default_grain_direction as any;
+        const grainDirection = (sectionMaterialData?.grain_direction || config.default_grain_direction) as 'horizontal' | 'vertical' | 'radiant' | 'diamond';
         const grainAngle = calculateGrainAngle(grainDirection, materialId, number_sections, config, this._currentCSGData);
         let material = this._sectionMaterials[sectionIndex];
         if (!material) {
@@ -1175,7 +1189,6 @@ export class SceneManager {
                         }
                     }
                     
-                    const canvas = this._engine.getRenderingCanvas();
                     const fov = this._camera.fov || 0.8;
                     const paddingFactor = 1.25; // 80% of viewport
                     const halfHeight = Math.tan(fov / 2);
@@ -1222,19 +1235,15 @@ export class SceneManager {
         throw new Error('Method updateComposition() is not fully implemented and should be reviewed.');
     }
 
-    public async generateBackingIfEnabled(backingParams: BackingParameters | null, composition: CompositionStateDTO): Promise<void> {
-        console.log('[SceneManager] generateBackingIfEnabled called');
-        console.log('[SceneManager] composition:', composition ? 'exists' : 'null');
+    public generateBackingIfEnabled(backingParams: BackingParameters | null, composition: CompositionStateDTO): void {
 				
 				PerformanceMonitor.start('generate_backing');
         
         if (!composition) {
-            console.log('[SceneManager] Early return: no composition');
             return;
         }
         
         if (!backingParams?.enabled || !backingParams.sections) {
-            console.log('[SceneManager] Early return: backing not enabled or no sections');
             this.disposeBackingMeshes();
             return;
         }
@@ -1245,13 +1254,10 @@ export class SceneManager {
         // Check for asymmetric pattern
         const asymmetricConfig = this._currentCSGData?.csg_data?.asymmetric_config;
         if (composition.pattern_settings.slot_style === 'asymmetric' && asymmetricConfig) {
-            console.log('[SceneManager] Creating asymmetric backing meshes');
             this._generateAsymmetricBacking(backingParams, asymmetricConfig);
             PerformanceMonitor.end('generate_backing');
             return;
         }
-        
-        console.log('[SceneManager] Creating backing meshes for', backingParams.sections.length, 'sections');
         
         // NOTE: Backing meshes must NOT cast shadows (receive only) to avoid blocking the wood panel's slot shadows.
         // They are intentionally excluded from this._shadowGenerator.addShadowCaster() calls.
@@ -1301,8 +1307,6 @@ export class SceneManager {
             
             this._backingMeshes.push(mesh);
         }
-        
-        console.log(`[SceneManager] Generated ${this._backingMeshes.length} backing meshes`);
 				
 				PerformanceMonitor.end('generate_backing');
     }
@@ -1380,8 +1384,6 @@ export class SceneManager {
         // Store in order: [small_right, large_left, large_right, small_left]
         // Matches wood panel _sectionMeshes order for material application
         this._backingMeshes = [smallPanels[0], largePanels[1], largePanels[0], smallPanels[1]];
-
-        console.log(`[SceneManager] Generated ${this._backingMeshes.length} asymmetric backing meshes`);
     }
     
     private _createShadowReceiver(csgData: SmartCsgResponse): void {
@@ -1398,9 +1400,10 @@ export class SceneManager {
         
         let finalYPos: number;
         const backingEnabled = csgData.updated_state?.frame_design?.backing?.enabled ?? false;
-        if (backingEnabled && csgData.backing_parameters?.sections?.[0]) {
-            const backingThickness = csgData.backing_parameters.sections[0].thickness;
-            const backingCenterY = csgData.backing_parameters.sections[0].position_y;
+        const backingSection = csgData.backing_parameters?.sections?.[0];
+        if (backingEnabled && backingSection) {
+            const backingThickness = backingSection.thickness;
+            const backingCenterY = backingSection.position_y;
             finalYPos = backingCenterY - (backingThickness / 2) - 0.001;
         } else if (csgData.csg_data?.panel_config) {
             const panelThickness = csgData.csg_data.panel_config.thickness;
@@ -1422,7 +1425,7 @@ export class SceneManager {
         shadowMat.primaryColor = Color3.Black();
         shadowMat.alpha = 1.0;
         shadowMat.opacityFresnel = false;
-        (shadowMat as any).shadowOnly = true;
+        (shadowMat as unknown as { shadowOnly: boolean }).shadowOnly = true;
         this._shadowReceiverPlane.material = shadowMat;
         
         if (this._hemisphericLight) {
@@ -1434,7 +1437,7 @@ export class SceneManager {
     }
 		
 		private createBackingMesh(
-        section: BackingParameters['sections'][0],
+        section: NonNullable<BackingParameters['sections']>[0],
         params: BackingParameters,
         sectionIndex: number,
         state: ApplicationState
@@ -1481,7 +1484,6 @@ export class SceneManager {
 
         const backingMaterial = new BackingMaterial(this._scene, backingParams);
         this._backingMesh.material = backingMaterial.getMaterial();
-        console.log('[SceneManager] Backing material updated');
     }
 
     public disposeBacking(): void {
@@ -1544,8 +1546,6 @@ export class SceneManager {
             rotZ
         );
         
-        console.log('[SceneManager] Applied art placement:', placement);
-        
         const archetypeId = state?.composition?.archetype_id || null;
         const scaleFactor = placement.scale_factor || 1.0;
         
@@ -1581,10 +1581,11 @@ export class SceneManager {
             // Position shadow receiver 0.001" behind backing (if enabled) or panel bottom
             let finalYPos: number;
             const backingEnabled = state?.composition?.frame_design?.backing?.enabled ?? false;
-            if (backingEnabled && this._currentCSGData?.backing_parameters) {
+            const currentBackingSection = this._currentCSGData?.backing_parameters?.sections?.[0];
+            if (backingEnabled && currentBackingSection) {
                 // Get backing thickness and position
-                const backingThickness = this._currentCSGData.backing_parameters.sections[0].thickness;
-                const backingCenterY = this._currentCSGData.backing_parameters.sections[0].position_y;
+                const backingThickness = currentBackingSection.thickness;
+                const backingCenterY = currentBackingSection.position_y;
                 // Position 0.001" behind backing bottom surface
                 finalYPos = backingCenterY - (backingThickness / 2) - 0.001;
             } else if (this._currentCSGData?.csg_data?.panel_config) {
@@ -1598,11 +1599,6 @@ export class SceneManager {
             
             // Set position AFTER reparenting (prevents coordinate space corruption)
             // Use config position if provided, otherwise auto-calculated
-						
-						console.log('[applyArtPlacement] bgState.id:', bgState.id);
-            console.log('[applyArtPlacement] background found:', !!background);
-            console.log('[applyArtPlacement] background.lighting:', background?.lighting);
-            console.log('[applyArtPlacement] shadow_receiver_position:', background?.lighting?.shadow_receiver_position);
             
             if (background?.lighting?.shadow_receiver_position) {
                 const pos = background.lighting.shadow_receiver_position;
@@ -1774,8 +1770,7 @@ export class SceneManager {
                 this._shadowReceiverPlane.dispose();
                 this._shadowReceiverPlane = null;
             }
-            if (true) {
-                const receiverSize = 200; // Global constant - large enough for all artwork sizes
+            const receiverSize = 200; // Global constant - large enough for all artwork sizes
                 this._shadowReceiverPlane = MeshBuilder.CreatePlane('shadowReceiver', { size: receiverSize }, this._scene);
                 
                 // Apply rotation matching wood panel geometry pipeline
@@ -1824,7 +1819,7 @@ export class SceneManager {
                 shadowMat.primaryColor = Color3.Black(); // Black for dark shadows on transparent canvas
                 shadowMat.alpha = 1.0;
                 shadowMat.opacityFresnel = false;
-                (shadowMat as any).shadowOnly = true; // Forces shadow-only rendering on transparent canvas
+                (shadowMat as unknown as { shadowOnly: boolean }).shadowOnly = true; // Forces shadow-only rendering on transparent canvas
                 
                 this._shadowReceiverPlane.material = shadowMat;
                 // Prevent ambient light from turning the plane white/gray
@@ -1832,7 +1827,6 @@ export class SceneManager {
                     this._hemisphericLight.excludedMeshes.push(this._shadowReceiverPlane);
                 }
                 this._shadowReceiverPlane.receiveShadows = true;
-            }
         } else {
             if (this._shadowGenerator) {
                 this._shadowGenerator.dispose();
@@ -1862,8 +1856,6 @@ export class SceneManager {
             this._shadowReceiverPlane.dispose();
             this._shadowReceiverPlane = null;
         }
-
-        console.log('[SceneManager] Reset lighting to universal defaults');
     }
     
     public resetArtPlacement(): void {
@@ -1892,7 +1884,171 @@ export class SceneManager {
             this._idealCameraRadius = this._baseCameraRadius;
             this._camera.radius = this._idealCameraRadius;
         }
-        
-        console.log('[SceneManager] Reset art placement to defaults');
     }
+
+
+		/**
+		 * Export current panel geometry as GLB for Blender rendering.
+		 * Preserves mesh geometry, UVs, and material metadata.
+		 * 
+		 * @returns Promise containing GLB blob and material config for Blender
+		 */
+		public async exportForBlenderRender(): Promise<{
+				glb: Blob;
+				config: {
+						panel_config: object;
+						section_materials: Array<{
+								section_id: number;
+								species: string;
+								grain_direction: string;
+								grain_angle?: number;
+								mesh_name: string;
+						}>;
+						backing_enabled: boolean;
+						backing_material?: object;
+				};
+		}> {
+				if (!this._currentCSGData || this._sectionMeshes.length === 0) {
+						throw new Error('No panel geometry to export. Render a panel first.');
+				}
+
+				// Collect meshes to export
+				const exportMeshes: Mesh[] = [];
+				const sectionMaterials: Array<{
+						section_id: number;
+						species: string;
+						grain_direction: string;
+						mesh_name: string;
+				}> = [];
+
+				// Get current state for material info
+				const state = this._controller.getState();
+				const materials = state?.composition?.frame_design?.section_materials || [];
+
+				// Tag section meshes with material metadata
+				this._sectionMeshes.forEach((mesh, index) => {
+						mesh.name = `section_${index}`;
+						exportMeshes.push(mesh);
+
+						const matConfig = materials.find(m => m.section_id === index);
+						const grainDirection = matConfig?.grain_direction || 'vertical';
+						
+						// Compute grain angle (same as applySectionMaterials)
+						const grainAngle = calculateGrainAngle(
+								grainDirection as 'horizontal' | 'vertical' | 'radiant' | 'diamond',
+								index,
+								this._sectionMeshes.length,
+								this._controller.getWoodMaterialsConfig(),
+								this._currentCSGData
+						);
+						
+						sectionMaterials.push({
+								section_id: index,
+								species: matConfig?.species || 'walnut-black-american',
+								grain_direction: grainDirection,
+								grain_angle: grainAngle,
+								mesh_name: mesh.name
+						});
+				});
+
+				// Include backing meshes if present
+				if (this._backingMeshes && this._backingMeshes.length > 0) {
+						this._backingMeshes.forEach((mesh, index) => {
+								mesh.name = `backing_${index}`;
+								exportMeshes.push(mesh);
+						});
+				}
+
+				// Create temporary parent for export
+        const exportRoot = new TransformNode('export_root', this._scene);
+        // Match rootNode rotation so panel faces camera in exported file
+        if (this._rootNode) {
+            exportRoot.rotation = this._rootNode.rotation.clone();
+        }
+        const originalParents: (TransformNode | null)[] = [];
+        const originalMaterials: (Material | null)[] = [];
+
+        // Create lightweight dummy material (no textures to embed)
+        const dummyMat = new StandardMaterial('export_dummy', this._scene);
+        dummyMat.diffuseColor = new Color3(0.5, 0.5, 0.5);
+        dummyMat.specularColor = new Color3(0, 0, 0);
+
+        exportMeshes.forEach(mesh => {
+            originalParents.push(mesh.parent as TransformNode | null);
+            originalMaterials.push(mesh.material);
+            mesh.material = dummyMat;  // Swap to prevent texture embedding
+            mesh.parent = exportRoot;
+        });
+
+				try {
+						// Export to GLB
+						const glb = await GLTF2Export.GLBAsync(this._scene, 'wavedesigner_panel', {
+								shouldExportNode: (node) => {
+                // Only export visible panel meshes (respects asymmetric toggle state)
+                if (node === exportRoot) return true;
+                const isPanel = node.name.startsWith('section_') || 
+                                node.name.startsWith('backing_') ||
+                                node.name.startsWith('asymmetric_');
+                if (!isPanel) return false;
+                // Filter by visibility - asymmetric uses setEnabled() to toggle pairs
+                return (node as Mesh).isEnabled?.() ?? true;
+            },
+								exportWithoutWaitingForScene: false,
+								includeCoordinateSystemConversionNodes: false,
+                shouldExportTexture: () => false
+            });
+
+						// Get the GLB blob
+						const glbBlob = glb.glTFFiles['wavedesigner_panel.glb'] as Blob;
+
+						// Build config for Blender material application
+						const config = {
+								panel_config: this._currentCSGData.csg_data.panel_config,
+								section_materials: sectionMaterials,
+								backing_enabled: this._backingMeshes && this._backingMeshes.length > 0,
+								backing_material: (this._currentCSGData.backing_parameters as BackingParameters | undefined)?.material_properties
+						};
+
+						return { glb: glbBlob, config };
+
+				} finally {
+						// Restore original parenting and materials
+						exportMeshes.forEach((mesh, index) => {
+								mesh.parent = originalParents[index];
+								mesh.material = originalMaterials[index];
+						});
+						dummyMat.dispose();
+						exportRoot.dispose();
+				}
+		}
+
+		/**
+		 * Download panel as GLB + config JSON bundle for Blender rendering.
+		 * Triggered by UI "Export for Render" button.
+		 */
+		public async downloadForBlenderRender(): Promise<void> {
+				try {
+						const { glb, config } = await this.exportForBlenderRender();
+
+						// Download GLB
+						const glbUrl = URL.createObjectURL(glb);
+						const glbLink = document.createElement('a');
+						glbLink.href = glbUrl;
+						glbLink.download = 'panel_export.glb';
+						glbLink.click();
+						URL.revokeObjectURL(glbUrl);
+
+						// Download config JSON
+						const configBlob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+						const configUrl = URL.createObjectURL(configBlob);
+						const configLink = document.createElement('a');
+						configLink.href = configUrl;
+						configLink.download = 'panel_config.json';
+						configLink.click();
+						URL.revokeObjectURL(configUrl);
+				} catch (error) {
+						console.error('[SceneManager] Export failed:', error);
+						throw error;
+				}
+		}	
 }

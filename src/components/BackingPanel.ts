@@ -1,6 +1,7 @@
 // src/components/BackingPanel.ts
 
 import type { PanelComponent } from '../types/PanelTypes';
+
 import { HorizontalScrollContainer } from './HorizontalScrollContainer';
 import { Tooltip } from './Tooltip';
 

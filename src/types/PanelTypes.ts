@@ -1,4 +1,5 @@
 // src/types/PanelTypes.ts
+import type { MarginPreset } from './schemas';
 
 /**
  * Configuration for CSG panel generation
@@ -151,6 +152,7 @@ export interface ThumbnailItem {
   thumbnailUrl?: string;
   disabled?: boolean;
   tooltip?: string;
+  rgb?: [number, number, number];
 }
 
 /**
@@ -165,7 +167,7 @@ export interface SliderConfig {
   value: number;
   unit?: string;
   displayOffset?: number;  // Offset added to display value (e.g., 1 shows "1" when value is 0)
-  discretePresets?: import('./schemas').MarginPreset[];  // For discrete side_margin selection
+  discretePresets?: MarginPreset[];  // For discrete side_margin selection
   selectedPresetNEnd?: number;  // Currently selected preset's n_end value
 }
 

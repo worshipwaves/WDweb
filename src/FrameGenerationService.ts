@@ -107,8 +107,6 @@ export class FrameGenerationService {
 		private createAsymmetricMeshes(data: CSGDataResponse): Mesh[] {
 				const cfg = data.asymmetric_config!;
 				const thickness = data.panel_config.thickness;
-				const finishX = data.panel_config.finish_x;
-				const gcX = finishX / 2.0;
 				
 				// Large config (separation=0 for standalone n=2)
 				const largeConfig: PanelConfig = {

@@ -9,9 +9,9 @@
  */
 
 import type { PanelComponent, ThumbnailItem } from '../types/PanelTypes';
+import { TooltipClassNameFactory } from '../utils/TooltipClassNameFactory';
 
 import { Tooltip } from './Tooltip';
-import { TooltipClassNameFactory } from '../utils/TooltipClassNameFactory';
 
 export class ThumbnailGrid implements PanelComponent {
   private _container: HTMLElement | null = null;
