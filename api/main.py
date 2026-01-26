@@ -361,6 +361,7 @@ async def process_audio(
             content = await file.read()
             tmp_file.write(content)
             tmp_file.flush()
+            tmp_file.close()
             
             # Process the audio file and get the response package
             response_data = facade.process_audio(tmp_file.name, composition_state)
