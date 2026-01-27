@@ -51,7 +51,7 @@ export class Tooltip {
 								if (naturalHeight > maxHeight) {
 									tooltip.style.maxHeight = `${maxHeight}px`;
 								}
-								tooltip.style.left = `${canvasRect.left + (canvasRect.width / 2) - (tooltip.offsetWidth / 2) + offsetX}px`;
+								tooltip.style.left = `${canvasRect.right - tooltip.offsetWidth + offsetX}px`;
 								tooltip.style.top = `${canvasRect.top + (canvasRect.height / 2) - (displayHeight / 2) + offsetY}px`;
 							} else {
 								tooltip.style.left = `${rect.left - tooltip.offsetWidth - 8 + offsetX}px`;
