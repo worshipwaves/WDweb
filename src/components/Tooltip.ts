@@ -41,35 +41,25 @@ export class Tooltip {
 					tooltip.style.top = `${rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2) + offsetY}px`;
 			} else {
 					// Left: Position tooltip
-					if (fixedToPanel) {
-							// Fixed to right main panel's left edge
-							const rightMainPanel = document.querySelector('.panel-right-main') as HTMLElement;
-							if (rightMainPanel) {
-									const panelRect = rightMainPanel.getBoundingClientRect();
-									tooltip.style.left = `${panelRect.left - tooltip.offsetWidth - 16 + offsetX}px`;
-									if (verticalAlign === 'top') {
-										tooltip.style.top = `${panelRect.top + offsetY}px`;
-								} else if (verticalAlign === 'canvas') {
-										const canvas = document.getElementById('renderCanvas');
-										if (canvas) {
-											const canvasRect = canvas.getBoundingClientRect();
-											const maxHeight = canvasRect.height * 0.9;
-											const naturalHeight = tooltip.offsetHeight;
-											const displayHeight = Math.min(naturalHeight, maxHeight);
-											if (naturalHeight > maxHeight) {
-												tooltip.style.maxHeight = `${maxHeight}px`;
-											}
-											tooltip.style.top = `${canvasRect.top + (canvasRect.height / 2) - (displayHeight / 2) + offsetY}px`;
-										} else {
-											tooltip.style.top = `${rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2) + offsetY}px`;
-										}
-								} else {
-										tooltip.style.top = `${rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2) + offsetY}px`;
+					if (fixedToPanel && verticalAlign === 'canvas') {
+							const canvas = document.getElementById('renderCanvas');
+							if (canvas) {
+								const canvasRect = canvas.getBoundingClientRect();
+								const maxHeight = canvasRect.height * 0.9;
+								const naturalHeight = tooltip.offsetHeight;
+								const displayHeight = Math.min(naturalHeight, maxHeight);
+								if (naturalHeight > maxHeight) {
+									tooltip.style.maxHeight = `${maxHeight}px`;
 								}
+								tooltip.style.left = `${canvasRect.left + (canvasRect.width / 2) - (tooltip.offsetWidth / 2) + offsetX}px`;
+								tooltip.style.top = `${canvasRect.top + (canvasRect.height / 2) - (displayHeight / 2) + offsetY}px`;
 							} else {
-									tooltip.style.left = `${rect.left - tooltip.offsetWidth - 8 + offsetX}px`;
-									tooltip.style.top = `${rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2) + offsetY}px`;
+								tooltip.style.left = `${rect.left - tooltip.offsetWidth - 8 + offsetX}px`;
+								tooltip.style.top = `${rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2) + offsetY}px`;
 							}
+					} else if (fixedToPanel) {
+							tooltip.style.left = `${rect.left - tooltip.offsetWidth - 8 + offsetX}px`;
+							tooltip.style.top = `${rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2) + offsetY}px`;
 					} else {
 							// Relative to target element
 							tooltip.style.left = `${rect.left - tooltip.offsetWidth - 8 + offsetX}px`;
