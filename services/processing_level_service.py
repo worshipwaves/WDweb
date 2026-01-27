@@ -132,7 +132,7 @@ class ProcessingLevelService:
                     print(f"[PROCESSING DIAGNOSTIC] Detected normalized amplitudes (max={max_amp:.4f}), applying physical scaling")
                     scaled_amplitudes = AudioProcessingService.scale_and_clamp_amplitudes(
                         state.processed_amplitudes,
-                        new_max_amplitude,
+                        current_max,
                         state.pattern_settings.bit_diameter,
                         state.pattern_settings.visual_floor_pct
                     )
