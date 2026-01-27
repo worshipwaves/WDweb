@@ -72,6 +72,7 @@ export class SceneManager {
     private _shadowGenerator: ShadowGenerator | null = null;
     private _shadowReceiverPlane: Mesh | null = null;
     private _referenceAspectRatio: number = 1.0;
+    private _cameraControlsEnabled: boolean = true;
 		// Debug getters
     public get engine(): Engine { return this._engine; }
     public get scene(): Scene { return this._scene; }
@@ -136,6 +137,22 @@ export class SceneManager {
             this._camera.fov = newHalfFov * 2;
         }
     }
+		
+		/**
+     * Enable or disable camera controls based on background type.
+     * Only blank_wall allows camera manipulation.
+     */
+    public setCameraControlsEnabled(enabled: boolean): void {
+        if (enabled === this._cameraControlsEnabled) return;
+        
+        this._cameraControlsEnabled = enabled;
+        
+        if (enabled) {
+            this._camera.attachControl(this._canvas, true);
+        } else {
+            this._camera.detachControl();
+        }
+    }
 
     public static create(canvasId: string, facade: WaveformDesignerFacade, controller: ApplicationController): SceneManager {
         const manager = new SceneManager(canvasId, facade, controller);
@@ -166,11 +183,14 @@ export class SceneManager {
         camera.panningSensibility = 50;
         camera.pinchPrecision = 50;
         camera.attachControl(this._canvas, true);
-        camera.useNaturalPinchZoom = true;
+        
         if (camera.inputs.attached.pointers) {
             camera.inputs.attached.pointers.multiTouchPanning = true;
             camera.inputs.attached.pointers.multiTouchPanAndZoom = true;
         }
+        
+        // Store reference for enabling/disabling controls
+        this._cameraControlsEnabled = true;
         return camera;
     }
 
@@ -279,6 +299,9 @@ export class SceneManager {
 								
 								// Different room - full reload
 								this._currentDisplayedRoomId = id;
+								
+								// Disable camera controls for room scenes (except blank_wall)
+								this.setCameraControlsEnabled(id === 'blank_wall');
 								
 								if (foregroundPath) {
 										// Preload both images before swapping to prevent flash
