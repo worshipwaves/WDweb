@@ -2536,8 +2536,8 @@ export class ApplicationController {
       const grains = grainDefs.map(g => ({
         id: g.id,
         direction: g.direction,
-        thumbnailUrl: `/wood_thumbnails_small/${species.id}_${g.id}.png`,
-        largeThumbnailUrl: `/wood_thumbnails_large/${species.id}_${g.id}.png`
+        thumbnailUrl: `${import.meta.env.VITE_ASSET_BASE_URL}/wood_thumbnails_small/${species.id}_${g.id}.png`,
+        largeThumbnailUrl: `${import.meta.env.VITE_ASSET_BASE_URL}/wood_thumbnails_large/${species.id}_${g.id}.png`
       }));
       
       const card = new AccordionSpeciesCard({
@@ -3436,8 +3436,8 @@ export class ApplicationController {
 						const grains = grainDefs.map(g => ({
 							id: g.id,
 							direction: g.direction,
-							thumbnailUrl: `/wood_thumbnails_small/${species.id}_${g.id}.png`,
-							largeThumbnailUrl: `/wood_thumbnails_large/${species.id}_${g.id}.png`
+							thumbnailUrl: `${import.meta.env.VITE_ASSET_BASE_URL}/wood_thumbnails_small/${species.id}_${g.id}.png`,
+							largeThumbnailUrl: `${import.meta.env.VITE_ASSET_BASE_URL}/wood_thumbnails_large/${species.id}_${g.id}.png`
 						}));
 						
 						const card = new AccordionSpeciesCard({
