@@ -101,27 +101,22 @@ export class AccordionSpeciesCard implements PanelComponent {
       });
 
       thumb.addEventListener('mouseenter', () => {
-        const content = document.createElement('div');
-        content.className = 'tooltip-content-wrapper';
         if (grain.largeThumbnailUrl) {
-          const largeImg = document.createElement('img');
-          largeImg.width = 512;
-          largeImg.height = 512;
-          largeImg.style.backgroundColor = 'transparent';
+          const largeImg = new Image();
           largeImg.src = grain.largeThumbnailUrl;
-          largeImg.alt = `${this._config.label} - ${grain.direction}`;
           largeImg.onload = () => {
-            // Reposition tooltip after image loads
-            this._tooltip.hide();
+            if (!thumb.matches(':hover')) return; // User moved away
+            const content = document.createElement('div');
+            content.className = 'tooltip-content-wrapper';
+            largeImg.alt = `${this._config.label} - ${grain.direction}`;
+            content.appendChild(largeImg);
+            const desc = document.createElement('p');
+            desc.className = 'tooltip-description';
+            desc.textContent = `${this._config.label} with ${grain.direction} grain pattern.`;
+            content.appendChild(desc);
             this._tooltip.show(content, thumb, 'left', 'tooltip-species', 0, 0, true, 'canvas');
           };
-          content.appendChild(largeImg);
         }
-        const desc = document.createElement('p');
-        desc.className = 'tooltip-description';
-        desc.textContent = `${this._config.label} with ${grain.direction} grain pattern.`;
-        content.appendChild(desc);
-        this._tooltip.show(content, thumb, 'left', 'tooltip-species', 0, 0, true, 'canvas');
       });
       thumb.addEventListener('mouseleave', () => this._tooltip.hide());
 
