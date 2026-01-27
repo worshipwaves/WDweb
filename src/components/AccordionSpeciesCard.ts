@@ -105,6 +105,9 @@ export class AccordionSpeciesCard implements PanelComponent {
         content.className = 'tooltip-content-wrapper';
         if (grain.largeThumbnailUrl) {
           const largeImg = document.createElement('img');
+          largeImg.width = 512;
+          largeImg.height = 512;
+          largeImg.style.backgroundColor = 'transparent';
           largeImg.src = grain.largeThumbnailUrl;
           largeImg.alt = `${this._config.label} - ${grain.direction}`;
           content.appendChild(largeImg);
