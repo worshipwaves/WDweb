@@ -110,6 +110,11 @@ export class AccordionSpeciesCard implements PanelComponent {
           largeImg.style.backgroundColor = 'transparent';
           largeImg.src = grain.largeThumbnailUrl;
           largeImg.alt = `${this._config.label} - ${grain.direction}`;
+          largeImg.onload = () => {
+            // Reposition tooltip after image loads
+            this._tooltip.hide();
+            this._tooltip.show(content, thumb, 'left', 'tooltip-species', 0, 0, true, 'canvas');
+          };
           content.appendChild(largeImg);
         }
         const desc = document.createElement('p');
