@@ -2519,7 +2519,7 @@ export class ApplicationController {
     const scrollElement = scrollContainer.getScrollElement()!;
     
     const _shape = this._state.composition.frame_design.shape;
-    const _numSections = this._state.composition.frame_design.number_sections;number_sections;
+    const _numSections = this._state.composition.frame_design.number_sections;
     
     const allGrainDefs = [
       { id: 'n1_vertical', direction: 'vertical' },
