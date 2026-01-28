@@ -52,7 +52,7 @@ export class TextureCacheService {
   async preloadAllTextures(config: WoodMaterialsConfig, prioritySpeciesId?: string): Promise<IdleTextureLoader> {
     const textureConfig = config.texture_config;
     const basePath = textureConfig.base_texture_path;
-    const sizeInfo = textureConfig.size_map.large;
+    const sizeInfo = textureConfig.size_map.Seamless_4K;
     const folderName = sizeInfo.folder;
     
     // Load priority species first (selected or default)
@@ -71,8 +71,8 @@ export class TextureCacheService {
     // Create idle loader for remaining species (array order = priority)
     const idleLoader = new IdleTextureLoader(this, config);
     
-    // TEMPORARILY DISABLED: Uncomment when deploying to S3 with cache headers
-    // idleLoader.startBackgroundLoading(3);
+    // Background preload remaining species during idle time
+    idleLoader.startBackgroundLoading(3);
     
     return idleLoader;
   }
