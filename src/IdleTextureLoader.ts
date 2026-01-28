@@ -93,7 +93,7 @@ export class IdleTextureLoader {
       try {
       const textureConfig = this.config.texture_config;
       const basePath = textureConfig.base_texture_path;
-      const sizeInfo = textureConfig.size_map.large;
+      const sizeInfo = textureConfig.size_map.Seamless_4K;
       const folderName = sizeInfo.folder;
       const dimensions = sizeInfo.dimensions;
       
@@ -211,7 +211,7 @@ export class IdleTextureLoader {
     // Check if textures exist in cache
     const textureConfig = this.config.texture_config;
     const basePath = textureConfig.base_texture_path;
-    const sizeInfo = textureConfig.size_map.large;
+    const sizeInfo = textureConfig.size_map.Seamless_4K;
     const species = this.config.species_catalog.find(s => s.id === speciesId);
     
     if (!species) return false;
@@ -237,7 +237,7 @@ export class IdleTextureLoader {
     // Load immediately
     const textureConfig = this.config.texture_config;
     const basePath = textureConfig.base_texture_path;
-    const sizeInfo = textureConfig.size_map.large;
+    const sizeInfo = textureConfig.size_map.Seamless_4K;
     
     await this.textureCache._preloadSpeciesTexturesAsync(
       species,
