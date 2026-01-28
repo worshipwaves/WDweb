@@ -155,14 +155,41 @@ body {
     height: 36px;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.6);
     border: none;
     border-radius: 4px;
-    color: white;
-    font-size: 20px;
     cursor: pointer;
     z-index: 10;
     transition: background 0.2s;
+  }
+  
+  .mobile-fullscreen-btn .fs-icon {
+    width: 16px;
+    height: 16px;
+    position: relative;
+  }
+  
+  .mobile-fullscreen-btn .fs-icon::before,
+  .mobile-fullscreen-btn .fs-icon::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border: 2px solid white;
+  }
+  
+  .mobile-fullscreen-btn .fs-icon::before {
+    top: 0;
+    left: 0;
+    border-right: none;
+    border-bottom: none;
+  }
+  
+  .mobile-fullscreen-btn .fs-icon::after {
+    bottom: 0;
+    right: 0;
+    border-left: none;
+    border-top: none;
   }
   
   .mobile-fullscreen-btn:hover,
@@ -171,27 +198,10 @@ body {
   }
 }
 
-/* Hide camera controls on mobile except for blank wall staging */
+/* Hide camera controls on mobile - fullscreen button replaces them */
 @media (max-width: 749px) {
   .bottom-controls {
     display: none !important;
-  }
-  
-  /* Show controls on blank wall - horizontal under canvas */
-  body.room-blank-wall .bottom-controls {
-    display: flex !important;
-    position: fixed !important;
-    flex-direction: row !important;
-    top: 45vh !important;
-    bottom: auto !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    gap: 12px;
-    padding: 8px 16px;
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 24px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    z-index: 100;
   }
 }
 
