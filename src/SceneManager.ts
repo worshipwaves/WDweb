@@ -1583,7 +1583,10 @@ export class SceneManager {
         
         // Apply cached archetype radius with scene scale adjustment
         const baseRadius = this._archetypeIdealRadius.get(archetypeId || '') || this._baseCameraRadius;
-        this._idealCameraRadius = baseRadius / scaleFactor;
+        // Mobile (portrait): tighter framing to fill narrow canvas
+        const isMobile = window.innerWidth < 750;
+        const mobileFactor = isMobile ? 0.5 : 1.0;
+        this._idealCameraRadius = (baseRadius / scaleFactor) * mobileFactor;
         
         // Establish current aspect ratio as new baseline
         const canvas = this._engine.getRenderingCanvas();
