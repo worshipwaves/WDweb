@@ -102,11 +102,11 @@ export class IdleTextureLoader {
       const normalPath = `${basePath}/${species.id}/Shared_Maps/${folderName}/Normal/wood-${species.wood_number}_${species.id}-${dimensions}_n.png`;
       const roughnessPath = `${basePath}/${species.id}/Shared_Maps/${folderName}/Roughness/wood-${species.wood_number}_${species.id}-${dimensions}_r.png`;
       
-      // Warm browser cache before BabylonJS loads
+      // Warm browser cache before BabylonJS loads (consume response to ensure caching)
       await Promise.all([
-        fetch(albedoPath, { mode: 'cors', credentials: 'omit' }),
-        fetch(normalPath, { mode: 'cors', credentials: 'omit' }),
-        fetch(roughnessPath, { mode: 'cors', credentials: 'omit' })
+        fetch(albedoPath, { mode: 'cors', credentials: 'omit' }).then(r => r.blob()),
+        fetch(normalPath, { mode: 'cors', credentials: 'omit' }).then(r => r.blob()),
+        fetch(roughnessPath, { mode: 'cors', credentials: 'omit' }).then(r => r.blob())
       ]);
       
       // Load textures using cache's method
