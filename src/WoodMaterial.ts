@@ -70,11 +70,11 @@ export class WoodMaterial extends PBRMaterial {
     
     /**
      * Select appropriate texture size based on panel dimension.
-     * NOTE: Always returns 'large' for best quality and simpler caching.
+     * NOTE: Always returns 'Seamless_4K' for best quality and simpler caching.
      * Random UV offsets prevent repetitive appearance across sections.
      */
     private selectTextureSize(_dimension: number, _config: WoodMaterialsConfig): string {
-        return 'large';
+        return 'Seamless_4K';
     }
     
     /**
@@ -152,7 +152,7 @@ export class WoodMaterial extends PBRMaterial {
         }
         
         // Calculate texture scaling and corner-based offsets
-        const textureSizeCm = 400; // Large texture width from config (300x400cm)
+        const textureSizeCm = sizeConfig.physical_width_cm || 400;
         const panelSizeCm = panelDimension * 2.54; // Convert inches to cm
         const uvScale = panelSizeCm / textureSizeCm; // Scale DOWN to show portion of texture
         const maxSafeOffset = 1.0 - uvScale; // Maximum safe offset to keep within bounds
