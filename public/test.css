@@ -137,6 +137,13 @@ body {
   pointer-events: auto !important;
 }
 
+/* Hide camera controls on mobile (touch handles zoom/pan) */
+@media (max-width: 749px) {
+  .bottom-controls {
+    display: none !important;
+  }
+}
+
 /* Nav Tabs (Left Panel) -> Fixed Bottom Bar */
 #left-main-panel,
 .panel-left-main {
