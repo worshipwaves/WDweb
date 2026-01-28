@@ -1901,7 +1901,9 @@ export class SceneManager {
             const currentDimension = Math.max(width, height);
             
             const fov = this._camera.fov || 0.8;
-            const paddingFactor = 1.25; // 80% of viewport
+            // Mobile (portrait): tighter framing to fill narrow width
+            const isMobile = window.innerWidth < 750;
+            const paddingFactor = isMobile ? 0.7 : 1.25;
             const halfHeight = Math.tan(fov / 2);
             const idealRadius = (currentDimension / 2) * paddingFactor / halfHeight;
             
