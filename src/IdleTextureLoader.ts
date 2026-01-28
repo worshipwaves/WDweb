@@ -97,18 +97,6 @@ export class IdleTextureLoader {
       const folderName = sizeInfo.folder;
       const dimensions = sizeInfo.dimensions;
       
-      // Construct texture paths for browser cache warmup
-      const albedoPath = `${basePath}/${species.id}/Varnished/${folderName}/Diffuse/wood-${species.wood_number}_${species.id}-varnished-${dimensions}_d.png`;
-      const normalPath = `${basePath}/${species.id}/Shared_Maps/${folderName}/Normal/wood-${species.wood_number}_${species.id}-${dimensions}_n.png`;
-      const roughnessPath = `${basePath}/${species.id}/Shared_Maps/${folderName}/Roughness/wood-${species.wood_number}_${species.id}-${dimensions}_r.png`;
-      
-      // Warm browser cache before BabylonJS loads (consume response to ensure caching)
-      await Promise.all([
-        fetch(albedoPath, { mode: 'cors', credentials: 'omit' }).then(r => r.blob()),
-        fetch(normalPath, { mode: 'cors', credentials: 'omit' }).then(r => r.blob()),
-        fetch(roughnessPath, { mode: 'cors', credentials: 'omit' }).then(r => r.blob())
-      ]);
-      
       // Load textures using cache's method
       await this.textureCache._preloadSpeciesTexturesAsync(
         species,
