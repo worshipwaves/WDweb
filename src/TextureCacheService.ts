@@ -13,7 +13,9 @@ import type { WoodMaterialsConfig } from './types/schemas';
 
 export class TextureCacheService {
   private _textureCache: Map<string, Texture> = new Map();
+  private _blobUrlCache: Map<string, string> = new Map();
   private _scene: Scene;
+  private _cacheName = 'wavedesigner-textures-v1';
   
   constructor(scene: Scene) {
     this._scene = scene;
@@ -71,8 +73,8 @@ export class TextureCacheService {
     // Create idle loader for remaining species (array order = priority)
     const idleLoader = new IdleTextureLoader(this, config);
     
-    // Background preload remaining species during idle time
-    idleLoader.startBackgroundLoading(3);
+    // Idle preloading disabled - cache viewed species on demand instead
+    // idleLoader.startBackgroundLoading(3);
     
     return idleLoader;
   }
@@ -130,6 +132,9 @@ export class TextureCacheService {
   dispose(): void {
     this._textureCache.forEach(texture => texture.dispose());
     this._textureCache.clear();
+    
+    this._blobUrlCache.forEach(url => URL.revokeObjectURL(url));
+    this._blobUrlCache.clear();
   }
   
   /**
@@ -150,5 +155,95 @@ export class TextureCacheService {
 			if (this._textureCache.has(path)) return;
 			const texture = new Texture(resolveAssetUrl(path), this._scene);
 			this._textureCache.set(path, texture);
-	}	
+			this._ensureInCacheApi(path);
+	}
+	
+  /**
+   * Ensure texture is in Cache API for cross-session persistence.
+   */
+  private async _ensureInCacheApi(path: string): Promise<void> {
+    try {
+      const finalUrl = resolveAssetUrl(path);
+      const cache = await window.caches.open(this._cacheName);
+      const existing = await cache.match(finalUrl);
+      if (!existing) {
+        await cache.add(finalUrl);
+      }
+    } catch (err) {
+      console.warn('[TextureCache] Cache API storage failed:', err);
+    }
+  }
+
+  /**
+   * Get texture via Cache API - checks persistent storage first.
+   */
+  async getTextureAsync(path: string): Promise<Texture> {
+    const cached = this._textureCache.get(path);
+    if (cached) {
+      return cached.clone();
+    }
+    
+    const finalUrl = resolveAssetUrl(path);
+    
+    try {
+      const cache = await window.caches.open(this._cacheName);
+      let response = await cache.match(finalUrl);
+      
+      if (!response) {
+        await cache.add(finalUrl);
+        response = await cache.match(finalUrl);
+      }
+      
+      if (!response) throw new Error(`Failed to cache: ${finalUrl}`);
+      
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      this._blobUrlCache.set(path, objectUrl);
+      
+      const texture = new Texture(objectUrl, this._scene);
+      texture.onDisposeObservable.add(() => {
+        URL.revokeObjectURL(objectUrl);
+        this._blobUrlCache.delete(path);
+      });
+      
+      this._textureCache.set(path, texture);
+      return texture;
+      
+    } catch (err) {
+      console.warn('[TextureCache] Cache API failed, using network:', err);
+      const texture = new Texture(finalUrl, this._scene);
+      this._textureCache.set(path, texture);
+      return texture;
+    }
+  }
+
+  /**
+   * Preload all three maps for a species via Cache API.
+   */
+  async preloadSpeciesFull(speciesId: string, config: WoodMaterialsConfig): Promise<void> {
+    const textureConfig = config.texture_config;
+    const basePath = textureConfig.base_texture_path;
+    const sizeInfo = textureConfig.size_map.Seamless_4K;
+    const folderName = sizeInfo.folder;
+    const dimensions = sizeInfo.dimensions;
+    
+    const species = config.species_catalog.find(s => s.id === speciesId);
+    if (!species) return;
+    
+    const albedoPath = `${basePath}/${speciesId}/Varnished/${folderName}/Diffuse/wood-${species.wood_number}_${speciesId}-varnished-${dimensions}_d.png`;
+    const normalPath = `${basePath}/${speciesId}/Shared_Maps/${folderName}/Normal/wood-${species.wood_number}_${speciesId}-${dimensions}_n.png`;
+    const roughnessPath = `${basePath}/${speciesId}/Shared_Maps/${folderName}/Roughness/wood-${species.wood_number}_${speciesId}-${dimensions}_r.png`;
+    
+    await Promise.all([
+      this.getTextureAsync(albedoPath),
+      this.getTextureAsync(normalPath),
+      this.getTextureAsync(roughnessPath)
+    ]);
+    
+    await Promise.all([
+      this._waitForTextureReady(this._textureCache.get(albedoPath)!),
+      this._waitForTextureReady(this._textureCache.get(normalPath)!),
+      this._waitForTextureReady(this._textureCache.get(roughnessPath)!)
+    ]);
+  }
 }
