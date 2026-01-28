@@ -141,6 +141,7 @@ export class SceneManager {
 		/**
      * Enable or disable camera controls based on background type.
      * Only blank_wall allows camera manipulation.
+     * When enabled, constrains to turntable mode (horizontal rotation + zoom only).
      */
     public setCameraControlsEnabled(enabled: boolean): void {
         if (enabled === this._cameraControlsEnabled) return;
@@ -149,8 +150,28 @@ export class SceneManager {
         
         if (enabled) {
             this._camera.attachControl(this._canvas, true);
+            
+            // Turntable mode: lock vertical tilt (beta), allow zoom (radius)
+            const fixedBeta = Math.PI / 2; // Eye-level view
+            this._camera.beta = fixedBeta;
+            this._camera.lowerBetaLimit = fixedBeta;
+            this._camera.upperBetaLimit = fixedBeta;
+            
+            // Allow zoom for detail inspection
+            this._camera.lowerRadiusLimit = 5;  // Close-up for cut details
+            this._camera.upperRadiusLimit = 150;
+            
+            // Disable panning (keeps artwork centered)
+            this._camera.panningSensibility = 0;
         } else {
             this._camera.detachControl();
+            
+            // Restore default limits for when controls are re-enabled
+            this._camera.lowerBetaLimit = 0.1;
+            this._camera.upperBetaLimit = Math.PI - 0.1;
+            this._camera.lowerRadiusLimit = 0.1;
+            this._camera.upperRadiusLimit = 300;
+            this._camera.panningSensibility = 50;
         }
     }
 
