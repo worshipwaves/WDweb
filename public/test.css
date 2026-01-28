@@ -132,6 +132,11 @@ body {
   display: none !important;
 }
 
+/* Re-enable interaction on left panel */
+#left-main-panel {
+  pointer-events: auto !important;
+}
+
 /* Nav Tabs (Left Panel) -> Fixed Bottom Bar */
 #left-main-panel,
 .panel-left-main {
@@ -140,6 +145,7 @@ body {
   left: 0 !important;
   width: 100% !important;
   height: var(--footer-height) !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
   top: auto !important;
   
   background: #ffffff !important;
