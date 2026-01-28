@@ -132,8 +132,9 @@ body {
   display: none !important;
 }
 
-/* Re-enable interaction on left panel */
-#left-main-panel {
+/* Re-enable interaction on panels */
+#left-main-panel,
+#right-main-panel {
   pointer-events: auto !important;
 }
 
