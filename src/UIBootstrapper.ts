@@ -105,6 +105,16 @@ export class UIBootstrapper {
             fullscreenBtn.addEventListener('mouseleave', () => tooltip.hide());
         }
 
+        // Mobile fullscreen button (YouTube-style, bottom-right of canvas)
+        const mobileFullscreenBtn = document.getElementById('mobileFullscreenBtn');
+        if (mobileFullscreenBtn) {
+            mobileFullscreenBtn.addEventListener('click', () => {
+                if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(err => console.error(err));
+                else if (document.exitFullscreen) void document.exitFullscreen();
+                setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
+            });
+        }
+
         let menusHidden = false;
         const toggleMenusBtn = document.getElementById('toggleMenusBtn');
         if (toggleMenusBtn) {
