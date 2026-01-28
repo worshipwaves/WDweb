@@ -119,7 +119,18 @@ body {
   outline: none;
 }
 
-.ui-overlay-container { display: none; }
+.ui-overlay-container { 
+  display: block !important;
+  pointer-events: none;
+}
+
+/* Hide desktop-only elements on mobile */
+.ui-overlay-container .sidebar-header,
+.ui-overlay-container .panel-right-main,
+.ui-overlay-container .panel-left-secondary,
+.ui-overlay-container .panel-right-secondary {
+  display: none !important;
+}
 
 /* Nav Tabs (Left Panel) -> Fixed Bottom Bar */
 #left-main-panel,
