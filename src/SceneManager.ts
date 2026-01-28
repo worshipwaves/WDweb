@@ -1213,7 +1213,8 @@ export class SceneManager {
                     }
                     
                     const fov = this._camera.fov || 0.8;
-                    const paddingFactor = 1.25; // 80% of viewport
+                    const isMobile = window.innerWidth < 750;
+                    const paddingFactor = isMobile ? 0.4 : 1.25; // 90% fill on mobile, 80% on desktop
                     const halfHeight = Math.tan(fov / 2);
                     const idealRadius = (maxDimension / 2) * paddingFactor / halfHeight;
                     
