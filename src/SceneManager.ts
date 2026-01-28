@@ -1224,17 +1224,20 @@ export class SceneManager {
     }
 		
 		private calculateIdealRadius(): number {
-				const state = this._controller?.getState();
-				const frameDesign = state?.composition?.frame_design;
-				
-				if (!frameDesign) {
-						return 47;
-				}
-				
-				const width = frameDesign.finish_x;
-				const height = frameDesign.finish_y;
-				const dominantDimension = Math.max(width, height);
-				const paddingFactor = 1.5;
+			const state = this._controller?.getState();
+			const frameDesign = state?.composition?.frame_design;
+			
+			if (!frameDesign) {
+					return 47;
+			}
+			
+			const width = frameDesign.finish_x;
+			const height = frameDesign.finish_y;
+			const dominantDimension = Math.max(width, height);
+			
+			// Tighter framing on mobile (90% fill vs 67% on desktop)
+			const isMobile = window.innerWidth < 750;
+			const paddingFactor = isMobile ? 1.1 : 1.5;
 				
 				return Math.max(dominantDimension * paddingFactor, this._camera.lowerRadiusLimit ?? 20);
 		}
