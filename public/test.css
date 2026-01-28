@@ -143,6 +143,12 @@ body {
   .bottom-controls {
     display: none !important;
   }
+  
+  /* Allow minimal overscroll to trigger browser chrome auto-hide */
+  body {
+    height: calc(100vh + 1px);
+    overflow-y: auto;
+  }
 }
 
 /* Nav Tabs (Left Panel) -> Fixed Bottom Bar */
