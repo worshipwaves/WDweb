@@ -1666,11 +1666,19 @@ export class SceneManager {
         }
         // Center anchor: position IS center, no offset needed
         
-        this._rootNode.position = new Vector3(
+        const targetPosition = new Vector3(
             placement.position[0],
             placement.position[1] + yOffset,
             placement.position[2]
         );
+
+        // When turntable mode is active, set pole position instead of rootNode
+        if (this._turntableEnabled && this._turntablePole) {
+            this._turntablePole.position = targetPosition;
+            this._rootNode.position = Vector3.Zero();
+        } else {
+            this._rootNode.position = targetPosition;
+        }
 
         // Apply scale factor
         const targetScale = placement.scale_factor;
