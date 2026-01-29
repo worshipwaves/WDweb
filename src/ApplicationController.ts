@@ -3770,20 +3770,9 @@ export class ApplicationController {
     changedParams: string[],
     previousMaxAmplitude: number | null
   ): Promise<SmartCsgResponse> {
-    // Normalize amplitudes to 0-1 range before sending to backend
-    // Ensures consistent behavior whether called from initialize() or handleCompositionUpdate()
-    const validAmps = state.processed_amplitudes?.filter(
-      (amp): amp is number => amp !== null && isFinite(amp)
-    ) || [];
-    const normalizedAmps = (() => {
-			if (validAmps.length === 0) return validAmps;
-			const prevMax = this._state.audio.previousMaxAmplitude;
-			return prevMax && prevMax > 0 ? validAmps.map(a => a / prevMax) : validAmps;
-		})();
-    const normalizedState: CompositionStateDTO = {
-      ...state,
-      processed_amplitudes: normalizedAmps
-    };
+    // Amplitudes are already normalized (0-1) by the caller (handleCompositionUpdate or initialize)
+    // Do NOT normalize again here - double normalization causes all slots to be equal size
+    const normalizedState: CompositionStateDTO = state;
 
     const finishX = normalizedState.frame_design.finish_x;
     const gap = finishX / 12.0;
