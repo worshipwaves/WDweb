@@ -3808,7 +3808,11 @@ export class ApplicationController {
         slot_data: [],
         panel_config: { ...largeResponse.csg_data.panel_config, slot_style: 'asymmetric' }
       },
-      updated_state: state
+      updated_state: {
+        ...state,
+        // Store scaled amplitudes to maintain consistency with max_amplitude_local
+        processed_amplitudes: largeResponse.updated_state.processed_amplitudes
+      }
     };
   }
 	
