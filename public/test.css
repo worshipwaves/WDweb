@@ -337,9 +337,21 @@ body.room-blank-wall .turntable-indicator {
     height: 55vh !important; /* More canvas on tablet */
   }
   
+  /* Category bar below canvas */
+  #left-main-panel,
+  .panel-left-main {
+    top: calc(var(--header-height-mobile) + 55vh) !important;
+  }
+  
+  /* Accordion below category bar */
   #right-main-panel,
   .panel-right-main {
-    top: calc(var(--header-height-mobile) + 55vh) !important;
+    top: calc(var(--header-height-mobile) + 55vh + var(--footer-height)) !important;
+  }
+  
+  /* Position controls relative to canvas bottom, not viewport bottom */
+  .bottom-controls {
+    bottom: calc(100vh - 55vh + 16px) !important;
   }
 }
 
@@ -3110,7 +3122,7 @@ SPECIES CARDS - 140px
 .bottom-controls {
   position: absolute !important;
   bottom: 32px;
-  left: 16px;
+  left: calc(var(--canvas-left, 0px) + 16px);
   z-index: 100;
   
   display: none; /* Hidden by default */
