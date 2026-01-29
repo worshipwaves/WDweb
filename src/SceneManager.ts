@@ -151,14 +151,17 @@ export class SceneManager {
         if (enabled) {
             this._camera.attachControl(this._canvas, true);
             
-            // Turntable mode: lock vertical tilt (beta), allow zoom (radius)
-            const fixedBeta = Math.PI / 2; // Eye-level view
+            // Turntable mode: camera orbits around artwork center
+            this._camera.setTarget(Vector3.Zero());
+            
+            // Lock vertical tilt (beta) to eye-level
+            const fixedBeta = Math.PI / 2;
             this._camera.beta = fixedBeta;
             this._camera.lowerBetaLimit = fixedBeta;
             this._camera.upperBetaLimit = fixedBeta;
             
             // Allow zoom for detail inspection
-            this._camera.lowerRadiusLimit = 5;  // Close-up for cut details
+            this._camera.lowerRadiusLimit = 5;
             this._camera.upperRadiusLimit = 150;
             
             // Disable panning (keeps artwork centered)
@@ -166,12 +169,15 @@ export class SceneManager {
         } else {
             this._camera.detachControl();
             
-            // Restore default limits for when controls are re-enabled
+            // Restore default limits
             this._camera.lowerBetaLimit = 0.1;
             this._camera.upperBetaLimit = Math.PI - 0.1;
             this._camera.lowerRadiusLimit = 0.1;
             this._camera.upperRadiusLimit = 300;
             this._camera.panningSensibility = 50;
+            
+            // Restore camera offset for room views
+            this._camera.setTarget(new Vector3(this._cameraOffset, 0, 0));
         }
     }
 
