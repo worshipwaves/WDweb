@@ -140,8 +140,9 @@ body {
   pointer-events: auto !important;
 }
 
-/* Mobile fullscreen button - YouTube style */
-.mobile-fullscreen-btn {
+/* Mobile buttons - hidden on desktop */
+.mobile-fullscreen-btn,
+.mobile-reset-btn {
   display: none;
 }
 
