@@ -60,6 +60,9 @@ export class SceneManager {
 		private _archetypeIdealRadius: Map<string, number> = new Map();
     private _currentArchetypeId: string | null = null;
     private _asymmetricLargeOnLeft: boolean = true; // Toggle state for asymmetric archetype
+    private _turntablePole: TransformNode | null = null;
+    private _turntableEnabled: boolean = false;
+    private _lastPointerX: number = 0;
 		private _currentImageAspectRatio: number = 1.5; // Default 3:2
 		private _currentPaintColor: number[] | null = null;
 		private _currentWallTexturePath: string | undefined = undefined;
@@ -141,7 +144,7 @@ export class SceneManager {
 		/**
      * Enable or disable camera controls based on background type.
      * Only blank_wall allows camera manipulation.
-     * When enabled, constrains to turntable mode (horizontal rotation + zoom only).
+     * When enabled, uses turntable mode (object rotates, camera only zooms).
      */
     public setCameraControlsEnabled(enabled: boolean): void {
         if (enabled === this._cameraControlsEnabled) return;
@@ -149,37 +152,99 @@ export class SceneManager {
         this._cameraControlsEnabled = enabled;
         
         if (enabled) {
-            this._camera.attachControl(this._canvas, true);
-            
-            // Turntable mode: camera orbits around artwork center
-            this._camera.setTarget(Vector3.Zero());
-            
-            // Lock vertical tilt (beta) to eye-level
-            const fixedBeta = Math.PI / 2;
-            this._camera.beta = fixedBeta;
-            this._camera.lowerBetaLimit = fixedBeta;
-            this._camera.upperBetaLimit = fixedBeta;
-            
-            // Allow zoom for detail inspection
-            this._camera.lowerRadiusLimit = 5;
-            this._camera.upperRadiusLimit = 150;
-            
-            // Disable panning (keeps artwork centered)
-            this._camera.panningSensibility = 0;
+            this._enableTurntableMode();
         } else {
-            this._camera.detachControl();
-            
-            // Restore default limits
-            this._camera.lowerBetaLimit = 0.1;
-            this._camera.upperBetaLimit = Math.PI - 0.1;
-            this._camera.lowerRadiusLimit = 0.1;
-            this._camera.upperRadiusLimit = 300;
-            this._camera.panningSensibility = 50;
-            
-            // Restore camera offset for room views
-            this._camera.setTarget(new Vector3(this._cameraOffset, 0, 0));
+            this._disableTurntableMode();
         }
     }
+    
+    private _enableTurntableMode(): void {
+        this._turntableEnabled = true;
+        
+        // Create turntable pole if needed
+        if (!this._turntablePole) {
+            this._turntablePole = new TransformNode("turntablePole", this._scene);
+        }
+        
+        // Parent rootNode to the pole
+        if (this._rootNode && this._rootNode.parent !== this._turntablePole) {
+            this._turntablePole.position = Vector3.Zero();
+            this._turntablePole.rotation = Vector3.Zero();
+            this._rootNode.setParent(this._turntablePole);
+        }
+        
+        // Camera: fixed position, only zoom allowed
+        this._camera.detachControl();
+        
+        // Reset camera to front view
+        this._camera.alpha = Math.PI / 2;
+        this._camera.beta = Math.PI / 2;
+        this._camera.setTarget(Vector3.Zero());
+        
+        // Add pointer events for turntable drag
+        this._canvas.addEventListener('pointerdown', this._onTurntablePointerDown);
+        this._canvas.addEventListener('pointermove', this._onTurntablePointerMove);
+        this._canvas.addEventListener('pointerup', this._onTurntablePointerUp);
+        this._canvas.addEventListener('pointerleave', this._onTurntablePointerUp);
+        
+        // Allow zoom via wheel
+        this._canvas.addEventListener('wheel', this._onTurntableWheel);
+    }
+    
+    private _disableTurntableMode(): void {
+        this._turntableEnabled = false;
+        
+        // Unparent rootNode from pole
+        if (this._rootNode && this._turntablePole) {
+            this._rootNode.setParent(null);
+            // Reset pole rotation so next enable starts fresh
+            this._turntablePole.rotation = Vector3.Zero();
+        }
+        
+        // Remove turntable event listeners
+        this._canvas.removeEventListener('pointerdown', this._onTurntablePointerDown);
+        this._canvas.removeEventListener('pointermove', this._onTurntablePointerMove);
+        this._canvas.removeEventListener('pointerup', this._onTurntablePointerUp);
+        this._canvas.removeEventListener('pointerleave', this._onTurntablePointerUp);
+        this._canvas.removeEventListener('wheel', this._onTurntableWheel);
+        
+        // Detach camera controls for room views
+        this._camera.detachControl();
+    }
+    
+    private _onTurntablePointerDown = (evt: PointerEvent): void => {
+        this._lastPointerX = evt.clientX;
+        this._canvas.setPointerCapture(evt.pointerId);
+    };
+    
+    private _onTurntablePointerMove = (evt: PointerEvent): void => {
+        if (!this._canvas.hasPointerCapture(evt.pointerId)) return;
+        if (!this._turntablePole) return;
+        
+        const deltaX = evt.clientX - this._lastPointerX;
+        this._lastPointerX = evt.clientX;
+        
+        // Rotate pole around Y axis (turntable spin)
+        // Negative to make drag direction intuitive (drag right = rotate right)
+        this._turntablePole.rotation.y -= deltaX * 0.005;
+    };
+    
+    private _onTurntablePointerUp = (evt: PointerEvent): void => {
+        if (this._canvas.hasPointerCapture(evt.pointerId)) {
+            this._canvas.releasePointerCapture(evt.pointerId);
+        }
+    };
+    
+    private _onTurntableWheel = (evt: WheelEvent): void => {
+        evt.preventDefault();
+        
+        // Zoom in/out
+        const zoomDelta = evt.deltaY * 0.05;
+        const newRadius = this._camera.radius + zoomDelta;
+        
+        // Clamp radius
+        this._camera.radius = Math.max(5, Math.min(150, newRadius));
+    };
 
     public static create(canvasId: string, facade: WaveformDesignerFacade, controller: ApplicationController): SceneManager {
         const manager = new SceneManager(canvasId, facade, controller);
