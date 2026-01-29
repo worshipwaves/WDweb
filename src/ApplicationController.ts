@@ -3776,10 +3776,10 @@ export class ApplicationController {
       (amp): amp is number => amp !== null && isFinite(amp)
     ) || [];
     const normalizedAmps = (() => {
-      if (validAmps.length === 0) return validAmps;
-      const maxAmp = Math.max(...validAmps.map(Math.abs));
-      return maxAmp > 1.5 ? validAmps.map(a => a / maxAmp) : validAmps;
-    })();
+			if (validAmps.length === 0) return validAmps;
+			const prevMax = this._state.audio.previousMaxAmplitude;
+			return prevMax && prevMax > 0 ? validAmps.map(a => a / prevMax) : validAmps;
+		})();
     const normalizedState: CompositionStateDTO = {
       ...state,
       processed_amplitudes: normalizedAmps
@@ -4783,10 +4783,10 @@ export class ApplicationController {
             // CRITICAL: For geometry changes, send NORMALIZED amplitudes (0-1 range)
             // Backend will apply the new max_amplitude_local to these normalized values
             const normalizedAmps = (() => {
-              if (validAmps.length === 0) return validAmps;
-              const maxAmp = Math.max(...validAmps.map(Math.abs));
-              return maxAmp > 1.5 ? validAmps.map(a => a / maxAmp) : validAmps;
-            })();
+							if (validAmps.length === 0) return validAmps;
+							const prevMax = this._state.audio.previousMaxAmplitude;
+							return prevMax && prevMax > 0 ? validAmps.map(a => a / prevMax) : validAmps;
+						})();
             
             stateToSend = {
                 ...newComposition,
