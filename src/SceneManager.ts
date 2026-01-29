@@ -220,27 +220,26 @@ export class SceneManager {
         this._camera.detachControl();
     }
     
+    private _isDragging: boolean = false;
+    
     private _onTurntablePointerDown = (evt: PointerEvent): void => {
+        this._isDragging = true;
         this._lastPointerX = evt.clientX;
-        this._canvas.setPointerCapture(evt.pointerId);
     };
     
     private _onTurntablePointerMove = (evt: PointerEvent): void => {
-        if (!this._canvas.hasPointerCapture(evt.pointerId)) return;
+        if (!this._isDragging) return;
         if (!this._turntablePole) return;
         
         const deltaX = evt.clientX - this._lastPointerX;
         this._lastPointerX = evt.clientX;
         
         // Rotate pole around Y axis (turntable spin)
-        // Negative to make drag direction intuitive (drag right = rotate right)
         this._turntablePole.rotation.y -= deltaX * 0.005;
     };
     
-    private _onTurntablePointerUp = (evt: PointerEvent): void => {
-        if (this._canvas.hasPointerCapture(evt.pointerId)) {
-            this._canvas.releasePointerCapture(evt.pointerId);
-        }
+    private _onTurntablePointerUp = (): void => {
+        this._isDragging = false;
     };
     
     private _onTurntableWheel = (evt: WheelEvent): void => {
