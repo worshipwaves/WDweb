@@ -51,6 +51,18 @@
         <span class="loading-text">Loading exotic wood species... (<span id="texturesLoaded">0</span> of <span id="texturesTotal">15</span>)</span>
       </div>
       
+      <!-- 360° Turntable Indicator -->
+      <div class="turntable-indicator">
+        <svg width="80" height="40" viewBox="0 0 80 40">
+          <!-- Ellipse arc -->
+          <ellipse cx="40" cy="30" rx="35" ry="8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="110 60"/>
+          <!-- Arrow head on left -->
+          <polygon points="8,26 14,30 10,33" fill="currentColor"/>
+          <!-- 360° text -->
+          <text x="40" y="24" text-anchor="middle" font-size="18" font-weight="bold" fill="currentColor">360°</text>
+        </svg>
+      </div>
+      
       <!-- Mobile Reset Button -->
       <button id="mobileResetBtn" class="mobile-reset-btn" title="Reset View">↻</button>
       

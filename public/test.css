@@ -146,6 +146,22 @@ body {
   display: none;
 }
 
+/* 360° Turntable indicator - only visible on blank wall */
+.turntable-indicator {
+  display: none;
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 5;
+}
+
+body.room-blank-wall .turntable-indicator {
+  display: block;
+}
+
 @media (max-width: 749px) {
   .mobile-fullscreen-btn {
     display: flex;
