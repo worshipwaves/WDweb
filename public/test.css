@@ -1332,7 +1332,7 @@ input:checked + .toggle-slider:before {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 1.25rem .5rem 1.25rem 1.4rem;
+  padding: 1.25rem 1.25rem 1.25rem 1.25rem;
   cursor: pointer;
   transition: opacity var(--duration-default, 250ms);
   user-select: none;
