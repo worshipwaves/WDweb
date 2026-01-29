@@ -282,7 +282,8 @@ export class SceneManager {
         }
         
         // Store reference for enabling/disabling controls
-        this._cameraControlsEnabled = true;
+        // Start as false so first setCameraControlsEnabled(true) triggers turntable setup
+        this._cameraControlsEnabled = false;
         return camera;
     }
 
