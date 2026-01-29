@@ -166,15 +166,23 @@ export class SceneManager {
             this._turntablePole = new TransformNode("turntablePole", this._scene);
         }
         
-        // Parent rootNode to the pole
+        // Parent rootNode to the pole, positioned at artwork center
         if (this._rootNode && this._rootNode.parent !== this._turntablePole) {
-            this._turntablePole.position = Vector3.Zero();
+            // Position pole at rootNode's current location
+            this._turntablePole.position = this._rootNode.position.clone();
             this._turntablePole.rotation = Vector3.Zero();
+            
+            // Reset rootNode position since pole now holds the offset
+            this._rootNode.position = Vector3.Zero();
             this._rootNode.setParent(this._turntablePole);
         }
         
-        // Camera: fixed position, only zoom allowed
+        // Camera: fully disable rotation/pan inputs, keep only for zoom
         this._camera.detachControl();
+        // Remove pointer inputs that cause camera orbit
+        if (this._camera.inputs.attached.pointers) {
+            this._camera.inputs.remove(this._camera.inputs.attached.pointers);
+        }
         
         // Reset camera to front view
         this._camera.alpha = Math.PI / 2;
