@@ -136,7 +136,7 @@ export class SliderGroup implements PanelComponent {
       container.appendChild(header);
     }
 		
-		// Window-level listeners to catch mouseup outside slider
+		// Window-level listeners to catch mouseup/touchend outside slider
     this._windowMouseUpHandler = () => {
       if (this._isDragging) {
         this._isDragging = false;
@@ -149,6 +149,7 @@ export class SliderGroup implements PanelComponent {
       }
     };
     window.addEventListener('mouseup', this._windowMouseUpHandler);
+    window.addEventListener('touchend', this._windowMouseUpHandler);
 
     this._sliders.forEach(config => {
       // Check for discrete presets
@@ -193,13 +194,15 @@ export class SliderGroup implements PanelComponent {
       slider.value = String(displayValue);
       slider.className = 'slider-input';
 			
-			// Track interaction start
-      slider.addEventListener('mousedown', () => {
+			// Track interaction start (mouse and touch)
+      const startDrag = () => {
         if (!this._isDragging) {
           this._isDragging = true;
           this._onInteraction?.(true);
         }
-      });
+      };
+      slider.addEventListener('mousedown', startDrag);
+      slider.addEventListener('touchstart', startDrag, { passive: true });
 
       slider.addEventListener('input', (e) => {
         const target = e.target as HTMLInputElement;
@@ -286,6 +289,7 @@ export class SliderGroup implements PanelComponent {
 		// Clean up window-level event listener
     if (this._windowMouseUpHandler) {
       window.removeEventListener('mouseup', this._windowMouseUpHandler);
+			window.removeEventListener('touchend', this._windowMouseUpHandler);
       this._windowMouseUpHandler = null;
     }
     if (this._isDragging) {
