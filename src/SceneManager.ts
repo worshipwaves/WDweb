@@ -229,13 +229,13 @@ export class SceneManager {
     
     private _onTurntablePointerMove = (evt: PointerEvent): void => {
         if (!this._isDragging) return;
-        if (!this._turntablePole) return;
+        if (!this._rootNode) return;
         
         const deltaX = evt.clientX - this._lastPointerX;
         this._lastPointerX = evt.clientX;
         
-        // Rotate pole around Y axis (turntable spin)
-        this._turntablePole.rotation.y -= deltaX * 0.005;
+        // Rotate rootNode around Y axis (turntable spin)
+        this._rootNode.rotation.y -= deltaX * 0.005;
     };
     
     private _onTurntablePointerUp = (): void => {
