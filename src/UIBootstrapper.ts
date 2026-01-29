@@ -114,6 +114,12 @@ export class UIBootstrapper {
                 setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
             });
         }
+        
+        // Mobile reset button (lower-left of canvas)
+        const mobileResetBtn = document.getElementById('mobileResetBtn');
+        if (mobileResetBtn) {
+            mobileResetBtn.addEventListener('click', () => this.sceneManager.resetCamera());
+        }
 
         let menusHidden = false;
         const toggleMenusBtn = document.getElementById('toggleMenusBtn');

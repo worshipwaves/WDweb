@@ -236,6 +236,11 @@ export class SceneManager {
         
         // Rotate rootNode around Y axis (turntable spin)
         this._rootNode.rotation.y -= deltaX * 0.005;
+        
+        // Hide shadow plane when rotated (shadow position becomes incorrect)
+        if (this._shadowReceiverPlane && this._shadowReceiverPlane.isVisible) {
+            this._shadowReceiverPlane.isVisible = false;
+        }
     };
     
     private _onTurntablePointerUp = (): void => {
@@ -1356,6 +1361,16 @@ export class SceneManager {
         [animAlpha, animBeta, animRadius].forEach(a => a.setEasingFunction(ease));
         this._camera.setTarget(new Vector3(this._cameraOffset, 0, 0));
         this._scene.beginDirectAnimation(this._camera, [animAlpha, animBeta, animRadius], 0, 60, false);
+        
+        // Reset turntable rotation
+        if (this._rootNode) {
+            this._rootNode.rotation.y = 0;
+        }
+        
+        // Show shadow plane
+        if (this._shadowReceiverPlane) {
+            this._shadowReceiverPlane.isVisible = true;
+        }
     }
 	
     public updateComposition(_newState: CompositionStateDTO): void {

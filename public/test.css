@@ -196,6 +196,31 @@ body {
   .mobile-fullscreen-btn:active {
     background: rgba(0, 0, 0, 0.7);
   }
+  
+  /* Mobile reset button - lower left */
+  .mobile-reset-btn {
+    display: flex;
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    border-radius: 4px;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 10;
+    transition: background 0.2s;
+  }
+  
+  .mobile-reset-btn:hover,
+  .mobile-reset-btn:active {
+    background: rgba(0, 0, 0, 0.7);
+  }
 }
 
 /* Hide camera controls on mobile - fullscreen button replaces them */
