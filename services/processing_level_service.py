@@ -232,7 +232,7 @@ class ProcessingLevelService:
             scaled_amplitudes = AudioProcessingService.scale_and_clamp_amplitudes(
                 state.processed_amplitudes,
                 new_max_amplitude,
-                geometry.min_radius_from_V_calc,
+                state.pattern_settings.bit_diameter,
                 state.pattern_settings.visual_floor_pct
             )
             updated_state = state.model_copy(update={"processed_amplitudes": scaled_amplitudes})
