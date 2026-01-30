@@ -527,22 +527,28 @@ export class SceneManager {
     }
 		
 		private updateCanvasBoundaries(): void {
-        const canvas = this._engine.getRenderingCanvas();
-        if (!canvas) return;
-        
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        const viewportAspect = viewportWidth / viewportHeight;
-        const targetAspect = 16 / 9;
-        
-        let canvasLeft = 0;
-        let canvasRight = viewportWidth;
-        
-        if (viewportAspect > targetAspect) {
-            const canvasWidth = viewportHeight * targetAspect;
-            canvasLeft = (viewportWidth - canvasWidth) / 2;
-            canvasRight = canvasLeft + canvasWidth;
-        }
+				const canvas = this._engine.getRenderingCanvas();
+				if (!canvas) return;
+				
+				const viewportWidth = window.innerWidth;
+				const viewportHeight = window.innerHeight;
+				const isDesktopLayout = viewportWidth >= 1100;
+				
+				let canvasLeft = 0;
+				let canvasRight = viewportWidth;
+				
+				// On desktop grid layout, canvas is in left cell starting at 0
+				// On mobile/tablet, canvas may be letterboxed if wider than 16:9
+				if (!isDesktopLayout) {
+						const viewportAspect = viewportWidth / viewportHeight;
+						const targetAspect = 16 / 9;
+						
+						if (viewportAspect > targetAspect) {
+								const canvasWidth = viewportHeight * targetAspect;
+								canvasLeft = (viewportWidth - canvasWidth) / 2;
+								canvasRight = canvasLeft + canvasWidth;
+						}
+				}
         
         const canvasRightOffset = viewportWidth - canvasRight;
         
