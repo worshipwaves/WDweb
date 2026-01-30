@@ -63,6 +63,9 @@ export class SceneManager {
     private _turntablePole: TransformNode | null = null;
     private _turntableEnabled: boolean = false;
     private _lastPointerX: number = 0;
+    private _pinchStartDistance: number = 0;
+    private _pinchStartRadius: number = 0;
+    private _activePointers: Map<number, PointerEvent> = new Map();
 		private _currentImageAspectRatio: number = 1.5; // Default 3:2
 		private _currentPaintColor: number[] | null = null;
 		private _currentWallTexturePath: string | undefined = undefined;
@@ -195,8 +198,14 @@ export class SceneManager {
         this._canvas.addEventListener('pointerup', this._onTurntablePointerUp);
         this._canvas.addEventListener('pointerleave', this._onTurntablePointerUp);
         
-        // Allow zoom via wheel
+        // Allow zoom via wheel (desktop)
         this._canvas.addEventListener('wheel', this._onTurntableWheel);
+        
+        // Allow zoom via pinch (mobile)
+        this._canvas.addEventListener('pointerdown', this._onTurntablePinchStart);
+        this._canvas.addEventListener('pointermove', this._onTurntablePinchMove);
+        this._canvas.addEventListener('pointerup', this._onTurntablePinchEnd);
+        this._canvas.addEventListener('pointercancel', this._onTurntablePinchEnd);
     }
     
     private _disableTurntableMode(): void {
@@ -215,6 +224,13 @@ export class SceneManager {
         this._canvas.removeEventListener('pointerup', this._onTurntablePointerUp);
         this._canvas.removeEventListener('pointerleave', this._onTurntablePointerUp);
         this._canvas.removeEventListener('wheel', this._onTurntableWheel);
+        this._canvas.removeEventListener('pointerdown', this._onTurntablePinchStart);
+        this._canvas.removeEventListener('pointermove', this._onTurntablePinchMove);
+        this._canvas.removeEventListener('pointerup', this._onTurntablePinchEnd);
+        this._canvas.removeEventListener('pointercancel', this._onTurntablePinchEnd);
+        
+        // Clear any active pointers
+        this._activePointers.clear();
         
         // Detach camera controls for room views
         this._camera.detachControl();
@@ -256,6 +272,49 @@ export class SceneManager {
         
         // Clamp radius
         this._camera.radius = Math.max(5, Math.min(150, newRadius));
+    };
+    
+    private _onTurntablePinchStart = (evt: PointerEvent): void => {
+        this._activePointers.set(evt.pointerId, evt);
+        
+        if (this._activePointers.size === 2) {
+            // Two fingers down - start pinch
+            const pointers = Array.from(this._activePointers.values());
+            this._pinchStartDistance = this._getPointerDistance(pointers[0], pointers[1]);
+            this._pinchStartRadius = this._camera.radius;
+        }
+    };
+    
+    private _onTurntablePinchMove = (evt: PointerEvent): void => {
+        this._activePointers.set(evt.pointerId, evt);
+        
+        if (this._activePointers.size === 2) {
+            // Two fingers moving - handle pinch zoom
+            const pointers = Array.from(this._activePointers.values());
+            const currentDistance = this._getPointerDistance(pointers[0], pointers[1]);
+            
+            if (this._pinchStartDistance > 0) {
+                const scale = this._pinchStartDistance / currentDistance;
+                const newRadius = this._pinchStartRadius * scale;
+                
+                // Clamp radius
+                this._camera.radius = Math.max(5, Math.min(150, newRadius));
+            }
+        }
+    };
+    
+    private _onTurntablePinchEnd = (evt: PointerEvent): void => {
+        this._activePointers.delete(evt.pointerId);
+        
+        if (this._activePointers.size < 2) {
+            this._pinchStartDistance = 0;
+        }
+    };
+    
+    private _getPointerDistance(p1: PointerEvent, p2: PointerEvent): number {
+        const dx = p1.clientX - p2.clientX;
+        const dy = p1.clientY - p2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
     };
 
     public static create(canvasId: string, facade: WaveformDesignerFacade, controller: ApplicationController): SceneManager {
