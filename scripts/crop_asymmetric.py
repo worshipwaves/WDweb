@@ -7,9 +7,9 @@ img = Image.open(path)
 bbox = img.getbbox()
 cropped = img.crop(bbox)
 
-# Add small padding (5%)
+# Add small padding (1%)
 w, h = cropped.size
-pad = int(max(w, h) * 0.05)
+pad = int(max(w, h) * 0.01)
 padded = Image.new('RGBA', (w + pad*2, h + pad*2), (0, 0, 0, 0))
 padded.paste(cropped, (pad, pad))
 
