@@ -737,7 +737,9 @@ export class SceneManager {
             // Keep scene hidden until textures are ready to prevent "pop-in" artifact
             if (texturePromises.length > 0) {
                 this._rootNode?.setEnabled(false);
+                PerformanceMonitor.start('texture_wait_time');
                 await Promise.all(texturePromises);
+                PerformanceMonitor.end('texture_wait_time');
                 this._rootNode?.setEnabled(true);
             } else {
                 this._rootNode?.setEnabled(true);

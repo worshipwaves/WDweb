@@ -86,6 +86,7 @@ export class IdleTextureLoader {
     
     this.isLoading = true;
     const species = this.loadQueue.shift()!;
+    const loadStartTime = performance.now();
     
     // Add timeout to detect hung loads
     const timeoutMs = 10000; // 10 seconds
@@ -116,6 +117,7 @@ export class IdleTextureLoader {
     
     try {
       await Promise.race([loadPromise, timeoutPromise]);
+      console.debug(`[IdleLoader] texture_idle_${species.id}: ${(performance.now() - loadStartTime).toFixed(1)}ms`);
     } catch (error) {
       console.error(`[IdleLoader] Load failed or timed out for ${species.id}:`, error);
     }

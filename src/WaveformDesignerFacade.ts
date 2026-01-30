@@ -29,6 +29,7 @@ import {
 } from './types/schemas';
 import { fetchAndValidate, parseStoredData } from './utils/validation';
 import { getApiBaseUrl } from './utils/assetUrl';
+import { PerformanceMonitor } from './PerformanceMonitor';
 
 
 interface UIConfigResponse {
@@ -107,7 +108,18 @@ export class WaveformDesignerFacade {
       previous_max_amplitude: previousMaxAmplitude,
     };
 
-    return fetchAndValidate(
+    PerformanceMonitor.start('api_csg_roundtrip');
+    const result = await fetchAndValidate(
+      `${this.apiBase}/geometry/csg-data`,
+      SmartCsgResponseSchema,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      }
+    );
+    PerformanceMonitor.end('api_csg_roundtrip');
+    return result;
       `${this.apiBase}/geometry/csg-data`,
       SmartCsgResponseSchema,
       {

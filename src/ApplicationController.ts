@@ -421,6 +421,7 @@ export class ApplicationController {
    * Initialize the controller with default or restored state
    */
   async initialize(): Promise<void> {
+		PerformanceMonitor.start('app_initialize_total');
     try {
       // Initialize facade (loads style presets)
       this._facade.initialize();
@@ -463,6 +464,9 @@ export class ApplicationController {
 			
 			// Load thumbnail and categories configuration
       // Load all configs in parallel
+			
+			PerformanceMonitor.start('config_fetch_parallel');
+			
 			const [archetypes, woodMaterials, backgrounds, placementDefaults, uiConfig, _compositionDefaults, constraints] = await Promise.all([
 				fetch(`${getApiBaseUrl()}/api/config/archetypes`).then(r => r.json() as Promise<Record<string, Archetype>>),
 				fetch(`${getApiBaseUrl()}/api/config/wood-materials`).then(r => r.json() as Promise<WoodMaterialsConfig>),
@@ -472,6 +476,8 @@ export class ApplicationController {
 				fetch(`${getApiBaseUrl()}/api/config/composition-defaults`).then(r => r.json() as Promise<unknown>),
 				fetchAndValidate(`${getApiBaseUrl()}/api/config/constraints`, ConstraintsConfigSchema)
 			]);
+			
+			PerformanceMonitor.end('config_fetch_parallel');
 
 			// Store archetypes
 			Object.entries(archetypes).forEach(([id, data]) => {
@@ -492,6 +498,9 @@ export class ApplicationController {
     } catch (error: unknown) {
       console.error('[Controller] Failed to load configuration:', error);
     }
+		
+		PerformanceMonitor.end('app_initialize_total');
+    PerformanceMonitor.start('state_restore');
     
     // Load fresh defaults first
     const freshDefaults = await this._facade.createInitialState();
@@ -557,6 +566,8 @@ export class ApplicationController {
       }
       this._state = freshDefaults;
     }
+		
+		PerformanceMonitor.end('state_restore');
     
     this.notifySubscribers();
     

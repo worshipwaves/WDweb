@@ -9,6 +9,7 @@ import { Texture, Scene } from '@babylonjs/core';
 
 import { resolveAssetUrl } from './utils/assetUrl';
 import { IdleTextureLoader } from './IdleTextureLoader';
+import { PerformanceMonitor } from './PerformanceMonitor';
 import type { WoodMaterialsConfig } from './types/schemas';
 
 export class TextureCacheService {
@@ -61,14 +62,18 @@ export class TextureCacheService {
     const priorityId = prioritySpeciesId || config.default_species;
     const prioritySpecies = config.species_catalog.find(s => s.id === priorityId);
     if (prioritySpecies) {
+      PerformanceMonitor.start('texture_preload_priority');
       await this._preloadSpeciesTexturesAsync(prioritySpecies, basePath, folderName, sizeInfo.dimensions);
+      PerformanceMonitor.end('texture_preload_priority');
     }
     
     // Load remaining top species (skip priority if already loaded)
     const remaining = config.species_catalog.filter(s => s.id !== priorityId).slice(0, 2);
+    PerformanceMonitor.start('texture_preload_secondary');
     for (const species of remaining) {
       await this._preloadSpeciesTexturesAsync(species, basePath, folderName, sizeInfo.dimensions);
     }
+    PerformanceMonitor.end('texture_preload_secondary');
     
     // Create idle loader for remaining species (array order = priority)
     const idleLoader = new IdleTextureLoader(this, config);

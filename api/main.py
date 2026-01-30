@@ -1,8 +1,9 @@
 from dotenv import load_dotenv
 load_dotenv()
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, File, UploadFile, Form
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
+import time
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 import tempfile
@@ -21,6 +22,14 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # Initialize FastAPI application
 app = FastAPI(title="WaveDesigner API", version="0.1.0")
+
+@app.middleware("http")
+async def timing_middleware(request: Request, call_next):
+    start = time.perf_counter()
+    response = await call_next(request)
+    duration_ms = (time.perf_counter() - start) * 1000
+    response.headers["X-Response-Time"] = f"{duration_ms:.2f}ms"
+    return response
 
 # Configure CORS
 app.add_middleware(

@@ -6,6 +6,7 @@ This is now the authoritative source for core geometry logic.
 import math
 from typing import Dict, Any, Tuple, List
 from services.dtos import CompositionStateDTO, GeometryResultDTO
+from dev_utils.performance_monitor import performance_monitor
 from services.dimension_calculator import (
     DimensionConstraints,
     calculate_constrained_dimensions
@@ -674,7 +675,10 @@ class GeometryService:
         This is the authoritative source for geometry calculations.
         Returns a GeometryResultDTO with all calculated parameters.
         """
-        return calculate_geometries_core(state)
+        performance_monitor.start('geometry_calculate_dto')
+        result = calculate_geometries_core(state)
+        performance_monitor.end('geometry_calculate_dto')
+        return result
     
     def get_panel_parameters(self, state: CompositionStateDTO) -> Dict[str, Any]:
         """
