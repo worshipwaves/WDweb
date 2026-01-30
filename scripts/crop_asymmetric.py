@@ -3,17 +3,20 @@ from PIL import Image
 path = 'public/assets/style/thumbnails/circular_radial_n2_asymmetric.webp'
 img = Image.open(path)
 
-# Find bounding box of non-transparent content
 bbox = img.getbbox()
 cropped = img.crop(bbox)
 
-# Add small padding (1%)
+target_content_size = int(512 * 0.95)
 w, h = cropped.size
-pad = int(max(w, h) * 0.01)
-padded = Image.new('RGBA', (w + pad*2, h + pad*2), (0, 0, 0, 0))
-padded.paste(cropped, (pad, pad))
+scale = target_content_size / max(w, h)
+new_w = int(w * scale)
+new_h = int(h * scale)
+scaled = cropped.resize((new_w, new_h), Image.Resampling.LANCZOS)
 
-# Resize to 512x512
-padded.thumbnail((512, 512), Image.Resampling.LANCZOS)
-padded.save(path, 'WEBP', quality=90)
-print('Cropped and resized')
+final = Image.new('RGBA', (512, 512), (0, 0, 0, 0))
+x = (512 - new_w) // 2
+y = (512 - new_h) // 2
+final.paste(scaled, (x, y))
+
+final.save(path, 'WEBP', quality=90)
+print('Done')
