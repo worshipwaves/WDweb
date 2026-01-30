@@ -62,7 +62,8 @@ export class SceneManager {
     private _asymmetricLargeOnLeft: boolean = true; // Toggle state for asymmetric archetype
     private _turntablePole: TransformNode | null = null;
     private _turntableEnabled: boolean = false;
-    private _lastPointerX: number = 0;
+    private _activePointers: Map<number, PointerEvent> = new Map();
+		private _lastPinchDistance: number = 0;
 		private _currentImageAspectRatio: number = 1.5; // Default 3:2
 		private _currentPaintColor: number[] | null = null;
 		private _currentWallTexturePath: string | undefined = undefined;
@@ -222,32 +223,64 @@ export class SceneManager {
     
     private _isDragging: boolean = false;
     
-    private _onTurntablePointerDown = (evt: PointerEvent): void => {
-        this._isDragging = true;
-        this._lastPointerX = evt.clientX;
-    };
+		private _onTurntablePointerDown = (evt: PointerEvent): void => {
+				this._activePointers.set(evt.pointerId, evt);
+				
+				if (this._activePointers.size === 1) {
+						this._isDragging = true;
+						this._lastPointerX = evt.clientX;
+				} else if (this._activePointers.size === 2) {
+						this._isDragging = false;
+						const pointers = Array.from(this._activePointers.values());
+						const dx = pointers[0].clientX - pointers[1].clientX;
+						const dy = pointers[0].clientY - pointers[1].clientY;
+						this._lastPinchDistance = Math.sqrt(dx * dx + dy * dy);
+				}
+		};
     
-    private _onTurntablePointerMove = (evt: PointerEvent): void => {
-        if (!this._isDragging) return;
-        if (!this._rootNode) return;
-        
-        const deltaX = evt.clientX - this._lastPointerX;
-        this._lastPointerX = evt.clientX;
-        
-        // Rotate turntable pole around Y axis (world vertical)
+		private _onTurntablePointerMove = (evt: PointerEvent): void => {
+				this._activePointers.set(evt.pointerId, evt);
+				
+				// Two-finger pinch: zoom
+				if (this._activePointers.size === 2) {
+						const pointers = Array.from(this._activePointers.values());
+						const dx = pointers[0].clientX - pointers[1].clientX;
+						const dy = pointers[0].clientY - pointers[1].clientY;
+						const currentDistance = Math.sqrt(dx * dx + dy * dy);
+						
+						if (this._lastPinchDistance > 0) {
+								const delta = this._lastPinchDistance - currentDistance;
+								const newRadius = this._camera.radius + delta * 0.1;
+								this._camera.radius = Math.max(5, Math.min(150, newRadius));
+						}
+						this._lastPinchDistance = currentDistance;
+						return;
+				}
+				
+				// Single-finger drag: rotate
+				if (!this._isDragging) return;
+				
+				const deltaX = evt.clientX - this._lastPointerX;
+				this._lastPointerX = evt.clientX;
+				
+				// Rotate turntable pole around Y axis (world vertical)
 				if (this._turntablePole) {
 						this._turntablePole.rotation.y -= deltaX * 0.005;
 				}
-        
-        // Hide shadow plane when rotated (shadow position becomes incorrect)
-        if (this._shadowReceiverPlane && this._shadowReceiverPlane.isVisible) {
-            this._shadowReceiverPlane.isVisible = false;
-        }
-    };
+				
+				// Hide shadow plane when rotated (shadow position becomes incorrect)
+				if (this._shadowReceiverPlane && this._shadowReceiverPlane.isVisible) {
+						this._shadowReceiverPlane.isVisible = false;
+				}
+		};
     
-    private _onTurntablePointerUp = (): void => {
-        this._isDragging = false;
-    };
+		private _onTurntablePointerUp = (evt: PointerEvent): void => {
+				this._activePointers.delete(evt.pointerId);
+				this._lastPinchDistance = 0;
+				if (this._activePointers.size === 0) {
+						this._isDragging = false;
+				}
+		};
     
     private _onTurntableWheel = (evt: WheelEvent): void => {
         evt.preventDefault();
