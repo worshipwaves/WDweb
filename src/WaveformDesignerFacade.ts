@@ -120,14 +120,6 @@ export class WaveformDesignerFacade {
     );
     PerformanceMonitor.end('api_csg_roundtrip');
     return result;
-      `${this.apiBase}/geometry/csg-data`,
-      SmartCsgResponseSchema,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      }
-    );
   }
   
   /**
