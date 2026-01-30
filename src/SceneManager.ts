@@ -234,8 +234,10 @@ export class SceneManager {
         const deltaX = evt.clientX - this._lastPointerX;
         this._lastPointerX = evt.clientX;
         
-        // Rotate rootNode around Y axis (turntable spin)
-        this._rootNode.rotation.y -= deltaX * 0.005;
+        // Rotate turntable pole around Y axis (world vertical)
+				if (this._turntablePole) {
+						this._turntablePole.rotation.y -= deltaX * 0.005;
+				}
         
         // Hide shadow plane when rotated (shadow position becomes incorrect)
         if (this._shadowReceiverPlane && this._shadowReceiverPlane.isVisible) {
@@ -605,6 +607,10 @@ export class SceneManager {
 						if (!this._rootNode) {
 								this._rootNode = new TransformNode("root", this._scene);
 								this._rootNode.rotation.x = Math.PI / 2;
+
+								if (this._turntableEnabled && this._turntablePole) {
+										this._rootNode.setParent(this._turntablePole);
+								}
 						}
 						// Hide rootNode until all meshes and textures are ready (prevents staged reveal)
 						this._rootNode.setEnabled(false);
@@ -1358,10 +1364,10 @@ export class SceneManager {
         this._camera.setTarget(new Vector3(this._cameraOffset, 0, 0));
         this._scene.beginDirectAnimation(this._camera, [animAlpha, animBeta, animRadius], 0, 60, false);
         
-        // Reset turntable rotation
-        if (this._rootNode) {
-            this._rootNode.rotation.y = 0;
-        }
+				// Reset turntable rotation
+				if (this._turntablePole) {
+						this._turntablePole.rotation.y = 0;
+				}
         
         // Show shadow plane
         if (this._shadowReceiverPlane) {
