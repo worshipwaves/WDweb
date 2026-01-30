@@ -75,7 +75,7 @@ export class SceneManager {
     private _shadowGenerator: ShadowGenerator | null = null;
     private _shadowReceiverPlane: Mesh | null = null;
     private _referenceAspectRatio: number = 1.0;
-    private _cameraControlsEnabled: boolean = true;
+    private _cameraControlsEnabled: boolean;
 		// Debug getters
     public get engine(): Engine { return this._engine; }
     public get scene(): Scene { return this._scene; }
