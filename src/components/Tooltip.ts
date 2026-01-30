@@ -11,7 +11,14 @@ export class Tooltip {
   private _element: HTMLElement | null = null;
   private _showTimer: number | null = null;
   
-	show(content: string | HTMLElement, targetElement: HTMLElement, position: 'left' | 'above' | 'right' | 'below' = 'left', className: string = 'tooltip', offsetX: number = 0, offsetY: number = 0, fixedToPanel: boolean = false, verticalAlign: 'center' | 'top' | 'canvas' = 'center'): void {    this.hide();
+	show(content: string | HTMLElement, targetElement: HTMLElement, position: 'left' | 'above' | 'right' | 'below' = 'left', className: string = 'tooltip', offsetX: number = 0, offsetY: number = 0, fixedToPanel: boolean = false, verticalAlign: 'center' | 'top' | 'canvas' = 'center'): void {
+    // Skip thumbnail tooltips (HTMLElement content) on mobile - help tooltips (string) still show
+    const isMobile = window.innerWidth < 750;
+    if (isMobile && typeof content !== 'string') {
+      return;
+    }
+    
+    this.hide();
     
     this._showTimer = window.setTimeout(() => {
 			if (!targetElement.isConnected) {

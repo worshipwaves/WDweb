@@ -1699,6 +1699,16 @@ export class ApplicationController {
           this._scrollToSelectedInContainer(scrollContainer);
         }
       });
+    } else {
+      // Accordion closed: disable section interaction if this was the wood_species subcategory
+      if (this._sceneManager && 'setSectionInteractionEnabled' in this._sceneManager) {
+        const wasWoodSpecies = this._isSectionSelectionEnabled(categoryId, subcategoryId);
+        if (wasWoodSpecies) {
+          (this._sceneManager as { setSectionInteractionEnabled: (enabled: boolean) => void }).setSectionInteractionEnabled(false);
+          (this._sceneManager as { setSectionOverlaysVisible: (visible: boolean) => void }).setSectionOverlaysVisible(false);
+          (this._sceneManager as { clearSelection: () => void }).clearSelection();
+        }
+      }
     }
   }
   
