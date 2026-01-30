@@ -287,16 +287,12 @@ export class SceneManager {
         camera.panningSensibility = 50;
         camera.pinchPrecision = 50;
         camera.attachControl(this._canvas, true);
-        
-        if (camera.inputs.attached.pointers) {
-            camera.inputs.attached.pointers.multiTouchPanning = true;
-            camera.inputs.attached.pointers.multiTouchPanAndZoom = true;
-        }
-        
-        // Store reference for enabling/disabling controls
-        // Start as false so first setCameraControlsEnabled(true) triggers turntable setup
-        this._cameraControlsEnabled = false;
-        return camera;
+				camera.useNaturalPinchZoom = true;
+				if (camera.inputs.attached.pointers) {
+						camera.inputs.attached.pointers.multiTouchPanning = true;
+						camera.inputs.attached.pointers.multiTouchPanAndZoom = true;
+				}
+				return camera;
     }
 
     private setupLighting(): void {
