@@ -166,7 +166,7 @@ body.room-blank-wall .turntable-indicator {
   display: block;
 }
 
-@media (max-width: 749px) {
+@media (max-width: 1099px) {
   .mobile-fullscreen-btn {
     display: flex;
     position: absolute;
@@ -245,7 +245,7 @@ body.room-blank-wall .turntable-indicator {
 }
 
 /* Hide camera controls on mobile - fullscreen button replaces them */
-@media (max-width: 749px) {
+@media (max-width: 1099px) {
   .bottom-controls {
     display: none !important;
   }
