@@ -23,6 +23,7 @@ interface SectionIcon {
 }
 
 export class SectionSelectorPanel implements PanelComponent {
+  private static _svgCache: Map<string, string> = new Map();
   private _container: HTMLElement | null = null;
   private _controller: ApplicationController;
   private _numberSections: number;
@@ -247,13 +248,16 @@ export class SectionSelectorPanel implements PanelComponent {
     }
     
     try {
-      const response = await fetch(svgPath);
-      if (!response.ok) {
-        console.error(`[SectionSelector] Failed to load ${svgPath}`);
-        return;
+      let svgText = SectionSelectorPanel._svgCache.get(svgPath);
+      if (!svgText) {
+        const response = await fetch(svgPath);
+        if (!response.ok) {
+          console.error(`[SectionSelector] Failed to load ${svgPath}`);
+          return;
+        }
+        svgText = await response.text();
+        SectionSelectorPanel._svgCache.set(svgPath, svgText);
       }
-      
-      const svgText = await response.text();
       const parser = new DOMParser();
       const svgDoc = parser.parseFromString(svgText, 'image/svg+xml');
       const svgElement = svgDoc.querySelector('svg');
