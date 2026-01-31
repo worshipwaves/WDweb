@@ -5,7 +5,7 @@ Two semi-circles of different sizes (42" and 35") with gap.
 from PIL import Image, ImageDraw
 import os
 
-OUTPUT_SIZE = 512
+OUTPUT_SIZE = 1024
 LARGE_RADIUS = 0.44   # 42" relative
 SMALL_RADIUS = 0.36   # 35" relative
 GAP = 0.03
