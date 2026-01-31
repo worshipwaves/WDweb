@@ -3811,8 +3811,8 @@ export class ApplicationController {
     };
 
     const [largeResponse, smallResponse] = await Promise.all([
-      this._facade.getSmartCSGData(largeState, changedParams, previousMaxAmplitude),
-      this._facade.getSmartCSGData(smallState, changedParams, previousMaxAmplitude)
+      this._facade.getSmartCSGData(largeState, changedParams, previousMaxAmplitude, 'api_csg_roundtrip_large'),
+      this._facade.getSmartCSGData(smallState, changedParams, previousMaxAmplitude, 'api_csg_roundtrip_small')
     ]);
 
     return {

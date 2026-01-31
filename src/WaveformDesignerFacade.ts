@@ -100,7 +100,8 @@ export class WaveformDesignerFacade {
   async getSmartCSGData(
     state: CompositionStateDTO,
     changedParams: string[],
-    previousMaxAmplitude: number | null
+    previousMaxAmplitude: number | null,
+    timingKey: string = 'api_csg_roundtrip'
   ): Promise<SmartCsgResponse> {
     const requestBody = {
       state,
@@ -108,7 +109,7 @@ export class WaveformDesignerFacade {
       previous_max_amplitude: previousMaxAmplitude,
     };
 
-    PerformanceMonitor.start('api_csg_roundtrip');
+    PerformanceMonitor.start(timingKey);
     const result = await fetchAndValidate(
       `${this.apiBase}/geometry/csg-data`,
       SmartCsgResponseSchema,
@@ -118,7 +119,7 @@ export class WaveformDesignerFacade {
         body: JSON.stringify(requestBody),
       }
     );
-    PerformanceMonitor.end('api_csg_roundtrip');
+    PerformanceMonitor.end(timingKey);
     return result;
   }
   
