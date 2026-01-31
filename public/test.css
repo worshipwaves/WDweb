@@ -22,7 +22,7 @@
   --category-bar-height: 90px;
 	--footer-height: 60px;
   --sidebar-width: clamp(340px, 28vw, 420px);
-  --sidebar-width-mobile-landscape: 280px;
+  --sidebar-width-mobile-landscape: 300px;
   
   --font-family-base: "Instrument Sans", sans-serif;
 }
