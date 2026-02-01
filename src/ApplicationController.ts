@@ -4760,13 +4760,10 @@ export class ApplicationController {
         return; // CRITICAL: Stop execution here to prevent full re-render
       }
 
-      // 3. Check if this is an audio-level change that we can handle client-side
-      const audioLevelParams = ['number_sections', 'number_slots', 'binning_mode', 'amplitude_exponent', 'filter_amount'];
-      const isAudioChange = changedParams.some(param => audioLevelParams.includes(param));
-      
+      // 3. Always derive amplitudes from raw cache when available (ensures consistent 0-1 normalized input)
       let stateToSend = newComposition;
       
-      if (isAudioChange && this._state.audio.audioSessionId) {
+      if (this._state.audio.audioSessionId) {
         const rebinnedAmplitudes = this._audioCache.rebinFromCache(
           this._state.audio.audioSessionId,
           {
@@ -4788,25 +4785,9 @@ export class ApplicationController {
         } else {
           return; // Abort if we can't generate valid amplitudes
         }
-      } else {
-            // Filter valid amplitudes first
-            const validAmps = this._state.composition.processed_amplitudes.filter(
-              (amp): amp is number => amp !== null && isFinite(amp)
-            );
-            
-            // CRITICAL: For geometry changes, send NORMALIZED amplitudes (0-1 range)
-            // Backend will apply the new max_amplitude_local to these normalized values
-            const normalizedAmps = (() => {
-							if (validAmps.length === 0) return validAmps;
-							const prevMax = this._state.audio.previousMaxAmplitude;
-							return prevMax && prevMax > 0 ? validAmps.map(a => a / prevMax) : validAmps;
-						})();
-            
-            stateToSend = {
-                ...newComposition,
-                processed_amplitudes: normalizedAmps,
-            };
-          }
+      }
+        // If no audioSessionId, stateToSend retains newComposition.processed_amplitudes as-is
+        // (This only happens on restored sessions without raw cache - rare edge case)
       
       try {
         // 4. Make one smart API call (or two for asymmetric).
