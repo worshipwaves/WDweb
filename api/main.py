@@ -116,6 +116,7 @@ class ValidSlotCountsResponse(BaseModel):
     applicable: bool   
 
 @app.get("/")
+@app.head("/")
 def health_check():
     """Basic health check endpoint."""
     return {"status": "ok", "message": "Welcome to WaveDesigner API"}
