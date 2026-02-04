@@ -2090,8 +2090,11 @@ private async _processVocals(): Promise<void> {
       
       // Trigger CSG regeneration and render
       console.log('[_applyFromCache] calling handleCompositionUpdate');
+      console.log('[_applyFromCache] updatedComposition.processed_amplitudes length:', updatedComposition.processed_amplitudes?.length);
+      console.log('[_applyFromCache] updatedComposition.processed_amplitudes first 5:', updatedComposition.processed_amplitudes?.slice(0, 5));
       await this._controller.handleCompositionUpdate(updatedComposition);
       console.log('[_applyFromCache] handleCompositionUpdate complete');
+      console.log('[_applyFromCache] state after update:', this._controller.getState()?.composition.processed_amplitudes?.slice(0, 5));
       
       // Enable export button
       const exportBtn = this._trimmerSection?.querySelector('.slicer-btn-export') as HTMLButtonElement;
