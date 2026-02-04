@@ -145,8 +145,8 @@ class ModalAudioService:
         # Call Modal function asynchronously
         try:
             # Import Modal function
-            from modal import Function
-            separate_vocals = Function.lookup("wavedesigner-demucs", "separate_vocals")
+            import modal
+            separate_vocals = modal.Function.from_name("wavedesigner-demucs", "separate_vocals")
             
             # Spawn async call
             call = separate_vocals.spawn(job.input_key, job.output_key)
