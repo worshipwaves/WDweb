@@ -13,6 +13,7 @@
 import type { ApplicationController } from '../ApplicationController';
 import type { PanelComponent } from '../types/PanelTypes';
 import { getApiBaseUrl } from '../utils/assetUrl';
+import { base64ToBlob } from '../utils/audioUtils';
 import { PerformanceMonitor } from '../PerformanceMonitor';
 
 interface SliceResult {
@@ -105,6 +106,11 @@ export class AudioSlicerPanel implements PanelComponent {
   
   // Isolate Vocals param
   private _isolateVocals: boolean = false;
+	
+	// Demucs response cache (eliminates redundant second upload)
+  private _cachedRawSamples: Float32Array | null = null;
+  private _cachedDuration: number | null = null;
+  private _demucsResponseCached: boolean = false;
 	
 	// Pending intent for deferred UI update
   private _pendingIntent: 'music' | 'speech' | null = null;
@@ -903,7 +909,12 @@ export class AudioSlicerPanel implements PanelComponent {
     }
     
     try {
-      PerformanceMonitor.start('slicer_file_read');
+			// Clear cached Demucs data from previous file
+      this._cachedRawSamples = null;
+      this._cachedDuration = null;
+      this._demucsResponseCached = false;
+			
+      PerformanceMonitor.start('slicer_file_read');			
       const arrayBuffer = await file.arrayBuffer();
       PerformanceMonitor.end('slicer_file_read');
       PerformanceMonitor.start('slicer_audio_decode');
@@ -1672,18 +1683,49 @@ private async _processVocals(): Promise<void> {
       
       if (!response.ok) throw new Error(`Processing failed: ${response.status}`);
       
-      const demucsTimeHeader = response.headers.get('X-Demucs-Time');
-      if (demucsTimeHeader) this._updateCalibration(audioDuration, parseFloat(demucsTimeHeader));
+      // Check content type for new JSON response vs legacy binary
+      const contentType = response.headers.get('content-type');
       
-      const processedBlob = await response.blob();
-      const arrayBuffer = await processedBlob.arrayBuffer();
-      
-      this._initAudioContext();
-      PerformanceMonitor.start('ux_audio_decode');
-      this._rawVocalsBuffer = await this._audioContext!.decodeAudioData(arrayBuffer);
-      PerformanceMonitor.end('ux_audio_decode');
-      
-      await this._processPreviewSilenceRemoval();
+      if (contentType?.includes('application/json')) {
+        // New JSON response with embedded audio + samples
+        const data = await response.json();
+        
+        // Decode base64 audio
+        console.log('[AudioSlicerPanel] JSON response received, audio_base64 length:', data.audio_base64?.length);
+        console.log('[AudioSlicerPanel] raw_samples length:', data.raw_samples?.length);
+        const audioBlob = base64ToBlob(data.audio_base64, 'audio/wav');
+        console.log('[AudioSlicerPanel] Decoded blob size:', audioBlob.size);
+        const arrayBuffer = await audioBlob.arrayBuffer();
+        
+        this._initAudioContext();
+        PerformanceMonitor.start('ux_audio_decode');
+        this._rawVocalsBuffer = await this._audioContext!.decodeAudioData(arrayBuffer);
+        PerformanceMonitor.end('ux_audio_decode');
+        
+        // Cache samples - eliminates redundant second upload
+        this._cachedRawSamples = new Float32Array(data.raw_samples);
+        this._cachedDuration = data.duration;
+        this._demucsResponseCached = true;
+        
+      } else {
+        // Legacy binary response (fallback)
+        const demucsTimeHeader = response.headers.get('X-Demucs-Time');
+        if (demucsTimeHeader) this._updateCalibration(audioDuration, parseFloat(demucsTimeHeader));
+        
+        const processedBlob = await response.blob();
+        const arrayBuffer = await processedBlob.arrayBuffer();
+        
+        this._initAudioContext();
+        PerformanceMonitor.start('ux_audio_decode');
+        this._rawVocalsBuffer = await this._audioContext!.decodeAudioData(arrayBuffer);
+        PerformanceMonitor.end('ux_audio_decode');
+        
+        // No cached samples - will require re-upload
+        this._cachedRawSamples = null;
+        this._demucsResponseCached = false;
+        
+        await this._processPreviewSilenceRemoval();
+      }
       
       // Show success
       this._stopProgressTimer();
@@ -1931,6 +1973,12 @@ private async _processVocals(): Promise<void> {
     const audioProcessing = this._controller.getState()?.composition.audio_processing;
     const removeSilence = isolateVocals || audioProcessing?.remove_silence;
     
+    // Cache bypass: if we have cached Demucs response, skip re-upload entirely
+    if (this._demucsResponseCached && this._cachedRawSamples && this._rawVocalsBuffer) {
+      void this._applyFromCache();
+      return;
+    }
+    
     // If vocals already processed client-side, use cached buffer and skip backend demucs
     const vocalsAlreadyProcessed = isolateVocals && !!this._rawVocalsBuffer;
     
@@ -1960,6 +2008,87 @@ private async _processVocals(): Promise<void> {
       }
     });
   }
+	
+	/**
+   * Apply artwork using cached Demucs response.
+   * Bypasses re-upload by directly hydrating AudioCacheService.
+   */
+  private async _applyFromCache(): Promise<void> {
+    if (!this._cachedRawSamples || !this._rawVocalsBuffer) {
+      console.error('[AudioSlicerPanel] _applyFromCache called without cached data');
+      return;
+    }
+    
+    PerformanceMonitor.start('apply_from_cache');
+    
+    try {
+      await this._controller.dispatch({
+        type: 'PROCESSING_UPDATE',
+        payload: { stage: 'uploading', progress: 50, message: 'Applying vocals...' }
+      });
+      
+      // Create dummy file for cache key generation
+      const dummyFile = new File(
+        [this._encodeWAV(this._rawVocalsBuffer)],
+        'processed_vocals.wav',
+        { type: 'audio/wav' }
+      );
+      
+      // Hydrate audio cache directly
+      const sessionId = this._controller.audioCache.cacheRawSamples(
+        dummyFile,
+        this._cachedRawSamples
+      );
+      
+      // Get current composition state
+      const currentState = this._controller.getState();
+      if (!currentState) throw new Error('No state available');
+      
+      // Update composition with vocals enabled
+      const updatedComposition = {
+        ...currentState.composition,
+        audio_source: {
+          ...currentState.composition.audio_source,
+          use_stems: true,
+          start_time: 0,
+          end_time: this._cachedDuration || this._rawVocalsBuffer.duration
+        }
+      };
+      
+      // Update state with new session
+      await this._controller.dispatch({
+        type: 'FILE_PROCESSING_SUCCESS',
+        payload: {
+          composition: updatedComposition,
+          maxAmplitudeLocal: 1.0,
+          rawSamplesForCache: Array.from(this._cachedRawSamples),
+          audioSessionId: sessionId
+        }
+      });
+      
+      // Trigger CSG regeneration and render
+      await this._controller.handleCompositionUpdate(updatedComposition);
+      
+      // Enable export button
+      const exportBtn = this._trimmerSection?.querySelector('.slicer-btn-export') as HTMLButtonElement;
+      if (exportBtn) exportBtn.disabled = false;
+      
+      await this._controller.dispatch({
+        type: 'PROCESSING_UPDATE',
+        payload: { stage: 'idle', progress: 100 }
+      });
+      
+    } catch (error) {
+      console.error('[AudioSlicerPanel] Apply from cache failed:', error);
+      await this._controller.dispatch({
+        type: 'PROCESSING_UPDATE',
+        payload: { stage: 'idle', progress: 0 }
+      });
+    } finally {
+      PerformanceMonitor.end('apply_from_cache');
+    }
+  }
+	
   
   private _createSliceBlob(): Blob | null {
     if (this._markStart === null || this._markEnd === null || !this._audioBuffer || !this._audioContext) {
