@@ -2088,13 +2088,12 @@ private async _processVocals(): Promise<void> {
         }
       });
       
-      // Trigger CSG regeneration and render
-      console.log('[_applyFromCache] calling handleCompositionUpdate');
-      console.log('[_applyFromCache] updatedComposition.processed_amplitudes length:', updatedComposition.processed_amplitudes?.length);
-      console.log('[_applyFromCache] updatedComposition.processed_amplitudes first 5:', updatedComposition.processed_amplitudes?.slice(0, 5));
-      await this._controller.handleCompositionUpdate(updatedComposition);
-      console.log('[_applyFromCache] handleCompositionUpdate complete');
-      console.log('[_applyFromCache] state after update:', this._controller.getState()?.composition.processed_amplitudes?.slice(0, 5));
+      // Trigger CSG regeneration and render directly (bypass handleCompositionUpdate change detection)
+      console.log('[_applyFromCache] calling getRoutedCSGData');
+      const csgResponse = await this._controller.getRoutedCSGData(updatedComposition, ['processed_amplitudes'], null);
+      console.log('[_applyFromCache] rendering composition');
+      await this._controller.getSceneManager()?.renderComposition(csgResponse);
+      console.log('[_applyFromCache] render complete');
       
       // Enable export button
       const exportBtn = this._trimmerSection?.querySelector('.slicer-btn-export') as HTMLButtonElement;

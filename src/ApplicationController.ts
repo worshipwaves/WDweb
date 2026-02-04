@@ -312,6 +312,14 @@ export class ApplicationController {
     return this._audioCache;
   }
 	
+	public getFacade(): WaveformDesignerFacade {
+    return this._facade;
+  }
+  
+  public getSceneManager(): typeof this._sceneManager {
+    return this._sceneManager;
+  }
+	
 	/**
    * Update section selection state (called from SceneManager or UI)
    * Syncs state and updates section selector panel if visible
