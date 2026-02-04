@@ -2014,6 +2014,11 @@ private async _processVocals(): Promise<void> {
    * Bypasses re-upload by directly hydrating AudioCacheService.
    */
   private async _applyFromCache(): Promise<void> {
+    console.log('[_applyFromCache] START', {
+      cachedSamples: this._cachedRawSamples?.length,
+      vocalsBuffer: this._rawVocalsBuffer?.duration,
+      cachedDuration: this._cachedDuration
+    });
     if (!this._cachedRawSamples || !this._rawVocalsBuffer) {
       console.error('[AudioSlicerPanel] _applyFromCache called without cached data');
       return;
@@ -2067,7 +2072,9 @@ private async _processVocals(): Promise<void> {
       });
       
       // Trigger CSG regeneration and render
+      console.log('[_applyFromCache] calling handleCompositionUpdate');
       await this._controller.handleCompositionUpdate(updatedComposition);
+      console.log('[_applyFromCache] handleCompositionUpdate complete');
       
       // Enable export button
       const exportBtn = this._trimmerSection?.querySelector('.slicer-btn-export') as HTMLButtonElement;
