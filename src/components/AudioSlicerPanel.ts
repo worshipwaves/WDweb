@@ -1974,7 +1974,7 @@ private async _processVocals(): Promise<void> {
     const removeSilence = isolateVocals || audioProcessing?.remove_silence;
     
     // Cache bypass: if we have cached Demucs response, skip re-upload entirely
-    if (t && this._demucsResponseCached && this._cachedRawSamples && this._rawVocalsBuffer) {
+    if (isolateVocals && this._demucsResponseCached && this._cachedRawSamples && this._rawVocalsBuffer) {
       this._applyFromCache();
       return;
     }
