@@ -860,6 +860,7 @@ export class ApplicationController {
       }
       
       // Call backend
+      PerformanceMonitor.start('commit_network_roundtrip');
       const response = await fetch(`${getApiBaseUrl()}/api/audio/process-commit`, {
         method: 'POST',
         body: formData
@@ -871,6 +872,7 @@ export class ApplicationController {
       
       // Get processed audio blob
       const processedBlob = await response.blob();
+      PerformanceMonitor.end('commit_network_roundtrip');
       const processedFile = new File([processedBlob], 'processed.wav', { type: 'audio/wav' });
       
       // PARITY FIX: The file is already processed (silence removed).

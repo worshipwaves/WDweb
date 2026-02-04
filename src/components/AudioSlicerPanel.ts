@@ -150,6 +150,7 @@ export class AudioSlicerPanel implements PanelComponent {
   }
   
   private async _saveAudioToStorage(file: File): Promise<boolean> {
+    PerformanceMonitor.start('indexeddb_save');
     try {
       // Check available storage
       if (navigator.storage?.estimate) {
@@ -175,21 +176,25 @@ export class AudioSlicerPanel implements PanelComponent {
         
         tx.oncomplete = () => {
           db.close();
+          PerformanceMonitor.end('indexeddb_save');
           resolve(true);
         };
         tx.onerror = () => {
+          PerformanceMonitor.end('indexeddb_save');
           console.error('[AudioSlicerPanel] Failed to save audio:', tx.error);
           db.close();
           resolve(false);
         };
       });
     } catch (error) {
+      PerformanceMonitor.end('indexeddb_save');
       console.error('[AudioSlicerPanel] IndexedDB error:', error);
       return false;
     }
   }
   
   private async _loadAudioFromStorage(): Promise<File | null> {
+    PerformanceMonitor.start('indexeddb_load');
     try {
       const db = await this._openDB();
       return new Promise((resolve) => {
@@ -199,6 +204,7 @@ export class AudioSlicerPanel implements PanelComponent {
         
         request.onsuccess = () => {
           db.close();
+          PerformanceMonitor.end('indexeddb_load');
           const record = request.result as StoredAudioRecord | undefined;
           if (record?.file) {
             resolve(record.file);
@@ -208,10 +214,12 @@ export class AudioSlicerPanel implements PanelComponent {
         };
         request.onerror = () => {
           db.close();
+          PerformanceMonitor.end('indexeddb_load');
           resolve(null);
         };
       });
     } catch (error) {
+      PerformanceMonitor.end('indexeddb_load');
       console.error('[AudioSlicerPanel] IndexedDB load error:', error);
       return null;
     }
@@ -230,6 +238,7 @@ export class AudioSlicerPanel implements PanelComponent {
   }
 
 	private async _attemptAudioRestore(): Promise<void> {
+    PerformanceMonitor.start('audio_restore_total');
     const file = await this._loadAudioFromStorage();
     
     if (file) {
@@ -267,6 +276,7 @@ export class AudioSlicerPanel implements PanelComponent {
         // Do NOT call _handleCommit() here.
         // Global state is already correct from localStorage.
         // Committing would trigger backend processing that resets section_materials.
+        PerformanceMonitor.end('audio_restore_total');
         return;
       } else {
         // Stale data, clear it
@@ -275,6 +285,7 @@ export class AudioSlicerPanel implements PanelComponent {
     }
     
     // Restore failed - show re-upload prompt
+    PerformanceMonitor.end('audio_restore_total');
     this._showReuploadPrompt();
   }
   
@@ -685,6 +696,7 @@ export class AudioSlicerPanel implements PanelComponent {
     formData.append('num_slots', String(this._controller.getState()?.composition.pattern_settings.number_slots || 48));
     
     try {
+      PerformanceMonitor.start('optimize_api_roundtrip');
       const response = await fetch(`${getApiBaseUrl()}/api/audio/optimize`, {
         method: 'POST',
         body: formData
@@ -693,6 +705,7 @@ export class AudioSlicerPanel implements PanelComponent {
       if (!response.ok) throw new Error(`${response.status}`);
       
       const result = await response.json() as OptimizationResult;
+      PerformanceMonitor.end('optimize_api_roundtrip');
       
       // 1. Get optimized composition DTO (Pure, no state mutation yet)
       const optimizedComposition = this._controller.createOptimizedComposition(result);
@@ -890,8 +903,12 @@ export class AudioSlicerPanel implements PanelComponent {
     }
     
     try {
+      PerformanceMonitor.start('slicer_file_read');
       const arrayBuffer = await file.arrayBuffer();
+      PerformanceMonitor.end('slicer_file_read');
+      PerformanceMonitor.start('slicer_audio_decode');
       this._audioBuffer = await this._audioContext!.decodeAudioData(arrayBuffer);
+      PerformanceMonitor.end('slicer_audio_decode');
 			this._originalFile = file;
       
       // Update UI
@@ -917,7 +934,9 @@ export class AudioSlicerPanel implements PanelComponent {
       this._markStart = 0;
       this._markEnd = this._audioBuffer.duration;
       this._updateCommitButton();
+      PerformanceMonitor.start('slicer_waveform_draw');
       this._drawWaveform();
+      PerformanceMonitor.end('slicer_waveform_draw');
       this._updateSelection();
       this._updateMarkButtonsV2();
       this._controller.updateAudioAccordionValue('custom');
@@ -1384,16 +1403,15 @@ export class AudioSlicerPanel implements PanelComponent {
       formData.append('file', audioFile);
       formData.append('isolate_vocals', 'true');
       
+      PerformanceMonitor.start('preview_vocals_roundtrip');
       const response = await fetch(`${getApiBaseUrl()}/api/audio/process-commit`, {
         method: 'POST',
         body: formData
       });
+      PerformanceMonitor.end('preview_vocals_roundtrip');
       
-      if (!response.ok) {
-        throw new Error(`Processing failed: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Processing failed: ${response.status}`);
       
-      // Decode response
       const processedBlob = await response.blob();
       const arrayBuffer = await processedBlob.arrayBuffer();
       
@@ -1509,10 +1527,12 @@ private async _processPreviewSilenceRemoval(): Promise<void> {
 			formData.append('threshold_db', String(threshold));
 			formData.append('min_duration', String(duration));
       
+      PerformanceMonitor.start('silence_removal_api');
       const response = await fetch(`${getApiBaseUrl()}/api/audio/compress-silence`, {
         method: 'POST',
         body: formData
       });
+      PerformanceMonitor.end('silence_removal_api');
       
       if (!response.ok) throw new Error(`Silence removal failed: ${response.status}`);
       
