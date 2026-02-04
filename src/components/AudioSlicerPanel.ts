@@ -2051,12 +2051,17 @@ private async _processVocals(): Promise<void> {
       
       // Rebin cached samples to get processed amplitudes
       const audioProcessing = currentState.composition.audio_processing;
-      const frameDesign = currentState.composition.frame_design;
+      const patternSettings = currentState.composition.pattern_settings;
+      
+      if (!patternSettings?.number_slots) {
+        throw new Error('pattern_settings.number_slots is required');
+      }
+      
       const rebinnedAmplitudes = this._controller.audioCache.rebinFromCache(sessionId, {
-        numSlots: frameDesign?.number_slots ?? 85,
-        binningMode: audioProcessing?.binning_mode ?? 'rms',
-        exponent: audioProcessing?.amplitude_exponent ?? 1.0,
-        filterAmount: audioProcessing?.filter_amount ?? 0
+        numSlots: patternSettings.number_slots,
+        binningMode: audioProcessing?.binning_mode || 'rms',
+        exponent: audioProcessing?.amplitude_exponent || 1.0,
+        filterAmount: audioProcessing?.filter_amount || 0
       });
       
       if (!rebinnedAmplitudes) {
