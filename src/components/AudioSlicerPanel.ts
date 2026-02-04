@@ -2049,9 +2049,26 @@ private async _processVocals(): Promise<void> {
       const currentState = this._controller.getState();
       if (!currentState) throw new Error('No state available');
       
-      // Update composition with vocals enabled
+      // Rebin cached samples to get processed amplitudes
+      const audioProcessing = currentState.composition.audio_processing;
+      const frameDesign = currentState.composition.frame_design;
+      const rebinnedAmplitudes = this._controller.audioCache.rebinFromCache(sessionId, {
+        numSlots: frameDesign?.number_slots ?? 85,
+        binningMode: audioProcessing?.binning_mode ?? 'rms',
+        exponent: audioProcessing?.amplitude_exponent ?? 1.0,
+        filterAmount: audioProcessing?.filter_amount ?? 0
+      });
+      
+      if (!rebinnedAmplitudes) {
+        console.error('[_applyFromCache] rebinFromCache returned null');
+        throw new Error('Failed to rebin cached samples');
+      }
+      console.log('[_applyFromCache] rebinnedAmplitudes length:', rebinnedAmplitudes.length);
+      
+      // Update composition with vocals enabled AND new amplitudes
       const updatedComposition = {
         ...currentState.composition,
+        processed_amplitudes: Array.from(rebinnedAmplitudes),
         audio_source: {
           ...currentState.composition.audio_source,
           use_stems: true,
