@@ -1974,8 +1974,8 @@ private async _processVocals(): Promise<void> {
     const removeSilence = isolateVocals || audioProcessing?.remove_silence;
     
     // Cache bypass: if we have cached Demucs response, skip re-upload entirely
-    if (this._demucsResponseCached && this._cachedRawSamples && this._rawVocalsBuffer) {
-      void this._applyFromCache();
+    if (t && this._demucsResponseCached && this._cachedRawSamples && this._rawVocalsBuffer) {
+      this._applyFromCache();
       return;
     }
     
@@ -2014,11 +2014,6 @@ private async _processVocals(): Promise<void> {
    * Bypasses re-upload by directly hydrating AudioCacheService.
    */
   private async _applyFromCache(): Promise<void> {
-    console.log('[_applyFromCache] START', {
-      cachedSamples: this._cachedRawSamples?.length,
-      vocalsBuffer: this._rawVocalsBuffer?.duration,
-      cachedDuration: this._cachedDuration
-    });
     if (!this._cachedRawSamples || !this._rawVocalsBuffer) {
       console.error('[AudioSlicerPanel] _applyFromCache called without cached data');
       return;
@@ -2068,7 +2063,6 @@ private async _processVocals(): Promise<void> {
         console.error('[_applyFromCache] rebinFromCache returned null');
         throw new Error('Failed to rebin cached samples');
       }
-      console.log('[_applyFromCache] rebinnedAmplitudes length:', rebinnedAmplitudes.length);
       
       // Update composition with vocals enabled AND new amplitudes
       const updatedComposition = {
@@ -2093,12 +2087,9 @@ private async _processVocals(): Promise<void> {
         }
       });
       
-      // Trigger CSG regeneration and render directly (bypass handleCompositionUpdate change detection)
-      console.log('[_applyFromCache] calling getRoutedCSGData');
+      // Trigger CSG regeneration and render directly (bypass handleCompositionUpdate change detection)      
       const csgResponse = await this._controller.getRoutedCSGData(updatedComposition, ['processed_amplitudes'], null);
-      console.log('[_applyFromCache] rendering composition');
       await this._controller.getSceneManager()?.renderComposition(csgResponse);
-      console.log('[_applyFromCache] render complete');
       
       // Enable export button
       const exportBtn = this._trimmerSection?.querySelector('.slicer-btn-export') as HTMLButtonElement;
