@@ -267,9 +267,8 @@ class ModalAudioService:
         """Ping Modal to warm up container."""
         try:
             import modal
-            separate_vocals = modal.Function.from_name("wavedesigner-demucs", "separate_vocals")
-            # Spawn with dummy keys - Modal spins up container even if files don't exist
-            separate_vocals.spawn("warmup/ping.wav", "warmup/pong.wav")
+            ping = modal.Function.from_name("wavedesigner-demucs", "ping")
+            ping.spawn()
             print("[ModalAudioService] Warmup triggered")
         except Exception as e:
             print(f"[ModalAudioService] Warmup failed: {e}")

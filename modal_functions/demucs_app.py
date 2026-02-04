@@ -172,7 +172,23 @@ def generate_presigned_urls(input_key: str, output_key: str, expiration: int = 3
         "input_key": input_key,
         "output_key": output_key,
     }
-
+    
+    
+# ---------------------------------------------------------------------------
+# Warmup Function
+# ---------------------------------------------------------------------------
+@app.function(
+    gpu="A10G",
+    timeout=30,
+    secrets=[modal.Secret.from_name("aws-credentials")],
+    enable_memory_snapshot=True,
+)
+def ping() -> dict:
+    """Lightweight warmup function - spins up GPU container without processing."""
+    import torch
+    gpu_available = torch.cuda.is_available()
+    gpu_name = torch.cuda.get_device_name(0) if gpu_available else "none"
+    return {"status": "warm", "gpu": gpu_name}    
 
 # ---------------------------------------------------------------------------
 # Local Entrypoint for Testing
