@@ -5,10 +5,13 @@ Audio processing endpoints - stem separation and silence removal.
 import os
 import tempfile
 import asyncio
+import base64
 import uuid
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
+from typing import List
 import subprocess
 import librosa
 import soundfile as sf
@@ -18,6 +21,13 @@ from services.audio_processing_service import AudioProcessingService
 from services.modal_audio_service import get_modal_audio_service, JobStatus
 from dev_utils.performance_monitor import performance_monitor
 
+
+class ProcessedAudioResponse(BaseModel):
+    """JSON response for Demucs processing with embedded audio and samples."""
+    audio_base64: str
+    raw_samples: List[float]
+    duration: float
+    sample_rate: int = 44100
 
 router = APIRouter(prefix="/api/audio", tags=["audio"])
 
@@ -36,6 +46,19 @@ _demucs = DemucsService(
 
 # Audio processor routing: "modal" or "local"
 AUDIO_PROCESSOR = os.environ.get("AUDIO_PROCESSOR", "local")
+
+def _extract_samples_for_cache(audio_path: str, target_samples: int = 200000) -> tuple[list[float], float]:
+    """Extract amplitude samples for frontend cache."""
+    y, sr = librosa.load(audio_path, sr=44100, mono=True)
+    duration = len(y) / sr
+    # Rebin to target sample count
+    if len(y) > target_samples:
+        step = len(y) / target_samples
+        indices = [int(i * step) for i in range(target_samples)]
+        samples = [float(y[i]) for i in indices]
+    else:
+        samples = [float(s) for s in y]
+    return samples, duration
 
 # ===========================================================================
 # MODAL ASYNC ENDPOINTS
@@ -362,6 +385,17 @@ async def process_audio_commit(
             output_path = working_path
         
         headers = {"X-Demucs-Time": str(round(demucs_time, 2))} if demucs_time > 0 else {}
+        
+        # If Demucs was used, return JSON with embedded audio + samples for caching
+        if isolate_vocals:
+            raw_samples, duration = _extract_samples_for_cache(str(output_path))
+            with open(output_path, "rb") as f:
+                audio_base64 = base64.b64encode(f.read()).decode("utf-8")
+            return ProcessedAudioResponse(
+                audio_base64=audio_base64,
+                raw_samples=raw_samples,
+                duration=duration
+            )
         
         return FileResponse(
             path=str(output_path),
