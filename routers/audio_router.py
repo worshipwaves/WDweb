@@ -15,6 +15,7 @@ import soundfile as sf
 from services.demucs_service import DemucsService
 from services.audio_processing_service import AudioProcessingService
 from services.modal_audio_service import get_modal_audio_service, JobStatus
+from dev_utils.performance_monitor import performance_monitor
 
 
 router = APIRouter(prefix="/api/audio", tags=["audio"])
@@ -296,29 +297,32 @@ async def process_audio_commit(
             use_modal_processor = use_modal or AUDIO_PROCESSOR == "modal"
             
             if use_modal_processor:
-                # Modal path: upload to S3, process, download result
+                performance_monitor.start('modal_total')
                 service = get_modal_audio_service()
                 job = service.create_job()
                 
-                # Upload working file to S3
+                performance_monitor.start('modal_s3_upload')
                 if not service.upload_file_to_job(job.job_id, working_path):
                     raise HTTPException(500, f"S3 upload failed: {job.error_message}")
+                performance_monitor.end('modal_s3_upload')
                 
-                # Process synchronously (blocking)
+                performance_monitor.start('modal_processing')
                 job = service.submit_job_sync(job.job_id)
+                performance_monitor.end('modal_processing')
                 
                 if job.status != JobStatus.COMPLETED:
                     raise HTTPException(500, f"Modal processing failed: {job.error_message}")
                 
-                # Download result
+                performance_monitor.start('modal_s3_download')
                 vocals_path = Path(tempfile.gettempdir()) / f"{uuid.uuid4()}_vocals.wav"
                 if not service.download_result(job.job_id, vocals_path):
                     raise HTTPException(500, "Failed to download processed audio")
+                performance_monitor.end('modal_s3_download')
                 
                 demucs_time = job.processing_time or 0.0
                 
-                # Cleanup S3
                 service.cleanup_job(job.job_id)
+                performance_monitor.end('modal_total')
             else:
                 # Local GPU path (existing behavior)
                 vocals_path, demucs_time = _demucs.separate_vocals(
