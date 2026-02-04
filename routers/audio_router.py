@@ -4,6 +4,7 @@ Audio processing endpoints - stem separation and silence removal.
 
 import os
 import tempfile
+import asyncio
 import uuid
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form
@@ -111,6 +112,19 @@ async def cleanup_demucs_job(job_id: str):
     service = get_modal_audio_service()
     service.cleanup_job(job_id)
     return {"status": "cleaned"}
+    
+    
+@router.post("/demucs/warmup")
+async def warm_modal():
+    """Fire-and-forget Modal container warmup."""
+    if AUDIO_PROCESSOR != "modal":
+        return {"status": "skipped", "reason": "local processor"}
+    try:
+        service = get_modal_audio_service()
+        asyncio.create_task(service.warmup())
+        return {"status": "warming"}
+    except Exception as e:
+        return {"status": "warmup_skipped", "reason": str(e)}    
     
     
 @router.post("/isolate-vocals")

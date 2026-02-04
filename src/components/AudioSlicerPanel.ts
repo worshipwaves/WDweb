@@ -952,6 +952,10 @@ export class AudioSlicerPanel implements PanelComponent {
         // Save to IndexedDB for persistence across refresh
         void this._saveAudioToStorage(file);
 				
+				// Pre-warm Modal container for potential Demucs usage
+        fetch(`${getApiBaseUrl()}/api/audio/demucs/warmup`, { method: 'POST' })
+          .catch(e => console.warn('[AudioSlicerPanel] Modal warmup failed:', e));
+				
 				// Update intent radio button if provided (or store for later if section not rendered)
         if (intent) {
           this._pendingIntent = intent;
