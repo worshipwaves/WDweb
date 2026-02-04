@@ -13,6 +13,7 @@
 import type { ApplicationController } from '../ApplicationController';
 import type { PanelComponent } from '../types/PanelTypes';
 import { getApiBaseUrl } from '../utils/assetUrl';
+import { PerformanceMonitor } from '../PerformanceMonitor';
 
 interface SliceResult {
   blob: Blob;
@@ -1638,10 +1639,12 @@ private async _processVocals(): Promise<void> {
       formData.append('file', audioFile);
       formData.append('isolate_vocals', 'true');
       
+      PerformanceMonitor.start('ux_network_roundtrip');
       const response = await fetch(`${getApiBaseUrl()}/api/audio/process-commit`, {
         method: 'POST',
         body: formData
       });
+      PerformanceMonitor.end('ux_network_roundtrip');
       
       if (!response.ok) throw new Error(`Processing failed: ${response.status}`);
       
@@ -1652,7 +1655,9 @@ private async _processVocals(): Promise<void> {
       const arrayBuffer = await processedBlob.arrayBuffer();
       
       this._initAudioContext();
+      PerformanceMonitor.start('ux_audio_decode');
       this._rawVocalsBuffer = await this._audioContext!.decodeAudioData(arrayBuffer);
+      PerformanceMonitor.end('ux_audio_decode');
       
       await this._processPreviewSilenceRemoval();
       
