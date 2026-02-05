@@ -984,7 +984,7 @@ export class AudioSlicerPanel implements PanelComponent {
         }
         
         // Auto-optimize with intent (no render), then commit
-        this._lastOptimizeResult = await this._runOptimizationOnly(intent);
+        this._lastOptimizeResult = await this._runOptimizationOnly(intent, 'optimize_initial');
         await this._handleCommit();
         
         // Populate apply cache with initial upload result
@@ -2024,6 +2024,7 @@ private async _processVocals(): Promise<void> {
    * Every path produces exactly one render with correct data.
    */
   private async _handleApply(): Promise<void> {
+    PerformanceMonitor.start('handle_apply');
     const vocals = this._isolateVocals || this._isolateCheckbox?.checked || false;
     const start = this._markStart ?? 0;
     const end = this._markEnd ?? this._audioBuffer?.duration ?? 0;
@@ -2032,6 +2033,7 @@ private async _processVocals(): Promise<void> {
     
     if (entry?.status === 'fully_cached') {
       await this._applyFromCacheEntry(entry, vocals);
+      PerformanceMonitor.end('handle_apply');
       return;
     }
     
@@ -2045,6 +2047,7 @@ private async _processVocals(): Promise<void> {
         entry.optimizeResult = result;
         entry.status = 'fully_cached';
         await this._applyFromCacheEntry(entry, vocals);
+        PerformanceMonitor.end('handle_apply');
         return;
       } catch {
         // Fall through to inline optimize
@@ -2057,10 +2060,11 @@ private async _processVocals(): Promise<void> {
         payload: { stage: 'uploading', progress: 25, message: 'Optimizing...' }
       });
       try {
-        const result = await this._runOptimizationOnly();
+        const result = await this._runOptimizationOnly(undefined, 'optimize_inline');
         entry.optimizeResult = result;
         entry.status = 'fully_cached';
         await this._applyFromCacheEntry(entry, vocals);
+        PerformanceMonitor.end('handle_apply');
         return;
       } catch {
         // Fall through to full commit
@@ -2072,7 +2076,7 @@ private async _processVocals(): Promise<void> {
       type: 'PROCESSING_UPDATE',
       payload: { stage: 'uploading', progress: 0, message: 'Processing audio...' }
     });
-    this._lastOptimizeResult = await this._runOptimizationOnly();
+    this._lastOptimizeResult = await this._runOptimizationOnly(undefined, 'optimize_miss');
     await this._handleCommit();
     
     // Populate cache after commit completes
@@ -2085,6 +2089,7 @@ private async _processVocals(): Promise<void> {
         optimizeResult: this._lastOptimizeResult
       });
     }
+    PerformanceMonitor.end('handle_apply');
   }
 
   /**
@@ -2206,7 +2211,7 @@ private async _processVocals(): Promise<void> {
     
     entry.status = 'optimize_pending';
     
-    const promise = this._runOptimizationOnly(intentOverride)
+    const promise = this._runOptimizationOnly(intentOverride, 'optimize_bg')
       .then(result => {
         const current = this._applyCache.get(cacheKey);
         if (current && current.optimizePromise === promise) {
@@ -2228,7 +2233,7 @@ private async _processVocals(): Promise<void> {
    * Run optimize endpoint and return result WITHOUT rendering.
    * Decoupled from handleCompositionUpdate to prevent stale intermediate renders.
    */
-  private async _runOptimizationOnly(intentOverride?: 'music' | 'speech'): Promise<OptimizationResult> {
+  private async _runOptimizationOnly(intentOverride?: 'music' | 'speech', perfLabel: string = 'optimize_api_roundtrip'): Promise<OptimizationResult> {
     if (!this._originalFile) {
       throw new Error('No audio file loaded');
     }
@@ -2242,7 +2247,7 @@ private async _processVocals(): Promise<void> {
     formData.append('mode', intent);
     formData.append('num_slots', String(this._controller.getState()?.composition.pattern_settings.number_slots || 48));
     
-    PerformanceMonitor.start('optimize_api_roundtrip');
+    PerformanceMonitor.start(perfLabel);
     const response = await fetch(`${getApiBaseUrl()}/api/audio/optimize`, {
       method: 'POST',
       body: formData
@@ -2251,7 +2256,7 @@ private async _processVocals(): Promise<void> {
     if (!response.ok) throw new Error(`Optimize failed: ${response.status}`);
     
     const result = await response.json() as OptimizationResult;
-    PerformanceMonitor.end('optimize_api_roundtrip');
+    PerformanceMonitor.end(perfLabel);
     
     const statusEl = this._trimmerSection?.querySelector('.slicer-optimize-status') as HTMLElement;
     if (statusEl) {
