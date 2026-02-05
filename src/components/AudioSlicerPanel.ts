@@ -1739,6 +1739,19 @@ private async _processVocals(): Promise<void> {
         });
         this._fireBackgroundOptimize(vocalsKey, 'optimize_bg_vocals');
         
+        // Populate original (vocals=false) cache from backend-sourced pre-demucs samples
+        if (data.raw_samples_original) {
+          const origKey = this._getApplyCacheKey(vocalsStart, vocalsEnd, false);
+          if (!this._applyCache.has(origKey)) {
+            this._applyCache.set(origKey, {
+              status: 'samples_ready',
+              rawSamples: new Float32Array(data.raw_samples_original),
+              duration: data.duration_original ?? (vocalsEnd - vocalsStart)
+            });
+            this._fireBackgroundOptimize(origKey, 'optimize_bg_original');
+          }
+        }
+        
       } else {
         // Legacy binary response (fallback)
         const demucsTimeHeader = response.headers.get('X-Demucs-Time');
@@ -1757,26 +1770,8 @@ private async _processVocals(): Promise<void> {
         await this._processPreviewSilenceRemoval();
       }
       
-      // Pre-warm original audio cache entry for toggle-off path,
-      // but ONLY if committed audio matches current trim (otherwise samples are wrong)
-      const origStart = this._markStart ?? 0;
-      const origEnd = this._markEnd ?? this._audioBuffer!.duration;
-      const origKey = this._getApplyCacheKey(origStart, origEnd, false);
-      if (!this._applyCache.has(origKey)) {
-        const origState = this._controller.getState();
-        const committedSource = origState?.composition?.audio_source;
-        const trimMatches = committedSource &&
-          Math.abs((committedSource.start_time ?? 0) - origStart) < 0.01 &&
-          Math.abs((committedSource.end_time ?? this._audioBuffer!.duration) - origEnd) < 0.01;
-        if (trimMatches && origState?.audio?.rawSamples && origState.audio.rawSamples.length > 0) {
-          this._applyCache.set(origKey, {
-            status: 'samples_ready',
-            rawSamples: new Float32Array(origState.audio.rawSamples),
-            duration: this._audioBuffer!.duration
-          });
-          this._fireBackgroundOptimize(origKey, 'optimize_bg_original');
-        }
-      }
+      // Original (vocals=false) cache is now populated in the JSON response path above.
+      // Legacy binary path does not support opposite-key pre-warming.
       
       // Show success
       this._stopProgressTimer();
@@ -2092,19 +2087,9 @@ private async _processVocals(): Promise<void> {
         optimizeResult: this._lastOptimizeResult
       });
     }
-    // Pre-warm opposite vocals toggle for instant switching
-    const oppositeKey = this._getApplyCacheKey(start, end, !vocals);
-    if (!this._applyCache.has(oppositeKey)) {
-      const freshState = this._controller.getState();
-      if (freshState?.audio?.rawSamples && freshState.audio.rawSamples.length > 0) {
-        this._applyCache.set(oppositeKey, {
-          status: 'samples_ready',
-          rawSamples: new Float32Array(freshState.audio.rawSamples),
-          duration: end - start
-        });
-        this._fireBackgroundOptimize(oppositeKey, 'optimize_bg_toggle');
-      }
-    }
+    // Opposite-key pre-warming is handled at data-source time:
+    // - JSON mega-endpoint path: _processVocals populates both keys from backend data
+    // - Initial upload path: only vocals=false exists (vocals=true requires demucs)
     PerformanceMonitor.end('handle_apply');
   }
 

@@ -26,7 +26,9 @@ class ProcessedAudioResponse(BaseModel):
     """JSON response for Demucs processing with embedded audio and samples."""
     audio_base64: str
     raw_samples: List[float]
+    raw_samples_original: List[float]
     duration: float
+    duration_original: float
     sample_rate: int = 44100
 
 router = APIRouter(prefix="/api/audio", tags=["audio"])
@@ -389,12 +391,15 @@ async def process_audio_commit(
         # If Demucs was used, return JSON with embedded audio + samples for caching
         if isolate_vocals:
             raw_samples, duration = _extract_samples_for_cache(str(output_path))
+            raw_samples_original, duration_original = _extract_samples_for_cache(str(working_path))
             with open(output_path, "rb") as f:
                 audio_base64 = base64.b64encode(f.read()).decode("utf-8")
             return ProcessedAudioResponse(
                 audio_base64=audio_base64,
                 raw_samples=raw_samples,
-                duration=duration
+                raw_samples_original=raw_samples_original,
+                duration=duration,
+                duration_original=duration_original
             )
         
         return FileResponse(
