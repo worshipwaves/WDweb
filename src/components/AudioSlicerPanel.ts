@@ -1737,7 +1737,7 @@ private async _processVocals(): Promise<void> {
           rawSamples: new Float32Array(data.raw_samples),
           duration: data.duration
         });
-        this._fireBackgroundOptimize(vocalsKey);
+        this._fireBackgroundOptimize(vocalsKey, 'optimize_bg_vocals');
         
       } else {
         // Legacy binary response (fallback)
@@ -1757,21 +1757,24 @@ private async _processVocals(): Promise<void> {
         await this._processPreviewSilenceRemoval();
       }
       
-      // Pre-warm original audio cache entry for toggle-off path
-      const origKey = this._getApplyCacheKey(
-        this._markStart ?? 0,
-        this._markEnd ?? this._audioBuffer!.duration,
-        false
-      );
+      // Pre-warm original audio cache entry for toggle-off path,
+      // but ONLY if committed audio matches current trim (otherwise samples are wrong)
+      const origStart = this._markStart ?? 0;
+      const origEnd = this._markEnd ?? this._audioBuffer!.duration;
+      const origKey = this._getApplyCacheKey(origStart, origEnd, false);
       if (!this._applyCache.has(origKey)) {
         const origState = this._controller.getState();
-        if (origState?.audio?.rawSamples && origState.audio.rawSamples.length > 0) {
+        const committedSource = origState?.composition?.audio_source;
+        const trimMatches = committedSource &&
+          Math.abs((committedSource.start_time ?? 0) - origStart) < 0.01 &&
+          Math.abs((committedSource.end_time ?? this._audioBuffer!.duration) - origEnd) < 0.01;
+        if (trimMatches && origState?.audio?.rawSamples && origState.audio.rawSamples.length > 0) {
           this._applyCache.set(origKey, {
             status: 'samples_ready',
             rawSamples: new Float32Array(origState.audio.rawSamples),
             duration: this._audioBuffer!.duration
           });
-          this._fireBackgroundOptimize(origKey);
+          this._fireBackgroundOptimize(origKey, 'optimize_bg_original');
         }
       }
       
@@ -2089,6 +2092,19 @@ private async _processVocals(): Promise<void> {
         optimizeResult: this._lastOptimizeResult
       });
     }
+    // Pre-warm opposite vocals toggle for instant switching
+    const oppositeKey = this._getApplyCacheKey(start, end, !vocals);
+    if (!this._applyCache.has(oppositeKey)) {
+      const freshState = this._controller.getState();
+      if (freshState?.audio?.rawSamples && freshState.audio.rawSamples.length > 0) {
+        this._applyCache.set(oppositeKey, {
+          status: 'samples_ready',
+          rawSamples: new Float32Array(freshState.audio.rawSamples),
+          duration: end - start
+        });
+        this._fireBackgroundOptimize(oppositeKey, 'optimize_bg_toggle');
+      }
+    }
     PerformanceMonitor.end('handle_apply');
   }
 
@@ -2205,13 +2221,13 @@ private async _processVocals(): Promise<void> {
   /**
    * Fire background optimize for a cache entry. Fire-and-forget with tracked promise.
    */
-  private _fireBackgroundOptimize(cacheKey: string, intentOverride?: 'music' | 'speech'): void {
+  private _fireBackgroundOptimize(cacheKey: string, perfLabel: string = 'optimize_bg', intentOverride?: 'music' | 'speech'): void {
     const entry = this._applyCache.get(cacheKey);
     if (!entry || entry.status !== 'samples_ready') return;
     
     entry.status = 'optimize_pending';
     
-    const promise = this._runOptimizationOnly(intentOverride, 'optimize_bg')
+    const promise = this._runOptimizationOnly(intentOverride, perfLabel)
       .then(result => {
         const current = this._applyCache.get(cacheKey);
         if (current && current.optimizePromise === promise) {
