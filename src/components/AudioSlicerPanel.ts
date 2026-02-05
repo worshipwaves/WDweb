@@ -2014,7 +2014,7 @@ private async _processVocals(): Promise<void> {
   }
 	
   private _getApplyCacheKey(start: number, end: number, vocals: boolean): string {
-    return `${start.toFixed(3)}:${end.toFixed(3)}:${vocals}`;
+    return `${Math.round(start)}:${Math.round(end)}:${vocals}`;
   }
 
   /**
