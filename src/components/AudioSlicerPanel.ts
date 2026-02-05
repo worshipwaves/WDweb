@@ -364,6 +364,10 @@ export class AudioSlicerPanel implements PanelComponent {
       this._rawVocalsBuffer = null;
       this._processedBuffer = null;
     }
+    // Trim changed — Demucs cache is for a different audio segment
+    this._cachedRawSamples = null;
+    this._cachedDuration = null;
+    this._demucsResponseCached = false;
   }
 
   private _persistTrimState(): void {
@@ -1979,6 +1983,24 @@ private async _processVocals(): Promise<void> {
       return;
     }
     
+    // Cache bypass for original audio (vocals OFF): reuse existing audioSessionId
+    if (!isolateVocals) {
+      const currentState = this._controller.getState();
+      const existingSession = currentState?.audio?.audioSessionId;
+      const audioSource = currentState?.composition?.audio_source;
+      if (existingSession && audioSource && !audioSource.use_stems) {
+        const currentStart = this._markStart ?? 0;
+        const currentEnd = this._markEnd ?? this._audioBuffer?.duration ?? 0;
+        const trimMatches =
+          Math.abs(currentStart - (audioSource.start_time ?? 0)) < 0.01 &&
+          Math.abs(currentEnd - (audioSource.end_time ?? 0)) < 0.01;
+        if (trimMatches) {
+          this._applyOriginalFromCache(existingSession);
+          return;
+        }
+      }
+    }
+    
     // If vocals already processed client-side, use cached buffer and skip backend demucs
     const vocalsAlreadyProcessed = isolateVocals && !!this._rawVocalsBuffer;
     
@@ -2108,6 +2130,67 @@ private async _processVocals(): Promise<void> {
       });
     } finally {
       PerformanceMonitor.end('apply_from_cache');
+    }
+  }
+	
+	
+	/**
+   * Apply artwork using cached original audio (vocals OFF path).
+   * Bypasses re-upload when trim hasn't changed since last commit.
+   */
+  private async _applyOriginalFromCache(sessionId: string): Promise<void> {
+    try {
+      const currentState = this._controller.getState();
+      if (!currentState) throw new Error('No state available');
+      
+      const audioProcessing = currentState.composition.audio_processing;
+      const patternSettings = currentState.composition.pattern_settings;
+      
+      if (!patternSettings?.number_slots) {
+        throw new Error('pattern_settings.number_slots is required');
+      }
+      
+      const rebinnedAmplitudes = this._controller.audioCache.rebinFromCache(sessionId, {
+        numSlots: patternSettings.number_slots,
+        binningMode: audioProcessing?.binning_mode || 'rms',
+        exponent: audioProcessing?.amplitude_exponent || 1.0,
+        filterAmount: audioProcessing?.filter_amount || 0
+      });
+      
+      if (!rebinnedAmplitudes) {
+        throw new Error('Session expired or missing from AudioCacheService');
+      }
+      
+      const updatedComposition = {
+        ...currentState.composition,
+        processed_amplitudes: Array.from(rebinnedAmplitudes),
+        audio_source: {
+          ...currentState.composition.audio_source,
+          use_stems: false
+        }
+      };
+      
+      const csgResponse = await this._controller.getRoutedCSGData(
+        updatedComposition, ['processed_amplitudes'], null
+      );
+      await this._controller.getSceneManager()?.renderComposition(csgResponse);
+      
+    } catch (error) {
+      console.error('[_applyOriginalFromCache] failed, falling back to upload:', error);
+      this._controller.dispatch({
+        type: 'AUDIO_COMMIT',
+        payload: {
+          useSlice: this._markStart !== null && this._markEnd !== null,
+          startTime: this._markStart,
+          endTime: this._markEnd,
+          isolateVocals: false,
+          removeSilence: false,
+          silenceThreshold: undefined,
+          silenceMinDuration: undefined,
+          sliceBlob: null,
+          originalFile: this._originalFile ?? undefined
+        }
+      });
     }
   }
 	
