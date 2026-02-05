@@ -40,14 +40,6 @@ interface OptimizationResult {
   status: 'optimized' | 'fallback' | 'error';
 }
 
-interface ApplyCacheEntry {
-  status: 'samples_ready' | 'optimize_pending' | 'fully_cached' | 'optimize_failed';
-  rawSamples: Float32Array;
-  duration: number;
-  optimizeResult?: OptimizationResult;
-  optimizePromise?: Promise<OptimizationResult>;
-}
-
 export class AudioSlicerPanel implements PanelComponent {
   private _container: HTMLElement | null = null;
   private _controller: ApplicationController;
@@ -115,9 +107,10 @@ export class AudioSlicerPanel implements PanelComponent {
   // Isolate Vocals param
   private _isolateVocals: boolean = false;
 	
-  // Unified Apply Cache — keyed by {start:end:vocals}
-  private _applyCache: Map<string, ApplyCacheEntry> = new Map();
-  private _lastOptimizeResult: OptimizationResult | null = null;
+	// Demucs response cache (eliminates redundant second upload)
+  private _cachedRawSamples: Float32Array | null = null;
+  private _cachedDuration: number | null = null;
+  private _demucsResponseCached: boolean = false;
 	
 	// Pending intent for deferred UI update
   private _pendingIntent: 'music' | 'speech' | null = null;
@@ -357,7 +350,7 @@ export class AudioSlicerPanel implements PanelComponent {
         const durationText = this._audioBuffer 
           ? this._formatTime(this._audioBuffer.duration) 
           : '--:--';
-        this._songDurationEl.textContent = `${durationText} Â· ${this._audioBuffer ? 'Ready' : 'Re-upload to Edit'}`;
+        this._songDurationEl.textContent = `${durationText} · ${this._audioBuffer ? 'Ready' : 'Re-upload to Edit'}`;
       }
     }
   }
@@ -371,8 +364,10 @@ export class AudioSlicerPanel implements PanelComponent {
       this._rawVocalsBuffer = null;
       this._processedBuffer = null;
     }
-    // _applyCache NOT cleared — entries are keyed by trim values,
-    // so stale entries simply will not match the current configuration
+    // Trim changed — Demucs cache is for a different audio segment
+    this._cachedRawSamples = null;
+    this._cachedDuration = null;
+    this._demucsResponseCached = false;
   }
 
   private _persistTrimState(): void {
@@ -437,11 +432,11 @@ export class AudioSlicerPanel implements PanelComponent {
         </button>
         <button class="slicer-mark-btn slicer-btn-mark-start" data-demo-id="slicer_start">
           <span class="slicer-mark-btn-label">Start Here</span>
-          <span class="slicer-mark-btn-time">â€”</span>
+          <span class="slicer-mark-btn-time">—</span>
         </button>
         <button class="slicer-mark-btn slicer-btn-mark-end" data-demo-id="slicer_end">
           <span class="slicer-mark-btn-label">End Here</span>
-          <span class="slicer-mark-btn-time">â€”</span>
+          <span class="slicer-mark-btn-time">—</span>
         </button>
         <button class="slicer-btn-reset" title="Reset to full song">Reset</button>
       </div>
@@ -576,8 +571,6 @@ export class AudioSlicerPanel implements PanelComponent {
     section.querySelectorAll('input[name="upload-intent"]').forEach(radio => {
       radio.addEventListener('change', () => {
         if (this._originalFile && this._audioBuffer) {
-          this._applyCache.clear();
-          this._lastOptimizeResult = null;
           void this._runOptimization().then(() => this._handleCommit());
         }
       });
@@ -618,7 +611,7 @@ export class AudioSlicerPanel implements PanelComponent {
       }
     });
     section.querySelector('.slicer-btn-apply')?.addEventListener('click', () => {
-      void this._handleApply();
+      void this._runOptimization().then(() => this._handleCommit());
     });
     
     window.addEventListener('resize', this._handleResize);
@@ -646,7 +639,7 @@ export class AudioSlicerPanel implements PanelComponent {
     if (this._markStart === null || this._markEnd === null) return null;
     const start = Math.min(this._markStart, this._markEnd);
     const end = Math.max(this._markStart, this._markEnd);
-    return `${this._formatTime(start)} â†’ ${this._formatTime(end)}`;
+    return `${this._formatTime(start)} → ${this._formatTime(end)}`;
   }
 	
 	/**
@@ -736,14 +729,14 @@ export class AudioSlicerPanel implements PanelComponent {
       
       if (statusEl) {
         statusEl.textContent = result.status === 'fallback' 
-          ? `âš  ${result.exponent}` 
-          : `âœ“ ${result.exponent}`;
+          ? `⚠ ${result.exponent}` 
+          : `✓ ${result.exponent}`;
         statusEl.className = `slicer-optimize-status ${result.status}`;
       }
     } catch (error) {
       console.error('[AudioSlicerPanel] Optimization failed:', error);
       if (statusEl) {
-        statusEl.textContent = 'âœ— Error';
+        statusEl.textContent = '✗ Error';
         statusEl.className = 'slicer-optimize-status error';
       }
     } finally {
@@ -833,7 +826,7 @@ export class AudioSlicerPanel implements PanelComponent {
       this._dropContent?.classList.add('hidden');
       this._songLoaded?.classList.add('visible');
       if (this._songNameEl) this._songNameEl.textContent = this._originalFile.name;
-      if (this._songDurationEl) this._songDurationEl.textContent = `${this._formatTime(this._audioBuffer.duration)} Â· Ready`;
+      if (this._songDurationEl) this._songDurationEl.textContent = `${this._formatTime(this._audioBuffer.duration)} · Ready`;
     }
   }
 	
@@ -920,9 +913,10 @@ export class AudioSlicerPanel implements PanelComponent {
     }
     
     try {
-      // Clear all cached apply data from previous file
-      this._applyCache.clear();
-      this._lastOptimizeResult = null;
+			// Clear cached Demucs data from previous file
+      this._cachedRawSamples = null;
+      this._cachedDuration = null;
+      this._demucsResponseCached = false;
 			
       PerformanceMonitor.start('slicer_file_read');			
       const arrayBuffer = await file.arrayBuffer();
@@ -938,7 +932,7 @@ export class AudioSlicerPanel implements PanelComponent {
       
       // Update song loaded display
       if (this._songNameEl) this._songNameEl.textContent = file.name;
-      if (this._songDurationEl) this._songDurationEl.textContent = `${this._formatTime(this._audioBuffer.duration)} Â· Ready`;
+      if (this._songDurationEl) this._songDurationEl.textContent = `${this._formatTime(this._audioBuffer.duration)} · Ready`;
       
       // Show song footer with buttons
       const songFooter = this._container?.querySelector('.slicer-song-footer') as HTMLElement;
@@ -983,25 +977,9 @@ export class AudioSlicerPanel implements PanelComponent {
           this._applyPendingIntent();
         }
         
-        // Auto-optimize with intent (no render), then commit
-        this._lastOptimizeResult = await this._runOptimizationOnly(intent);
-        await this._handleCommit();
-        
-        // Populate apply cache with initial upload result
-        const postState = this._controller.getState();
-        if (postState?.audio?.audioSessionId && postState.audio.rawSamples && this._lastOptimizeResult) {
-          const cacheKey = this._getApplyCacheKey(
-            this._markStart ?? 0,
-            this._markEnd ?? this._audioBuffer!.duration,
-            false
-          );
-          this._applyCache.set(cacheKey, {
-            status: 'fully_cached',
-            rawSamples: new Float32Array(postState.audio.rawSamples),
-            duration: this._audioBuffer!.duration,
-            optimizeResult: this._lastOptimizeResult
-          });
-        }
+        // Auto-optimize with intent, then commit
+        await this._runOptimization(intent);
+        this._handleCommit();
       }
       
     } catch (err) {
@@ -1308,9 +1286,9 @@ export class AudioSlicerPanel implements PanelComponent {
     
     if (this._markStart !== null && this._markEnd !== null) {
       const duration = Math.round(this._markEnd - this._markStart);
-      this._selectionValueEl.textContent = `${this._formatTime(this._markStart)} â†’ ${this._formatTime(this._markEnd)} (${duration}s)`;
+      this._selectionValueEl.textContent = `${this._formatTime(this._markStart)} → ${this._formatTime(this._markEnd)} (${duration}s)`;
     } else if (this._markStart !== null) {
-      this._selectionValueEl.textContent = `${this._formatTime(this._markStart)} â†’ ...`;
+      this._selectionValueEl.textContent = `${this._formatTime(this._markStart)} → ...`;
     } else {
       this._selectionValueEl.textContent = 'Full track';
     }
@@ -1418,11 +1396,11 @@ export class AudioSlicerPanel implements PanelComponent {
     
     this._isPreviewing = true;
     const btn = previewBtn;
-    if (btn) btn.textContent = 'âšâš Pause';
+    if (btn) btn.textContent = '❚❚ Pause';
     
     this._sourceNode.onended = () => {
       this._isPreviewing = false;
-      if (btn) btn.textContent = 'â–¶ Preview';
+      if (btn) btn.textContent = '▶ Preview';
     };
   }
   private async _previewWithProcessing(previewBtn: HTMLButtonElement | null): Promise<void> {
@@ -1430,7 +1408,7 @@ export class AudioSlicerPanel implements PanelComponent {
     
     this._isProcessing = true;
     const btn = previewBtn;
-    if (btn) btn.textContent = 'â³ Processing...';
+    if (btn) btn.textContent = '⏳ Processing...';
     
     try {
       // Build source audio
@@ -1476,12 +1454,12 @@ export class AudioSlicerPanel implements PanelComponent {
       this._isProcessing = false;
       this._pausedAt = 0;
       this._playStartedAt = this._audioContext!.currentTime;
-      if (btn) btn.textContent = 'âšâš Pause';
+      if (btn) btn.textContent = '❚❚ Pause';
       
     } catch (error) {
       console.error('[AudioSlicerPanel] Preview processing failed:', error);
       this._isProcessing = false;
-      if (btn) btn.textContent = 'â–¶ Preview';
+      if (btn) btn.textContent = '▶ Preview';
     }
   }
 	
@@ -1534,7 +1512,7 @@ export class AudioSlicerPanel implements PanelComponent {
       this._initAudioContext();
       this._rawVocalsBuffer = await this._audioContext!.decodeAudioData(arrayBuffer);
       
-      if (status) status.textContent = 'âœ“ Cached';
+      if (status) status.textContent = '✓ Cached';
       this._isProcessing = false;
       if (btn) btn.disabled = false;
       
@@ -1545,7 +1523,7 @@ export class AudioSlicerPanel implements PanelComponent {
       this._isProcessing = false;
       if (btn) btn.disabled = false;
       if (label) label.textContent = 'Process & Preview';
-      if (status) status.textContent = 'âœ— Failed';
+      if (status) status.textContent = '✗ Failed';
     }
   }
 
@@ -1728,16 +1706,10 @@ private async _processVocals(): Promise<void> {
         this._rawVocalsBuffer = await this._audioContext!.decodeAudioData(arrayBuffer);
         PerformanceMonitor.end('ux_audio_decode');
         
-        // Populate apply cache with vocals samples + fire background optimize
-        const vocalsStart = this._markStart ?? 0;
-        const vocalsEnd = this._markEnd ?? this._audioBuffer!.duration;
-        const vocalsKey = this._getApplyCacheKey(vocalsStart, vocalsEnd, true);
-        this._applyCache.set(vocalsKey, {
-          status: 'samples_ready',
-          rawSamples: new Float32Array(data.raw_samples),
-          duration: data.duration
-        });
-        this._fireBackgroundOptimize(vocalsKey);
+        // Cache samples - eliminates redundant second upload
+        this._cachedRawSamples = new Float32Array(data.raw_samples);
+        this._cachedDuration = data.duration;
+        this._demucsResponseCached = true;
         
       } else {
         // Legacy binary response (fallback)
@@ -1752,34 +1724,18 @@ private async _processVocals(): Promise<void> {
         this._rawVocalsBuffer = await this._audioContext!.decodeAudioData(arrayBuffer);
         PerformanceMonitor.end('ux_audio_decode');
         
-        // Legacy binary — no raw samples available for apply cache
+        // No cached samples - will require re-upload
+        this._cachedRawSamples = null;
+        this._demucsResponseCached = false;
         
         await this._processPreviewSilenceRemoval();
-      }
-      
-      // Pre-warm original audio cache entry for toggle-off path
-      const origKey = this._getApplyCacheKey(
-        this._markStart ?? 0,
-        this._markEnd ?? this._audioBuffer!.duration,
-        false
-      );
-      if (!this._applyCache.has(origKey)) {
-        const origState = this._controller.getState();
-        if (origState?.audio?.rawSamples && origState.audio.rawSamples.length > 0) {
-          this._applyCache.set(origKey, {
-            status: 'samples_ready',
-            rawSamples: new Float32Array(origState.audio.rawSamples),
-            duration: this._audioBuffer!.duration
-          });
-          this._fireBackgroundOptimize(origKey);
-        }
       }
       
       // Show success
       this._stopProgressTimer();
       const statusEl = this._trimmerSection?.querySelector('.slicer-vocals-status') as HTMLElement;
       if (statusEl) {
-        statusEl.textContent = 'âœ“';
+        statusEl.textContent = '✓';
         statusEl.style.color = '#27ae60';
       }
       
@@ -1793,7 +1749,7 @@ private async _processVocals(): Promise<void> {
       this._stopProgressTimer();
       const statusEl = this._trimmerSection?.querySelector('.slicer-vocals-status') as HTMLElement;
       if (statusEl) {
-        statusEl.textContent = 'âœ— failed';
+        statusEl.textContent = '✗ failed';
         statusEl.style.color = '#c0392b';
       }
     } finally {
@@ -1852,7 +1808,7 @@ private async _processVocals(): Promise<void> {
     }
     
     const previewBtn = this._container?.querySelector('.slicer-btn-preview') as HTMLButtonElement;
-    if (previewBtn) previewBtn.textContent = 'â–¶ Preview';
+    if (previewBtn) previewBtn.textContent = '▶ Preview';
   }
   
   private _reset(): void {
@@ -2015,85 +1971,74 @@ private async _processVocals(): Promise<void> {
     }
   }
 	
-  private _getApplyCacheKey(start: number, end: number, vocals: boolean): string {
-    return `${start.toFixed(3)}:${end.toFixed(3)}:${vocals}`;
-  }
-
-  /**
-   * Top-level Apply handler. Checks cache BEFORE optimize to prevent stale renders.
-   * Every path produces exactly one render with correct data.
-   */
-  private async _handleApply(): Promise<void> {
-    const vocals = this._isolateVocals || this._isolateCheckbox?.checked || false;
-    const start = this._markStart ?? 0;
-    const end = this._markEnd ?? this._audioBuffer?.duration ?? 0;
-    const key = this._getApplyCacheKey(start, end, vocals);
-    const entry = this._applyCache.get(key);
+	private _handleCommit(): void {
+    const isolateVocals = this._isolateVocals || this._isolateCheckbox?.checked || false;
+    const useSlice = this._markStart !== null && this._markEnd !== null;
+    const audioProcessing = this._controller.getState()?.composition.audio_processing;
+    const removeSilence = isolateVocals || audioProcessing?.remove_silence;
     
-    if (entry?.status === 'fully_cached') {
-      await this._applyFromCacheEntry(entry, vocals);
+    // Cache bypass: if we have cached Demucs response, skip re-upload entirely
+    if (isolateVocals && this._demucsResponseCached && this._cachedRawSamples && this._rawVocalsBuffer) {
+      this._applyFromCache();
       return;
     }
     
-    if (entry?.status === 'optimize_pending' && entry.optimizePromise) {
-      await this._controller.dispatch({
-        type: 'PROCESSING_UPDATE',
-        payload: { stage: 'uploading', progress: 50, message: 'Finalizing...' }
-      });
-      try {
-        const result = await entry.optimizePromise;
-        entry.optimizeResult = result;
-        entry.status = 'fully_cached';
-        await this._applyFromCacheEntry(entry, vocals);
-        return;
-      } catch {
-        // Fall through to inline optimize
+    // Cache bypass for original audio (vocals OFF): reuse existing audioSessionId
+    if (!isolateVocals) {
+      const currentState = this._controller.getState();
+      const existingSession = currentState?.audio?.audioSessionId;
+      const audioSource = currentState?.composition?.audio_source;
+      if (existingSession && audioSource && !audioSource.use_stems) {
+        const currentStart = this._markStart ?? 0;
+        const currentEnd = this._markEnd ?? this._audioBuffer?.duration ?? 0;
+        const trimMatches =
+          Math.abs(currentStart - (audioSource.start_time ?? 0)) < 0.01 &&
+          Math.abs(currentEnd - (audioSource.end_time ?? 0)) < 0.01;
+        if (trimMatches) {
+          this._applyOriginalFromCache(existingSession);
+          return;
+        }
       }
     }
     
-    if (entry && (entry.status === 'samples_ready' || entry.status === 'optimize_failed')) {
-      await this._controller.dispatch({
-        type: 'PROCESSING_UPDATE',
-        payload: { stage: 'uploading', progress: 25, message: 'Optimizing...' }
-      });
-      try {
-        const result = await this._runOptimizationOnly();
-        entry.optimizeResult = result;
-        entry.status = 'fully_cached';
-        await this._applyFromCacheEntry(entry, vocals);
-        return;
-      } catch {
-        // Fall through to full commit
-      }
-    }
+    // If vocals already processed client-side, use cached buffer and skip backend demucs
+    const vocalsAlreadyProcessed = isolateVocals && !!this._rawVocalsBuffer;
     
-    // Cache miss — full pipeline with overlay
-    await this._controller.dispatch({
-      type: 'PROCESSING_UPDATE',
-      payload: { stage: 'uploading', progress: 0, message: 'Processing audio...' }
+    let fileToSend: File | Blob | undefined = this._originalFile ?? undefined;
+    if (vocalsAlreadyProcessed) {
+      // Send pre-processed vocals, tell backend to skip demucs
+      fileToSend = new File([this._encodeWAV(this._rawVocalsBuffer!)], 'vocals.wav', { type: 'audio/wav' });
+    }
+		
+		// Enable export button after commit
+    const exportBtn = this._trimmerSection?.querySelector('.slicer-btn-export') as HTMLButtonElement;
+    if (exportBtn) exportBtn.disabled = false;
+    
+    void this._controller.dispatch({
+      type: 'AUDIO_COMMIT',
+      payload: {
+        // When vocals pre-processed, file is already sliced - don't slice again
+        useSlice: vocalsAlreadyProcessed ? false : useSlice,
+        startTime: vocalsAlreadyProcessed ? 0 : this._markStart,
+        endTime: vocalsAlreadyProcessed ? (this._rawVocalsBuffer?.duration ?? this._markEnd) : this._markEnd,
+        isolateVocals: vocalsAlreadyProcessed ? false : isolateVocals, // Skip demucs if already done
+        removeSilence: vocalsAlreadyProcessed ? false : removeSilence, // Skip if already applied in preview
+        silenceThreshold: audioProcessing?.silence_threshold,
+      silenceMinDuration: audioProcessing?.silence_duration,
+        sliceBlob: null, // Slicing handled by file selection above
+        originalFile: fileToSend
+      }
     });
-    this._lastOptimizeResult = await this._runOptimizationOnly();
-    await this._handleCommit();
-    
-    // Populate cache after commit completes
-    const postState = this._controller.getState();
-    if (postState?.audio?.audioSessionId && postState.audio.rawSamples && this._lastOptimizeResult) {
-      this._applyCache.set(key, {
-        status: 'fully_cached',
-        rawSamples: new Float32Array(postState.audio.rawSamples),
-        duration: end - start,
-        optimizeResult: this._lastOptimizeResult
-      });
-    }
   }
-
-  /**
-   * Apply from a fully-cached or optimize-resolved cache entry.
-   * Rehydrates AudioCacheService, rebins, updates state, renders once.
+	
+	/**
+   * Apply artwork using cached Demucs response.
+   * Bypasses re-upload by directly hydrating AudioCacheService.
    */
-  private async _applyFromCacheEntry(entry: ApplyCacheEntry, vocals: boolean): Promise<void> {
-    if (!entry.optimizeResult) {
-      throw new Error('Cannot apply cache entry without optimize result');
+  private async _applyFromCache(): Promise<void> {
+    if (!this._cachedRawSamples || !this._rawVocalsBuffer) {
+      console.error('[AudioSlicerPanel] _applyFromCache called without cached data');
+      return;
     }
     
     PerformanceMonitor.start('apply_from_cache');
@@ -2101,70 +2046,74 @@ private async _processVocals(): Promise<void> {
     try {
       await this._controller.dispatch({
         type: 'PROCESSING_UPDATE',
-        payload: { stage: 'uploading', progress: 50, message: 'Applying...' }
+        payload: { stage: 'uploading', progress: 50, message: 'Applying vocals...' }
       });
       
+      // Create dummy file for cache key generation
       const dummyFile = new File(
-        [new ArrayBuffer(8)],
-        vocals ? 'cached_vocals.wav' : 'cached_original.wav',
+        [this._encodeWAV(this._rawVocalsBuffer)],
+        'processed_vocals.wav',
         { type: 'audio/wav' }
       );
-      const sessionId = this._controller.audioCache.cacheRawSamples(dummyFile, entry.rawSamples);
       
+      // Hydrate audio cache directly
+      const sessionId = this._controller.audioCache.cacheRawSamples(
+        dummyFile,
+        this._cachedRawSamples
+      );
+      
+      // Get current composition state
       const currentState = this._controller.getState();
       if (!currentState) throw new Error('No state available');
       
+      // Rebin cached samples to get processed amplitudes
+      const audioProcessing = currentState.composition.audio_processing;
       const patternSettings = currentState.composition.pattern_settings;
+      
       if (!patternSettings?.number_slots) {
         throw new Error('pattern_settings.number_slots is required');
       }
       
       const rebinnedAmplitudes = this._controller.audioCache.rebinFromCache(sessionId, {
         numSlots: patternSettings.number_slots,
-        binningMode: entry.optimizeResult.binning_mode as 'mean_abs' | 'min_max' | 'continuous',
-        exponent: entry.optimizeResult.exponent,
-        filterAmount: entry.optimizeResult.filter_amount
+        binningMode: audioProcessing?.binning_mode || 'rms',
+        exponent: audioProcessing?.amplitude_exponent || 1.0,
+        filterAmount: audioProcessing?.filter_amount || 0
       });
       
       if (!rebinnedAmplitudes) {
-        throw new Error('rebinFromCache returned null');
+        console.error('[_applyFromCache] rebinFromCache returned null');
+        throw new Error('Failed to rebin cached samples');
       }
       
+      // Update composition with vocals enabled AND new amplitudes
       const updatedComposition = {
         ...currentState.composition,
         processed_amplitudes: Array.from(rebinnedAmplitudes),
         audio_source: {
           ...currentState.composition.audio_source,
-          use_stems: vocals,
-          start_time: vocals ? 0 : (this._markStart ?? 0),
-          end_time: vocals ? entry.duration : (this._markEnd ?? this._audioBuffer?.duration ?? 0)
-        },
-        audio_processing: {
-          ...currentState.composition.audio_processing,
-          amplitude_exponent: entry.optimizeResult.exponent,
-          filter_amount: entry.optimizeResult.filter_amount,
-          apply_filter: entry.optimizeResult.filter_amount > 0,
-          binning_mode: entry.optimizeResult.binning_mode,
-          remove_silence: entry.optimizeResult.remove_silence,
-          silence_threshold: entry.optimizeResult.silence_threshold,
-          silence_duration: entry.optimizeResult.silence_duration
-        },
-        pattern_settings: {
-          ...patternSettings,
-          amplitude_exponent: entry.optimizeResult.exponent
+          use_stems: true,
+          start_time: 0,
+          end_time: this._cachedDuration || this._rawVocalsBuffer.duration
         }
       };
       
+      // Update state with new session
       await this._controller.dispatch({
-        type: 'AUDIO_SESSION_UPDATED',
-        payload: { audioSessionId: sessionId, composition: updatedComposition }
+        type: 'FILE_PROCESSING_SUCCESS',
+        payload: {
+          composition: updatedComposition,
+          maxAmplitudeLocal: 1.0,
+          rawSamplesForCache: Array.from(this._cachedRawSamples),
+          audioSessionId: sessionId
+        }
       });
       
-      const csgResponse = await this._controller.getRoutedCSGData(
-        updatedComposition, ['processed_amplitudes'], null
-      );
+      // Trigger CSG regeneration and render directly (bypass handleCompositionUpdate change detection)      
+      const csgResponse = await this._controller.getRoutedCSGData(updatedComposition, ['processed_amplitudes'], null);
       await this._controller.getSceneManager()?.renderComposition(csgResponse);
       
+      // Enable export button
       const exportBtn = this._trimmerSection?.querySelector('.slicer-btn-export') as HTMLButtonElement;
       if (exportBtn) exportBtn.disabled = false;
       
@@ -2183,119 +2132,69 @@ private async _processVocals(): Promise<void> {
       PerformanceMonitor.end('apply_from_cache');
     }
   }
-
-  /**
-   * Get audio file/blob for optimize endpoint based on current trim state.
+	
+	
+	/**
+   * Apply artwork using cached original audio (vocals OFF path).
+   * Bypasses re-upload when trim hasn't changed since last commit.
    */
-  private _getAudioForOptimize(): File | Blob {
-    const hasSlice = this._markStart !== null && this._markEnd !== null &&
-                     (this._markStart > 0 || this._markEnd < (this._audioBuffer?.duration ?? 0));
-    if (hasSlice && this._audioBuffer) {
-      const sliceBlob = this._createSliceBlob();
-      if (sliceBlob) return new File([sliceBlob], 'slice.wav', { type: 'audio/wav' });
-    }
-    return this._originalFile!;
-  }
-
-  /**
-   * Fire background optimize for a cache entry. Fire-and-forget with tracked promise.
-   */
-  private _fireBackgroundOptimize(cacheKey: string, intentOverride?: 'music' | 'speech'): void {
-    const entry = this._applyCache.get(cacheKey);
-    if (!entry || entry.status !== 'samples_ready') return;
-    
-    entry.status = 'optimize_pending';
-    
-    const promise = this._runOptimizationOnly(intentOverride)
-      .then(result => {
-        const current = this._applyCache.get(cacheKey);
-        if (current && current.optimizePromise === promise) {
-          current.optimizeResult = result;
-          current.status = 'fully_cached';
+  private async _applyOriginalFromCache(sessionId: string): Promise<void> {
+    try {
+      const currentState = this._controller.getState();
+      if (!currentState) throw new Error('No state available');
+      
+      const audioProcessing = currentState.composition.audio_processing;
+      const patternSettings = currentState.composition.pattern_settings;
+      
+      if (!patternSettings?.number_slots) {
+        throw new Error('pattern_settings.number_slots is required');
+      }
+      
+      const rebinnedAmplitudes = this._controller.audioCache.rebinFromCache(sessionId, {
+        numSlots: patternSettings.number_slots,
+        binningMode: audioProcessing?.binning_mode || 'rms',
+        exponent: audioProcessing?.amplitude_exponent || 1.0,
+        filterAmount: audioProcessing?.filter_amount || 0
+      });
+      
+      if (!rebinnedAmplitudes) {
+        throw new Error('Session expired or missing from AudioCacheService');
+      }
+      
+      const updatedComposition = {
+        ...currentState.composition,
+        processed_amplitudes: Array.from(rebinnedAmplitudes),
+        audio_source: {
+          ...currentState.composition.audio_source,
+          use_stems: false
         }
-      })
-      .catch(() => {
-        const current = this._applyCache.get(cacheKey);
-        if (current && current.optimizePromise === promise) {
-          current.status = 'optimize_failed';
+      };
+      
+      const csgResponse = await this._controller.getRoutedCSGData(
+        updatedComposition, ['processed_amplitudes'], null
+      );
+      await this._controller.getSceneManager()?.renderComposition(csgResponse);
+      
+    } catch (error) {
+      console.error('[_applyOriginalFromCache] failed, falling back to upload:', error);
+      this._controller.dispatch({
+        type: 'AUDIO_COMMIT',
+        payload: {
+          useSlice: this._markStart !== null && this._markEnd !== null,
+          startTime: this._markStart,
+          endTime: this._markEnd,
+          isolateVocals: false,
+          removeSilence: false,
+          silenceThreshold: undefined,
+          silenceMinDuration: undefined,
+          sliceBlob: null,
+          originalFile: this._originalFile ?? undefined
         }
       });
-    
-    entry.optimizePromise = promise;
-  }
-
-  /**
-   * Run optimize endpoint and return result WITHOUT rendering.
-   * Decoupled from handleCompositionUpdate to prevent stale intermediate renders.
-   */
-  private async _runOptimizationOnly(intentOverride?: 'music' | 'speech'): Promise<OptimizationResult> {
-    if (!this._originalFile) {
-      throw new Error('No audio file loaded');
     }
-    
-    const formData = new FormData();
-    const audioFile = this._getAudioForOptimize();
-    formData.append('file', audioFile);
-    
-    const intentRadio = this._uploadSection?.querySelector('input[name="upload-intent"]:checked') as HTMLInputElement;
-    const intent = intentOverride || intentRadio?.value || 'music';
-    formData.append('mode', intent);
-    formData.append('num_slots', String(this._controller.getState()?.composition.pattern_settings.number_slots || 48));
-    
-    PerformanceMonitor.start('optimize_api_roundtrip');
-    const response = await fetch(`${getApiBaseUrl()}/api/audio/optimize`, {
-      method: 'POST',
-      body: formData
-    });
-    
-    if (!response.ok) throw new Error(`Optimize failed: ${response.status}`);
-    
-    const result = await response.json() as OptimizationResult;
-    PerformanceMonitor.end('optimize_api_roundtrip');
-    
-    const statusEl = this._trimmerSection?.querySelector('.slicer-optimize-status') as HTMLElement;
-    if (statusEl) {
-      statusEl.textContent = result.status === 'fallback'
-        ? `âš  ${result.exponent}`
-        : `âœ“ ${result.exponent}`;
-    }
-    
-    return result;
-  }
-
-
-	private async _handleCommit(): Promise<void> {
-    const isolateVocals = this._isolateVocals || this._isolateCheckbox?.checked || false;
-    const useSlice = this._markStart !== null && this._markEnd !== null;
-    const audioProcessing = this._controller.getState()?.composition.audio_processing;
-    const removeSilence = isolateVocals || audioProcessing?.remove_silence;
-    
-    const vocalsAlreadyProcessed = isolateVocals && !!this._rawVocalsBuffer;
-    
-    let fileToSend: File | Blob | undefined = this._originalFile ?? undefined;
-    if (vocalsAlreadyProcessed) {
-      fileToSend = new File([this._encodeWAV(this._rawVocalsBuffer!)], 'vocals.wav', { type: 'audio/wav' });
-    }
-    
-    const exportBtn = this._trimmerSection?.querySelector('.slicer-btn-export') as HTMLButtonElement;
-    if (exportBtn) exportBtn.disabled = false;
-    
-    await this._controller.dispatch({
-      type: 'AUDIO_COMMIT',
-      payload: {
-        useSlice: vocalsAlreadyProcessed ? false : useSlice,
-        startTime: vocalsAlreadyProcessed ? 0 : this._markStart,
-        endTime: vocalsAlreadyProcessed ? (this._rawVocalsBuffer?.duration ?? this._markEnd) : this._markEnd,
-        isolateVocals: vocalsAlreadyProcessed ? false : isolateVocals,
-        removeSilence: vocalsAlreadyProcessed ? false : removeSilence,
-        silenceThreshold: audioProcessing?.silence_threshold,
-        silenceMinDuration: audioProcessing?.silence_duration,
-        sliceBlob: null,
-        originalFile: fileToSend
-      }
-    });
   }
 	
+  
   private _createSliceBlob(): Blob | null {
     if (this._markStart === null || this._markEnd === null || !this._audioBuffer || !this._audioContext) {
       return null;
@@ -2467,13 +2366,13 @@ private async _processVocals(): Promise<void> {
     const endBtn = this._trimmerSection.querySelector('.slicer-btn-mark-end');
     
     if (startTimeEl) {
-      startTimeEl.textContent = this._markStart !== null ? this._formatTime(this._markStart) : 'â€”';
+      startTimeEl.textContent = this._markStart !== null ? this._formatTime(this._markStart) : '—';
     }
     if (startBtn) {
       startBtn.classList.toggle('marked', this._markStart !== null);
     }
     if (endTimeEl) {
-      endTimeEl.textContent = this._markEnd !== null ? this._formatTime(this._markEnd) : 'â€”';
+      endTimeEl.textContent = this._markEnd !== null ? this._formatTime(this._markEnd) : '—';
     }
     if (endBtn) {
       endBtn.classList.toggle('marked', this._markEnd !== null);
@@ -2492,7 +2391,7 @@ private async _processVocals(): Promise<void> {
       const rangeEl = summary.querySelector('.slicer-summary-range');
       const durationEl = summary.querySelector('.slicer-summary-duration');
       
-      if (rangeEl) rangeEl.textContent = `${this._formatTime(start)} â†’ ${this._formatTime(end)}`;
+      if (rangeEl) rangeEl.textContent = `${this._formatTime(start)} → ${this._formatTime(end)}`;
       if (durationEl) {
         const mins = Math.floor(duration / 60);
         const secs = Math.floor(duration % 60);
