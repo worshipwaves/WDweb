@@ -536,8 +536,13 @@ export class ApplicationController {
           if (csgResponse) {
             const maxAmplitudeLocal = csgResponse.max_amplitude_local;
             
-            // Scale amplitudes to physical dimensions
-            const scaledAmps = amps.map(a => a * maxAmplitudeLocal);
+            // Scale amplitudes to physical dimensions with visual floor
+            const bitDiameter = this._state.composition.pattern_settings.bit_diameter;
+            const visualFloorPct = this._state.composition.pattern_settings.visual_floor_pct;
+            const artFloor = maxAmplitudeLocal * visualFloorPct;
+            const physicalLimit = bitDiameter * 2.0;
+            const effectiveFloor = Math.max(artFloor, physicalLimit);
+            const scaledAmps = amps.map(a => Math.max(a * maxAmplitudeLocal, effectiveFloor));
             this._state = {
               ...this._state,
               composition: {

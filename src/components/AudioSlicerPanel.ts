@@ -357,7 +357,7 @@ export class AudioSlicerPanel implements PanelComponent {
         const durationText = this._audioBuffer 
           ? this._formatTime(this._audioBuffer.duration) 
           : '--:--';
-        this._songDurationEl.textContent = `${durationText} Â· ${this._audioBuffer ? 'Ready' : 'Re-upload to Edit'}`;
+        this._songDurationEl.textContent = `${durationText} \u00B7 ${this._audioBuffer ? 'Ready' : 'Re-upload to Edit'}`;
       }
     }
   }
@@ -437,11 +437,11 @@ export class AudioSlicerPanel implements PanelComponent {
         </button>
         <button class="slicer-mark-btn slicer-btn-mark-start" data-demo-id="slicer_start">
           <span class="slicer-mark-btn-label">Start Here</span>
-          <span class="slicer-mark-btn-time">â€”</span>
+          <span class="slicer-mark-btn-time">\u2014</span>
         </button>
         <button class="slicer-mark-btn slicer-btn-mark-end" data-demo-id="slicer_end">
           <span class="slicer-mark-btn-label">End Here</span>
-          <span class="slicer-mark-btn-time">â€”</span>
+          <span class="slicer-mark-btn-time">\u2014</span>
         </button>
         <button class="slicer-btn-reset" title="Reset to full song">Reset</button>
       </div>
@@ -646,7 +646,7 @@ export class AudioSlicerPanel implements PanelComponent {
     if (this._markStart === null || this._markEnd === null) return null;
     const start = Math.min(this._markStart, this._markEnd);
     const end = Math.max(this._markStart, this._markEnd);
-    return `${this._formatTime(start)} â†’ ${this._formatTime(end)}`;
+    return `${this._formatTime(start)} \u2192 ${this._formatTime(end)}`;
   }
 	
 	/**
@@ -736,14 +736,14 @@ export class AudioSlicerPanel implements PanelComponent {
       
       if (statusEl) {
         statusEl.textContent = result.status === 'fallback' 
-          ? `âš  ${result.exponent}` 
-          : `âœ“ ${result.exponent}`;
+          ? `\u26A0  ${result.exponent}` 
+          : `\u2713 ${result.exponent}`;
         statusEl.className = `slicer-optimize-status ${result.status}`;
       }
     } catch (error) {
       console.error('[AudioSlicerPanel] Optimization failed:', error);
       if (statusEl) {
-        statusEl.textContent = 'âœ— Error';
+        statusEl.textContent = '\u2717 Error';
         statusEl.className = 'slicer-optimize-status error';
       }
     } finally {
@@ -833,7 +833,7 @@ export class AudioSlicerPanel implements PanelComponent {
       this._dropContent?.classList.add('hidden');
       this._songLoaded?.classList.add('visible');
       if (this._songNameEl) this._songNameEl.textContent = this._originalFile.name;
-      if (this._songDurationEl) this._songDurationEl.textContent = `${this._formatTime(this._audioBuffer.duration)} Â· Ready`;
+      if (this._songDurationEl) this._songDurationEl.textContent = `${this._formatTime(this._audioBuffer.duration)} \u00B7 Ready`;
     }
   }
 	
@@ -938,7 +938,7 @@ export class AudioSlicerPanel implements PanelComponent {
       
       // Update song loaded display
       if (this._songNameEl) this._songNameEl.textContent = file.name;
-      if (this._songDurationEl) this._songDurationEl.textContent = `${this._formatTime(this._audioBuffer.duration)} Â· Ready`;
+      if (this._songDurationEl) this._songDurationEl.textContent = `${this._formatTime(this._audioBuffer.duration)} \u00B7 Ready`;
       
       // Show song footer with buttons
       const songFooter = this._container?.querySelector('.slicer-song-footer') as HTMLElement;
@@ -1308,9 +1308,9 @@ export class AudioSlicerPanel implements PanelComponent {
     
     if (this._markStart !== null && this._markEnd !== null) {
       const duration = Math.round(this._markEnd - this._markStart);
-      this._selectionValueEl.textContent = `${this._formatTime(this._markStart)} â†’ ${this._formatTime(this._markEnd)} (${duration}s)`;
+      this._selectionValueEl.textContent = `${this._formatTime(this._markStart)} \u2192 ${this._formatTime(this._markEnd)} (${duration}s)`;
     } else if (this._markStart !== null) {
-      this._selectionValueEl.textContent = `${this._formatTime(this._markStart)} â†’ ...`;
+      this._selectionValueEl.textContent = `${this._formatTime(this._markStart)} \u2192 ...`;
     } else {
       this._selectionValueEl.textContent = 'Full track';
     }
@@ -1418,11 +1418,11 @@ export class AudioSlicerPanel implements PanelComponent {
     
     this._isPreviewing = true;
     const btn = previewBtn;
-    if (btn) btn.textContent = 'âšâš Pause';
+    if (btn) btn.textContent = '\u23F8\u23F8 Pause';
     
     this._sourceNode.onended = () => {
       this._isPreviewing = false;
-      if (btn) btn.textContent = 'â–¶ Preview';
+      if (btn) btn.textContent = '\u25B6 Preview';
     };
   }
   private async _previewWithProcessing(previewBtn: HTMLButtonElement | null): Promise<void> {
@@ -1430,7 +1430,7 @@ export class AudioSlicerPanel implements PanelComponent {
     
     this._isProcessing = true;
     const btn = previewBtn;
-    if (btn) btn.textContent = 'â³ Processing...';
+    if (btn) btn.textContent = '\u23F3 Processing...';
     
     try {
       // Build source audio
@@ -1476,12 +1476,12 @@ export class AudioSlicerPanel implements PanelComponent {
       this._isProcessing = false;
       this._pausedAt = 0;
       this._playStartedAt = this._audioContext!.currentTime;
-      if (btn) btn.textContent = 'âšâš Pause';
+      if (btn) btn.textContent = '\u23F8\u23F8 Pause';
       
     } catch (error) {
       console.error('[AudioSlicerPanel] Preview processing failed:', error);
       this._isProcessing = false;
-      if (btn) btn.textContent = 'â–¶ Preview';
+      if (btn) btn.textContent = '\u25B6 Preview';
     }
   }
 	
@@ -1534,7 +1534,7 @@ export class AudioSlicerPanel implements PanelComponent {
       this._initAudioContext();
       this._rawVocalsBuffer = await this._audioContext!.decodeAudioData(arrayBuffer);
       
-      if (status) status.textContent = 'âœ“ Cached';
+      if (status) status.textContent = '\u2713 Cached';
       this._isProcessing = false;
       if (btn) btn.disabled = false;
       
@@ -1545,7 +1545,7 @@ export class AudioSlicerPanel implements PanelComponent {
       this._isProcessing = false;
       if (btn) btn.disabled = false;
       if (label) label.textContent = 'Process & Preview';
-      if (status) status.textContent = 'âœ— Failed';
+      if (status) status.textContent = '\u2717 Failed';
     }
   }
 
@@ -1777,7 +1777,7 @@ private async _processVocals(): Promise<void> {
       this._stopProgressTimer();
       const statusEl = this._trimmerSection?.querySelector('.slicer-vocals-status') as HTMLElement;
       if (statusEl) {
-        statusEl.textContent = 'âœ“';
+        statusEl.textContent = '\u2713';
         statusEl.style.color = '#27ae60';
       }
       
@@ -1791,7 +1791,7 @@ private async _processVocals(): Promise<void> {
       this._stopProgressTimer();
       const statusEl = this._trimmerSection?.querySelector('.slicer-vocals-status') as HTMLElement;
       if (statusEl) {
-        statusEl.textContent = 'âœ— failed';
+        statusEl.textContent = '\u2717 failed';
         statusEl.style.color = '#c0392b';
       }
     } finally {
@@ -1850,7 +1850,7 @@ private async _processVocals(): Promise<void> {
     }
     
     const previewBtn = this._container?.querySelector('.slicer-btn-preview') as HTMLButtonElement;
-    if (previewBtn) previewBtn.textContent = 'â–¶ Preview';
+    if (previewBtn) previewBtn.textContent = '\u25B6 Preview';
   }
   
   private _reset(): void {
@@ -2142,8 +2142,8 @@ private async _processVocals(): Promise<void> {
         audio_source: {
           ...currentState.composition.audio_source,
           use_stems: vocals,
-          start_time: vocals ? 0 : (this._markStart ?? 0),
-          end_time: vocals ? entry.duration : (this._markEnd ?? this._audioBuffer?.duration ?? 0)
+          start_time: this._markStart ?? 0,
+          end_time: this._markEnd ?? this._audioBuffer?.duration ?? 0
         },
         audio_processing: {
           ...currentState.composition.audio_processing,
@@ -2262,8 +2262,8 @@ private async _processVocals(): Promise<void> {
     const statusEl = this._trimmerSection?.querySelector('.slicer-optimize-status') as HTMLElement;
     if (statusEl) {
       statusEl.textContent = result.status === 'fallback'
-        ? `âš  ${result.exponent}`
-        : `âœ“ ${result.exponent}`;
+        ? `\u26A0  ${result.exponent}`
+        : `\u2713 ${result.exponent}`;
     }
     
     return result;
@@ -2290,8 +2290,8 @@ private async _processVocals(): Promise<void> {
       type: 'AUDIO_COMMIT',
       payload: {
         useSlice: vocalsAlreadyProcessed ? false : useSlice,
-        startTime: vocalsAlreadyProcessed ? 0 : this._markStart,
-        endTime: vocalsAlreadyProcessed ? (this._rawVocalsBuffer?.duration ?? this._markEnd) : this._markEnd,
+        startTime: this._markStart,
+        endTime: this._markEnd,
         isolateVocals: vocalsAlreadyProcessed ? false : isolateVocals,
         removeSilence: vocalsAlreadyProcessed ? false : removeSilence,
         silenceThreshold: audioProcessing?.silence_threshold,
@@ -2473,13 +2473,13 @@ private async _processVocals(): Promise<void> {
     const endBtn = this._trimmerSection.querySelector('.slicer-btn-mark-end');
     
     if (startTimeEl) {
-      startTimeEl.textContent = this._markStart !== null ? this._formatTime(this._markStart) : 'â€”';
+      startTimeEl.textContent = this._markStart !== null ? this._formatTime(this._markStart) : '\u2014';
     }
     if (startBtn) {
       startBtn.classList.toggle('marked', this._markStart !== null);
     }
     if (endTimeEl) {
-      endTimeEl.textContent = this._markEnd !== null ? this._formatTime(this._markEnd) : 'â€”';
+      endTimeEl.textContent = this._markEnd !== null ? this._formatTime(this._markEnd) : '\u2014';
     }
     if (endBtn) {
       endBtn.classList.toggle('marked', this._markEnd !== null);
@@ -2498,7 +2498,7 @@ private async _processVocals(): Promise<void> {
       const rangeEl = summary.querySelector('.slicer-summary-range');
       const durationEl = summary.querySelector('.slicer-summary-duration');
       
-      if (rangeEl) rangeEl.textContent = `${this._formatTime(start)} â†’ ${this._formatTime(end)}`;
+      if (rangeEl) rangeEl.textContent = `${this._formatTime(start)} \u2192 ${this._formatTime(end)}`;
       if (durationEl) {
         const mins = Math.floor(duration / 60);
         const secs = Math.floor(duration % 60);
