@@ -953,7 +953,7 @@ export class AudioSlicerPanel implements PanelComponent {
       this._resetState(skipAutoCommit);
       // Initialize selection to full track so handles are visible
       this._markStart = 0;
-      this._markEnd = this._audioBuffer.duration;
+      this._markEnd = Math.round(this._audioBuffer.duration);
       this._updateCommitButton();
       PerformanceMonitor.start('slicer_waveform_draw');
       this._drawWaveform();
