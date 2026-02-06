@@ -253,7 +253,8 @@ async def compress_silence(
 async def optimize_audio_settings(
     file: UploadFile = File(...),
     mode: str = Form(...),
-    num_slots: int = Form(...)
+    num_slots: int = Form(...),
+    isolate_vocals: bool = Form(False)
 ):
     """Analyze audio and return optimized processing settings."""
     if not file.filename:
@@ -276,6 +277,10 @@ async def optimize_audio_settings(
             print(f"[OPTIMIZER] Exp {log['exp']}: Score={log['score']:.3f} (Spread={log['spread']:.2f}, Brick={log['brick']:.2f}, Ghost={log['ghost']:.2f})")
         print(f"[OPTIMIZER] Selected: Exp={result['exponent']}, Status={result['status']}")
         print(f"[OPTIMIZER] Params: binning={result['binning_mode']}, filter={result['filter_amount']}, silence={result['remove_silence']}, thresh={result['silence_threshold']}, dur={result['silence_duration']}")
+        
+        # Silence removal only applies when demucs is active
+        if not isolate_vocals:
+            result['remove_silence'] = False
         
         return result
         

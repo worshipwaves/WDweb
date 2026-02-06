@@ -985,6 +985,10 @@ export class AudioSlicerPanel implements PanelComponent {
         
         // Auto-optimize with intent (no render), then commit
         this._lastOptimizeResult = await this._runOptimizationOnly(intent, 'optimize_initial');
+        const initComp = this._controller.createOptimizedComposition(this._lastOptimizeResult);
+        if (initComp) {
+          await this._controller.dispatch({ type: 'COMPOSITION_UPDATED', payload: initComp });
+        }
         await this._handleCommit();
         
         // Populate apply cache with initial upload result
@@ -1737,7 +1741,7 @@ private async _processVocals(): Promise<void> {
           rawSamples: new Float32Array(data.raw_samples),
           duration: data.duration
         });
-        this._fireBackgroundOptimize(vocalsKey, 'optimize_bg_vocals');
+        this._fireBackgroundOptimize(vocalsKey, 'optimize_bg_vocals', undefined, true);
         
         // Populate original (vocals=false) cache from backend-sourced pre-demucs samples
         if (data.raw_samples_original) {
@@ -1748,7 +1752,7 @@ private async _processVocals(): Promise<void> {
               rawSamples: new Float32Array(data.raw_samples_original),
               duration: data.duration_original ?? (vocalsEnd - vocalsStart)
             });
-            this._fireBackgroundOptimize(origKey, 'optimize_bg_original');
+            this._fireBackgroundOptimize(origKey, 'optimize_bg_original', undefined, false);
           }
         }
         
@@ -2074,7 +2078,11 @@ private async _processVocals(): Promise<void> {
       type: 'PROCESSING_UPDATE',
       payload: { stage: 'uploading', progress: 0, message: 'Processing audio...' }
     });
-    this._lastOptimizeResult = await this._runOptimizationOnly(undefined, 'optimize_miss');
+    this._lastOptimizeResult = await this._runOptimizationOnly(undefined, 'optimize_miss', vocals);
+    const missComp = this._controller.createOptimizedComposition(this._lastOptimizeResult);
+    if (missComp) {
+      await this._controller.dispatch({ type: 'COMPOSITION_UPDATED', payload: missComp });
+    }
     await this._handleCommit();
     
     // Populate cache after commit completes
@@ -2206,13 +2214,13 @@ private async _processVocals(): Promise<void> {
   /**
    * Fire background optimize for a cache entry. Fire-and-forget with tracked promise.
    */
-  private _fireBackgroundOptimize(cacheKey: string, perfLabel: string = 'optimize_bg', intentOverride?: 'music' | 'speech'): void {
+  private _fireBackgroundOptimize(cacheKey: string, perfLabel: string = 'optimize_bg', intentOverride?: 'music' | 'speech', vocalsOverride?: boolean): void {
     const entry = this._applyCache.get(cacheKey);
     if (!entry || entry.status !== 'samples_ready') return;
     
     entry.status = 'optimize_pending';
     
-    const promise = this._runOptimizationOnly(intentOverride, perfLabel)
+    const promise = this._runOptimizationOnly(intentOverride, perfLabel, vocalsOverride)
       .then(result => {
         const current = this._applyCache.get(cacheKey);
         if (current && current.optimizePromise === promise) {
@@ -2234,7 +2242,7 @@ private async _processVocals(): Promise<void> {
    * Run optimize endpoint and return result WITHOUT rendering.
    * Decoupled from handleCompositionUpdate to prevent stale intermediate renders.
    */
-  private async _runOptimizationOnly(intentOverride?: 'music' | 'speech', perfLabel: string = 'optimize_api_roundtrip'): Promise<OptimizationResult> {
+  private async _runOptimizationOnly(intentOverride?: 'music' | 'speech', perfLabel: string = 'optimize_api_roundtrip', vocalsOverride?: boolean): Promise<OptimizationResult> {
     if (!this._originalFile) {
       throw new Error('No audio file loaded');
     }
@@ -2247,6 +2255,9 @@ private async _processVocals(): Promise<void> {
     const intent = intentOverride || intentRadio?.value || 'music';
     formData.append('mode', intent);
     formData.append('num_slots', String(this._controller.getState()?.composition.pattern_settings.number_slots || 48));
+		
+		const vocals = vocalsOverride ?? (this._isolateVocals || this._isolateCheckbox?.checked || false);
+    formData.append('isolate_vocals', String(vocals));
     
     PerformanceMonitor.start(perfLabel);
     const response = await fetch(`${getApiBaseUrl()}/api/audio/optimize`, {
