@@ -189,7 +189,8 @@ export class SceneManager {
         this._camera.alpha = Math.PI / 2;
         this._camera.beta = Math.PI / 2;
         this._camera.setTarget(Vector3.Zero());
-        
+				
+				this._canvas.style.touchAction = 'none';
         // Add pointer events for turntable drag
         this._canvas.addEventListener('pointerdown', this._onTurntablePointerDown);
         this._canvas.addEventListener('pointermove', this._onTurntablePointerMove);
@@ -209,6 +210,8 @@ export class SceneManager {
             // Reset pole rotation so next enable starts fresh
             this._turntablePole.rotation = Vector3.Zero();
         }
+				
+				this._canvas.style.touchAction = '';
         
         // Remove turntable event listeners
         this._canvas.removeEventListener('pointerdown', this._onTurntablePointerDown);
