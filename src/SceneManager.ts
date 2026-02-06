@@ -190,12 +190,12 @@ export class SceneManager {
         this._camera.beta = Math.PI / 2;
         this._camera.setTarget(Vector3.Zero());
 				
-				this._canvas.style.touchAction = 'none';
         // Add pointer events for turntable drag
         this._canvas.addEventListener('pointerdown', this._onTurntablePointerDown);
         this._canvas.addEventListener('pointermove', this._onTurntablePointerMove);
         this._canvas.addEventListener('pointerup', this._onTurntablePointerUp);
-        this._canvas.addEventListener('pointerleave', this._onTurntablePointerUp);
+        this._canvas.addEventListener('pointerleave', this._onTurntablePointerUp);				
+				this._canvas.addEventListener('touchstart', this._onPreventDefault, { passive: false });
         
         // Allow zoom via wheel
         this._canvas.addEventListener('wheel', this._onTurntableWheel);
@@ -210,14 +210,13 @@ export class SceneManager {
             // Reset pole rotation so next enable starts fresh
             this._turntablePole.rotation = Vector3.Zero();
         }
-				
-				this._canvas.style.touchAction = '';
         
         // Remove turntable event listeners
         this._canvas.removeEventListener('pointerdown', this._onTurntablePointerDown);
         this._canvas.removeEventListener('pointermove', this._onTurntablePointerMove);
         this._canvas.removeEventListener('pointerup', this._onTurntablePointerUp);
         this._canvas.removeEventListener('pointerleave', this._onTurntablePointerUp);
+				this._canvas.removeEventListener('touchstart', this._onPreventDefault);
         this._canvas.removeEventListener('wheel', this._onTurntableWheel);
         
         // Detach camera controls for room views
@@ -284,6 +283,8 @@ export class SceneManager {
 						this._isDragging = false;
 				}
 		};
+		
+		private _onPreventDefault = (evt: Event): void => { evt.preventDefault(); };
     
     private _onTurntableWheel = (evt: WheelEvent): void => {
         evt.preventDefault();
