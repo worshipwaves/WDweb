@@ -539,6 +539,7 @@ def _create_area_light(
     direction = Vector((0, 0, 0)) - light.location
     light.rotation_euler = direction.to_track_quat('-Z', 'Y').to_euler()
     light.visible_glossy = visible_glossy
+    light.data.use_shadow = False
     
     print(f"  {name}: pos=({x:.1f}, {y:.1f}, {z:.1f}), size={size}, energy={energy:.0f}")
 
@@ -620,6 +621,48 @@ def create_environment_wall():
     wall.is_shadow_catcher = True
 
     return wall
+    
+def create_video_wall(bg_color_srgb=(0.953, 0.953, 0.945)):
+    """Shadow catcher wall composited over flat background color.
+    Renders shadows with transparency, then composites over #f3f3f1.
+    """
+    # Shadow catcher wall (same as stills)
+    bpy.ops.mesh.primitive_plane_add(size=1000, location=(0, 0.25, 0))
+    wall = bpy.context.active_object
+    wall.name = "Environment_Wall"
+    wall.rotation_euler = (math.radians(90), 0, 0)
+    wall.is_shadow_catcher = True
+
+    # Enable compositor
+    scene = bpy.context.scene
+    scene.use_nodes = True
+    scene.render.film_transparent = True
+
+    tree = scene.node_tree
+    tree.nodes.clear()
+
+    # Render Layers input
+    rl = tree.nodes.new('CompositorNodeRLayers')
+    rl.location = (0, 0)
+
+    # Flat background color
+    bg = tree.nodes.new('CompositorNodeRGB')
+    bg.location = (0, -200)
+    bg.outputs[0].default_value = (*bg_color_srgb, 1.0)
+
+    # Alpha Over: composites transparent render over flat color
+    alpha_over = tree.nodes.new('CompositorNodeAlphaOver')
+    alpha_over.location = (300, 0)
+
+    # Output
+    composite = tree.nodes.new('CompositorNodeComposite')
+    composite.location = (600, 0)
+
+    tree.links.new(bg.outputs[0], alpha_over.inputs[1])               # Background
+    tree.links.new(rl.outputs['Image'], alpha_over.inputs[2])         # Foreground
+    tree.links.new(alpha_over.outputs[0], composite.inputs[0])
+
+    return wall 
     
     
 def get_camera_distance(subject_dimension: float, lens_mm: float = 50.0) -> float:
@@ -832,9 +875,11 @@ def setup_camera_closeup(meshes: list, config: dict, slot_index: int = None):
 
 def setup_animated_camera(meshes: list, frames: int = 90):
     """
-    Pivot-based camera orbiting panel. Simulates gallery walk.
-    Camera maintains constant distance via pivot rotation.
+    Gallery walk video: camera orbits panel on center pivot, ±swing°.
+    Same architecture as turntable — panel stays centered in frame.
     """
+    swing_angle = 35
+
     # Get panel bounds
     min_coord = Vector((float('inf'), float('inf'), float('inf')))
     max_coord = Vector((float('-inf'), float('-inf'), float('-inf')))
@@ -844,15 +889,22 @@ def setup_animated_camera(meshes: list, frames: int = 90):
             for vert in mesh.bound_box:
                 world_vert = mesh.matrix_world @ Vector(vert)
                 min_coord.x = min(min_coord.x, world_vert.x)
+                min_coord.y = min(min_coord.y, world_vert.y)
                 min_coord.z = min(min_coord.z, world_vert.z)
                 max_coord.x = max(max_coord.x, world_vert.x)
+                max_coord.y = max(max_coord.y, world_vert.y)
                 max_coord.z = max(max_coord.z, world_vert.z)
 
-    panel_width = max_coord.x - min_coord.x
-    panel_height = max_coord.z - min_coord.z
-    max_dimension = max(panel_width, panel_height)
+    center = (min_coord + max_coord) / 2
+    size = max_coord - min_coord
+    max_dimension = max(size.x, size.z)
 
-    # Create camera
+    # Camera pivot at panel center
+    pivot = bpy.data.objects.new('CameraPivot', None)
+    pivot.location = (center.x, center.y, center.z)
+    bpy.context.collection.objects.link(pivot)
+
+    # Camera setup
     cam_data = bpy.data.cameras.new('VideoCamera')
     cam_obj = bpy.data.objects.new('VideoCamera', cam_data)
     bpy.context.collection.objects.link(cam_obj)
@@ -861,67 +913,34 @@ def setup_animated_camera(meshes: list, frames: int = 90):
     cam_data.lens = 50
     cam_data.dof.use_dof = False
 
-    # Use SSOT for distance
     distance = get_camera_distance(max_dimension, cam_data.lens)
-    distance *= 1.05  # 5% safety buffer for perspective distortion
 
-    # Create focus target (point camera looks at)
-    focus_target = bpy.data.objects.new('FocusTarget', None)
-    bpy.context.collection.objects.link(focus_target)
-
-    # Create camera pivot (invisible person walking)
-    pivot = bpy.data.objects.new('CameraPivot', None)
-    bpy.context.collection.objects.link(pivot)
-    pivot.location = (0, 0, 0)
-
-    # Parent camera to pivot, place in front
+    # Parent camera to pivot, fixed forward orientation
     cam_obj.parent = pivot
     cam_obj.location = (0, -distance, 0)
+    cam_obj.rotation_euler = (math.radians(90), 0, 0)
 
-    # Track-to constraint
-    track = cam_obj.constraints.new(type='TRACK_TO')
-    track.target = focus_target
-    track.track_axis = 'TRACK_NEGATIVE_Z'
-    track.up_axis = 'UP_Y'
-
-    # Animation settings
+    # Animation: ping-pong swing
     scene = bpy.context.scene
     scene.frame_start = 1
-    scene.frame_end = frames + 15  # Buffer for ping-pong
-
-    # Gallery walk: ping-pong loop (left -> right -> left)
+    scene.frame_end = frames + 15
     mid_frame = (frames + 15) // 2
 
-    # Pivot rotation: -35° -> +35° -> -35°
-    pivot.rotation_euler = (0, 0, math.radians(-35))
+    pivot.rotation_euler = (0, 0, math.radians(-swing_angle))
     pivot.keyframe_insert(data_path='rotation_euler', frame=1)
-    pivot.rotation_euler = (0, 0, math.radians(35))
+    pivot.rotation_euler = (0, 0, math.radians(swing_angle))
     pivot.keyframe_insert(data_path='rotation_euler', frame=mid_frame)
-    pivot.rotation_euler = (0, 0, math.radians(-35))
+    pivot.rotation_euler = (0, 0, math.radians(-swing_angle))
     pivot.keyframe_insert(data_path='rotation_euler', frame=frames + 15)
 
-    # Focus target: scan 25% width (left -> right -> left)
-    focus_target.location = (-panel_width * 0.25, 0, 0)
-    focus_target.keyframe_insert(data_path='location', frame=1)
-    focus_target.location = (panel_width * 0.25, 0, 0)
-    focus_target.keyframe_insert(data_path='location', frame=mid_frame)
-    focus_target.location = (-panel_width * 0.25, 0, 0)
-    focus_target.keyframe_insert(data_path='location', frame=frames + 15)
-
     # Smooth interpolation
-    for obj in [pivot, focus_target]:
-        if obj.animation_data and obj.animation_data.action:
-            for fc in obj.animation_data.action.fcurves:
-                for kp in fc.keyframe_points:
-                    kp.interpolation = 'BEZIER'
-                    kp.easing = 'EASE_IN_OUT'
+    if pivot.animation_data and pivot.animation_data.action:
+        for fc in pivot.animation_data.action.fcurves:
+            for kp in fc.keyframe_points:
+                kp.interpolation = 'BEZIER'
+                kp.easing = 'EASE_IN_OUT'
 
-    # Loop-safe settings
-    scene.use_preview_range = True
-    scene.frame_preview_start = 1
-    scene.frame_preview_end = frames
-
-    print(f"  Video: {frames} frames, distance: {distance:.1f}")
+    print(f"  Video: {frames} frames, ±{swing_angle}°, distance: {distance:.1f}")
     return cam_obj
 
 
@@ -1283,7 +1302,7 @@ def main():
         # === VIDEO MODE ===
         if render_mode == 'video':
             video_frames = frames or 90
-            create_environment_wall()
+            create_video_wall()
             setup_animated_camera(meshes, video_frames)
             
             video_output = output_file.parent / f"{output_file.stem}_video.mp4" if not batch else output_file.parent / "video.mp4"
