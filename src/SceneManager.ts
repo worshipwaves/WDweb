@@ -2136,13 +2136,20 @@ export class SceneManager {
 						const grainDirection = matConfig?.grain_direction || 'vertical';
 						
 						// Compute grain angle (same as applySectionMaterials)
-						const grainAngle = calculateGrainAngle(
+						let grainAngle = calculateGrainAngle(
 								grainDirection as 'horizontal' | 'vertical' | 'radiant' | 'diamond',
 								index,
 								this._sectionMeshes.length,
 								this._controller.getWoodMaterialsConfig(),
 								this._currentCSGData
 						);
+						
+						// Blender applies grain angles directly without coordinate system offset.
+						// calculateGrainAngle() adds +90° for rectangular panels (needed for BJS rendering).
+						// Remove that offset for all grain directions in the Blender export.
+						if (this._currentCSGData?.csg_data?.panel_config?.shape === 'rectangular') {
+								grainAngle = (grainAngle - 90 + 360) % 360;
+						}
 						
 						sectionMaterials.push({
 								section_id: index,
@@ -2174,6 +2181,8 @@ export class SceneManager {
         const dummyMat = new StandardMaterial('export_dummy', this._scene);
         dummyMat.diffuseColor = new Color3(0.5, 0.5, 0.5);
         dummyMat.specularColor = new Color3(0, 0, 0);
+				
+				const backingMaterialExport = this._getBackingMaterialExport();
 
         exportMeshes.forEach(mesh => {
             originalParents.push(mesh.parent as TransformNode | null);
@@ -2208,7 +2217,7 @@ export class SceneManager {
 								panel_config: this._currentCSGData.csg_data.panel_config,
 								section_materials: sectionMaterials,
 								backing_enabled: this._backingMeshes && this._backingMeshes.length > 0,
-								backing_material: (this._currentCSGData.backing_parameters as BackingParameters | undefined)?.material_properties
+								backing_material: backingMaterialExport
 						};
 
 						return { glb: glbBlob, config };
@@ -2252,5 +2261,37 @@ export class SceneManager {
 						console.error('[SceneManager] Export failed:', error);
 						throw error;
 				}
-		}	
+		}
+
+		private _getBackingMaterialExport(): object | undefined {
+				if (!this._backingMeshes || this._backingMeshes.length === 0) return undefined;
+				
+				const mat = this._backingMeshes[0].material as PBRMaterial | StandardMaterial | null;
+				if (!mat) return undefined;
+				
+				const result: Record<string, any> = {
+						id: mat.name,
+						roughness: (mat as any).roughness ?? 0.2,
+						metallic: (mat as any).metallic ?? 0
+				};
+				
+				// Capture texture path if present
+				const albedoTex = (mat as any).albedoTexture;
+				if (albedoTex?.name) {
+						result.type = 'textured';
+						result.diffuse_texture = albedoTex.name;
+				} else {
+						result.type = 'solid';
+						const color = (mat as any).albedoColor || (mat as any).diffuseColor;
+						if (color) {
+								result.color_rgb = [
+										Math.round(color.r * 255),
+										Math.round(color.g * 255),
+										Math.round(color.b * 255)
+								];
+						}
+				}
+				
+				return result;
+		}
 }

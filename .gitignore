@@ -184,3 +184,5 @@ node_modules/
 combined_files/
 public/assets/textures/wood
 temp/
+blender/
+dev_utils/
