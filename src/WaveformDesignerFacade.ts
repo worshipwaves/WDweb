@@ -47,7 +47,7 @@ export type Action =
   | { type: 'DEMUCS_COMPLETED'; payload: CompositionStateDTO }
   | { type: 'STATE_RESTORED'; payload: ApplicationState }
   | { type: 'COMPOSITION_UPDATED'; payload: CompositionStateDTO }
-	| { type: 'AUDIO_COMMIT'; payload: { useSlice: boolean; startTime: number | null; endTime: number | null; isolateVocals: boolean; removeSilence: boolean; silenceThreshold: number; silenceMinDuration: number; sliceBlob: Blob | null; originalFile?: File } }
+	| { type: 'AUDIO_COMMIT'; payload: { useSlice: boolean; startTime: number | null; endTime: number | null; isolateVocals: boolean; removeSilence: boolean; silenceThreshold: number; silenceMinDuration: number; demucsSilenceThreshold: number; demucsSilenceDuration: number; sliceBlob: Blob | null; originalFile?: File } }
   | { 
       type: 'FILE_PROCESSING_SUCCESS'; 
       payload: { 
@@ -429,7 +429,8 @@ export class WaveformDesignerFacade {
       ...merged,
       composition: {
         ...merged.composition,
-        audio_processing: systemDefaults.audio_processing
+        audio_processing: systemDefaults.audio_processing,
+        pattern_settings: freshDefaults.composition.pattern_settings
       }
     };
   }

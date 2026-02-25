@@ -829,6 +829,11 @@ export class ApplicationController {
     startTime: number | null;
     endTime: number | null;
     isolateVocals: boolean;
+    removeSilence: boolean;
+    silenceThreshold: number;
+    silenceMinDuration: number;
+    demucsSilenceThreshold: number;
+    demucsSilenceDuration: number;
     sliceBlob: Blob | null;
     originalFile?: File;
   }): Promise<void> {
@@ -864,6 +869,8 @@ export class ApplicationController {
       formData.append('remove_silence', String(payload.removeSilence));
       formData.append('silence_threshold', String(payload.silenceThreshold));
       formData.append('silence_min_duration', String(payload.silenceMinDuration));
+			formData.append('demucs_silence_threshold', String(payload.demucsSilenceThreshold));
+      formData.append('demucs_silence_duration', String(payload.demucsSilenceDuration));
       
       // Send timing if we are using the original file to ensure backend handles slicing (parity)
       const isOriginal = audioFile === payload.originalFile;
@@ -883,10 +890,15 @@ export class ApplicationController {
         throw new Error(`Audio processing failed: ${response.status}`);
       }
       
-      // Get processed audio blob
-      const processedBlob = await response.blob();
       PerformanceMonitor.end('commit_network_roundtrip');
-      const processedFile = new File([processedBlob], 'processed.wav', { type: 'audio/wav' });
+      let processedFile: File;
+      if (payload.isolateVocals) {
+        const data = await response.json() as { audio_base64: string; raw_samples: number[]; duration: number };
+        const audioBytes = Uint8Array.from(atob(data.audio_base64), c => c.charCodeAt(0));
+        processedFile = new File([audioBytes], 'processed.wav', { type: 'audio/wav' });
+      } else {
+        processedFile = new File([await response.blob()], 'processed.wav', { type: 'audio/wav' });
+      }
       
       // PARITY FIX: The file is already processed (silence removed).
       // Update state snapshot to prevent double-processing in the main pipeline.

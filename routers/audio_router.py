@@ -301,6 +301,8 @@ async def process_audio_commit(
     remove_silence: bool = Form(False),
     silence_threshold: float = Form(-40.0),
     silence_min_duration: float = Form(1.0),
+    demucs_silence_threshold: float = Form(None),
+    demucs_silence_duration: float = Form(None),
     start_time: float | None = Form(None),
     end_time: float | None = Form(None)
 ):
@@ -333,6 +335,8 @@ async def process_audio_commit(
                 working_path = slice_path
         
         print(f"[DEBUG] isolate_vocals={isolate_vocals}, remove_silence={remove_silence}")
+        print(f"[DEMUCS-PARAMS] received: threshold={demucs_silence_threshold}, duration={demucs_silence_duration}")
+        print(f"[DEMUCS-PARAMS] config:   threshold={_audio_config.demucs_silence_threshold}, duration={_audio_config.demucs_silence_duration}")
         
         # Process based on options
         demucs_time = 0.0
@@ -373,15 +377,12 @@ async def process_audio_commit(
                     input_path=working_path
                 )
             
-            # PyQt parity: Silence removal is decoupled, apply if requested
-            if remove_silence:
-                output_path = _demucs.compress_silence_only(
-                    input_path=vocals_path,
-                    threshold_db=_audio_config.demucs_silence_threshold,
-                    min_duration=_audio_config.demucs_silence_duration
-                )
-            else:
-                output_path = vocals_path
+            # PyQt parity: Silence removal is decoupled, always apply for demucs path
+            output_path = _demucs.compress_silence_only(
+                input_path=vocals_path,
+                threshold_db=demucs_silence_threshold if demucs_silence_threshold is not None else _audio_config.demucs_silence_threshold,
+                min_duration=demucs_silence_duration if demucs_silence_duration is not None else _audio_config.demucs_silence_duration
+            )
         elif remove_silence:
             output_path = _demucs.compress_silence_only(
                 input_path=working_path,

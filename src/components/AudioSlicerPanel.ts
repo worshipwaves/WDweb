@@ -2018,7 +2018,11 @@ private async _processVocals(): Promise<void> {
   }
 	
   private _getApplyCacheKey(start: number, end: number, vocals: boolean): string {
-    return `${Math.round(start)}:${Math.round(end)}:${vocals}`;
+    const ap = this._controller.getState()?.composition.audio_processing;
+    const demucsSuffix = vocals
+      ? `:${ap?.demucs_silence_threshold}:${ap?.demucs_silence_duration}`
+      : '';
+    return `${Math.round(start)}:${Math.round(end)}:${vocals}${demucsSuffix}`;
   }
 
   /**
@@ -2029,7 +2033,7 @@ private async _processVocals(): Promise<void> {
     PerformanceMonitor.start('handle_apply');
     const vocals = this._isolateVocals || this._isolateCheckbox?.checked || false;
     const start = this._markStart ?? 0;
-    const end = this._markEnd ?? this._audioBuffer?.duration ?? 0;
+    const end = Math.floor(this._markEnd ?? this._audioBuffer?.duration ?? 0);
     const key = this._getApplyCacheKey(start, end, vocals);
     const entry = this._applyCache.get(key);
     
@@ -2307,6 +2311,8 @@ private async _processVocals(): Promise<void> {
         removeSilence: vocalsAlreadyProcessed ? false : removeSilence,
         silenceThreshold: audioProcessing?.silence_threshold,
         silenceMinDuration: audioProcessing?.silence_duration,
+        demucsSilenceThreshold: audioProcessing?.demucs_silence_threshold,
+        demucsSilenceDuration: audioProcessing?.demucs_silence_duration,
         sliceBlob: null,
         originalFile: fileToSend
       }
