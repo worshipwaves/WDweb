@@ -378,8 +378,8 @@ export class AudioSlicerPanel implements PanelComponent {
   private _persistTrimState(): void {
     if (this._markStart !== null && this._markEnd !== null) {
       this._controller.updateAudioSourceState({
-        start_time: Math.min(this._markStart, this._markEnd),
-        end_time: Math.max(this._markStart, this._markEnd)
+        start_time: Math.floor(Math.min(this._markStart, this._markEnd)),
+        end_time: Math.floor(Math.max(this._markStart, this._markEnd))
       });
     }
   }
