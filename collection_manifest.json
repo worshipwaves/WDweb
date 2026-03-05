@@ -1,0 +1,122 @@
+[
+  {
+    "song_id": "all-hail-the-power-of-jesus-name",
+    "source_file": "all-hail-the-power-of-jesus-name.wav",
+    "intent": "music",
+    "slice_start": 22.0,
+    "slice_end": 60.0,
+    "demucs_version": "htdemucs"
+  },
+  {
+    "song_id": "amazing-grace",
+    "source_file": "amazing-grace.wav",
+    "intent": "music",
+    "slice_start": 21.0,
+    "slice_end": 54.0,
+    "demucs_version": "htdemucs"
+  },
+  {
+    "song_id": "be-thou-my-vision",
+    "source_file": "be-thou-my-vision.wav",
+    "intent": "music",
+    "slice_start": 19.0,
+    "slice_end": 51.0,
+    "demucs_version": "htdemucs"
+  },
+  {
+    "song_id": "blessed-assurance",
+    "source_file": "blessed-assurance.wav",
+    "intent": "music",
+    "slice_start": 21.0,
+    "slice_end": 90.0,
+    "demucs_version": "htdemucs"
+  },
+  {
+    "song_id": "come-thou-fount-of-every-blessing",
+    "source_file": "come-thou-fount-of-every-blessing.wav",
+    "intent": "music",
+    "slice_start": 12.0,
+    "slice_end": 53.0,
+    "demucs_version": "htdemucs"
+  },
+  {
+    "song_id": "come-thou-long-expected-jesus",
+    "source_file": "come-thou-long-expected-jesus.wav",
+    "intent": "music",
+    "slice_start": 14.0,
+    "slice_end": 61.0,
+    "demucs_version": "htdemucs"
+  },
+  {
+    "song_id": "crown-him-with-many-crowns",
+    "source_file": "crown-him-with-many-crowns.wav",
+    "intent": "music",
+    "slice_start": 14.0,
+    "slice_end": 62.0,
+    "demucs_version": "htdemucs"
+  },
+  {
+    "song_id": "great-is-thy-faithfulness",
+    "source_file": "great-is-thy-faithfulness.wav",
+    "intent": "music",
+    "slice_start": 12.0,
+    "slice_end": 94.0,
+    "demucs_version": "htdemucs"
+  },
+  {
+    "song_id": "holy-holy-holy",
+    "source_file": "holy-holy-holy.wav",
+    "intent": "music",
+    "slice_start": 14.0,
+    "slice_end": 62.0,
+    "demucs_version": "htdemucs"
+  },
+  {
+    "song_id": "how-great-thou-art",
+    "source_file": "how-great-thou-art.wav",
+    "intent": "music",
+    "slice_start": 15.0,
+    "slice_end": 77.0,
+    "demucs_version": "htdemucs"
+  },
+  {
+    "song_id": "it-is-well-with-my-soul",
+    "source_file": "it-is-well-with-my-soul.wav",
+    "intent": "music",
+    "slice_start": 3.0,
+    "slice_end": 69.0,
+    "demucs_version": "htdemucs"
+  },
+  {
+    "song_id": "my-hope-is-built-on-nothing-less",
+    "source_file": "my-hope-is-built-on-nothing-less.wav",
+    "intent": "music",
+    "slice_start": 42.0,
+    "slice_end": 77.0,
+    "demucs_version": "htdemucs"
+  },
+  {
+    "song_id": "to-god-be-the-glory",
+    "source_file": "to-god-be-the-glory.wav",
+    "intent": "music",
+    "slice_start": 27.0,
+    "slice_end": 86.0,
+    "demucs_version": "htdemucs"
+  },
+  {
+    "song_id": "turn-your-eyes-upon-jesus",
+    "source_file": "turn-your-eyes-upon-jesus.wav",
+    "intent": "music",
+    "slice_start": 14.0,
+    "slice_end": 69.0,
+    "demucs_version": "htdemucs"
+  },
+  {
+    "song_id": "when-i-survey-the-wondrous-cross",
+    "source_file": "when-i-survey-the-wondrous-cross.wav",
+    "intent": "music",
+    "slice_start": 21.0,
+    "slice_end": 58.0,
+    "demucs_version": "htdemucs"
+  }
+]

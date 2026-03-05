@@ -2136,12 +2136,19 @@ private async _processVocals(): Promise<void> {
       if (!patternSettings?.number_slots) {
         throw new Error('pattern_settings.number_slots is required');
       }
+			
+			const devOverrides = (window as any).__audioDevOverrides__;
+      const ap = currentState.composition.audio_processing;
+      const effectiveExponent    = devOverrides ? (ap.amplitude_exponent ?? entry.optimizeResult.exponent)    : entry.optimizeResult.exponent;
+      const effectiveFilterAmt   = devOverrides ? (ap.filter_amount      ?? entry.optimizeResult.filter_amount) : entry.optimizeResult.filter_amount;
+      const effectiveApplyFilter = devOverrides ? (ap.apply_filter       ?? (entry.optimizeResult.filter_amount > 0)) : entry.optimizeResult.filter_amount > 0;
+      const effectiveBinningMode = devOverrides ? (ap.binning_mode       ?? entry.optimizeResult.binning_mode) : entry.optimizeResult.binning_mode;
       
       const rebinnedAmplitudes = this._controller.audioCache.rebinFromCache(sessionId, {
         numSlots: patternSettings.number_slots,
-        binningMode: entry.optimizeResult.binning_mode as 'mean_abs' | 'min_max' | 'continuous',
-        exponent: entry.optimizeResult.exponent,
-        filterAmount: entry.optimizeResult.filter_amount
+        binningMode: effectiveBinningMode as 'mean_abs' | 'min_max' | 'continuous',
+        exponent: effectiveExponent,
+        filterAmount: effectiveApplyFilter ? effectiveFilterAmt : 0
       });
       
       if (!rebinnedAmplitudes) {
@@ -2159,17 +2166,17 @@ private async _processVocals(): Promise<void> {
         },
         audio_processing: {
           ...currentState.composition.audio_processing,
-          amplitude_exponent: entry.optimizeResult.exponent,
-          filter_amount: entry.optimizeResult.filter_amount,
-          apply_filter: entry.optimizeResult.filter_amount > 0,
-          binning_mode: entry.optimizeResult.binning_mode,
+          amplitude_exponent: effectiveExponent,
+          filter_amount: effectiveFilterAmt,
+          apply_filter: effectiveApplyFilter,
+          binning_mode: effectiveBinningMode,
           remove_silence: entry.optimizeResult.remove_silence,
           silence_threshold: entry.optimizeResult.silence_threshold,
           silence_duration: entry.optimizeResult.silence_duration
         },
         pattern_settings: {
           ...patternSettings,
-          amplitude_exponent: entry.optimizeResult.exponent
+          amplitude_exponent: effectiveExponent
         }
       };
       
@@ -2182,6 +2189,12 @@ private async _processVocals(): Promise<void> {
         updatedComposition, ['processed_amplitudes'], null
       );
       await this._controller.getSceneManager()?.renderComposition(csgResponse);
+			
+			this._controller.lastRenderedSnapshot = {
+        composition: JSON.parse(JSON.stringify(updatedComposition)),
+        rawSamples: new Float32Array(entry.rawSamples),
+        isolateVocals: vocals
+      };
       
       const exportBtn = this._trimmerSection?.querySelector('.slicer-btn-export') as HTMLButtonElement;
       if (exportBtn) exportBtn.disabled = false;
@@ -2572,6 +2585,65 @@ private async _processVocals(): Promise<void> {
    */
   public loadAudioFile(file: File, intent?: 'music' | 'speech'): void {
     void this._loadFile(file, false, intent);
+  }
+	
+	public async loadCollectionSamples(samples: Float32Array, title: string, samplesUrl: string, optimizeParams?: { exponent: number; filter_amount: number; binning_mode: string } | null): Promise<void> {
+    try {
+      const dummyFile = new File([new ArrayBuffer(8)], `${title}.wav`, { type: 'audio/wav' });
+      const sessionId = this._controller.audioCache.cacheRawSamples(dummyFile, samples);
+      const currentState = this._controller.getState();
+      if (!currentState) throw new Error('No state available');
+      const patternSettings = currentState.composition.pattern_settings;
+      if (!patternSettings?.number_slots) throw new Error('pattern_settings.number_slots is required');
+      const effectiveExponent = optimizeParams?.exponent ?? 1.0;
+      const effectiveFilter = optimizeParams?.filter_amount ?? 0;
+      const effectiveBinning = optimizeParams?.binning_mode ?? 'mean_abs';
+      const rebinnedAmplitudes = this._controller.audioCache.rebinFromCache(sessionId, {
+        numSlots: patternSettings.number_slots,
+        binningMode: effectiveBinning as 'mean_abs' | 'min_max' | 'continuous',
+        exponent: effectiveExponent,
+        filterAmount: effectiveFilter
+      });
+
+      if (!rebinnedAmplitudes) throw new Error('rebinFromCache returned null');
+
+      const updatedComposition = {
+        ...currentState.composition,
+        processed_amplitudes: Array.from(rebinnedAmplitudes),
+        audio_source: {
+          ...currentState.composition.audio_source,
+          source_file: title
+        },
+        audio_processing: {
+          ...currentState.composition.audio_processing,
+          amplitude_exponent: effectiveExponent,
+          filter_amount: effectiveFilter,
+          apply_filter: effectiveFilter > 0,
+          binning_mode: effectiveBinning
+        },
+        pattern_settings: {
+          ...patternSettings,
+          amplitude_exponent: effectiveExponent
+        }
+      };
+
+      await this._controller.dispatch({
+        type: 'AUDIO_SESSION_UPDATED',
+        payload: { audioSessionId: sessionId, composition: updatedComposition }
+      });
+
+      const csgResponse = await this._controller.getRoutedCSGData(
+        updatedComposition, ['processed_amplitudes'], null
+      );
+      await this._controller.getSceneManager()?.renderComposition(csgResponse);
+
+      await this._controller.dispatch({
+        type: 'PROCESSING_UPDATE',
+        payload: { stage: 'idle', progress: 100 }
+      });
+    } catch (error) {
+      console.error('[AudioSlicerPanel] loadCollectionSamples failed:', error);
+    }
   }
   
   /**

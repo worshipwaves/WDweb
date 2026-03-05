@@ -9,7 +9,8 @@ export interface CollectionCardConfig {
   id: string;
   title: string;
   subtitle?: string;
-  category: string;
+  category?: string;
+  thumbnail?: string | null;
   waveformThumbnail?: string;
   recordings: CollectionRecording[];
 }
@@ -74,10 +75,10 @@ export class AccordionCollectionCard implements PanelComponent {
     // Show version count or duration
     const meta = document.createElement('div');
     meta.className = 'collection-card-meta';
-    if (this._config.recordings.length > 1) {
-      meta.textContent = `${this._config.recordings.length} recordings`;
-    } else if (this._config.recordings.length === 1) {
-      meta.textContent = this._formatDuration(this._config.recordings[0].duration);
+    if (this._config.recordings.length === 1) {
+      meta.textContent = this._config.recordings[0].artifactName || '';
+    } else {
+      meta.textContent = `${this._config.recordings.length} hymns`;
     }
     info.appendChild(meta);
 

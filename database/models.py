@@ -163,6 +163,10 @@ class Archetype(Base):
     number_slots = Column(Integer, nullable=False)
     separation = Column(Float, default=0)
     side_margin = Column(Float)  # Only for linear slot styles
+    default_finish_x = Column(Float)
+    default_finish_y = Column(Float)
+    default_grain_direction = Column(String(20))
+    default_species = Column(String(50))
     sort_order = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())

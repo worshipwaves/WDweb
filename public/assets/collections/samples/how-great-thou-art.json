@@ -1,0 +1,13 @@
+{
+  "song_id": "how-great-thou-art",
+  "intent": "music",
+  "duration": 62.0,
+  "slice_start": 15.0,
+  "slice_end": 77.0,
+  "demucs_version": "htdemucs",
+  "processed_at": "2026-03-04T07:55:10.505001+00:00",
+  "sample_count": 200000,
+  "exponent": 0.5,
+  "filter_amount": 0.01,
+  "binning_mode": "mean_abs"
+}

@@ -5,6 +5,7 @@ import * as BABYLON from '@babylonjs/core';
 
 import { PlacementDebugPanel, DEBUG_PLACEMENT_PANEL } from '../dev_utils/PlacementDebugPanel';
 import { ShadowDebugPanel, DEBUG_SHADOW_PANEL } from '../dev_utils/ShadowDebugPanel';
+import { AudioDevPanel, DEBUG_AUDIO_PANEL } from '../dev_utils/AudioDevPanel';
 
 import { ApplicationController } from './ApplicationController';
 import type { AudioCacheService } from './AudioCacheService';
@@ -67,6 +68,11 @@ document.addEventListener('DOMContentLoaded', () => {
 			// Placement Debug Panel - toggle with Ctrl+Shift+P
 			if (DEBUG_PLACEMENT_PANEL) {
 				PlacementDebugPanel.init(sceneManager);
+			}
+			
+			// Audio Dev Panel - toggle with Ctrl+Shift+A
+			if (DEBUG_AUDIO_PANEL) {
+				AudioDevPanel.init(controller);
 			}
 
       // 4. Bootstrap the UI

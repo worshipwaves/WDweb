@@ -149,7 +149,11 @@ class DatabaseConfigService:
                 "available_grains": arch.available_grains,
                 "number_slots": arch.number_slots,
                 "separation": arch.separation,
-                **({"side_margin": arch.side_margin} if arch.side_margin is not None else {})
+                **({"side_margin": arch.side_margin} if arch.side_margin is not None else {}),
+                **({"default_finish_x": arch.default_finish_x} if arch.default_finish_x is not None else {}),
+                **({"default_finish_y": arch.default_finish_y} if arch.default_finish_y is not None else {}),
+                **({"default_grain_direction": arch.default_grain_direction} if arch.default_grain_direction is not None else {}),
+                **({"default_species": arch.default_species} if arch.default_species is not None else {}),
             }
     
     def get_archetypes(self) -> dict:

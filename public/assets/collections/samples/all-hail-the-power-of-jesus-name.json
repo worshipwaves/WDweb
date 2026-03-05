@@ -1,0 +1,13 @@
+{
+  "song_id": "all-hail-the-power-of-jesus-name",
+  "intent": "music",
+  "duration": 38.0,
+  "slice_start": 22.0,
+  "slice_end": 60.0,
+  "demucs_version": "htdemucs",
+  "processed_at": "2026-03-04T07:54:06.634879+00:00",
+  "sample_count": 200000,
+  "exponent": 0.9,
+  "filter_amount": 0.01,
+  "binning_mode": "mean_abs"
+}

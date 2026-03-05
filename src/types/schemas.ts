@@ -486,7 +486,8 @@ export const UIStateSchema = z.object({
   lockedAspectRatio: z.number().nullable().optional().default(null),
   selectedCollectionId: z.string().nullable().optional().default(null),
   selectedRecordingId: z.string().nullable().optional().default(null),
-  selectedArchetypeId: z.string().nullable().optional().default(null)
+  selectedArchetypeId: z.string().nullable().optional().default(null),
+  hasUserSelectedSpecies: z.boolean().optional().default(false)
 });
 
 export type UIState = z.infer<typeof UIStateSchema>;
@@ -494,10 +495,12 @@ export type UIState = z.infer<typeof UIStateSchema>;
 // Collections catalog schemas
 export const CollectionRecordingSchema = z.object({
   id: z.string(),
+  title: z.string().optional(),
+  artifactName: z.string().optional(),
   artist: z.string(),
   artistId: z.string().optional(),
-  duration: z.number(),
   url: z.string(),
+  samples_url: z.string().optional(),
   isDefault: z.boolean().optional()
 });
 
@@ -505,7 +508,9 @@ export const CollectionItemSchema = z.object({
   id: z.string(),
   title: z.string(),
   subtitle: z.string().optional(),
-  category: z.string(),
+  intent: z.enum(['music', 'speech']),
+  category: z.string().optional(),
+  thumbnail: z.string().nullable().optional(),
   waveformThumbnail: z.string().optional(),
   recordings: z.array(CollectionRecordingSchema)
 });

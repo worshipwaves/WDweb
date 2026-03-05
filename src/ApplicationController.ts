@@ -75,6 +75,10 @@ interface Archetype {
   number_slots: number;
   separation: number;
   side_margin?: number;
+  default_finish_x?: number;
+  default_finish_y?: number;
+  default_grain_direction?: string;
+  default_species?: string;
 }
 
 interface UIConfig {
@@ -291,6 +295,13 @@ export class ApplicationController {
   private _accordion: SubcategoryAccordion | null = null;
   private _accordionState: Record<string, Record<string, boolean>> = {};
 	private _audioSlicerPanel: import('./components/AudioSlicerPanel').AudioSlicerPanel | null = null;
+	
+	
+	public lastRenderedSnapshot: {
+    composition: import('./types/schemas').CompositionStateDTO;
+    rawSamples: Float32Array;
+    isolateVocals: boolean;
+  } | null = null;
 	
 	/**
    * Trigger export for production (called from Order button)
@@ -2104,21 +2115,7 @@ export class ApplicationController {
       }
     }
 
-    // Get active category filter
-    const filterKey = `${this._state.ui.activeCategory}_${this._state.ui.activeSubcategory}`;
-    const stateFilters = this._state.ui.filterSelections[filterKey] || {};
-    const activeFilter = stateFilters['collection_type']?.[0] || null;
-    
-    // Route to artist view if selected
-    if (activeFilter === 'artist') {
-      this._renderArtistCollections(container);
-      return;
-    }
-    
-    // Filter collections by category (show all if no filter active)
-    const collections = activeFilter
-      ? this._collectionsCatalog.collections.filter(c => c.category === activeFilter)
-      : this._collectionsCatalog.collections;
+    const collections = this._collectionsCatalog.collections;
     const selectedId = this._state?.ui.selectedCollectionId || null;
     const selectedRecId = this._state?.ui.selectedRecordingId || null;
 
@@ -2152,18 +2149,23 @@ export class ApplicationController {
     }
     
     const selectedCollection = collections.find(c => c.id === selectedId);
-    if (selectedCollection && selectedCollection.recordings.length > 1) {
+    if (selectedCollection) {
       const capturedCollectionId = selectedId!;
+      if (this._collectionVariantSelector) {
+        this._collectionVariantSelector.destroy();
+        this._collectionVariantSelector = null;
+      }
       this._collectionVariantSelector = new CollectionVariantSelector({
         recordings: selectedCollection.recordings,
         selectedRecordingId: selectedRecId,
+        intent: selectedCollection.intent,
         onSelect: (recordingId) => {
           void this._handleCollectionRecordingSelected(capturedCollectionId, recordingId);
         }
       });
       variantArea.appendChild(this._collectionVariantSelector.render());
     } else {
-      variantArea.innerHTML = '<div class="variant-selector-empty">Select a track above</div>';
+      variantArea.innerHTML = '<div class="variant-selector-empty">Select a collection above</div>';
     }
     
     container.appendChild(variantArea);
@@ -2326,6 +2328,7 @@ export class ApplicationController {
         this._collectionVariantSelector = new CollectionVariantSelector({
           recordings: collection.recordings,
           selectedRecordingId: null,
+          intent: collection.intent,
           onSelect: (recId) => {
             void this._handleCollectionRecordingSelected(collectionId, recId);
           }
@@ -2367,6 +2370,7 @@ export class ApplicationController {
       this._collectionVariantSelector = new CollectionVariantSelector({
         recordings: collection.recordings,
         selectedRecordingId: recordingId,
+        intent: collection.intent,
         onSelect: (recId) => {
           void this._handleCollectionRecordingSelected(collectionId, recId);
         }
@@ -2387,12 +2391,7 @@ export class ApplicationController {
       card.classList.toggle('selected', (card as HTMLElement).dataset.collectionId === collectionId);
     });
 
-    // Look up intent from category
-    const category = this._collectionsCatalog.categories.find(c => c.id === collection.category);
-    const intent = category?.intent || 'music';
-    
-    // Load audio file
-    await this._loadCollectionAudio(recording.url, collection.title, intent);
+    await this._loadCollectionAudio(recording.url, recording.samples_url || null, recording.title || collection.title, collection.intent);
 
     // Update accordion header
     if (this._accordion) {
@@ -2450,12 +2449,7 @@ export class ApplicationController {
       }
     };
 
-    // Look up intent from category
-    const category = this._collectionsCatalog.categories.find(c => c.id === collection.category);
-    const intent = category?.intent || 'music';
-    
-    // Load the new recording
-    await this._loadCollectionAudio(recording.url, collection.title, intent);
+    await this._loadCollectionAudio(recording.url, recording.samples_url || null, recording.title || collection.title, collection.intent);
     
     // Update accordion header
     if (this._accordion) {
@@ -2467,13 +2461,32 @@ export class ApplicationController {
    * Load audio from collection URL
    * @private
    */
-  private async _loadCollectionAudio(url: string, title: string, intent: 'music' | 'speech' = 'music'): Promise<void> {
+  private async _loadCollectionAudio(url: string, samplesUrl: string | null, title: string, intent: 'music' | 'speech'): Promise<void> {
     try {
+      // Bypass path: fetch pre-computed .bin and hydrate cache directly
+      if (samplesUrl) {
+        const binResponse = await fetch(samplesUrl);
+        if (binResponse.ok) {
+          const buffer = await binResponse.arrayBuffer();
+          const samples = new Float32Array(buffer);
+					const jsonUrl = samplesUrl.replace(/\.bin$/, '.json');
+          const jsonResponse = await fetch(jsonUrl);
+          const optimizeParams = jsonResponse.ok ? await jsonResponse.json() : null;
+          await this._ensureAudioSlicerPanel();
+          if (this._audioSlicerPanel) {
+            await this._audioSlicerPanel.loadCollectionSamples(samples, title, samplesUrl, optimizeParams);
+          }
+          return;
+        }
+        console.warn(`[Controller] .bin fetch failed for ${samplesUrl}, falling back to audio file`);
+      }
+
+      // Fallback path: load full audio file
       const response = await fetch(url);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       
       const blob = await response.blob();
-      const filename = url.split('/').pop() || `${title}.mp3`;
+      const filename = url.split('/').pop() || `${title}.wav`;
       const ext = filename.split('.').pop()?.toLowerCase();
       const mimeMap: Record<string, string> = {
         'mp3': 'audio/mpeg',
@@ -2481,13 +2494,9 @@ export class ApplicationController {
         'flac': 'audio/flac',
         'ogg': 'audio/ogg'
       };
-      const mimeType = blob.type || mimeMap[ext || ''] || 'audio/mpeg';
+      const mimeType = blob.type || mimeMap[ext || ''] || 'audio/wav';
       const file = new File([blob], filename, { type: mimeType });
-      
-      // Ensure AudioSlicerPanel exists
       await this._ensureAudioSlicerPanel();
-      
-      // Use existing AudioSlicerPanel to load
       if (this._audioSlicerPanel) {
         this._audioSlicerPanel.loadAudioFile(file, intent);
       }
@@ -3930,6 +3939,38 @@ export class ApplicationController {
         composition.pattern_settings.side_margin = archetype.side_margin;
       }
       
+      // Apply per-archetype default dimensions (database is source of truth)
+      if (archetype.default_finish_x !== undefined && archetype.default_finish_y !== undefined) {
+        composition.frame_design.finish_x = archetype.default_finish_x;
+        composition.frame_design.finish_y = archetype.default_finish_y;
+      }
+      
+      // Apply per-archetype default grain direction
+      if (archetype.default_grain_direction) {
+        composition.frame_design.section_materials = Array.from(
+          { length: archetype.number_sections },
+          (_, i) => ({
+            section_id: i,
+            species: composition.frame_design.section_materials?.[i]?.species
+              ?? composition.frame_design.section_materials?.[0]?.species
+              ?? this._woodMaterialsConfig?.default_species
+              ?? 'walnut-black-american',
+            grain_direction: archetype.default_grain_direction!,
+          })
+        );
+      }
+			
+			// Apply per-archetype default species when user hasn't explicitly chosen one
+      if (archetype.default_species && !this._state.ui.hasUserSelectedSpecies) {
+        const materials = composition.frame_design.section_materials || [];
+        composition.frame_design.section_materials = materials.map(m => ({
+          ...m,
+          species: archetype.default_species!,
+        }));
+      }
+      
+      // Set x_offset from constraints.json based on slot_style (single source of truth)
+      
       // Set x_offset from constraints.json based on slot_style (single source of truth)
       const slotStyleConstraints = this._constraints?.manufacturing?.slot_style?.[archetype.slot_style] as { x_offset?: number } | undefined;
       if (!slotStyleConstraints?.x_offset) {
@@ -3969,16 +4010,6 @@ export class ApplicationController {
         const newSize = Math.max(minAllowedSize, Math.min(smallerCurrentDim, maxAllowedSize));
         composition.frame_design.finish_x = newSize;
         composition.frame_design.finish_y = newSize;
-      }
-			
-			// CRITICAL: Apply placement defaults (composition_overrides) ONLY during archetype selection
-      // Background changes (handleBackgroundSelected) must NOT reapply these defaults to preserve user modifications
-      // Apply placement defaults (first visit only)
-      if (this._placementDefaults) {
-        const placementData = this._placementDefaults.archetypes?.[archetypeId]?.backgrounds?.[backgroundId];
-        if (placementData?.composition_overrides) {
-          composition = deepMerge(composition, placementData.composition_overrides);
-        }
       }
       
       // Cache the result
@@ -4336,6 +4367,11 @@ export class ApplicationController {
     value: string
   ): Promise<void> {
     if (!this._state) return;
+
+    // Mark that the user has explicitly chosen a species
+    if (property === 'species') {
+      this._state = { ...this._state, ui: { ...this._state.ui, hasUserSelectedSpecies: true } };
+    }
 
     // Create a new composition state immutably
     const newComposition = structuredClone(this._state.composition);

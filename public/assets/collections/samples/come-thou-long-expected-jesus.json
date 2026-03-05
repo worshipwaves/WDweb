@@ -1,0 +1,13 @@
+{
+  "song_id": "come-thou-long-expected-jesus",
+  "intent": "music",
+  "duration": 47.0,
+  "slice_start": 14.0,
+  "slice_end": 61.0,
+  "demucs_version": "htdemucs",
+  "processed_at": "2026-03-04T07:54:40.193992+00:00",
+  "sample_count": 200000,
+  "exponent": 0.6,
+  "filter_amount": 0.01,
+  "binning_mode": "mean_abs"
+}

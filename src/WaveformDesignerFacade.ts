@@ -173,7 +173,8 @@ export class WaveformDesignerFacade {
         id: backgroundsConfig.default_room
       },
       currentWallFinish: backgroundsConfig.default_wall_finish,
-      selectedArchetypeId: null
+      selectedArchetypeId: null,
+			hasUserSelectedSpecies: false
     },
     processing: {
       stage: 'idle',

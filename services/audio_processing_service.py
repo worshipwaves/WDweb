@@ -116,13 +116,15 @@ class AudioProcessingService:
         if current_len == num_amplitudes or current_len == 0:
             return y_work
         
-        # Resample to target size
+        # Resample to target size using interpolation for both up and downsampling.
+        # astype(int) on linspace indices causes duplicate integers at boundaries,
+        # producing num_amplitudes - 1 elements instead of num_amplitudes.
+        # np.interp guarantees exactly num_amplitudes outputs in all cases.
         target_indices = np.linspace(0, current_len - 1, num_amplitudes)
-
-        if current_len > num_amplitudes:
-            y_work = y_work[target_indices.astype(int)]
-        else:
-            y_work = np.interp(target_indices, np.arange(current_len), y_work)
+        y_work = np.interp(target_indices, np.arange(current_len), y_work)
+        
+        assert len(y_work) == num_amplitudes, \
+            f"extract_amplitudes output {len(y_work)} != {num_amplitudes}"
         
         return y_work
     

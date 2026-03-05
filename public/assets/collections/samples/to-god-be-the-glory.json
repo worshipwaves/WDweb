@@ -1,0 +1,13 @@
+{
+  "song_id": "to-god-be-the-glory",
+  "intent": "music",
+  "duration": 59.0,
+  "slice_start": 27.0,
+  "slice_end": 86.0,
+  "demucs_version": "htdemucs",
+  "processed_at": "2026-03-04T07:55:32.313047+00:00",
+  "sample_count": 200000,
+  "exponent": 1.0,
+  "filter_amount": 0.01,
+  "binning_mode": "mean_abs"
+}

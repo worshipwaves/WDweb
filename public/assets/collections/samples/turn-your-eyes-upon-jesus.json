@@ -1,0 +1,13 @@
+{
+  "song_id": "turn-your-eyes-upon-jesus",
+  "intent": "music",
+  "duration": 55.0,
+  "slice_start": 14.0,
+  "slice_end": 69.0,
+  "demucs_version": "htdemucs",
+  "processed_at": "2026-03-04T07:55:39.694907+00:00",
+  "sample_count": 200000,
+  "exponent": 0.6,
+  "filter_amount": 0.01,
+  "binning_mode": "mean_abs"
+}

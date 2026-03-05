@@ -6,6 +6,7 @@ import type { CollectionRecording } from '../types/schemas';
 export interface CollectionVariantSelectorProps {
   recordings: CollectionRecording[];
   selectedRecordingId: string | null;
+  intent: 'music' | 'speech';
   onSelect: (recordingId: string) => void;
 }
 
@@ -17,11 +18,13 @@ export class CollectionVariantSelector implements PanelComponent {
   private _container: HTMLElement | null = null;
   private _recordings: CollectionRecording[];
   private _selectedId: string | null;
+  private _intent: 'music' | 'speech';
   private _onSelect: (recordingId: string) => void;
 
   constructor(props: CollectionVariantSelectorProps) {
     this._recordings = props.recordings;
     this._selectedId = props.selectedRecordingId;
+    this._intent = props.intent;
     this._onSelect = props.onSelect;
   }
 
@@ -31,7 +34,7 @@ export class CollectionVariantSelector implements PanelComponent {
 
     const label = document.createElement('span');
     label.className = 'variant-selector-label';
-    label.textContent = 'recording:';
+    label.textContent = this._intent === 'speech' ? 'scripture:' : 'hymn:';
     container.appendChild(label);
 
     const chipContainer = document.createElement('div');
@@ -46,7 +49,7 @@ export class CollectionVariantSelector implements PanelComponent {
         chip.classList.add('selected');
       }
 
-      chip.textContent = rec.artist;
+      chip.textContent = rec.title || rec.artist;
 
       chip.addEventListener('click', () => {
         chipContainer.querySelectorAll('.variant-chip').forEach(c => {
