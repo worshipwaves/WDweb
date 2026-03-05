@@ -185,5 +185,6 @@ combined_files/
 public/assets/textures/wood
 temp/
 blender/
-dev_utils/
+dev_utils/mockup_layers
+dev_utils/mockup_outputs
 renders/
