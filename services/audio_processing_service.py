@@ -19,6 +19,7 @@ import numpy as np
 from typing import Tuple, Dict, Any, List, Optional
 from enum import Enum
 from pathlib import Path
+import soundfile as sf
 import tempfile
 import os
 import subprocess
@@ -266,11 +267,14 @@ class AudioProcessingService:
         
         # Convert to WAV if not already (eliminates decoder variance)
         if not audio_path.lower().endswith('.wav'):
-            import soundfile as sf
-            print(f"[PARITY-WEB] Converting {audio_path} to WAV for decoder parity...")
-            y_convert, sr_convert = librosa.load(audio_path, sr=target_sr, mono=True)
+            import subprocess
             wav_path = audio_path.rsplit('.', 1)[0] + '_converted.wav'
-            sf.write(wav_path, y_convert, sr_convert)
+            print(f"[PARITY-WEB] Converting {audio_path} to WAV via ffmpeg...")
+            subprocess.run([
+                'ffmpeg', '-y', '-i', audio_path,
+                '-ar', str(target_sr), '-ac', '1', '-sample_fmt', 's16',
+                wav_path
+            ], capture_output=True, check=True)
             audio_path = wav_path
             print(f"[PARITY-WEB] Converted to: {wav_path}")
         
@@ -303,7 +307,9 @@ class AudioProcessingService:
         else:
             # Load full file (no slicing)
             try:
-                audio_data, sample_rate = librosa.load(working_path, sr=target_sr, mono=True)
+                audio_data, sample_rate = sf.read(working_path, dtype='float32')
+                if audio_data.ndim > 1:
+                    audio_data = audio_data.mean(axis=1)
             except Exception as e:
                 raise ValueError(f"Failed to load audio file: {e}")
                 
