@@ -15,7 +15,6 @@ COPY services/ ./services/
 COPY routers/ ./routers/
 COPY database/ ./database/
 COPY config/ ./config/
-COPY dev_utils/ ./dev_utils/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
 
