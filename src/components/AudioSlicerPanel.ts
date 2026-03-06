@@ -677,6 +677,7 @@ export class AudioSlicerPanel implements PanelComponent {
   }
   
   private async _runOptimization(intentOverride?: 'music' | 'speech'): Promise<void> {
+		console.trace(`[OPTIMIZE-TRACE] _runOptimization called`);
     if (!this._originalFile) {
       void this._controller.dispatch({
         type: 'PROCESSING_UPDATE',
@@ -2263,6 +2264,7 @@ private async _processVocals(): Promise<void> {
    * Decoupled from handleCompositionUpdate to prevent stale intermediate renders.
    */
   private async _runOptimizationOnly(intentOverride?: 'music' | 'speech', perfLabel: string = 'optimize_api_roundtrip', vocalsOverride?: boolean): Promise<OptimizationResult> {
+		console.trace(`[OPTIMIZE-TRACE] _runOptimizationOnly called, perfLabel=${perfLabel}`);
     if (!this._originalFile) {
       throw new Error('No audio file loaded');
     }
