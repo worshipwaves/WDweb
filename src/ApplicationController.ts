@@ -187,6 +187,7 @@ export class ApplicationController {
   private _marginPresetCache: Map<string, MarginPreset[]> = new Map();
   private _isUpdatingComposition: boolean = false;
 	private _pendingCompositionUpdate: CompositionStateDTO | null = null;
+	private _applyingArchetypeDefaults: boolean = false;
   private _isUserInteracting: boolean = false;
 	public getResolver(): ConstraintResolver | null {
     return this._resolver;
@@ -4037,7 +4038,13 @@ export class ApplicationController {
     }
     
     // Apply cached or newly created composition
-    await this.handleCompositionUpdate(composition);
+    // Flag suppresses size_defaults override: DB archetype values are authoritative on cache miss
+    this._applyingArchetypeDefaults = true;
+    try {
+      await this.handleCompositionUpdate(composition);
+    } finally {
+      this._applyingArchetypeDefaults = false;
+    }
 		
 		// Re-render the panel to show updated selection and new slider limits
     if (!this._accordion) {
@@ -4660,8 +4667,9 @@ export class ApplicationController {
       const oldSize = this._state.composition.frame_design.finish_x;
       const newSize = newComposition.frame_design.finish_x;
 
-      if (oldSize !== newSize) {
-        // Size has changed, apply smart defaults
+      if (oldSize !== newSize && !this._applyingArchetypeDefaults) {
+        // Size has changed via user slider — apply smart defaults
+        // Suppressed during archetype selection: DB number_slots is authoritative
         const sizeKey = String(newSize);
         const defaults = newComposition.size_defaults?.[sizeKey];
 
