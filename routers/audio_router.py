@@ -196,7 +196,7 @@ async def optimize_audio_settings(
         
         if AUDIO_PROCESSOR == "modal":
             service = get_modal_audio_service()
-            loaded = service.load_audio_remote(content)
+            loaded = await service.load_audio_remote(content)
             samples = np.array(loaded["samples"])
         else:
             samples, _ = librosa.load(str(temp_input), sr=44100, mono=True)
@@ -280,7 +280,7 @@ async def process_audio_commit(
                 performance_monitor.start('modal_total')
                 working_bytes = working_path.read_bytes()
                 service = get_modal_audio_service()
-                result = service.process_pipeline_remote(
+                result = await service.process_pipeline_remote(
                     file_bytes=working_bytes,
                     isolate_vocals=True,
                     demucs_silence_threshold=demucs_silence_threshold if demucs_silence_threshold is not None else _audio_config.demucs_silence_threshold,
