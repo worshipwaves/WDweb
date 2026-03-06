@@ -35,8 +35,6 @@ class ModalAudioService:
             import modal
             ping = modal.Function.from_name("wavedesigner-demucs", "ping")
             ping.spawn()
-            load_audio = modal.Function.from_name("wavedesigner-demucs", "remote_load_audio")
-            load_audio.spawn(b"RIFF$\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x44\xac\x00\x00\x88\x58\x01\x00\x02\x00\x10\x00data\x00\x00\x00\x00")
             print("[ModalAudioService] Warmup triggered")
         except Exception as e:
             print(f"[ModalAudioService] Warmup failed: {e}")

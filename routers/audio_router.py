@@ -184,9 +184,6 @@ async def optimize_audio_settings(
     isolate_vocals: bool = Form(False)
 ):
     """Analyze audio and return optimized processing settings."""
-    import traceback
-    print(f"[OPTIMIZE-HIT] {file.filename} mode={mode} slots={num_slots} isolate={isolate_vocals}")
-    traceback.print_stack()
     if not file.filename:
         raise HTTPException(400, "No filename provided")
     
