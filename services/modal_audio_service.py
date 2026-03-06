@@ -262,6 +262,18 @@ class ModalAudioService:
         except Exception:
             return False
             
+    def load_audio_remote(self, file_bytes: bytes, sr: int = 44100, target_samples: int = 200000) -> dict:
+        """Send audio to Modal for librosa.load + extract_amplitudes. Returns 200K samples."""
+        import modal
+        fn = modal.Function.from_name("wavedesigner-demucs", "remote_load_audio")
+        return fn.remote(file_bytes, sr=sr, target_samples=target_samples)
+
+    def process_pipeline_remote(self, file_bytes: bytes, **kwargs) -> dict:
+        """Send audio to Modal for full process-commit pipeline. Returns ProcessedAudioResponse fields."""
+        import modal
+        fn = modal.Function.from_name("wavedesigner-demucs", "remote_process_pipeline")
+        return fn.remote(file_bytes, **kwargs)        
+            
             
     async def warmup(self) -> None:
         """Ping Modal to warm up container."""

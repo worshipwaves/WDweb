@@ -15,6 +15,7 @@ from typing import List
 import subprocess
 import librosa
 import soundfile as sf
+import numpy as np
 
 from services.demucs_service import DemucsService
 from services.audio_processing_service import AudioProcessingService
@@ -267,7 +268,12 @@ async def optimize_audio_settings(
         content = await file.read()
         temp_input.write_bytes(content)
         
-        samples, _ = librosa.load(str(temp_input), sr=44100, mono=True)
+        if AUDIO_PROCESSOR == "modal":
+            service = get_modal_audio_service()
+            loaded = service.load_audio_remote(content)
+            samples = np.array(loaded["samples"])
+        else:
+            samples, _ = librosa.load(str(temp_input), sr=44100, mono=True)
         result = AudioProcessingService.analyze_and_optimize(
             samples, num_slots, mode, 
             intent_config=_intent_defaults.model_dump()
@@ -346,31 +352,22 @@ async def process_audio_commit(
             
             if use_modal_processor:
                 performance_monitor.start('modal_total')
+                working_bytes = working_path.read_bytes()
                 service = get_modal_audio_service()
-                job = service.create_job()
-                
-                performance_monitor.start('modal_s3_upload')
-                if not service.upload_file_to_job(job.job_id, working_path):
-                    raise HTTPException(500, f"S3 upload failed: {job.error_message}")
-                performance_monitor.end('modal_s3_upload')
-                
-                performance_monitor.start('modal_processing')
-                job = service.submit_job_sync(job.job_id)
-                performance_monitor.end('modal_processing')
-                
-                if job.status != JobStatus.COMPLETED:
-                    raise HTTPException(500, f"Modal processing failed: {job.error_message}")
-                
-                performance_monitor.start('modal_s3_download')
-                vocals_path = Path(tempfile.gettempdir()) / f"{uuid.uuid4()}_vocals.wav"
-                if not service.download_result(job.job_id, vocals_path):
-                    raise HTTPException(500, "Failed to download processed audio")
-                performance_monitor.end('modal_s3_download')
-                
-                demucs_time = job.processing_time or 0.0
-                
-                service.cleanup_job(job.job_id)
+                result = service.process_pipeline_remote(
+                    file_bytes=working_bytes,
+                    isolate_vocals=True,
+                    demucs_silence_threshold=demucs_silence_threshold if demucs_silence_threshold is not None else _audio_config.demucs_silence_threshold,
+                    demucs_silence_duration=demucs_silence_duration if demucs_silence_duration is not None else _audio_config.demucs_silence_duration,
+                )
                 performance_monitor.end('modal_total')
+                return ProcessedAudioResponse(
+                    audio_base64=result["audio_base64"],
+                    raw_samples=result["raw_samples"],
+                    raw_samples_original=result["raw_samples_original"],
+                    duration=result["duration"],
+                    duration_original=result["duration_original"],
+                )
             else:
                 # Local GPU path (existing behavior)
                 vocals_path, demucs_time = _demucs.separate_vocals(
