@@ -19,7 +19,7 @@ import numpy as np
 
 from services.demucs_service import DemucsService
 from services.audio_processing_service import AudioProcessingService
-from services.modal_audio_service import get_modal_audio_service, JobStatus
+from services.modal_audio_service import get_modal_audio_service
 from dev_utils.performance_monitor import performance_monitor
 
 
@@ -61,85 +61,12 @@ def _extract_samples_for_cache(audio_path: str, target_samples: int = 200000) ->
         samples = [float(y[i]) for i in indices]
     else:
         samples = [float(s) for s in y]
-    return samples, duration
+    return samples, duration   
 
 # ===========================================================================
-# MODAL ASYNC ENDPOINTS
+# MODAL WARMUP
 # ===========================================================================
 
-@router.post("/demucs/create-job")
-async def create_demucs_job():
-    """
-    Create a new Demucs job and return presigned URLs.
-    
-    Returns:
-        job_id, upload_url (for client PUT), download_url (for after completion)
-    """
-    if AUDIO_PROCESSOR != "modal":
-        raise HTTPException(400, "Modal processing not enabled. Set AUDIO_PROCESSOR=modal")
-    
-    service = get_modal_audio_service()
-    job = service.create_job()
-    
-    return {
-        "job_id": job.job_id,
-        "upload_url": job.upload_url,
-        "download_url": job.download_url,
-        "status": job.status.value,
-    }
-
-
-@router.post("/demucs/submit/{job_id}")
-async def submit_demucs_job(job_id: str):
-    """
-    Submit job to Modal after client has uploaded audio.
-    
-    Call this AFTER uploading audio to the upload_url from create-job.
-    """
-    if AUDIO_PROCESSOR != "modal":
-        raise HTTPException(400, "Modal processing not enabled")
-    
-    service = get_modal_audio_service()
-    job = service.submit_job_sync(job_id)
-    
-    if job is None:
-        raise HTTPException(404, f"Job not found: {job_id}")
-    
-    return {
-        "job_id": job.job_id,
-        "status": job.status.value,
-        "processing_time": job.processing_time,
-        "download_url": job.download_url if job.status == JobStatus.COMPLETED else None,
-        "error": job.error_message,
-    }
-
-
-@router.get("/demucs/status/{job_id}")
-async def get_demucs_job_status(job_id: str):
-    """Get current status of a Demucs job."""
-    service = get_modal_audio_service()
-    job = service.get_job_status(job_id)
-    
-    if job is None:
-        raise HTTPException(404, f"Job not found: {job_id}")
-    
-    return {
-        "job_id": job.job_id,
-        "status": job.status.value,
-        "processing_time": job.processing_time,
-        "download_url": job.download_url if job.status == JobStatus.COMPLETED else None,
-        "error": job.error_message,
-    }
-
-
-@router.delete("/demucs/cleanup/{job_id}")
-async def cleanup_demucs_job(job_id: str):
-    """Delete S3 files for a completed job."""
-    service = get_modal_audio_service()
-    service.cleanup_job(job_id)
-    return {"status": "cleaned"}
-    
-    
 @router.post("/demucs/warmup")
 async def warm_modal():
     """Fire-and-forget Modal container warmup."""
@@ -151,7 +78,6 @@ async def warm_modal():
         return {"status": "warming"}
     except Exception as e:
         return {"status": "warmup_skipped", "reason": str(e)}    
-    
     
 @router.post("/isolate-vocals")
 async def isolate_vocals(
