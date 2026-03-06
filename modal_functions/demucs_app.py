@@ -231,7 +231,7 @@ def _compress_silence(audio_path: str, threshold_db: float, min_duration: float)
 # ---------------------------------------------------------------------------
 # Audio Loading (CPU only — for /optimize and /audio/process offloading)
 # ---------------------------------------------------------------------------
-@app.function(cpu=2, memory=4096, timeout=120)
+@app.function(cpu=2, memory=4096, timeout=120, enable_memory_snapshot=True)
 def remote_load_audio(file_bytes: bytes, sr: int = 44100, target_samples: int = 200000) -> dict:
     """
     Load audio and return normalized amplitude samples.
