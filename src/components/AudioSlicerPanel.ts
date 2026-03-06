@@ -613,7 +613,7 @@ export class AudioSlicerPanel implements PanelComponent {
       this._persistToggleState();
       
       // Process vocals if enabled and not already cached
-      if (checked && !this._rawVocalsBuffer && this._audioBuffer && this._originalFile) {
+      if (checked && !this._rawVocalsBuffer && this._audioBuffer && this._originalFile && !this._initialLoadInProgress) {
         void this._processVocals();
       }
     });
@@ -982,6 +982,8 @@ export class AudioSlicerPanel implements PanelComponent {
           this._pendingIntent = intent;
           this._applyPendingIntent();
         }
+				
+				this._initialLoadInProgress = true;
         
         // Auto-optimize with intent (no render), then commit
         this._lastOptimizeResult = await this._runOptimizationOnly(intent, 'optimize_initial');
@@ -990,6 +992,7 @@ export class AudioSlicerPanel implements PanelComponent {
           await this._controller.dispatch({ type: 'COMPOSITION_UPDATED', payload: initComp });
         }
         await this._handleCommit();
+				this._initialLoadInProgress = false;
         
         // Populate apply cache with initial upload result
         const postState = this._controller.getState();
