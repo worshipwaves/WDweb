@@ -31,10 +31,9 @@ async def submit_feedback(fb: ReviewFeedbackIn):
 async def list_feedback():
     """View all collected feedback as JSON."""
     with get_db() as session:
-        rows = session.query(ReviewFeedback).order_by(ReviewFeedback.created_at.desc()).all()
         return {"feedback": [
             {"id": r.id, "page": r.page, "comment": r.comment, "name": r.name, "timestamp": r.created_at.isoformat()}
-            for r in rows
+            for r in session.query(ReviewFeedback).order_by(ReviewFeedback.created_at.desc()).all()
         ]}
 
 
@@ -42,11 +41,14 @@ async def list_feedback():
 async def feedback_report():
     """View all feedback as a readable HTML table."""
     with get_db() as session:
-        rows = session.query(ReviewFeedback).order_by(ReviewFeedback.created_at.desc()).all()
+        rows = [
+            (r.created_at.isoformat()[:19], r.page, r.comment, r.name)
+            for r in session.query(ReviewFeedback).order_by(ReviewFeedback.created_at.desc()).all()
+        ]
     html = "<html><head><style>body{font-family:sans-serif;margin:40px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:10px;text-align:left}th{background:#333;color:#fff}tr:nth-child(even){background:#f5f5f5}</style></head><body>"
     html += f"<h2>Review Feedback ({len(rows)} submissions)</h2>"
     html += "<table><tr><th>Time</th><th>Page</th><th>Comment</th><th>Name</th></tr>"
-    for r in rows:
-        html += f"<tr><td>{r.created_at.isoformat()[:19]}</td><td>{r.page}</td><td>{r.comment}</td><td>{r.name}</td></tr>"
+    for ts, page, comment, name in rows:
+        html += f"<tr><td>{ts}</td><td>{page}</td><td>{comment}</td><td>{name}</td></tr>"
     html += "</table></body></html>"
     return html
