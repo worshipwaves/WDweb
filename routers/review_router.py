@@ -50,7 +50,8 @@ async def feedback_report():
     html += "<table><tr><th>Time</th><th>Page</th><th>Comment</th><th>Name</th></tr>"
     for rid, ts, page, comment, name in rows:
         short_page = page.split('/')[-1] or 'index.html'
-        short_comment = (comment[:80] + '…') if len(comment) > 80 else comment
+        flat_comment = comment.replace(chr(10), ' ')
+        short_comment = (flat_comment[:80] + '…') if len(flat_comment) > 80 else flat_comment
         html += f'<tr style="cursor:pointer" onclick="window.location=\'/api/review/feedback/{rid}\'">'
         html += f"<td>{ts}</td><td>{short_page}</td><td>{short_comment}</td><td>{name}</td></tr>"
     html += "</table></body></html>"
@@ -74,6 +75,6 @@ async def feedback_detail(feedback_id: int):
     html += f"<label>Time</label><p>{ts}</p>"
     html += f"<label>Page</label><p><a href=\"{page}\" target=\"_blank\">{page}</a></p>"
     html += f"<label>Name</label><p>{name or '(anonymous)'}</p>"
-    html += f"<label>Comment</label><p>{comment}</p>"
+    html += f"<label>Comment</label><p>{comment.replace(chr(10), '<br>')}</p>"
     html += "</body></html>"
     return html    
