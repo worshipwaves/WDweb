@@ -397,3 +397,17 @@ class CollectionsCatalog(Base):
     id = Column(Integer, primary_key=True, default=1)
     data = Column(JSON, nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    
+# =============================================================================
+# REVIEW FEEDBACK — Remove after review cycle
+# =============================================================================
+
+class ReviewFeedback(Base):
+    """Focus group feedback submissions."""
+    __tablename__ = "review_feedback"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    page = Column(Text, nullable=False)
+    comment = Column(Text, nullable=False)
+    name = Column(String(200), default="")
+    created_at = Column(DateTime, server_default=func.now())    

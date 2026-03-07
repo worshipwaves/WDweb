@@ -28,6 +28,8 @@ from database.models import (
     CollectionsCatalog,
     # Audio
     IntentDefaults,
+    # Review — remove after review cycle
+    ReviewFeedback,
 )
 
 __all__ = [
@@ -55,4 +57,5 @@ __all__ = [
     "UIConfig",
     "CollectionsCatalog",
     "IntentDefaults",
+    "ReviewFeedback",
 ]
