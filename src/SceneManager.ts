@@ -1479,12 +1479,7 @@ export class SceneManager {
             
             mesh.name = `backing_section_${i}`;
             
-            // CRITICAL: Apply rotation for ALL backing (matches wood panel rotation from cutSlots)
-            // Wood panels get this normalization regardless of section count
-            mesh.rotation.y = Math.PI;
-            mesh.bakeCurrentTransformIntoVertices();
-            
-            // Set position AFTER baking (baking resets position to 0)
+            // Rotation now applied inside createPanelsWithCSG unconditionally
             mesh.position.y = section.position_y;
             
             // Apply material BEFORE parenting to prevent white flash
@@ -1547,8 +1542,7 @@ export class SceneManager {
         // Apply material and common setup to all backing meshes
         const setupBackingMesh = (mesh: Mesh, name: string, offsetX: number): void => {
             mesh.name = name;
-            mesh.rotation.y = Math.PI;
-            mesh.bakeCurrentTransformIntoVertices();
+            // Rotation now applied inside createPanelsWithCSG unconditionally
             mesh.position.x = offsetX;
             mesh.position.y = positionY;
             const backingMaterial = new BackingMaterial(this._scene, backingParams);

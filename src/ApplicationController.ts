@@ -576,6 +576,27 @@ export class ApplicationController {
           this._state.audio.audioSessionId,
           new Float32Array(this._state.audio.rawSamples)
         );
+        // Fix amplitude/slot count mismatch (e.g. collections persisted with stale slot count)
+        const ampCount = this._state.composition.processed_amplitudes?.length || 0;
+        const slotCount = this._state.composition.pattern_settings.number_slots;
+        if (ampCount > 0 && ampCount !== slotCount) {
+          console.warn(`[Controller] Amplitude/slot mismatch: ${ampCount} amps vs ${slotCount} slots. Re-rebinning.`);
+          const rebinned = this._audioCache.rebinFromCache(this._state.audio.audioSessionId, {
+            numSlots: slotCount,
+            binningMode: (this._state.composition.audio_processing?.binning_mode || 'mean_abs') as 'mean_abs' | 'min_max' | 'continuous',
+            filterAmount: this._state.composition.audio_processing?.apply_filter ? this._state.composition.audio_processing.filter_amount : 0,
+            exponent: this._state.composition.pattern_settings.amplitude_exponent
+          });
+          if (rebinned) {
+            this._state = {
+              ...this._state,
+              composition: {
+                ...this._state.composition,
+                processed_amplitudes: Array.from(rebinned)
+              }
+            };
+          }
+        }
       }
       await this.dispatch({ type: 'STATE_RESTORED', payload: this._state });
 			

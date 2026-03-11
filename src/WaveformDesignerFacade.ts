@@ -57,7 +57,7 @@ export type Action =
         audioSessionId?: string 
       };
     }
-	| { type: 'AUDIO_SESSION_UPDATED'; payload: { audioSessionId: string; composition: CompositionStateDTO } }	
+	| { type: 'AUDIO_SESSION_UPDATED'; payload: { audioSessionId: string; composition: CompositionStateDTO; rawSamples?: number[] } }	
   | { type: 'SHOW_HINT' }
   | { type: 'CATEGORY_SELECTED'; payload: string }
   | { type: 'SUBCATEGORY_SELECTED'; payload: { category: string; subcategory: string } }
@@ -279,7 +279,8 @@ export class WaveformDesignerFacade {
           composition: action.payload.composition,
           audio: {
             ...state.audio,
-            audioSessionId: action.payload.audioSessionId
+            audioSessionId: action.payload.audioSessionId,
+            ...(action.payload.rawSamples ? { rawSamples: action.payload.rawSamples } : {})
           }
         };
 

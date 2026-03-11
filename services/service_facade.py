@@ -365,9 +365,8 @@ class WaveformDesignerFacade:
                 if state.pattern_settings.slot_style == "linear" and result["slot_data"]:
                     print(f"[DEBUG] First linear slot vertices: {result['slot_data'][0]['vertices']}")
                     print(f"[DEBUG] First linear slot dims: width={result['slot_data'][0]['width']:.4f}, length={result['slot_data'][0]['length']:.4f}")
-            except ValueError:
-                # Keep empty slot_data if generation fails
-                pass
+            except ValueError as e:
+                print(f"[ServiceFacade] Slot generation failed: {e}")
         
         # Extract section edge lines for n=3
         if state.frame_design.number_sections == 3:

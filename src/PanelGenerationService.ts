@@ -369,7 +369,9 @@ export class PanelGenerationService {
           }
         }
 
-        // Step 3c: Finalize mesh properties.
+        // Step 3c: Apply rotation normalization unconditionally (matches backing panels)
+        finalMesh.rotation.y = Math.PI;
+        finalMesh.bakeCurrentTransformIntoVertices();
         finalMesh.name = `section_${i}`;
         finalMesh.computeWorldMatrix(true);
         finalMesh.refreshBoundingInfo(true, true);
@@ -421,6 +423,8 @@ export class PanelGenerationService {
           sectionMesh.dispose();
         }
         
+        finalMesh.rotation.y = Math.PI;
+        finalMesh.bakeCurrentTransformIntoVertices();
         finalMesh.name = `section_${sectionIndex}`;
         finalMesh.refreshBoundingInfo();
         finalMesh.isPickable = true;
@@ -457,6 +461,8 @@ export class PanelGenerationService {
         baseMesh.dispose();
       }
       
+      finalMesh.rotation.y = Math.PI;
+      finalMesh.bakeCurrentTransformIntoVertices();
       finalMesh.name = `section_${sectionIndex}`;
       finalMesh.refreshBoundingInfo();
       finalMesh.isPickable = true;
@@ -500,17 +506,6 @@ export class PanelGenerationService {
     mat.specularColor = new Color3(0.2, 0.2, 0.2);
     mat.backFaceCulling = false;
     result.material = mat;
-    
-    // Apply rotations to align with coordinate system expectations
-    if (config.numberSections === 3) {
-      // n=3 wedge cut needs Y rotation
-      result.rotation.y = Math.PI;
-      result.bakeCurrentTransformIntoVertices();
-    } else {
-      // n=1, n=2, n=4 need triple rotation for correct orientation
-      result.rotation.y = Math.PI;  // 180° around Y (horizontal flip)
-      result.bakeCurrentTransformIntoVertices();
-    }
     
     return result;
   }

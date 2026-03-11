@@ -2185,14 +2185,14 @@ private async _processVocals(): Promise<void> {
       
       await this._controller.dispatch({
         type: 'AUDIO_SESSION_UPDATED',
-        payload: { audioSessionId: sessionId, composition: updatedComposition }
+        payload: { audioSessionId: sessionId, composition: updatedComposition, rawSamples: Array.from(entry.rawSamples) }
       });
       
       const csgResponse = await this._controller.getRoutedCSGData(
         updatedComposition, ['processed_amplitudes'], null
       );
       await this._controller.getSceneManager()?.renderComposition(csgResponse);
-			
+				
 			this._controller.lastRenderedSnapshot = {
         composition: JSON.parse(JSON.stringify(updatedComposition)),
         rawSamples: new Float32Array(entry.rawSamples),
@@ -2632,7 +2632,7 @@ private async _processVocals(): Promise<void> {
 
       await this._controller.dispatch({
         type: 'AUDIO_SESSION_UPDATED',
-        payload: { audioSessionId: sessionId, composition: updatedComposition }
+        payload: { audioSessionId: sessionId, composition: updatedComposition, rawSamples: Array.from(samples) }
       });
 
       const csgResponse = await this._controller.getRoutedCSGData(
