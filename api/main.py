@@ -229,7 +229,8 @@ def get_csg_data(request: CsgDataRequest) -> Dict[str, Any]:
             print(f"[API] Included {len(result['csg_data']['section_edges'])} section edge sets")
         return result
     except Exception as e:
-        print(f"Error in get_csg_data: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
 
 

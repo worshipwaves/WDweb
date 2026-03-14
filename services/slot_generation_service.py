@@ -538,7 +538,7 @@ class SlotGenerationService:
         all_slots: List[List[List[float]]] = []
         
         for slot_index in range(number_slots):
-            section_id = slot_index // slots_per_section
+            section_id = min(slot_index // slots_per_section, number_sections - 1)
             local_slot_index = slot_index % slots_per_section
             
             # Amplitude with exponent

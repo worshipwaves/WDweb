@@ -539,11 +539,18 @@ export class ApplicationController {
         const maxAmp = Math.max(...amps.map(Math.abs));
         if (maxAmp > 0 && maxAmp <= 1.5) {
           // Call backend to get max_amplitude_local for current geometry
-          const csgResponse = await this.getRoutedCSGData(
-            this._state.composition,
-            [],
-            null
-          );
+          let csgResponse: SmartCsgResponse | null = null;
+          try {
+            csgResponse = await this.getRoutedCSGData(
+              this._state.composition,
+              [],
+              null
+            );
+          } catch (err) {
+            console.warn('[Controller] CSG failed with restored state, resetting to defaults');
+            localStorage.removeItem('wavedesigner_session');
+            this._state = freshDefaults;
+          }
           
           if (csgResponse) {
             const maxAmplitudeLocal = csgResponse.max_amplitude_local;
@@ -3804,9 +3811,20 @@ export class ApplicationController {
   public getActiveArchetypeId(): string | null {
     if (!this._state) return null;
     
-    // Prefer explicit selection from UI state
+    // Prefer explicit selection from UI state, but validate consistency
     if (this._state.ui.selectedArchetypeId) {
-      return this._state.ui.selectedArchetypeId;
+      const selected = this._archetypes.get(this._state.ui.selectedArchetypeId);
+      if (selected) {
+        const comp = this._state.composition;
+        const isConsistent =
+          comp.frame_design.shape === selected.shape &&
+          comp.frame_design.number_sections === selected.number_sections &&
+          comp.pattern_settings.slot_style === selected.slot_style;
+        if (isConsistent) {
+          return this._state.ui.selectedArchetypeId;
+        }
+        this._state.ui.selectedArchetypeId = null;
+      }
     }
     
     // Fallback to detection logic
