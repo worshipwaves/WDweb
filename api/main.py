@@ -40,7 +40,8 @@ app.add_middleware(
         "http://localhost:3000",
         "https://wavedesigner-frontend.onrender.com",
         "https://design.worshipwaves.art",
-        "https://worshipwaves.netlify.app"
+        "https://worshipwaves.netlify.app",
+        "https://three-wounds.netlify.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
