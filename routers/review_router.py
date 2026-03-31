@@ -38,15 +38,22 @@ async def list_feedback():
 
 
 @router.get("/feedback/report", response_class=HTMLResponse)
-async def feedback_report():
-    """View all feedback as a readable HTML table."""
+async def feedback_report(source: str = None):
+    """View all feedback as a readable HTML table. Filter: ?source=book or ?source=website"""
     with get_db() as session:
+        query = session.query(ReviewFeedback).order_by(ReviewFeedback.created_at.desc())
+        if source == "book":
+            query = query.filter(ReviewFeedback.page.contains("three-wounds.netlify.app"))
+        elif source == "website":
+            query = query.filter(ReviewFeedback.page.contains("worshipwaves.netlify.app"))
         rows = [
             (r.id, r.created_at.isoformat()[:19], r.page, r.comment, r.name)
-            for r in session.query(ReviewFeedback).order_by(ReviewFeedback.created_at.desc()).all()
+            for r in query.all()
         ]
     html = "<html><head><style>body{font-family:sans-serif;margin:40px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:10px;text-align:left}th{background:#333;color:#fff}tr:nth-child(even){background:#f5f5f5}</style></head><body>"
-    html += f"<h2>Review Feedback ({len(rows)} submissions)</h2>"
+    label = "All" if not source else source.title()
+    html += f"<h2>Review Feedback — {label} ({len(rows)} submissions)</h2>"
+    html += '<p><a href="/api/review/feedback/report">All</a> &middot; <a href="/api/review/feedback/report?source=website">Website</a> &middot; <a href="/api/review/feedback/report?source=book">Book</a></p>'
     html += "<table><tr><th>Time</th><th>Page</th><th>Comment</th><th>Name</th></tr>"
     for rid, ts, page, comment, name in rows:
         short_page = page.split('/')[-1] or 'index.html'
