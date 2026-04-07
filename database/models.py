@@ -410,4 +410,6 @@ class ReviewFeedback(Base):
     page = Column(Text, nullable=False)
     comment = Column(Text, nullable=False)
     name = Column(String(200), default="")
-    created_at = Column(DateTime, server_default=func.now())    
+    created_at = Column(DateTime, server_default=func.now())   
+    status = Column(String(20), default="open")
+    response_note = Column(Text)    
