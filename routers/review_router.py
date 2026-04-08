@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
+from zoneinfo import ZoneInfo
 from database import get_db, ReviewFeedback
 
 router = APIRouter(prefix="/api/review", tags=["review"])
@@ -52,8 +53,10 @@ async def feedback_report(source: str = None, sort: str = None):
             query = query.filter(ReviewFeedback.page.contains("three-wounds.netlify.app"))
         elif source == "website":
             query = query.filter(ReviewFeedback.page.contains("worshipwaves.netlify.app"))
+        utc = ZoneInfo("UTC")
+        pac = ZoneInfo("America/Los_Angeles")
         rows = [
-            (r.id, r.created_at.isoformat()[:19], r.page, r.comment, r.name, r.status or 'open', r.response_note or '')
+            (r.id, r.created_at.replace(tzinfo=utc).astimezone(pac).strftime("%Y-%m-%d %I:%M %p"), r.page, r.comment, r.name, r.status or 'open', r.response_note or '')
             for r in query.all()
         ]
     html = "<html><head><style>body{font-family:sans-serif;margin:40px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:10px;text-align:left}th{background:#333;color:#fff}tr:nth-child(even){background:#f5f5f5}</style></head><body>"
@@ -81,7 +84,9 @@ async def feedback_detail(feedback_id: int):
         r = session.query(ReviewFeedback).filter_by(id=feedback_id).first()
         if not r:
             return HTMLResponse("<h2>Not found</h2>", status_code=404)
-        data = (r.id, r.created_at.isoformat()[:19], r.page, r.comment, r.name, r.status or 'open', r.response_note or '—')
+        utc = ZoneInfo("UTC")
+        pac = ZoneInfo("America/Los_Angeles")
+        data = (r.id, r.created_at.replace(tzinfo=utc).astimezone(pac).strftime("%Y-%m-%d %I:%M %p"), r.page, r.comment, r.name, r.status or 'open', r.response_note or '—')
     rid, ts, page, comment, name, status, note = data
     html = "<html><head><style>body{font-family:sans-serif;margin:40px;max-width:800px}"
     html += "label{font-weight:bold;display:block;margin-top:20px;color:#666;font-size:0.85rem}"
