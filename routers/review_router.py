@@ -45,6 +45,7 @@ async def feedback_report(source: str = None, sort: str = None):
             "page": ReviewFeedback.page,
             "name": ReviewFeedback.name,
             "status": ReviewFeedback.status,
+            "time": ReviewFeedback.created_at.desc(),
         }.get(sort, ReviewFeedback.created_at.desc())
         query = session.query(ReviewFeedback).order_by(sort_col)
         if source == "book":
@@ -60,7 +61,7 @@ async def feedback_report(source: str = None, sort: str = None):
     html += f"<h2>Review Feedback — {label} ({len(rows)} submissions)</h2>"
     html += '<p><a href="/api/review/feedback/report">All</a> &middot; <a href="/api/review/feedback/report?source=website">Website</a> &middot; <a href="/api/review/feedback/report?source=book">Book</a></p>'
     qs = f"source={source}&" if source else ""
-    html += f'<table><tr><th>Time</th><th><a href="?{qs}sort=page" style="color:#fff">Page</a></th><th>Comment</th><th><a href="?{qs}sort=name" style="color:#fff">Name</a></th><th><a href="?{qs}sort=status" style="color:#fff">Status</a></th><th>Note</th></tr>'
+    html += f'<table><tr><th><a href="?{qs}sort=time" style="color:#fff">Time</a></th><th><a href="?{qs}sort=page" style="color:#fff">Page</a></th><th>Comment</th><th><a href="?{qs}sort=name" style="color:#fff">Name</a></th><th><a href="?{qs}sort=status" style="color:#fff">Status</a></th><th>Note</th></tr>'
     for rid, ts, page, comment, name, status, note in rows:
         short_page = page.split('/')[-1] or 'index.html'
         flat_comment = comment.replace(chr(10), ' ')
