@@ -50,7 +50,7 @@ async def feedback_report(source: str = None, sort: str = None):
         }.get(sort, ReviewFeedback.created_at.desc())
         query = session.query(ReviewFeedback).order_by(sort_col)
         if source == "book":
-            query = query.filter(ReviewFeedback.page.contains("three-wounds.netlify.app"))
+            query = query.filter(ReviewFeedback.page.contains("three-wounds-book.onrender.com"))
         elif source == "website":
             query = query.filter(ReviewFeedback.page.contains("worshipwaves.netlify.app"))
         utc = ZoneInfo("UTC")
