@@ -41,7 +41,8 @@ app.add_middleware(
         "https://wavedesigner-frontend.onrender.com",
         "https://design.worshipwaves.art",
         "https://worshipwaves.netlify.app",
-        "https://three-wounds.netlify.app"
+        "https://three-wounds.netlify.app",
+        "https://three-wounds-book.onrender.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],
