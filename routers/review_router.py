@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from zoneinfo import ZoneInfo
 from database import get_db, ReviewFeedback
+from sqlalchemy import or_
 
 router = APIRouter(prefix="/api/review", tags=["review"])
 
@@ -50,7 +51,10 @@ async def feedback_report(source: str = None, sort: str = None):
         }.get(sort, ReviewFeedback.created_at.desc())
         query = session.query(ReviewFeedback).order_by(sort_col)
         if source == "book":
-            query = query.filter(ReviewFeedback.page.contains("three-wounds-book.onrender.com"))
+            query = query.filter(or_(
+                ReviewFeedback.page.contains("three-wounds.netlify.app"),
+                ReviewFeedback.page.contains("three-wounds.onrender.com")
+            ))
         elif source == "website":
             query = query.filter(ReviewFeedback.page.contains("worshipwaves.netlify.app"))
         utc = ZoneInfo("UTC")
